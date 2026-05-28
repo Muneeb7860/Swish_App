@@ -1,0 +1,333 @@
+import React, { useState } from 'react';
+import * as Lucide from 'lucide-react';
+
+export default function CustomerApp({
+  products,
+  cart,
+  setCart,
+  customerWallet,
+  setCustomerWallet,
+  customerPoints,
+  setCustomerPoints,
+  customerTab,
+  setCustomerTab,
+  profileSubTab,
+  setProfileSubTab,
+  savedAddresses,
+  savedCards,
+  favorites,
+  vipMember,
+  vouchers,
+  customerTrustScore,
+  gdprTokenProbation,
+  handleGdprPurge,
+  orderHistory,
+  esgCheckbox,
+  setEsgCheckbox,
+  tipAmount,
+  setTipAmount,
+  handleCheckout,
+  handleApplyVoucher,
+  voucherCode,
+  setVoucherCode,
+  activeOrder,
+  generateCertificate
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filter products by category/search
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
+  };
+
+  const removeFromCart = (itemId) => {
+    setCart(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  // Calculations
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const esgRebate = esgCheckbox ? 0.50 : 0.00;
+  const deliveryFee = 2.99;
+  const appliedDiscount = 0.00; // Simplified
+  const totalCost = Math.max(0, cartSubtotal + deliveryFee + tipAmount - esgRebate - appliedDiscount);
+
+  return (
+    <div className="customer-dashboard">
+      <div className="customer-main-panel">
+        
+        {/* Navigation Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.25rem', borderRadius: '10px', width: 'fit-content', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+          <button 
+            className="btn-secondary-glow" 
+            style={{ background: customerTab === 'catalog' ? 'rgba(255,255,255,0.08)' : 'transparent', border: 'none', fontSize: '0.8rem', padding: '0.4rem 1rem', cursor: 'pointer' }}
+            onClick={() => setCustomerTab('catalog')}
+          >
+            Browse Store Catalog
+          </button>
+          <button 
+            className="btn-secondary-glow" 
+            style={{ background: customerTab === 'profile' ? 'rgba(255,255,255,0.08)' : 'transparent', border: 'none', fontSize: '0.8rem', padding: '0.4rem 1rem', cursor: 'pointer' }}
+            onClick={() => setCustomerTab('profile')}
+          >
+            My Profile Hub
+          </button>
+        </div>
+
+        {customerTab === 'catalog' ? (
+          <div>
+            {/* Search and Promotions */}
+            <div className="search-promo-header" style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <Lucide.Search size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  style={{ paddingLeft: '2.25rem' }} 
+                  placeholder="Search organic grocery, fresh dairy, bakery..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Product Shelf Grid */}
+            <div className="product-shelf-grid">
+              {filteredProducts.map(p => (
+                <div key={p.id} className="product-card">
+                  {p.perishable && <span className="badge-perishable">Cold Chain Perishable</span>}
+                  <div className="product-emoji-row">
+                    <span style={{ fontSize: '2rem' }}>{p.emoji}</span>
+                    <button className="add-cart-btn" onClick={() => addToCart(p)}>
+                      <Lucide.Plus size={16} />
+                    </button>
+                  </div>
+                  <h4 style={{ fontWeight: 700, margin: '0.5rem 0 0.2rem 0' }}>{p.name}</h4>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.category}</span>
+                  <div className="product-price-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--color-customer)' }}>${p.price.toFixed(2)}</span>
+                    <span style={{ fontSize: '0.65rem', color: p.stock < 5 ? 'var(--color-admin)' : 'var(--text-muted)' }}>
+                      Stock: {p.stock} units
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="profile-hub-layout" style={{ display: 'flex', gap: '1.25rem' }}>
+            {/* Sidebar nav */}
+            <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <button className={`profile-nav-item ${profileSubTab === 'vip' ? 'active' : ''}`} onClick={() => setProfileSubTab('vip')}>
+                <Lucide.Crown size={14} /> VIP Club Membership
+              </button>
+              <button className={`profile-nav-item ${profileSubTab === 'orders' ? 'active' : ''}`} onClick={() => setProfileSubTab('orders')}>
+                <Lucide.ClipboardList size={14} /> Orders History & Purge
+              </button>
+              <button className={`profile-nav-item ${profileSubTab === 'vouchers' ? 'active' : ''}`} onClick={() => setProfileSubTab('vouchers')}>
+                <Lucide.Tag size={14} /> My Discount Vouchers
+              </button>
+              <button className={`profile-nav-item ${profileSubTab === 'rewards' ? 'active' : ''}`} onClick={() => setProfileSubTab('rewards')}>
+                <Lucide.Award size={14} /> Academy Course Certs
+              </button>
+            </div>
+
+            {/* Sub-view Content */}
+            <div style={{ flex: 1 }}>
+              {profileSubTab === 'vip' && (
+                <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid var(--color-customer)' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800 }}>
+                    <Lucide.Crown size={20} style={{ color: 'gold' }} />
+                    Swiss Q-Commerce VIP Hub
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                    <div><strong>Trust Shield rating:</strong> <span style={{ color: customerTrustScore >= 85 ? 'var(--color-customer)' : 'var(--color-admin)' }}>{customerTrustScore}/100</span></div>
+                    {gdprTokenProbation && <div style={{ color: 'var(--color-admin)', fontSize: '0.75rem' }}>⚠️ Your account is currently under GDPR probation. Please complete 3 successful orders to restore score.</div>}
+                    <div><strong>VIP Member status:</strong> {vipMember ? 'Active (Free delivery on orders > $15)' : 'Inactive'}</div>
+                    <div><strong>Loyalty Points balance:</strong> {customerPoints} Points</div>
+                  </div>
+                </div>
+              )}
+
+              {profileSubTab === 'orders' && (
+                <div className="glass-card" style={{ padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontWeight: 800 }}>Past Purchase Statements</h3>
+                    <button className="btn-secondary-glow" style={{ color: 'var(--color-admin)', borderColor: 'var(--color-admin)' }} onClick={handleGdprPurge}>
+                      Purge History (GDPR Art. 17)
+                    </button>
+                  </div>
+                  {orderHistory.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>No purchase statements found. Placed orders will display here.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {orderHistory.map(order => (
+                        <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                          <div>
+                            <strong>Order #{order.id}</strong> ({order.date})
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{order.items}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <strong>${order.total.toFixed(2)}</strong>
+                            <div style={{ color: 'var(--color-customer)', fontSize: '0.7rem' }}>{order.status}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {profileSubTab === 'vouchers' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {vouchers.map(v => (
+                    <div key={v.code} className="glass-card" style={{ padding: '0.75rem', borderLeft: '3px solid var(--color-customer)' }}>
+                      <strong>{v.code}</strong> (Flat ${v.value.toFixed(2)} Off)
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>{v.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {profileSubTab === 'rewards' && (
+                <div className="glass-card" style={{ padding: '1rem' }}>
+                  <h3 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Swiss Training Academy Certificates</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Complete roles training to generate downloadable canvas credentials.</p>
+                  <button className="btn-primary-glow" style={{ background: 'var(--color-customer)', color: '#ffffff', border: 'none', padding: '0.5rem 1rem', marginTop: '0.5rem' }} onClick={() => generateCertificate('customer')}>
+                    View Customer Loyalty Certificate
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cart Drawer Panel (Right Side) */}
+      <div className="customer-cart-drawer">
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
+          <Lucide.ShoppingCart size={18} className="event-customer" />
+          Shopping Cart ({cart.reduce((sum, item) => sum + item.qty, 0)})
+        </h3>
+        
+        {cart.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)' }}>
+            <Lucide.ShoppingBag size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+            <span style={{ fontSize: '0.75rem' }}>Cart is empty</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 40px)', justifyContent: 'space-between' }}>
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.25rem' }}>
+              {cart.map(item => (
+                <div key={item.id} className="cart-item-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{item.name}</span>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {item.qty}x ${item.price.toFixed(2)}
+                    </div>
+                  </div>
+                  <button className="cart-remove-btn" onClick={() => removeFromCart(item.id)}>
+                    <Lucide.Trash size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Cart Calculations and checkout */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+              {/* Tip Select */}
+              <div style={{ marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)' }}>ADD RIDER TIP</span>
+                <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
+                  {[0, 2, 5, 10].map(tip => (
+                    <button 
+                      key={tip} 
+                      className={`btn-secondary-glow`} 
+                      style={{ flex: 1, padding: '0.25rem', fontSize: '0.7rem', background: tipAmount === tip ? 'rgba(16, 185, 129, 0.1)' : 'transparent', borderColor: tipAmount === tip ? 'var(--color-customer)' : 'var(--border-color)' }}
+                      onClick={() => setTipAmount(tip)}
+                    >
+                      {tip === 0 ? 'No Tip' : `$${tip}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ESG Bag Checkbox */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <input 
+                  type="checkbox" 
+                  id="esg-bags" 
+                  checked={esgCheckbox} 
+                  onChange={(e) => setEsgCheckbox(e.target.checked)} 
+                  style={{ accentColor: 'var(--color-customer)', cursor: 'pointer' }}
+                />
+                <label htmlFor="esg-bags" style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  🌳 Return bags for $0.50 cash rebate offset
+                </label>
+              </div>
+
+              {/* Invoice calculation summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Subtotal:</span>
+                  <span>${cartSubtotal.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Delivery Fee:</span>
+                  <span>${deliveryFee.toFixed(2)}</span>
+                </div>
+                {esgCheckbox && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-customer)' }}>
+                    <span>Paper Bag Rebate:</span>
+                    <span>-$0.50</span>
+                  </div>
+                )}
+                {tipAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Rider Tip:</span>
+                    <span>${tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-color)', paddingTop: '0.3rem', fontSize: '0.85rem', fontWeight: 800 }}>
+                  <span>Total cost:</span>
+                  <span style={{ color: 'var(--color-customer)' }}>${totalCost.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Checkout Gateways fallbacks */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <button 
+                  id="btn-checkout-wallet" 
+                  className="btn-primary-glow" 
+                  style={{ width: '100%', border: 'none', background: 'var(--color-customer)', color: '#ffffff', padding: '0.5rem', cursor: 'pointer' }}
+                  onClick={() => handleCheckout('Wallet')}
+                >
+                  Pay via Wallet (Balance: ${customerWallet.toFixed(2)})
+                </button>
+                <button 
+                  className="btn-secondary-glow" 
+                  style={{ width: '100%', padding: '0.4rem', cursor: 'pointer' }}
+                  onClick={() => handleCheckout('Swipe')}
+                >
+                  Pay via Swipe Instant Gateway
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}

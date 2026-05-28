@@ -1,0 +1,806 @@
+openapi: 3.0.3
+info:
+  title: Swiss Quick Commerce BFF API
+  description: >
+    Backend-for-Frontend (BFF) API Gateway contract for the Swiss Quick Commerce System ("swiss_App").
+    Integrates the five-sided marketplace: Customers, Riders, Pickers, Wholesalers, and Platform Admins.
+    Enforces JWT security with Multi-Factor Authentication (MFA) parameters, GDPR compliance controls,
+    and Chaos Engineering fault logs.
+    Includes Idempotency key headers to prevent duplicate execution on critical payment/write routes.
+  version: 1.1.0
+servers:
+  - url: http://localhost:8080
+    description: Local Development BFF Server
+  - url: https://api.staging.swissqcommerce.ch
+    description: Staging Environment BFF Server
+paths:
+  /api/auth/login:
+    post:
+      summary: Authenticate User Credentials
+      description: Validates username/password. If MFA is active, returns a 200 with mfa_required=true and session token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful or MFA verification pending.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mfa_required:
+                    type: boolean
+                  session_token:
+                    type: string
+                    description: Temporary session identifier for MFA verification.
+                  token:
+                    type: string
+                    description: Finished JWT bearer token if MFA is bypassed.
+        '401':
+          description: Invalid username or password.
+
+  /api/auth/mfa/verify:
+    post:
+      summary: Complete MFA Verification
+      description: Validates SMS OTP or Google Authenticator TOTP code to release the authorized JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_token
+                - code
+              properties:
+                session_token:
+                  type: string
+                code:
+                  type: string
+                  description: 6-digit SMS OTP or Google TOTP token.
+      responses:
+        '200':
+          description: MFA validation successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT authentication bearer token.
+        '401':
+          description: Invalid or expired MFA passcode.
+
+  /api/customer/catalog:
+    get:
+      summary: Retrieve Inventory Catalog
+      description: Returns the real-time stock and prices for both MFC stores (Central and East).
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successful catalog retrieval.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogItem'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/customer/orders:
+    post:
+      summary: Place Order (Cart Checkout)
+      description: Initiates order picking and payment checkout. Routes to alternative MFC store if capacity or congestion is hit.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCheckoutRequest'
+      responses:
+        '201':
+          description: Order placed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Insufficient stock or invalid input.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    get:
+      summary: List Customer Orders
+      description: Retrieves the order history for the authenticated customer.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /api/customer/orders/{id}/refund:
+    post:
+      summary: Request AI-Assisted Refund
+      description: Submits a refund claim. Checks customer trust score, refund ratio, and validates GPS geofences/EXIF metadata.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - claim_reason
+                - customer_latitude
+                - customer_longitude
+                - photo_exif_timestamp
+              properties:
+                claim_reason:
+                  type: string
+                customer_latitude:
+                  type: number
+                  format: float
+                customer_longitude:
+                  type: number
+                  format: float
+                photo_exif_timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Refund processed or submitted to HITL admin queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [approved, pending_admin_approval, rejected]
+                  message:
+                    type: string
+                  ticket_id:
+                    type: string
+        '403':
+          description: Refund refused due to low trust score.
+
+  /api/customer/profile/purge:
+    post:
+      summary: GDPR Article 17 Erasure Request
+      description: Wipes customer profile (name, email, card tokens) and maps future sessions to a hashed probation identity.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile purged. Next session starts under probation status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  probationary_trust_score:
+                    type: integer
+                    example: 75
+
+  /api/customer/ledger:
+    get:
+      summary: Customer Double-Entry Ledger Statements
+      description: Returns the customer's chronological double-entry ledger lines and balance.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Ledger statements retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerLine'
+
+  /api/rider/orders/{id}/coolant:
+    post:
+      summary: Inject Dry Ice Coolant Mitigation
+      description: Charges merchant $2.00 to reset transit cargo temperature back to 4.0°C.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Coolant injected successfully. Cargo temperature reset.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  new_temperature:
+                    type: number
+                    example: 4.0
+        '400':
+          description: Order not in shipping status or not perishable.
+
+  /api/rider/onboard:
+    post:
+      summary: Submit Rider Onboarding Documents
+      description: Registers application for manual compliance and operational validation.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - full_name
+                - vehicle_type
+                - driver_license_base64
+              properties:
+                full_name:
+                  type: string
+                vehicle_type:
+                  type: string
+                  enum: [E-Bike, Scooter]
+                driver_license_base64:
+                  type: string
+      responses:
+        '202':
+          description: Application received. Awaiting admin approval.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application_id:
+                    type: string
+
+  /api/rider/academy/courses:
+    get:
+      summary: List Rider Academy Courses
+      description: Fetches available certification courses.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Courses retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    course_id:
+                      type: string
+                    course_name:
+                      type: string
+
+  /api/rider/academy/courses/{id}/complete:
+    post:
+      summary: Complete Academy Course
+      description: Issues a certificate and grants a trust score bonus.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Course completed and certificate issued.
+
+  /api/inventory/picker/queue:
+    get:
+      summary: Retrieve MFC Pick Backlog Queue
+      description: Fetch orders pending picking at the authenticated picker's store.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /api/inventory/picker/handover:
+    post:
+      summary: Complete Order Picking & Handover
+      description: Completes order packing. Awards lightning badge if done under 4.0s. Triggers fallback replacement if packing error occurred.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+                - duration_seconds
+                - contains_packing_error
+              properties:
+                order_id:
+                  type: integer
+                duration_seconds:
+                  type: number
+                contains_packing_error:
+                  type: boolean
+      responses:
+        '200':
+          description: Order handed over to shipping.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  lightning_bonus_awarded:
+                    type: boolean
+                  replacement_order_dispatched:
+                    type: boolean
+
+  /api/inventory/rebalance:
+    post:
+      summary: Rebalance Micro-Fulfillment Centers
+      description: Admin-triggered or scheduler-triggered stock transfer from surplus MFC to deficit MFC.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_store_id
+                - target_store_id
+                - item_id
+                - quantity
+              properties:
+                source_store_id:
+                  type: string
+                target_store_id:
+                  type: string
+                item_id:
+                  type: string
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Stock transfer dispatched.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  transfer_truck_id:
+                    type: string
+
+  /api/wholesaler/restocks:
+    get:
+      summary: Retrieve Wholesaler Restocking Queue
+      description: Fetch restocking orders assigned to the authenticated B2B Wholesaler.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of assigned B2B restocks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/B2BRestockOrder'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/wholesaler/restocks/{id}/fulfill:
+    post:
+      summary: Fulfill Restock Order (Acknowledge Invoice)
+      description: Wholesaler acknowledges a restocking order, confirming shipment and triggering invoice logging.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Restock marked as fulfilled. Store inventory will increment.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: fulfilled
+                  invoice_amount:
+                    type: number
+                    example: 25.00
+        '400':
+          description: Restock request already fulfilled or invalid.
+
+  /api/wholesaler/invoices:
+    get:
+      summary: Retrieve Wholesaler B2B Invoices
+      description: Retrieve invoicing details for auditing and financial ledger verification.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/B2BInvoice'
+
+  /api/admin/chaos/faults:
+    post:
+      summary: Inject/Resolve Chaos Fault
+      description: Dynamically toggle active infrastructure breakdowns (cold chain failure, B2B wholesaler outage, rider traffic).
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fault_type
+                - action
+              properties:
+                fault_type:
+                  type: string
+                  enum: [cold_chain_breakdown, wholesaler_outage, traffic_congestion]
+                action:
+                  type: string
+                  enum: [inject, resolve]
+      responses:
+        '200':
+          description: Chaos fault modified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fault_id:
+                    type: integer
+                  status:
+                    type: string
+
+  /api/admin/onboard/queue:
+    get:
+      summary: List Onboarding Applications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OnboardingApplication'
+  /api/admin/onboard/queue/{id}/approve:
+    post:
+      summary: Approve/Reject Onboarding Application
+      description: Grants operations and compliance clearances to applicants.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - approve
+                - validator_role
+              properties:
+                approve:
+                  type: boolean
+                validator_role:
+                  type: string
+                  enum: [Ops, Compliance, Admin]
+      responses:
+        '200':
+          description: Approval phase signed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingApplication'
+
+  /api/admin/hitl/queue:
+    get:
+      summary: List HITL Tickets
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HitlTicket'
+  /api/admin/hitl/queue/{id}/resolve:
+    post:
+      summary: Approve/Void HITL Ticket
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [approve, void]
+      responses:
+        '200':
+          description: Ticket resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HitlTicket'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      description: Unique client-generated key to prevent duplicate processing of mutations.
+      required: false
+      schema:
+        type: string
+        format: uuid
+  responses:
+    UnauthorizedError:
+      description: Missing or expired token. MFA step-up required.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              mfa_required:
+                type: boolean
+  schemas:
+    CatalogItem:
+      type: object
+      properties:
+        item_id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        category:
+          type: string
+        emoji:
+          type: string
+        perishable:
+          type: boolean
+    OrderCheckoutRequest:
+      type: object
+      required:
+        - items
+        - payment_method
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - item_id
+              - quantity
+            properties:
+              item_id:
+                type: string
+              quantity:
+                type: integer
+        payment_method:
+          type: string
+          enum: [Wallet, Swipe, PayPal, Paytm, Cash on Delivery]
+        tip_amount:
+          type: number
+          default: 0.00
+        bags_returned:
+          type: integer
+          default: 0
+    Order:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        customer_id:
+          type: string
+        store_id:
+          type: string
+        rider_id:
+          type: string
+        total_amount:
+          type: number
+        weather_surcharge:
+          type: number
+        payment_method:
+          type: string
+        status:
+          type: string
+        sla_countdown_sec:
+          type: integer
+        bags_returned:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    B2BRestockOrder:
+      type: object
+      properties:
+        restock_order_id:
+          type: integer
+        store_id:
+          type: string
+        wholesaler_id:
+          type: string
+        invoice_amount:
+          type: number
+        is_fallback:
+          type: boolean
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    B2BInvoice:
+      type: object
+      properties:
+        invoice_id:
+          type: integer
+        restock_order_id:
+          type: integer
+        wholesaler_id:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    OnboardingApplication:
+      type: object
+      properties:
+        application_id:
+          type: string
+        applicant_type:
+          type: string
+        name:
+          type: string
+        approval_ops:
+          type: boolean
+        approval_compliance:
+          type: boolean
+        approval_admin:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    HitlTicket:
+      type: object
+      properties:
+        ticket_id:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    LedgerLine:
+      type: object
+      properties:
+        line_id:
+          type: integer
+        entry_id:
+          type: integer
+        account_type:
+          type: string
+        debit:
+          type: number
+        credit:
+          type: number

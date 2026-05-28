@@ -1,0 +1,14 @@
+package ch.swissqcommerce.backend.domain.transaction.port.in;
+
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+public interface OrderUseCase {
+
+    record CartItem(String itemId, int quantity) {}
+
+    Order checkout(String customerId, List<CartItem> items, String paymentMethod,
+                   BigDecimal tip, Integer bagsReturned, String idempotencyKey);
+}
