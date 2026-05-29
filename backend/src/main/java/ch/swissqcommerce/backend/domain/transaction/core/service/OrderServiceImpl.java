@@ -2,47 +2,57 @@ package ch.swissqcommerce.backend.domain.transaction.core.service;
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
+import ch.swissqcommerce.backend.domain.transaction.port.out.*;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.repository.*;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.repository.OrderRepository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
 
+/**
+ * Hardened core Order Processing Service.
+ * Leverages transactional boundaries, optimistic lock retries,
+ * hexagonal ports for decoupling, and unique key database idempotency protection.
+ */
 public class OrderServiceImpl implements OrderUseCase {
 
     private final OrderRepository orderRepository;
-    private final CustomerRepository customerRepository;
-    private final DarkStoreRepository darkStoreRepository;
-    private final RiderRepository riderRepository;
-    private final InventoryRepository inventoryRepository;
-    private final SystemConfigurationRepository systemConfigurationRepository;
+    private final CustomerPort customerPort;
+    private final DarkStorePort darkStorePort;
+    private final RiderPort riderPort;
+    private final InventoryPort inventoryPort;
+    private final SystemConfigPort systemConfigPort;
     private final ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase;
-    private final ch.swissqcommerce.backend.repository.OutboxEventRepository outboxRepository;
+    private final OutboxEventPort outboxEventPort;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-                            CustomerRepository customerRepository,
-                            DarkStoreRepository darkStoreRepository,
-                            RiderRepository riderRepository,
-                            InventoryRepository inventoryRepository,
-                            SystemConfigurationRepository systemConfigurationRepository,
+                            CustomerPort customerPort,
+                            DarkStorePort darkStorePort,
+                            RiderPort riderPort,
+                            InventoryPort inventoryPort,
+                            SystemConfigPort systemConfigPort,
                             ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase,
-                            ch.swissqcommerce.backend.repository.OutboxEventRepository outboxRepository,
+                            OutboxEventPort outboxEventPort,
                             org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
-        this.customerRepository = customerRepository;
-        this.darkStoreRepository = darkStoreRepository;
-        this.riderRepository = riderRepository;
-        this.inventoryRepository = inventoryRepository;
-        this.systemConfigurationRepository = systemConfigurationRepository;
+        this.customerPort = customerPort;
+        this.darkStorePort = darkStorePort;
+        this.riderPort = riderPort;
+        this.inventoryPort = inventoryPort;
+        this.systemConfigPort = systemConfigPort;
         this.ledgerUseCase = ledgerUseCase;
-        this.outboxRepository = outboxRepository;
+        this.outboxEventPort = outboxEventPort;
         this.eventPublisher = eventPublisher;
     }
 
+    @Override
+    @Transactional
+    @ch.swissqcommerce.backend.config.TransactionalRetry(maxRetries = 3, backoffMs = 150)
     public Order checkout(String customerId, List<CartItem> items, String paymentMethod, 
                            BigDecimal tip, Integer bagsReturned, String idempotencyKey) {
         
@@ -53,6 +63,7 @@ public class OrderServiceImpl implements OrderUseCase {
             throw new IllegalArgumentException("Cart items cannot be null or empty");
         }
 
+        // 1. Initial quick idempotency check
         if (idempotencyKey != null) {
             Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);
             if (existingOrder.isPresent()) {
@@ -60,11 +71,11 @@ public class OrderServiceImpl implements OrderUseCase {
             }
         }
 
-        Customer customer = customerRepository.findById(customerId)
+        Customer customer = customerPort.findCustomerById(customerId)
                 .orElseThrow(() -> new NoSuchElementException("Customer not found: " + customerId));
 
         String storeId = evaluateCheckoutRouting(items);
-        DarkStore store = darkStoreRepository.findById(storeId)
+        DarkStore store = darkStorePort.findDarkStoreById(storeId)
                 .orElseThrow(() -> new NoSuchElementException("Dark Store not found: " + storeId));
 
         BigDecimal cartSubtotal = BigDecimal.ZERO;
@@ -80,7 +91,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .build();
 
         for (CartItem cartItem : items) {
-            Inventory inventory = inventoryRepository.findById(cartItem.itemId())
+            Inventory inventory = inventoryPort.findInventoryById(cartItem.itemId())
                     .orElseThrow(() -> new NoSuchElementException("Item not found: " + cartItem.itemId()));
 
             if (inventory.getStock() < cartItem.quantity()) {
@@ -88,7 +99,7 @@ public class OrderServiceImpl implements OrderUseCase {
             }
 
             inventory.setStock(inventory.getStock() - cartItem.quantity());
-            inventoryRepository.save(inventory);
+            inventoryPort.save(inventory);
 
             BigDecimal itemCost = inventory.getPrice().multiply(BigDecimal.valueOf(cartItem.quantity()));
             cartSubtotal = cartSubtotal.add(itemCost);
@@ -130,7 +141,18 @@ public class OrderServiceImpl implements OrderUseCase {
         order.setRider(rider);
         order.setStatus("pending");
 
-        Order savedOrder = orderRepository.save(order);
+        // 2. Safe unique-key checkout insert with fallback lookup
+        Order savedOrder;
+        try {
+            savedOrder = orderRepository.save(order);
+            orderRepository.flush(); // Flush immediately to trigger unique constraint check
+        } catch (DataIntegrityViolationException e) {
+            if (idempotencyKey != null) {
+                return orderRepository.findByIdempotencyKey(idempotencyKey)
+                        .orElseThrow(() -> new IllegalStateException("Idempotency key violation occurred, but safe lookup failed.", e));
+            }
+            throw e;
+        }
 
         List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = new ArrayList<>();
         legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("customer", customerId, customerTotalDebit, BigDecimal.ZERO));
@@ -144,22 +166,25 @@ public class OrderServiceImpl implements OrderUseCase {
             legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, esgRebate, BigDecimal.ZERO));
         }
 
+        // Ledger writes (will fail and roll back transaction if customer has insufficient funds)
         ledgerUseCase.recordTransaction("ORDER-PAY", "Order checkout payments and tip release", legs);
 
         int itemsCount = items.stream().mapToInt(CartItem::quantity).sum();
         int points = itemsCount * 10;
         customer.setLoyaltyPoints(customer.getLoyaltyPoints() + points);
-        customerRepository.save(customer);
+        customerPort.save(customer);
 
+        // Publish Spring domain event (now handled safely downstream)
         eventPublisher.publishEvent(new ch.swissqcommerce.backend.domain.event.core.model.OrderFulfilledEvent(customerId, savedOrder.getOrderId().toString(), points));
 
+        // Persistent transactional outbox save (Eventual Consistency outbox pattern)
         OutboxEvent event = OutboxEvent.builder()
                 .aggregateType("Order")
                 .aggregateId(savedOrder.getOrderId().toString())
                 .eventType("order.placed")
                 .payload("{\"orderId\": " + savedOrder.getOrderId() + ", \"totalAmount\": " + savedOrder.getTotalAmount() + "}")
                 .build();
-        outboxRepository.save(event);
+        outboxEventPort.save(event);
 
         return savedOrder;
     }
@@ -170,10 +195,8 @@ public class OrderServiceImpl implements OrderUseCase {
     }
 
     private String evaluateCheckoutRouting(List<CartItem> items) {
-        String selectedStore = "Central Store";
-
         for (CartItem item : items) {
-            Inventory inv = inventoryRepository.findById(item.itemId()).orElse(null);
+            Inventory inv = inventoryPort.findInventoryById(item.itemId()).orElse(null);
             if (inv != null && "Central Store".equalsIgnoreCase(inv.getStore().getStoreName())) {
                 if (inv.getStock() < item.quantity()) {
                     return "East Store";
@@ -190,15 +213,13 @@ public class OrderServiceImpl implements OrderUseCase {
     }
 
     private Rider findAvailableRider() {
-        return riderRepository.findAll().stream()
+        return riderPort.findAll().stream()
                 .filter(r -> "active".equalsIgnoreCase(r.getOnboardingStatus()))
                 .findFirst()
                 .orElse(null);
     }
 
     private String getSystemConfig(String key, String defaultValue) {
-        return systemConfigurationRepository.findById(key)
-                .map(SystemConfiguration::getConfigValue)
-                .orElse(defaultValue);
+        return systemConfigPort.getSystemConfig(key, defaultValue);
     }
 }

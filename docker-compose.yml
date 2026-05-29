@@ -44,3 +44,43 @@ services:
     ports:
       - "27017:27017"
     restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: swiss_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: swiss_backend
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=swisssecure2026
+      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    restart: unless-stopped
+
+  bff:
+    build:
+      context: ./bff
+    container_name: swiss_bff
+    depends_on:
+      - backend
+    ports:
+      - "8081:8081"
+    environment:
+      - BACKEND_URL=http://backend:8080
+      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
+    restart: unless-stopped
+

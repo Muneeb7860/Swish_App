@@ -5,13 +5,69 @@ import MfaLoginPortal from './components/MfaLoginPortal';
 import RbacBlocker from './components/RbacBlocker';
 import SupportBot from './components/SupportBot';
 
-// Lazy loaded remote Micro-Frontends
-const CustomerApp = React.lazy(() => import('customer/CustomerApp'));
-const RiderApp = React.lazy(() => import('rider/RiderApp'));
-const AdminPanel = React.lazy(() => import('admin/AdminPanel'));
-const BusinessApp = React.lazy(() => import('admin/BusinessApp'));
-const InventoryApp = React.lazy(() => import('admin/InventoryApp'));
-const SystemEngineRoom = React.lazy(() => import('admin/SystemEngineRoom'));
+// Strict MFE Origin Whitelist Check to prevent module hijacking
+const MFE_WHITELIST = [
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003'
+];
+
+const verifyMfeOrigin = (importPromise, remoteName) => {
+  return importPromise.then(module => {
+    const scriptElements = Array.from(document.querySelectorAll('script'));
+    const remoteScript = scriptElements.find(s => s.src && s.src.includes(remoteName));
+    if (remoteScript) {
+      const url = new URL(remoteScript.src);
+      if (!MFE_WHITELIST.includes(url.origin)) {
+        throw new Error(`Security Exception: Untrusted MFE Remote origin blocked: ${url.origin}`);
+      }
+    }
+    return module;
+  });
+};
+
+// Lazy loaded remote Micro-Frontends with Whitelist Verification
+const CustomerApp = React.lazy(() => verifyMfeOrigin(import('customer/CustomerApp'), 'customer'));
+const RiderApp = React.lazy(() => verifyMfeOrigin(import('rider/RiderApp'), 'rider'));
+const AdminPanel = React.lazy(() => verifyMfeOrigin(import('admin/AdminPanel'), 'admin'));
+const BusinessApp = React.lazy(() => verifyMfeOrigin(import('admin/BusinessApp'), 'admin'));
+const InventoryApp = React.lazy(() => verifyMfeOrigin(import('admin/InventoryApp'), 'admin'));
+const SystemEngineRoom = React.lazy(() => verifyMfeOrigin(import('admin/SystemEngineRoom'), 'admin'));
+
+class LocalErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error(`MFE Error Boundary caught failure for [${this.props.name}]:`, error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center', borderColor: '#ef4444', borderWidth: '1px', borderStyle: 'dashed', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.02)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem' }}>
+            <div style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '0.6rem', borderRadius: '50%', display: 'inline-flex' }}>
+              <Lucide.AlertOctagon size={24} />
+            </div>
+            <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.05rem', fontWeight: 800 }}>Micro-Frontend Load Failure</h4>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', maxWidth: '440px', lineHeight: '1.4' }}>
+              The federated remote panel [<strong>{this.props.name}</strong>] failed to load or experienced a runtime crash. Downstream systems and checkout capabilities remain operational.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 // Default mock product catalog
 const INITIAL_PRODUCTS = [
@@ -159,6 +215,21 @@ export default function App() {
 
   const canvasRef = useRef(null);
   const riderTimerRef = useRef(null);
+  const sseRef = useRef(null); // Holds the active EventSource for rider telemetry SSE
+
+  // Live rider GPS coordinates streamed via SSE from BFF /api/telemetry/stream/{orderId}
+  const [riderCoords, setRiderCoords] = useState(null); // { lat, lng, temperature, timestamp }
+
+  // Teardown SSE connection cleanly
+  const closeSseStream = () => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => () => { closeSseStream(); clearInterval(riderTimerRef.current); }, []);
 
   // Helper log triggers
   const triggerToast = (msg, borderType = 'system') => {
@@ -439,10 +510,11 @@ export default function App() {
 
   const handlePickerHandover = () => {
     if (!activeOrder) return;
-    
+
+    const orderId = activeOrder.id;
     setActiveOrder(prev => ({ ...prev, status: 'transit' }));
-    logKafka('rider', 'order.dispatched', `Order #${activeOrder.id} loaded on delivery cargo. Transit started.`);
-    triggerToast(`Order #${activeOrder.id} handed over to Rider Dave!`, 'rider');
+    logKafka('rider', 'order.dispatched', `Order #${orderId} loaded on delivery cargo. Transit started.`);
+    triggerToast(`Order #${orderId} handed over to Rider Dave!`, 'rider');
 
     setPickingBacklogQueue(q => {
       const nextQ = Math.max(0, q - 1);
@@ -465,7 +537,40 @@ export default function App() {
       updatePickerTrust(5, 'Picking completed on time');
     }
 
-    let tickCount = 0;
+    // ── SSE: Subscribe to live BFF telemetry stream ─────────────────────────
+    // Targets: BFF → /api/telemetry/stream/{orderId} (text/event-stream)
+    closeSseStream(); // close any prior connection
+    const sseUrl = `http://localhost:8081/api/telemetry/stream/${orderId}`;
+    const es = new EventSource(sseUrl);
+    sseRef.current = es;
+
+    es.onopen = () => {
+      logKafka('system', 'sse.connected', `EventSource connected to rider telemetry stream for Order #${orderId}`);
+    };
+
+    es.onmessage = (event) => {
+      try {
+        const tick = JSON.parse(event.data);
+        // Bind streamed coordinates to React UI state for live map marker updates
+        setRiderCoords({
+          lat: tick.latitude,
+          lng: tick.longitude,
+          temperature: tick.temperature,
+          timestamp: tick.timestamp || new Date().toISOString()
+        });
+        logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C`);
+      } catch (parseErr) {
+        console.warn('[SSE] Could not parse telemetry tick:', event.data);
+      }
+    };
+
+    es.onerror = () => {
+      // BFF not reachable — graceful silent degradation, telemetry via fetch still runs
+      console.log('[SSE] Rider stream unavailable — falling back to fetch-based telemetry.');
+      closeSseStream();
+    };
+    // ── End SSE ──────────────────────────────────────────────────────────────
+
     riderTimerRef.current = setInterval(() => {
       setActiveOrder(prev => {
         if (!prev) return null;
@@ -487,6 +592,21 @@ export default function App() {
           }
         }
 
+        // Fetch-based telemetry ingestion (push to backend regardless of SSE state)
+        const lat = 47.3769 + (nextProgress * 0.0001);
+        const lng = 8.5417 + (nextProgress * 0.0001);
+        fetch('http://localhost:8080/api/telemetry/tick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: prev.id,
+            latitude: lat,
+            longitude: lng,
+            temperature: nextTemp || 0.0,
+            dryIceInjected: false
+          })
+        }).catch(err => console.log('BFF Telemetry link offline:', err.message));
+
         return {
           ...prev,
           progress: nextProgress,
@@ -498,6 +618,10 @@ export default function App() {
   };
 
   const handleOrderDeliveryComplete = (order) => {
+    // Close SSE stream — order lifecycle complete
+    closeSseStream();
+    setRiderCoords(null);
+
     const tipPaid = tipAmount;
     if (tipPaid > 0) {
       setRiderWallet(w => w + tipPaid);
@@ -509,7 +633,7 @@ export default function App() {
     setRiderWallet(w => w + 5.00);
     updateRiderTrust(5, 'Order delivered successfully');
     updateCustomerTrust(5, 'Order completed without issue');
-    
+
     setOrderHistory(prev => [
       { id: order.id, date: 'Today', items: order.items, total: order.total, status: 'delivered', paymentMethod: 'Wallet' },
       ...prev
@@ -522,6 +646,10 @@ export default function App() {
   };
 
   const handlePerishablesSpoiled = (order) => {
+    // Close SSE stream — order terminated due to spoilage
+    closeSseStream();
+    setRiderCoords(null);
+
     updateRiderTrust(-30, 'Perishable cargo spoilage breach');
     logLedger('system', 'COLD-BREACH-DEBIT', `Perishable write-off debit`, order.total, 0);
     logKafka('system', 'coldchain.telemetry_failure', `Order #${order.id} cargo spoiled! Temperature exceeded 12.0°C limit. Delivery canceled.`);
@@ -534,6 +662,12 @@ export default function App() {
     if (!activeOrder) return;
     setMerchantWallet(w => w - 2.00);
     logLedger('system', 'DRY-ICE-DEBIT', 'Rider manual coolant mitigation applied', 2.00, 0);
+    
+    // Trigger Real Backend Telemetry Coolant Integration
+    fetch(`http://localhost:8080/api/telemetry/${activeOrder.id}/dry-ice`, {
+      method: 'POST'
+    }).catch(err => console.log('BFF Telemetry link offline:', err.message));
+
     setActiveOrder(prev => ({ ...prev, temperature: 4.0 }));
     logKafka('rider', 'telemetry.mitigation_applied', 'Coolant injected: Perishable temperature reset to 4.0°C.');
     triggerToast('Dry ice coolant injected successfully!', 'rider');
@@ -879,115 +1013,126 @@ export default function App() {
         <section className="workspace-main-panel">
           <Suspense fallback={<div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>Loading Federated Remote MFE...</div>}>
             {activeRole === 'customer' && (hasRoleAccess('customer') ? (
-              <CustomerApp 
-                products={products}
-                cart={cart}
-                setCart={setCart}
-                customerWallet={customerWallet}
-                setCustomerWallet={setCustomerWallet}
-                customerPoints={customerPoints}
-                setCustomerPoints={setCustomerPoints}
-                customerTab={customerTab}
-                setCustomerTab={setCustomerTab}
-                profileSubTab={profileSubTab}
-                setProfileSubTab={setProfileSubTab}
-                savedAddresses={savedAddresses}
-                savedCards={savedCards}
-                favorites={favorites}
-                vipMember={vipMember}
-                vouchers={vouchers}
-                customerTrustScore={customerTrustScore}
-                gdprTokenProbation={gdprTokenProbation}
-                handleGdprPurge={handleGdprPurge}
-                orderHistory={orderHistory}
-                esgCheckbox={esgCheckbox}
-                setEsgCheckbox={setEsgCheckbox}
-                tipAmount={tipAmount}
-                setTipAmount={setTipAmount}
-                handleCheckout={handleCheckout}
-                activeOrder={activeOrder}
-                generateCertificate={generateCertificate}
-              />
+              <LocalErrorBoundary name="Customer App">
+                <CustomerApp 
+                  products={products}
+                  cart={cart}
+                  setCart={setCart}
+                  customerWallet={customerWallet}
+                  setCustomerWallet={setCustomerWallet}
+                  customerPoints={customerPoints}
+                  setCustomerPoints={setCustomerPoints}
+                  customerTab={customerTab}
+                  setCustomerTab={setCustomerTab}
+                  profileSubTab={profileSubTab}
+                  setProfileSubTab={setProfileSubTab}
+                  savedAddresses={savedAddresses}
+                  savedCards={savedCards}
+                  favorites={favorites}
+                  vipMember={vipMember}
+                  vouchers={vouchers}
+                  customerTrustScore={customerTrustScore}
+                  gdprTokenProbation={gdprTokenProbation}
+                  handleGdprPurge={handleGdprPurge}
+                  orderHistory={orderHistory}
+                  esgCheckbox={esgCheckbox}
+                  setEsgCheckbox={setEsgCheckbox}
+                  tipAmount={tipAmount}
+                  setTipAmount={setTipAmount}
+                  handleCheckout={handleCheckout}
+                  activeOrder={activeOrder}
+                  generateCertificate={generateCertificate}
+                />
+              </LocalErrorBoundary>
             ) : <RbacBlocker targetRole="customer" currentUserSession={currentUserSession} handleLogout={handleLogout} logKafka={logKafka} triggerToast={triggerToast} />)}
 
             {activeRole === 'rider' && (hasRoleAccess('rider') ? (
-              <RiderApp 
-                riderWallet={riderWallet}
-                riderTrustScore={riderTrustScore}
-                riderOnboardStatus={riderOnboardStatus}
-                setRiderOnboardStatus={setRiderOnboardStatus}
-                activeOrder={activeOrder}
-                generateCertificate={generateCertificate}
-                coldChainBreakdownActive={coldChainBreakdownActive}
-                handleInjectDryIce={handleInjectDryIce}
-                handleApplyOnboard={handleApplyOnboard}
-                logKafka={logKafka}
-              />
+              <LocalErrorBoundary name="Rider App">
+                <RiderApp 
+                  riderWallet={riderWallet}
+                  riderTrustScore={riderTrustScore}
+                  riderOnboardStatus={riderOnboardStatus}
+                  setRiderOnboardStatus={setRiderOnboardStatus}
+                  activeOrder={activeOrder}
+                  generateCertificate={generateCertificate}
+                  coldChainBreakdownActive={coldChainBreakdownActive}
+                  handleInjectDryIce={handleInjectDryIce}
+                  handleApplyOnboard={handleApplyOnboard}
+                  logKafka={logKafka}
+                />
+              </LocalErrorBoundary>
             ) : <RbacBlocker targetRole="rider" currentUserSession={currentUserSession} handleLogout={handleLogout} logKafka={logKafka} triggerToast={triggerToast} />)}
 
             {activeRole === 'inventory' && (hasRoleAccess('inventory') ? (
-              <InventoryApp 
-                products={products}
-                setProducts={setProducts}
-                pickerTrustScore={pickerTrustScore}
-                pickerBadge={pickerBadge}
-                activeOrder={activeOrder}
-                activeStockTransfers={activeStockTransfers}
-                handleBalanceStores={handleBalanceStores}
-                handlePickerCheckItem={null}
-                handlePickerHandover={handlePickerHandover}
-                handleDeployBackupPicker={handleDeployBackupPicker}
-                pickingBacklogQueue={pickingBacklogQueue}
-                activePickingCongested={activePickingCongested}
-              />
+              <LocalErrorBoundary name="Inventory App">
+                <InventoryApp 
+                  products={products}
+                  setProducts={setProducts}
+                  pickerTrustScore={pickerTrustScore}
+                  pickerBadge={pickerBadge}
+                  activeOrder={activeOrder}
+                  activeStockTransfers={activeStockTransfers}
+                  handleBalanceStores={handleBalanceStores}
+                  handlePickerCheckItem={null}
+                  handlePickerHandover={handlePickerHandover}
+                  handleDeployBackupPicker={handleDeployBackupPicker}
+                  pickingBacklogQueue={pickingBacklogQueue}
+                  activePickingCongested={activePickingCongested}
+                />
+              </LocalErrorBoundary>
             ) : <RbacBlocker targetRole="inventory" currentUserSession={currentUserSession} handleLogout={handleLogout} logKafka={logKafka} triggerToast={triggerToast} />)}
 
             {activeRole === 'business' && (hasRoleAccess('business') ? (
-              <BusinessApp 
-                products={products}
-                merchantWallet={merchantWallet}
-                ledger={ledger}
-                trustLogs={trustLogs}
-                customerTrustScore={customerTrustScore}
-                riderTrustScore={riderTrustScore}
-                pickerTrustScore={pickerTrustScore}
-                wholesalerTrustScore={wholesalerTrustScore}
-                centralCapacity={centralCapacity}
-                eastCapacity={eastCapacity}
-                centralScalingCount={centralScalingCount}
-                eastScalingCount={eastScalingCount}
-                handleScaleCapacity={handleScaleCapacity}
-                downloadRegulatoryReport={downloadRegulatoryReport}
-              />
+              <LocalErrorBoundary name="Business App">
+                <BusinessApp 
+                  products={products}
+                  merchantWallet={merchantWallet}
+                  ledger={ledger}
+                  trustLogs={trustLogs}
+                  customerTrustScore={customerTrustScore}
+                  riderTrustScore={riderTrustScore}
+                  pickerTrustScore={pickerTrustScore}
+                  wholesalerTrustScore={wholesalerTrustScore}
+                  centralCapacity={centralCapacity}
+                  eastCapacity={eastCapacity}
+                  centralScalingCount={centralScalingCount}
+                  eastScalingCount={eastScalingCount}
+                  handleScaleCapacity={handleScaleCapacity}
+                  downloadRegulatoryReport={downloadRegulatoryReport}
+                />
+              </LocalErrorBoundary>
             ) : <RbacBlocker targetRole="business" currentUserSession={currentUserSession} handleLogout={handleLogout} logKafka={logKafka} triggerToast={triggerToast} />)}
 
             {activeRole === 'admin' && (hasRoleAccess('admin') ? (
-              <AdminPanel 
-                coldChainBreakdownActive={coldChainBreakdownActive}
-                setColdChainBreakdownActive={setColdChainBreakdownActive}
-                wholesalerOutageActive={wholesalerOutageActive}
-                setWholesalerOutageActive={setWholesalerOutageActive}
-                paymentOutageActive={paymentOutageActive}
-                setPaymentOutageActive={setPaymentOutageActive}
-                redisCrashActive={redisCrashActive}
-                setRedisCrashActive={setRedisCrashActive}
-                dbLatencyActive={dbLatencyActive}
-                setDbLatencyActive={setDbLatencyActive}
-                riderTrafficActive={riderTrafficActive}
-                setRiderTrafficActive={setRiderTrafficActive}
-                simulateTelemetryFraud={simulateTelemetryFraud}
-                setSimulateTelemetryFraud={setSimulateTelemetryFraud}
-                onboardingQueue={onboardingQueue}
-                handleApproveOnboard={handleApproveOnboard}
-                hitlQueue={hitlQueue}
-                handleReleaseHitl={handleReleaseHitl}
-                handleVoidHitl={handleVoidHitl}
-              />
+              <LocalErrorBoundary name="Admin Panel">
+                <AdminPanel 
+                  coldChainBreakdownActive={coldChainBreakdownActive}
+                  setColdChainBreakdownActive={setColdChainBreakdownActive}
+                  wholesalerOutageActive={wholesalerOutageActive}
+                  setWholesalerOutageActive={setWholesalerOutageActive}
+                  paymentOutageActive={paymentOutageActive}
+                  setPaymentOutageActive={setPaymentOutageActive}
+                  redisCrashActive={redisCrashActive}
+                  setRedisCrashActive={setRedisCrashActive}
+                  dbLatencyActive={dbLatencyActive}
+                  setDbLatencyActive={setDbLatencyActive}
+                  riderTrafficActive={riderTrafficActive}
+                  setRiderTrafficActive={setRiderTrafficActive}
+                  simulateTelemetryFraud={simulateTelemetryFraud}
+                  setSimulateTelemetryFraud={setSimulateTelemetryFraud}
+                  onboardingQueue={onboardingQueue}
+                  handleApproveOnboard={handleApproveOnboard}
+                  hitlQueue={hitlQueue}
+                  handleReleaseHitl={handleReleaseHitl}
+                  handleVoidHitl={handleVoidHitl}
+                />
+              </LocalErrorBoundary>
             ) : <RbacBlocker targetRole="admin" currentUserSession={currentUserSession} handleLogout={handleLogout} logKafka={logKafka} triggerToast={triggerToast} />)}
           </Suspense>
         </section>
 
-        <Suspense fallback={<div className="engine-room-loading">Loading Telemetry Control Room...</div>}>
+        <LocalErrorBoundary name="System Control Room">
+          <Suspense fallback={<div className="engine-room-loading">Loading Telemetry Control Room...</div>}>
           <SystemEngineRoom 
             rateLimitActive={rateLimitActive}
             dbLatencyActive={dbLatencyActive}
@@ -1005,7 +1150,7 @@ export default function App() {
             cacheMisses={cacheMisses}
             kafkaLogs={kafkaLogs}
           />
-        </Suspense>
+        </LocalErrorBoundary>
 
       </main>
 

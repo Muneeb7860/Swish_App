@@ -27,3 +27,14 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/**
+          filters:
+            - name: RateLimiter
+              args:
+                capacity: 30
+                refillRatePerSecond: 10
+            - name: EdgeJwtVerification
+            - name: CircuitBreaker
+              args:
+                name: backendCircuitBreaker
+                fallbackUri: forward:/fallback
+
