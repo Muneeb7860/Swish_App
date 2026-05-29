@@ -28,13 +28,14 @@ spring:
           predicates:
             - Path=/api/**
           filters:
-            - name: RateLimiter
+            - name: RateLimiterFilter
               args:
                 capacity: 30
                 refillRatePerSecond: 10
-            - name: EdgeJwtVerification
+            - name: EdgeJwtVerificationFilter
             - name: CircuitBreaker
               args:
                 name: backendCircuitBreaker
                 fallbackUri: forward:/fallback
+
 
