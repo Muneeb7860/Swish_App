@@ -1,5 +1,9 @@
 package ch.swissqcommerce.backend.service;
 
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.transaction.core.model.JournalEntry;
+import ch.swissqcommerce.backend.domain.transaction.core.service.LedgerServiceImpl;
+import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.Test;
@@ -31,7 +35,7 @@ public class LedgerServiceTest {
     private LedgerLineRepository ledgerLineRepository;
 
     @InjectMocks
-    private LedgerService ledgerService;
+    private LedgerServiceImpl ledgerService;
 
     @Test
     public void testRecordTransaction_Success() {
@@ -44,9 +48,9 @@ public class LedgerServiceTest {
         
         when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(i -> i.getArgument(0));
 
-        List<LedgerService.LedgerLeg> legs = List.of(
-            new LedgerService.LedgerLeg("customer", "C1", new BigDecimal("10.00"), BigDecimal.ZERO),
-            new LedgerService.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("10.00"))
+        List<LedgerUseCase.LedgerLeg> legs = List.of(
+            new LedgerUseCase.LedgerLeg("customer", "C1", new BigDecimal("10.00"), BigDecimal.ZERO),
+            new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("10.00"))
         );
 
         JournalEntry result = ledgerService.recordTransaction("REF", "DESC", legs);

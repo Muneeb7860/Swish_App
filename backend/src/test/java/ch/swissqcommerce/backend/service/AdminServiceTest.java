@@ -1,5 +1,8 @@
 package ch.swissqcommerce.backend.service;
 
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationRepository;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.Test;
@@ -27,7 +30,7 @@ public class AdminServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private InventoryRepository inventoryRepository;
-    @Mock private LedgerService ledgerService;
+    @Mock private LedgerUseCase ledgerService;
     @Mock private SecurityTrustLedgerRepository trustLedgerRepository;
 
     @InjectMocks private AdminService adminService;

@@ -1,5 +1,8 @@
 package ch.swissqcommerce.backend.service;
 
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.Test;

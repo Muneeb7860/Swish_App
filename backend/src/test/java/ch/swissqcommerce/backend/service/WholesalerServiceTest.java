@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.service;
 
+import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ public class WholesalerServiceTest {
     @Mock private WholesalerRepository wholesalerRepository;
     @Mock private B2BRestockOrderRepository restockOrderRepository;
     @Mock private InventoryRepository inventoryRepository;
-    @Mock private LedgerService ledgerService;
+    @Mock private LedgerUseCase ledgerService;
 
     @InjectMocks private WholesalerService wholesalerService;
 

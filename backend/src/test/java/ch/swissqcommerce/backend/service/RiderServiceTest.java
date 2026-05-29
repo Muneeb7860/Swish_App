@@ -1,7 +1,12 @@
 package ch.swissqcommerce.backend.service;
 
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.*;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertificate;
+import ch.swissqcommerce.backend.domain.enrollment.core.service.RiderServiceImpl;
+import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,14 +23,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class RiderServiceTest {
 
-    @Mock private RiderRepository riderRepository;
-    @Mock private OrderRepository orderRepository;
-    @Mock private CustomerRepository customerRepository;
-    @Mock private SecurityTrustLedgerRepository trustLedgerRepository;
-    @Mock private TelemetryService telemetryService;
-    @Mock private RiderAcademyCertificateRepository certificateRepository;
+    @Mock private EnrollmentOutPort outPort;
 
-    @InjectMocks private RiderService riderService;
+    @InjectMocks private RiderServiceImpl riderService;
 
     @Test
     public void testConfirmDelivery_Success() {
@@ -42,7 +42,7 @@ public class RiderServiceTest {
         order.setRider(rider);
         order.setCustomer(customer);
 
-        when(orderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
 
         Map<String, Object> result = riderService.confirmDelivery(1);
 
@@ -52,9 +52,10 @@ public class RiderServiceTest {
         assertEquals(3, customer.getConsecutiveOrdersCompleted());
         assertFalse(customer.getIsOnProbation());
         
-        verify(riderRepository, times(1)).save(rider);
-        verify(customerRepository, times(1)).save(customer);
-        verify(trustLedgerRepository, times(1)).save(any(SecurityTrustLedger.class));
+        verify(outPort, times(1)).saveOrder(order);
+        verify(outPort, times(1)).saveRider(rider);
+        verify(outPort, times(1)).saveCustomer(customer);
+        verify(outPort, times(1)).saveTrustLedger(any(SecurityTrustLedger.class));
     }
 
     @Test
@@ -63,13 +64,13 @@ public class RiderServiceTest {
         rider.setRiderId("R1");
         rider.setTrustScore(50);
 
-        when(riderRepository.findById("R1")).thenReturn(Optional.of(rider));
+        when(outPort.findRiderById("R1")).thenReturn(Optional.of(rider));
         
         Map<String, Object> result = riderService.completeAcademyCourse("R1", "COURSE_001");
         
         assertEquals("course_completed", result.get("status"));
         assertEquals(60, result.get("new_trust_score"));
-        verify(certificateRepository, times(1)).save(any(RiderAcademyCertificate.class));
-        verify(trustLedgerRepository, times(1)).save(any(SecurityTrustLedger.class));
+        verify(outPort, times(1)).saveRiderAcademyCertificate(any(RiderAcademyCertificate.class));
+        verify(outPort, times(1)).saveTrustLedger(any(SecurityTrustLedger.class));
     }
 }
