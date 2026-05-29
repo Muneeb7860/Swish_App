@@ -41,6 +41,9 @@ mvn-*.zip
 # ─── Environment / secrets ───────────────────────────────────────────────────
 .env
 .env.*
+.env.development
+.env.staging
+.env.production
 !.env.example
 *.pem
 *.key
