@@ -1133,23 +1133,24 @@ export default function App() {
 
         <LocalErrorBoundary name="System Control Room">
           <Suspense fallback={<div className="engine-room-loading">Loading Telemetry Control Room...</div>}>
-          <SystemEngineRoom 
-            rateLimitActive={rateLimitActive}
-            dbLatencyActive={dbLatencyActive}
-            redisCrashActive={redisCrashActive}
-            paymentOutageActive={paymentOutageActive}
-            riderTrafficActive={riderTrafficActive}
-            circuitBreakerTripped={circuitBreakerTripped}
-            activeProfile={activeProfile}
-            oltpWriteLatency={oltpWriteLatency}
-            olapSyncTimer={olapSyncTimer}
-            jwtFlash={jwtFlash}
-            vaultTimer={vaultTimer}
-            latencyHistory={latencyHistory}
-            cacheHits={cacheHits}
-            cacheMisses={cacheMisses}
-            kafkaLogs={kafkaLogs}
-          />
+            <SystemEngineRoom 
+              rateLimitActive={rateLimitActive}
+              dbLatencyActive={dbLatencyActive}
+              redisCrashActive={redisCrashActive}
+              paymentOutageActive={paymentOutageActive}
+              riderTrafficActive={riderTrafficActive}
+              circuitBreakerTripped={circuitBreakerTripped}
+              activeProfile={activeProfile}
+              oltpWriteLatency={oltpWriteLatency}
+              olapSyncTimer={olapSyncTimer}
+              jwtFlash={jwtFlash}
+              vaultTimer={vaultTimer}
+              latencyHistory={latencyHistory}
+              cacheHits={cacheHits}
+              cacheMisses={cacheMisses}
+              kafkaLogs={kafkaLogs}
+            />
+          </Suspense>
         </LocalErrorBoundary>
 
       </main>
