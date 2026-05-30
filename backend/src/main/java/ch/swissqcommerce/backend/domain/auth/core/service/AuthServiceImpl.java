@@ -5,6 +5,8 @@ import ch.swissqcommerce.backend.domain.auth.core.model.MfaSession;
 import ch.swissqcommerce.backend.domain.auth.port.in.AuthService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -51,6 +55,8 @@ public class AuthServiceImpl implements AuthService {
                 "\n[MFA GATEWAY] SMS OTP Broadcast to user %s. PIN code: %s (Expires in %ds)\n",
                 username, otpCode, mfaOtpExpirationSec
             ));
+            System.out.flush();
+            log.info("[MFA GATEWAY] SMS OTP Broadcast to user {}. PIN code: {} (Expires in {}s)", username, otpCode, mfaOtpExpirationSec);
 
             return new LoginResponse(true, sessionToken, null);
         } else {

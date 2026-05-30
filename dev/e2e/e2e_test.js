@@ -28,6 +28,10 @@ async function run() {
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  // Listen for console and error events
+  page.on('console', msg => console.log(`[BROWSER CONSOLE] ${msg.text()}`));
+  page.on('pageerror', err => console.error(`[BROWSER ERROR] ${err.toString()}`));
+
   try {
     // 1. Navigate to the App Shell
     console.log('[E2E TEST] Navigating to App Shell on http://localhost:3000...');
@@ -41,9 +45,13 @@ async function run() {
     await page.fill('#input-mfa-password', 'swiss-secure-password');
     await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'e2e_1_pre_login.png') });
 
-    // 3. Click Request OTP
+    // 3. Click Request OTP and wait for the login API call to complete
     console.log('[E2E TEST] Requesting OTP code...');
-    await page.click('#btn-mfa-request-otp');
+    await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/api/auth/login'), { timeout: 15000 }),
+      page.click('#btn-mfa-request-otp')
+    ]);
+    console.log('[E2E TEST] Login API responded. Polling for OTP PIN...');
 
     // 4. Polling backend.log to extract the generated OTP PIN
     console.log('[E2E TEST] Polling backend logs for PIN code...');

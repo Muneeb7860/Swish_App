@@ -189,6 +189,8 @@ export default function App() {
 
   // HITL Queue
   const [hitlQueue, setHitlQueue] = useState([]);
+  const [agentMetrics, setAgentMetrics] = useState({ dailyCost: 0.0, hourlyRequestCount: 0, dailyBudgetLimit: 5.0, hourlyRequestLimit: 100 });
+
 
   // Telemetry Metrics
   const [oltpWriteLatency, setOltpWriteLatency] = useState(4);
@@ -356,6 +358,27 @@ export default function App() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchAgentMetrics = () => {
+    fetch('http://localhost:8081/api/agent/metrics')
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Metrics offline');
+      })
+      .then(data => {
+        if (data && typeof data.dailyCost === 'number') {
+          setAgentMetrics(data);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchAgentMetrics();
+    const interval = setInterval(fetchAgentMetrics, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   // MFA Handlers
   const handleMfaSendOtp = () => {
@@ -826,13 +849,7 @@ export default function App() {
     }
   };
 
-  const handleSendBotMessage = (attachmentUrl = null) => {
-    const text = botInputText.trim();
-    if (!text && !attachmentUrl) return;
-
-    setBotMessages(prev => [...prev, { sender: 'user', text: text || 'Vision Image Uploaded', attachmentUrl }]);
-    setBotInputText('');
-
+  const runRulesEngine = (text, attachmentUrl) => {
     setTimeout(() => {
       let botResponse = `I received: "${text}". How can I help resolve this operational request?`;
 
@@ -887,6 +904,67 @@ export default function App() {
 
       setBotMessages(prev => [...prev, { sender: 'bot', text: botResponse }]);
     }, 1000);
+  };
+
+  const handleSendBotMessage = (attachmentUrl = null) => {
+    const text = botInputText.trim();
+    if (!text && !attachmentUrl) return;
+
+    setBotMessages(prev => [...prev, { sender: 'user', text: text || 'Vision Image Uploaded', attachmentUrl }]);
+    setBotInputText('');
+
+    if (activeRole === 'customer') {
+      // Connect directly to the Spring Boot Agentic backend via the BFF Gateway
+      fetch('http://localhost:8081/api/agent/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          message: text,
+          conversationId: 'CONV-CUST-Dave',
+          customerId: 'CUST-Dave'
+        })
+      })
+      .then(async res => {
+        if (!res.ok) {
+          throw new Error('API error');
+        }
+        return res.json();
+      })
+      .then(data => {
+        let reply = data.reply;
+        logKafka('system', 'agent.message_processed', `Agent conversation processed. Cost: $${data.tokenCost.toFixed(5)}`);
+        
+        if (data.hitlStatus) {
+          reply += `\n\n[HITL ESCALATION: Request routed to human operator. Ticket ID: ${data.ticketId}]`;
+          triggerToast(`Low confidence score (${Math.round(data.confidenceScore * 100)}%). Escalated ticket ${data.ticketId} to HITL queue.`, 'system');
+          logKafka('system', 'agent.hitl_escalated', `HITL Ticket generated: ${data.ticketId}. Reason: Confidence score low.`);
+          
+          // Re-fetch administrative queue to refresh the Admin view
+          fetch('http://localhost:8081/api/admin/hitl', {
+            headers: { 'Authorization': authToken ? `Bearer ${authToken}` : '' }
+          })
+          .then(r => r.json())
+          .then(hitlData => {
+            if (Array.isArray(hitlData)) {
+              setHitlQueue(hitlData);
+            }
+          })
+          .catch(() => {});
+        }
+        setBotMessages(prev => [...prev, { sender: 'bot', text: reply }]);
+        fetchAgentMetrics();
+      })
+
+      .catch(() => {
+        // Transparent fallback to local rule-based system if gateway/backend is not serving the agent
+        runRulesEngine(text, attachmentUrl);
+      });
+    } else {
+      runRulesEngine(text, attachmentUrl);
+    }
   };
 
   const downloadRegulatoryReport = () => {
@@ -1195,9 +1273,12 @@ export default function App() {
               cacheHits={cacheHits}
               cacheMisses={cacheMisses}
               kafkaLogs={kafkaLogs}
+              agentMetrics={agentMetrics}
             />
           </Suspense>
         </LocalErrorBoundary>
+
+
 
       </main>
 
