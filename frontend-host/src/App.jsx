@@ -4,6 +4,7 @@ import { useEnvProfiles } from './hooks/useEnvProfiles';
 import MfaLoginPortal from './components/MfaLoginPortal';
 import RbacBlocker from './components/RbacBlocker';
 import SupportBot from './components/SupportBot';
+import RiderTrackingPanel from './components/RiderTrackingPanel';
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = [
@@ -1053,7 +1054,10 @@ export default function App() {
       <main className="cockpit-main-layout">
         
         <section className="workspace-main-panel">
-          <Suspense fallback={<div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>Loading Federated Remote MFE...</div>}>
+          {/* ── Live Rider Tracking Panel (Global — visible on all tabs during transit) ── */}
+          <RiderTrackingPanel activeOrder={activeOrder} riderCoords={riderCoords} />
+
+          <Suspense fallback={<div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}><Lucide.Loader2 size={28} className="spin" /><p style={{ color: 'var(--text-secondary)', marginTop: '0.8rem' }}>Loading Federated Micro-Frontend...</p></div>}>
             {activeRole === 'customer' && (hasRoleAccess('customer') ? (
               <LocalErrorBoundary name="Customer App">
                 <CustomerApp 
