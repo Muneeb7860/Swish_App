@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as Lucide from 'lucide-react';
+import { useAiStream } from '../hooks/useAiStream';
 
 export default function CustomerApp({
   products,
@@ -35,11 +36,43 @@ export default function CustomerApp({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   
+  // AI Shopping Planner Integration
+  const { streamData, isStreaming, error, startStream } = useAiStream();
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  // Helper to parse matching products from streamed response (case-insensitive hybrid)
+  const getMatchingProducts = () => {
+    if (!streamData) return [];
+    const text = streamData.toLowerCase();
+    return products.filter(product => {
+      const name = product.name.toLowerCase();
+      return text.includes(name) || 
+             (product.id === 'p1' && text.includes('milk')) ||
+             (product.id === 'p2' && text.includes('banana')) ||
+             (product.id === 'p3' && text.includes('avocado')) ||
+             (product.id === 'p4' && (text.includes('coke') || text.includes('cola') || text.includes('drinks') || text.includes('soda'))) ||
+             (product.id === 'p5' && (text.includes('sourdough') || text.includes('bread') || text.includes('bakery'))) ||
+             (product.id === 'p6' && text.includes('muffin')) ||
+             (product.id === 'p7' && (text.includes('egg') || text.includes('eggs'))) ||
+             (product.id === 'p8' && (text.includes('chip') || text.includes('chips')));
+    });
+  };
+
+  const matchingProducts = getMatchingProducts();
+
+  const addMatchingToCart = () => {
+    matchingProducts.forEach(product => {
+      addToCart(product);
+    });
+  };
+
   // Filter products by category/search
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
 
   const addToCart = (product) => {
     setCart(prev => {
@@ -99,6 +132,147 @@ export default function CustomerApp({
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* AI Shopping Assistant Widget */}
+            <div className="glass-card" style={{ 
+              padding: '1.25rem', 
+              marginBottom: '1.25rem', 
+              borderLeft: '4px solid var(--color-customer)',
+              background: 'rgba(255,255,255,0.01)',
+              borderRadius: '12px',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setAiPanelOpen(!aiPanelOpen)}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-customer)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Lucide.Sparkles size={16} className="animate-pulse" style={{ color: 'var(--color-customer)' }} />
+                  ✨ Swiss AI Smart Recipe & Shopping Assistant
+                </h3>
+                <button className="btn-secondary-glow" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', border: 'none', cursor: 'pointer' }}>
+                  {aiPanelOpen ? 'Hide Assistant' : 'Show Assistant'}
+                </button>
+              </div>
+
+              {aiPanelOpen && (
+                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                    Describe what you want to cook or buy, and Swiss AI will plan your meal and suggest matching catalog items!
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input 
+                      type="text" 
+                      className="search-input"
+                      style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                      placeholder="e.g. I want to cook spaghetti carbonara, or make avocado toast with fresh milk..."
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isStreaming) {
+                          startStream('/api/ai/orchestrate', aiPrompt);
+                        }
+                      }}
+                      disabled={isStreaming}
+                    />
+                    <button 
+                      className="btn-primary-glow"
+                      style={{ 
+                        background: 'var(--color-customer)', 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '0.5rem 1rem', 
+                        fontSize: '0.8rem',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => startStream('/api/ai/orchestrate', aiPrompt)}
+                      disabled={isStreaming || !aiPrompt.trim()}
+                    >
+                      {isStreaming ? 'Planning...' : 'Plan Meal'}
+                    </button>
+                  </div>
+
+                  {error && (
+                    <div style={{ color: 'var(--color-admin)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      ⚠️ Error: {error}
+                    </div>
+                  )}
+
+                  {streamData && (
+                    <div style={{ 
+                      background: 'rgba(0,0,0,0.2)', 
+                      padding: '0.75rem', 
+                      borderRadius: '8px', 
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      fontSize: '0.8rem',
+                      lineHeight: '1.4',
+                      color: 'var(--text-primary)',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      position: 'relative'
+                    }}>
+                      {streamData}
+                      {isStreaming && <span className="animate-ping" style={{ color: 'var(--color-customer)', fontWeight: 'bold', marginLeft: '2px' }}>▋</span>}
+                    </div>
+                  )}
+
+                  {matchingProducts.length > 0 && (
+                    <div style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.75rem', 
+                      background: 'rgba(16, 185, 129, 0.03)', 
+                      border: '1px dashed rgba(16, 185, 129, 0.2)', 
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--color-customer)' }}>
+                          🎯 Matching Catalog Products Found ({matchingProducts.length})
+                        </span>
+                        <button 
+                          className="btn-primary-glow" 
+                          style={{ 
+                            background: 'var(--color-customer)', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '0.25rem 0.6rem', 
+                            fontSize: '0.7rem',
+                            cursor: 'pointer'
+                          }}
+                          onClick={addMatchingToCart}
+                        >
+                          🛒 Add All to Cart
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {matchingProducts.map(p => (
+                          <div 
+                            key={p.id} 
+                            style={{ 
+                              background: 'rgba(255,255,255,0.03)', 
+                              border: '1px solid rgba(255,255,255,0.05)', 
+                              borderRadius: '6px', 
+                              padding: '0.25rem 0.5rem', 
+                              fontSize: '0.7rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => addToCart(p)}
+                          >
+                            <span>{p.emoji}</span>
+                            <strong>{p.name}</strong>
+                            <span style={{ color: 'var(--color-customer)' }}>${p.price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Product Shelf Grid */}

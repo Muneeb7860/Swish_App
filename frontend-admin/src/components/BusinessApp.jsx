@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import * as Lucide from 'lucide-react';
+import { useAiStream } from '../hooks/useAiStream';
 
 export default function BusinessApp({
   products,
@@ -17,6 +18,9 @@ export default function BusinessApp({
   handleScaleCapacity,
   downloadRegulatoryReport
 }) {
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const { streamData, isStreaming, error, startStream } = useAiStream();
+
   // Calculate total stock in stores
   const totalStockCentral = products.reduce((sum, p) => sum + p.stock, 0);
   const totalStockEast = products.reduce((sum, p) => sum + p.stockEast, 0);
@@ -24,6 +28,23 @@ export default function BusinessApp({
   const centralFillPct = Math.min(100, (totalStockCentral / centralCapacity) * 100);
   const eastFillPct = Math.min(100, (totalStockEast / eastCapacity) * 100);
 
+  // AI Diagnostic Auditor Trigger
+  const handleTriggerAudit = () => {
+    const activeLedgerCount = ledger.length;
+    const latestLedgerEntry = ledger.length > 0 ? ledger[ledger.length - 1] : null;
+    const ledgerDesc = latestLedgerEntry ? latestLedgerEntry.desc : 'No transactions recorded yet.';
+
+    const prompt = `Analyze the current Swiss Q-Commerce operational telemetry and provide a brief executive audit report:
+- Central MFC Capacity: ${totalStockCentral}/${centralCapacity} units (${Math.round(centralFillPct)}% full).
+- East MFC Capacity: ${totalStockEast}/${eastCapacity} units (${Math.round(eastFillPct)}% full).
+- Merchant Wallet Balance: $${merchantWallet.toFixed(2)}.
+- System Trust Vectors: Wholesaler ${wholesalerTrustScore}/100, Customer ${customerTrustScore}/100, Picker Accuracy ${pickerTrustScore}/100, Rider Score ${riderTrustScore}/100.
+- Latest OLAP Ledger Transaction: "${ledgerDesc}".
+
+Provide a highly concise, professional business health assessment, flag any structural/trust bottlenecks, and list 2 key recommendations. Use bullet points. Keep it professional.`;
+
+    startStream('/api/ai/local', prompt);
+  };
   // Surcharges dynamically mapped from scaling count
   const getScalingFee = (count) => {
     if (count === 0) return 15.00;
@@ -124,6 +145,82 @@ export default function BusinessApp({
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>East Storage Capacity Max Scaled (+120 bay limit)</span>
           )}
         </div>
+      </div>
+
+      {/* AI Telemetry & Operations Auditor Widget */}
+      <div className="glass-card" style={{ 
+        padding: '1.25rem', 
+        borderLeft: '4px solid var(--color-business)',
+        background: 'rgba(255,255,255,0.01)',
+        borderRadius: '12px',
+        transition: 'all 0.3s ease',
+        marginBottom: '1.25rem'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setAiPanelOpen(!aiPanelOpen)}>
+          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-business)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Lucide.Sparkles size={16} className="animate-pulse" style={{ color: 'var(--color-business)' }} />
+            🔮 Swiss AI Operational Telemetry & Financial Auditor
+          </h3>
+          <button className="btn-secondary-glow" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', border: 'none', cursor: 'pointer' }}>
+            {aiPanelOpen ? 'Hide Auditor' : 'Show Auditor'}
+          </button>
+        </div>
+
+        {aiPanelOpen && (
+          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+              The Local LLM (Qwen 2.5) executes on-premises, scanning merchant wallets, warehouse capacities, and ledger anomalies to generate live corporate recommendations.
+            </p>
+            
+            <div>
+              <button 
+                className="btn-primary-glow"
+                style={{ 
+                  background: 'var(--color-business)', 
+                  color: 'white', 
+                  border: 'none', 
+                  padding: '0.5rem 1rem', 
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+                onClick={handleTriggerAudit}
+                disabled={isStreaming}
+              >
+                <Lucide.ShieldCheck size={14} />
+                {isStreaming ? 'Analyzing Operations...' : 'Run On-Premises Operational Audit'}
+              </button>
+            </div>
+
+            {error && (
+              <div style={{ color: 'var(--color-admin)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                ⚠️ Local Audit Failure: {error}
+              </div>
+            )}
+
+            {streamData && (
+              <div style={{ 
+                background: 'rgba(0,0,0,0.25)', 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                border: '1px solid rgba(255,255,255,0.05)',
+                fontSize: '0.8rem',
+                lineHeight: '1.45',
+                color: 'var(--text-primary)',
+                maxHeight: '250px',
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                position: 'relative',
+                fontFamily: 'var(--font-mono)'
+              }}>
+                {streamData}
+                {isStreaming && <span className="animate-ping" style={{ color: 'var(--color-business)', fontWeight: 'bold', marginLeft: '2px' }}>▋</span>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '1.25rem' }}>

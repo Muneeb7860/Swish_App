@@ -8,9 +8,9 @@ export default defineConfig({
     federation({
       name: 'host',
       remotes: {
-        customer: 'http://localhost:3001/assets/remoteEntry.js',
-        rider: 'http://localhost:3002/assets/remoteEntry.js',
-        admin: 'http://localhost:3003/assets/remoteEntry.js'
+        customer: './customer/assets/remoteEntry.js',
+        rider: './rider/assets/remoteEntry.js',
+        admin: './admin/assets/remoteEntry.js'
       },
       shared: ['react', 'react-dom']
     })

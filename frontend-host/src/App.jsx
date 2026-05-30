@@ -8,9 +8,8 @@ import RiderTrackingPanel from './components/RiderTrackingPanel';
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = [
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'http://localhost:3003'
+  'http://localhost',
+  'http://127.0.0.1'
 ];
 
 const verifyMfeOrigin = (importPromise, remoteName) => {
@@ -19,7 +18,7 @@ const verifyMfeOrigin = (importPromise, remoteName) => {
     const remoteScript = scriptElements.find(s => s.src && s.src.includes(remoteName));
     if (remoteScript) {
       const url = new URL(remoteScript.src);
-      if (!MFE_WHITELIST.includes(url.origin)) {
+      if (!MFE_WHITELIST.includes(url.origin) && url.origin !== window.location.origin) {
         throw new Error(`Security Exception: Untrusted MFE Remote origin blocked: ${url.origin}`);
       }
     }
@@ -392,7 +391,7 @@ export default function App() {
       password: mfaPassword
     };
 
-    fetch('http://localhost:8081/api/auth/login', {
+    fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -431,7 +430,7 @@ export default function App() {
   };
 
   const handleMfaVerify = () => {
-    fetch('http://localhost:8081/api/auth/mfa/verify', {
+    fetch('/api/auth/mfa/verify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -600,7 +599,7 @@ export default function App() {
     // ── SSE: Subscribe to live BFF telemetry stream ─────────────────────────
     // Targets: BFF → /api/telemetry/stream/{orderId} (text/event-stream)
     closeSseStream(); // close any prior connection
-    const sseUrl = `http://localhost:8081/api/telemetry/stream/${orderId}`;
+    const sseUrl = `/api/telemetry/stream/${orderId}`;
     const es = new EventSource(sseUrl);
     sseRef.current = es;
 
@@ -655,7 +654,7 @@ export default function App() {
         // Fetch-based telemetry ingestion (push to BFF gateway)
         const lat = 47.3769 + (nextProgress * 0.0001);
         const lng = 8.5417 + (nextProgress * 0.0001);
-        fetch('http://localhost:8081/api/telemetry/tick', {
+        fetch('/api/telemetry/tick', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -727,7 +726,7 @@ export default function App() {
     logLedger('system', 'DRY-ICE-DEBIT', 'Rider manual coolant mitigation applied', 2.00, 0);
     
     // Trigger Real BFF Telemetry Coolant Integration
-    fetch(`http://localhost:8081/api/telemetry/${activeOrder.id}/dry-ice`, {
+    fetch(`/api/telemetry/${activeOrder.id}/dry-ice`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`

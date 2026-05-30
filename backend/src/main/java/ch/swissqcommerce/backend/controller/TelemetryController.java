@@ -25,11 +25,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @RestController
 @RequestMapping("/api/telemetry")
 @CrossOrigin(origins = {
-    "http://localhost:3000",  // Frontend Host (Module Federation shell)
-    "http://localhost:3001",  // Customer MFE
-    "http://localhost:3002",  // Rider MFE
-    "http://localhost:3003",  // Admin MFE
-    "http://localhost:8081"   // BFF Gateway
+    "http://localhost",
+    "http://127.0.0.1"
 })
 public class TelemetryController {
 

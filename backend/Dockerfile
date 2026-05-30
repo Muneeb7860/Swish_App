@@ -9,7 +9,7 @@ COPY src ./src
 RUN mvn package -Dmaven.test.skip=true -DskipTests
 
 # Stage 2: Runtime
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/target/backend-1.0.0.jar app.jar
 EXPOSE 8080
