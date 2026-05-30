@@ -9,7 +9,8 @@ export default function RbacBlocker({ targetRole, currentUserSession, handleLogo
     if (triggerToast) {
       triggerToast(`403 FORBIDDEN: Access denied to ${targetRole} environment`, 'admin');
     }
-  }, [targetRole, currentUserSession, logKafka, triggerToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetRole]);
 
   const handleEscalate = () => {
     if (logKafka) {

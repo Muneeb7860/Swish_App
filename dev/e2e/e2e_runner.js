@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import net from 'net';
+import http from 'http';
 
 const WORKSPACE_DIR = 'C:/Users/DELL 9420/Documents/swiss_App';
 const LOGS_DIR = path.join(WORKSPACE_DIR, 'dev/e2e');
@@ -130,7 +131,7 @@ async function run() {
       path.join(LOGS_DIR, 'host.log')
     );
 
-    // 4. Boot Customer remote MFE
+    // 4. Boot Customer remote MFE (serve pre-built dist folder with remoteEntry.js)
     runService(
       'Customer Remote',
       'npm',
@@ -163,8 +164,32 @@ async function run() {
       throw new Error('Timeout: Not all ports came online in time. Check the log files in dev/e2e.');
     }
 
-    // Allow 3 additional seconds to ensure application context loads completely
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // HTTP health check — ensure backend API is truly ready (Spring context loaded)
+    console.log('[E2E RUNNER] Running HTTP health check on backend...');
+    let apiReady = false;
+    for (let i = 0; i < 15; i++) {
+      try {
+        await new Promise((resolve, reject) => {
+          const req = http.request({ hostname: '127.0.0.1', port: 8080, path: '/api/health', method: 'GET', timeout: 2000 }, (res) => {
+            resolve(res.statusCode);
+          });
+          req.on('error', reject);
+          req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+          req.end();
+        });
+        apiReady = true;
+        console.log('[E2E RUNNER] Backend API health check passed.');
+        break;
+      } catch (e) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    if (!apiReady) {
+      console.warn('[E2E RUNNER] Backend API health check did not pass. Proceeding anyway...');
+    }
+
+    // Allow extra seconds for full context readiness
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     // 8. Run Playwright script
     console.log('[E2E RUNNER] Spawning Playwright E2E execution tests...');

@@ -16,8 +16,10 @@ export default function SystemEngineRoom({
   latencyHistory,
   cacheHits,
   cacheMisses,
-  kafkaLogs
+  kafkaLogs,
+  agentMetrics = { dailyCost: 0.0, hourlyRequestCount: 0, dailyBudgetLimit: 5.0, hourlyRequestLimit: 100 }
 }) {
+
   const currentBffLatency = latencyHistory.length > 0 ? latencyHistory[latencyHistory.length - 1] : 4;
   const totalCacheQueries = cacheHits + cacheMisses;
   const cacheHitRate = totalCacheQueries > 0 ? Math.round((cacheHits / totalCacheQueries) * 100) : 100;
@@ -126,8 +128,42 @@ export default function SystemEngineRoom({
         </div>
       </div>
 
+      <div className="glass-card" style={{ padding: '0.65rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 700 }}>
+          <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <Lucide.Bot size={13} className="event-system" />
+            Agent Operations Control
+          </span>
+          <span style={{ color: 'var(--color-business)', fontSize: '0.65rem', fontWeight: 'bold' }}>
+            ● GEMINI FLASH FREE TIER
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+          <span>Daily Cost Budget:</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+            ${agentMetrics.dailyCost?.toFixed(4)} / ${agentMetrics.dailyBudgetLimit?.toFixed(2)}
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+          <span>Hourly Rate Limit:</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+            {agentMetrics.hourlyRequestCount} / {agentMetrics.hourlyRequestLimit} reqs
+          </span>
+        </div>
+        <div className="etl-sync-progress" style={{ height: '4px', marginTop: '0.2rem' }}>
+          <div 
+            className="etl-sync-fill" 
+            style={{ 
+              width: `${Math.min(100, (agentMetrics.dailyCost / (agentMetrics.dailyBudgetLimit || 5.0)) * 100)}%`,
+              background: agentMetrics.dailyCost >= 5.0 ? 'var(--color-admin)' : 'var(--color-business)'
+            }} 
+          />
+        </div>
+      </div>
+
       <div className="glass-card" style={{ padding: '0.75rem 1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+
           <span>BFF API Response Latency History</span>
           <span style={{ fontFamily: 'var(--font-mono)' }}>Max: 300ms</span>
         </div>
