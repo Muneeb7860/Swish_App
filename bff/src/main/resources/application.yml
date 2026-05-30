@@ -6,22 +6,26 @@ spring:
     name: swiss-qcommerce-bff
   cloud:
     gateway:
-      cors-configurations:
-        '[/**]':
-          allowedOrigins:
-            - "http://localhost:3000"
-            - "http://localhost:3001"
-            - "http://localhost:3002"
-            - "http://localhost:3003"
-          allowedMethods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-            - PATCH
-          allowedHeaders: "*"
-          allowCredentials: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+              - "http://localhost:3002"
+              - "http://localhost:3003"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       routes:
         - id: backend_route
           uri: http://localhost:8080
