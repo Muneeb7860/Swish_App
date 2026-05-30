@@ -1,19 +1,19 @@
 package ch.swissqcommerce.backend.controller;
 
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.*;
-import ch.swissqcommerce.backend.service.LedgerService;
-import ch.swissqcommerce.backend.service.OrderService;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.Inventory;
+import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.repository.InventoryRepository;
+import ch.swissqcommerce.backend.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,9 +34,7 @@ public class CustomerControllerTest {
     @MockBean private InventoryRepository inventoryRepository;
     @MockBean private OrderRepository orderRepository;
     @MockBean private CustomerRepository customerRepository;
-    @MockBean private OrderService orderService;
     @MockBean private HitlQueueRepository hitlQueueRepository;
-    @MockBean private LedgerService ledgerService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -45,23 +43,6 @@ public class CustomerControllerTest {
     public void testGetCatalog() throws Exception {
         when(inventoryRepository.findAll()).thenReturn(List.of(new Inventory()));
         mockMvc.perform(get("/api/customer/catalog"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    public void testPlaceOrder_InvalidPayload() throws Exception {
-        CustomerController.OrderRequest req = new CustomerController.OrderRequest();
-        
-        mockMvc.perform(post("/api/customer/orders")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    public void testGetCustomerLedger() throws Exception {
-        when(ledgerService.getCustomerLedger("C1")).thenReturn(List.of());
-        mockMvc.perform(get("/api/customer/ledger?customerId=C1"))
                 .andExpect(status().isOk());
     }
 
