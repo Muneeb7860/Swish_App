@@ -9,10 +9,8 @@ spring:
       cors-configurations:
         '[/**]':
           allowedOrigins:
-            - "http://localhost:3000"
-            - "http://localhost:3001"
-            - "http://localhost:3002"
-            - "http://localhost:3003"
+            - "http://localhost"
+            - "http://127.0.0.1"
           allowedMethods:
             - GET
             - POST
@@ -24,7 +22,7 @@ spring:
           allowCredentials: true
       routes:
         - id: backend_route
-          uri: http://localhost:8080
+          uri: ${BACKEND_URL:http://localhost:8080}
           predicates:
             - Path=/api/**
           filters:
@@ -38,4 +36,14 @@ spring:
                 name: backendCircuitBreaker
                 fallbackUri: forward:/fallback
 
-
+resilience4j:
+  circuitbreaker:
+    instances:
+      backendCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+  timelimiter:
+    instances:
+      backendCircuitBreaker:
+        timeoutDuration: 60s
