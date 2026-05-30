@@ -334,14 +334,14 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       setOltpWriteLatency(() => {
-        const base = dbLatencyActive ? 180 : activeProfile.dbLatencyDefault;
+        const base = dbLatencyActive ? 180 : activeProfile?.dbLatencyDefault;
         return base + Math.floor(Math.random() * 8);
       });
       setVaultTimer(t => (t <= 1 ? 15 : t - 1));
       setJwtFlash(f => !f);
     }, 1500);
     return () => clearInterval(interval);
-  }, [dbLatencyActive, activeProfile]);
+  }, [dbLatencyActive, activeProfile?.dbLatencyDefault]);
 
   useEffect(() => {
     const interval = setInterval(() => {
