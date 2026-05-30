@@ -131,6 +131,8 @@ export default function App() {
   const [mfaMethod, setMfaMethod] = useState('sms'); // 'sms', 'totp'
   const [totpSecretCode, setTotpSecretCode] = useState('');
   const [totpTimer, setTotpTimer] = useState(30);
+  const [sessionToken, setSessionToken] = useState('');
+  const [authToken, setAuthToken] = useState(localStorage.getItem('jwt_token') || '');
 
   // --- ADVANCED Q-COMMERCE AUTOMATION STATES ---
   const [searchVolumeMap, setSearchVolumeMap] = useState({});
@@ -360,58 +362,92 @@ export default function App() {
       triggerToast('Please enter password', 'admin');
       return;
     }
-    if (!activeProfile.mfaRequired) {
-      setIsAuthenticated(true);
-      setCurrentUserSession({ role: mfaRole });
-      setActiveRole(mfaRole);
-      logKafka('system', 'auth.success_bypass', `Bypassed MFA due to development environment profile rules for role: ${mfaRole}`);
-      triggerToast(`[DEV BYPASS] Welcome back, authorized ${mfaRole}!`, 'customer');
-      setMfaPassword('');
-      return;
-    }
-    const code = Math.floor(100000 + Math.random() * 900000);
-    setMfaOtpSentCode(code);
-    setMfaStep('otp');
-    logKafka('system', 'auth.mfa_otp_sent', `SMS OTP verification code dispatched to registered mobile: ${code}`);
-    triggerToast(`MOCK SMS GATEWAY: OTP code sent: ${code}`, 'system');
+
+    const payload = {
+      username: mfaRole === 'admin' ? 'swissadmin' : 'swissuser',
+      password: mfaPassword
+    };
+
+    fetch('http://localhost:8081/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Authentication failed');
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data.mfaRequired) {
+        setSessionToken(data.sessionToken);
+        setMfaStep('otp');
+        logKafka('system', 'auth.mfa_otp_sent', `MFA requested. Session token generated. Check backend stdout console for PIN.`);
+        triggerToast(`MFA verification required. Please check Spring Boot console for OTP code.`, 'system');
+      } else {
+        // Direct login
+        setIsAuthenticated(true);
+        setCurrentUserSession({ role: mfaRole });
+        setActiveRole(mfaRole);
+        setAuthToken(data.token);
+        localStorage.setItem('jwt_token', data.token);
+        logKafka('system', 'auth.success', `Authenticated successfully via backend for role: ${mfaRole}`);
+        triggerToast(`Welcome back, authorized ${mfaRole}!`, 'customer');
+        setMfaPassword('');
+      }
+    })
+    .catch(err => {
+      logKafka('system', 'auth.failure', `Failed login credentials check: ${err.message}`);
+      triggerToast(`Login Error: ${err.message}`, 'admin');
+    });
   };
 
   const handleMfaVerify = () => {
-    if (mfaMethod === 'sms') {
-      if (mfaOtpInput === String(mfaOtpSentCode)) {
-        setIsAuthenticated(true);
-        setCurrentUserSession({ role: mfaRole });
-        setActiveRole(mfaRole);
-        logKafka('system', 'auth.success', `MFA authenticated successfully for role: ${mfaRole}`);
-        triggerToast(`Welcome back, authorized ${mfaRole}!`, 'customer');
-        setMfaStep('credentials');
-        setMfaPassword('');
-        setMfaOtpInput('');
-      } else {
-        logKafka('system', 'auth.failure', `Failed MFA SMS verification for role: ${mfaRole}`);
-        triggerToast('Invalid SMS OTP Code. Please try again.', 'admin');
+    fetch('http://localhost:8081/api/auth/mfa/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        code: mfaOtpInput
+      })
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'MFA Verification failed');
       }
-    } else {
-      if (mfaOtpInput === totpSecretCode) {
-        setIsAuthenticated(true);
-        setCurrentUserSession({ role: mfaRole });
-        setActiveRole(mfaRole);
-        logKafka('system', 'auth.success', `MFA Authenticator token verified for role: ${mfaRole}`);
-        triggerToast(`Welcome back, authorized ${mfaRole}!`, 'customer');
-        setMfaStep('credentials');
-        setMfaPassword('');
-        setMfaOtpInput('');
-      } else {
-        logKafka('system', 'auth.failure', `Failed MFA Authenticator token verification for role: ${mfaRole}`);
-        triggerToast('Invalid TOTP token. Please check Authenticator app.', 'admin');
-      }
-    }
+      return res.json();
+    })
+    .then(data => {
+      setIsAuthenticated(true);
+      setCurrentUserSession({ role: mfaRole });
+      setActiveRole(mfaRole);
+      setAuthToken(data.token);
+      localStorage.setItem('jwt_token', data.token);
+      logKafka('system', 'auth.success', `MFA authenticated successfully via backend for role: ${mfaRole}`);
+      triggerToast(`Welcome back, authorized ${mfaRole}!`, 'customer');
+      setMfaStep('credentials');
+      setMfaPassword('');
+      setMfaOtpInput('');
+    })
+    .catch(err => {
+      logKafka('system', 'auth.failure', `Failed MFA verification for role: ${mfaRole}. Error: ${err.message}`);
+      triggerToast(`Invalid Passcode: ${err.message}. (Note: Backend uses SMS OTP printed in stdout console)`, 'admin');
+    });
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentUserSession(null);
     setMfaStep('credentials');
+    setAuthToken('');
+    localStorage.removeItem('jwt_token');
     logKafka('system', 'auth.session_terminated', 'Session locked. User signed out.');
     triggerToast('Session locked successfully.', 'system');
   };
@@ -592,12 +628,15 @@ export default function App() {
           }
         }
 
-        // Fetch-based telemetry ingestion (push to backend regardless of SSE state)
+        // Fetch-based telemetry ingestion (push to BFF gateway)
         const lat = 47.3769 + (nextProgress * 0.0001);
         const lng = 8.5417 + (nextProgress * 0.0001);
-        fetch('http://localhost:8080/api/telemetry/tick', {
+        fetch('http://localhost:8081/api/telemetry/tick', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify({
             orderId: prev.id,
             latitude: lat,
@@ -663,9 +702,12 @@ export default function App() {
     setMerchantWallet(w => w - 2.00);
     logLedger('system', 'DRY-ICE-DEBIT', 'Rider manual coolant mitigation applied', 2.00, 0);
     
-    // Trigger Real Backend Telemetry Coolant Integration
-    fetch(`http://localhost:8080/api/telemetry/${activeOrder.id}/dry-ice`, {
-      method: 'POST'
+    // Trigger Real BFF Telemetry Coolant Integration
+    fetch(`http://localhost:8081/api/telemetry/${activeOrder.id}/dry-ice`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
     }).catch(err => console.log('BFF Telemetry link offline:', err.message));
 
     setActiveOrder(prev => ({ ...prev, temperature: 4.0 }));
