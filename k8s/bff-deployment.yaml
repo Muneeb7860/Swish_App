@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff-gateway
+  labels:
+    app: bff-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bff-gateway
+  template:
+    metadata:
+      labels:
+        app: bff-gateway
+    spec:
+      containers:
+      - name: bff-gateway
+        image: swiss-bff:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_CLOUD_GATEWAY_ROUTES_0_URI
+          value: http://backend-monolith:8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-gateway
+spec:
+  ports:
+  - port: 8081
+    nodePort: 30081
+  type: NodePort
+  selector:
+    app: bff-gateway
