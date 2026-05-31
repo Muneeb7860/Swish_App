@@ -24,7 +24,7 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', background: '#0b0f19', minHeight: '100vh', color: '#fff' }}>
       <h2>Customer MFE (Standalone Dev Preview)</h2>
-      <CustomerApp
+      <CustomerApp {...({} as any)}
         products={MOCK_PRODUCTS}
         cart={cart}
         setCart={setCart}

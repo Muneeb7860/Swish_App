@@ -45,16 +45,19 @@ spring:
             - name: CircuitBreaker
               args:
                 name: backendCircuitBreaker
-                fallbackUri: forward:/fallback
+                fallbackUri: ${FALLBACK_URL:forward:/fallback}
 
 resilience4j:
   circuitbreaker:
     instances:
       backendCircuitBreaker:
         slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
   timelimiter:
     instances:
       backendCircuitBreaker:
-        timeoutDuration: 60s
+        timeoutDuration: 5s

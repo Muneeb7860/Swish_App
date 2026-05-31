@@ -38,7 +38,8 @@ public class TransactionConfig {
                                      SystemConfigPort systemConfigPort,
                                      LedgerUseCase ledgerUseCase,
                                      OutboxEventPort outboxEventPort,
-                                     ApplicationEventPublisher eventPublisher) {
+                                     ApplicationEventPublisher eventPublisher,
+                                     HitlQueueRepository hitlQueueRepository) {
         return new OrderServiceImpl(
                 orderRepository,
                 customerPort,
@@ -48,7 +49,8 @@ public class TransactionConfig {
                 systemConfigPort,
                 ledgerUseCase,
                 outboxEventPort,
-                eventPublisher
+                eventPublisher,
+                hitlQueueRepository
         );
     }
 }
