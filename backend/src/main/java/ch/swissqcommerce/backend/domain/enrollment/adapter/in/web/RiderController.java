@@ -22,7 +22,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/rider")
-@CrossOrigin(origins = {"http://localhost", "http://127.0.0.1"})
+@CrossOrigin(origins = "*")
 public class RiderController {
 
     @Autowired

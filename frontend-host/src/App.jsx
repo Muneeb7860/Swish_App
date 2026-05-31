@@ -8,8 +8,8 @@ import RiderTrackingPanel from './components/RiderTrackingPanel';
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = [
-  'http://localhost',
-  'http://127.0.0.1'
+  'localhost',
+  '127.0.0.1'
 ];
 
 const verifyMfeOrigin = (importPromise, remoteName) => {
@@ -18,7 +18,7 @@ const verifyMfeOrigin = (importPromise, remoteName) => {
     const remoteScript = scriptElements.find(s => s.src && s.src.includes(remoteName));
     if (remoteScript) {
       const url = new URL(remoteScript.src);
-      if (!MFE_WHITELIST.includes(url.origin) && url.origin !== window.location.origin) {
+      if (!MFE_WHITELIST.includes(url.hostname) && url.origin !== window.location.origin) {
         throw new Error(`Security Exception: Untrusted MFE Remote origin blocked: ${url.origin}`);
       }
     }
@@ -359,7 +359,12 @@ export default function App() {
   }, []);
 
   const fetchAgentMetrics = () => {
-    fetch('http://localhost:8081/api/agent/metrics')
+    if (!authToken) return;
+    fetch('http://localhost:8081/api/agent/metrics', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
       .then(res => {
         if (res.ok) return res.json();
         throw new Error('Metrics offline');
@@ -373,10 +378,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchAgentMetrics();
-    const interval = setInterval(fetchAgentMetrics, 4000);
-    return () => clearInterval(interval);
-  }, []);
+    if (authToken) {
+      fetchAgentMetrics();
+      const interval = setInterval(fetchAgentMetrics, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [authToken]);
 
 
   // MFA Handlers

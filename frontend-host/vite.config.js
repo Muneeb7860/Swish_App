@@ -8,9 +8,9 @@ export default defineConfig({
     federation({
       name: 'host',
       remotes: {
-        customer: './customer/assets/remoteEntry.js',
-        rider: './rider/assets/remoteEntry.js',
-        admin: './admin/assets/remoteEntry.js'
+        customer: 'http://localhost:3001/assets/remoteEntry.js',
+        rider: 'http://localhost:3002/assets/remoteEntry.js',
+        admin: 'http://localhost:3003/assets/remoteEntry.js'
       },
       shared: ['react', 'react-dom']
     })
@@ -23,6 +23,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    cors: true
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 });
