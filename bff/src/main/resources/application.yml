@@ -6,39 +6,42 @@ spring:
     name: swiss-qcommerce-bff
   cloud:
     gateway:
-      cors-configurations:
-        '[/**]':
-          allowedOrigins:
-            - "http://localhost"
-            - "http://127.0.0.1"
-            - "http://localhost:3000"
-            - "http://localhost:3001"
-            - "http://localhost:3002"
-            - "http://localhost:3003"
-            - "http://127.0.0.1:3000"
-            - "http://127.0.0.1:3001"
-            - "http://127.0.0.1:3002"
-            - "http://127.0.0.1:3003"
-          allowedMethods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-            - PATCH
-          allowedHeaders: "*"
-          allowCredentials: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost"
+              - "http://127.0.0.1"
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+              - "http://localhost:3002"
+              - "http://localhost:3003"
+              - "http://127.0.0.1:3000"
+              - "http://127.0.0.1:3001"
+              - "http://127.0.0.1:3002"
+              - "http://127.0.0.1:3003"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
       routes:
         - id: backend_route
           uri: ${BACKEND_URL:http://localhost:8080}
           predicates:
             - Path=/api/**
           filters:
+            - name: EdgeJwtVerificationFilter
             - name: RateLimiterFilter
               args:
                 capacity: 30
                 refillRatePerSecond: 10
-            - name: EdgeJwtVerificationFilter
             - name: CircuitBreaker
               args:
                 name: backendCircuitBreaker

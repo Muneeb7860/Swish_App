@@ -1,6 +1,32 @@
 import React, { useRef, useEffect } from 'react';
 import * as Lucide from 'lucide-react';
 
+const parseInline = (text) => {
+  if (!text) return '';
+  const parts = text.split(/\*\*([\s\S]*?)\*\*/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return <strong key={i} style={{ color: '#38bdf8' }}>{part}</strong>;
+    }
+    return part;
+  });
+};
+
+const parseMarkdown = (text) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('### ')) {
+      return <h3 key={idx} style={{ margin: '0.4rem 0', color: '#f8fafc', fontSize: '1rem' }}>{parseInline(trimmed.slice(4))}</h3>;
+    }
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      return <li key={idx} style={{ marginLeft: '1rem', listStyleType: 'disc', color: '#cbd5e1' }}>{parseInline(trimmed.slice(2))}</li>;
+    }
+    return <p key={idx} style={{ margin: '0.25rem 0', minHeight: '1em', lineHeight: '1.4' }}>{parseInline(line)}</p>;
+  });
+};
+
 export default function SupportBot({
   botOpen,
   setBotOpen,
@@ -65,7 +91,7 @@ export default function SupportBot({
         <div className="ai-bot-messages">
           {botMessages.map((msg, idx) => (
             <div key={idx} className={`ai-message ${msg.sender === 'user' ? 'ai-message-user' : 'ai-message-bot'}`}>
-              {msg.text}
+              {parseMarkdown(msg.text)}
               {msg.attachmentUrl && (
                 <img 
                   src={msg.attachmentUrl} 

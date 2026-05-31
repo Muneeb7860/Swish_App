@@ -28,11 +28,16 @@ public class RateLimiterFilter extends AbstractGatewayFilterFactory<RateLimiterF
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
-            String ip = request.getRemoteAddress() != null 
-                    ? request.getRemoteAddress().getAddress().getHostAddress() 
-                    : "unknown-ip";
+            
+            // Limit by authenticated user subject first to prevent NAT/IP sharing collision, fallback to IP
+            String limitKey = request.getHeaders().getFirst("X-User-Subject");
+            if (limitKey == null || limitKey.trim().isEmpty()) {
+                limitKey = request.getRemoteAddress() != null 
+                        ? request.getRemoteAddress().getAddress().getHostAddress() 
+                        : "unknown-ip";
+            }
 
-            TokenBucket bucket = ipBuckets.computeIfAbsent(ip, k -> new TokenBucket(config.getCapacity(), config.getRefillRatePerSecond()));
+            TokenBucket bucket = ipBuckets.computeIfAbsent(limitKey, k -> new TokenBucket(config.getCapacity(), config.getRefillRatePerSecond()));
 
             if (bucket.tryConsume()) {
                 return chain.filter(exchange);

@@ -603,38 +603,47 @@ export default function App() {
       updatePickerTrust(5, 'Picking completed on time');
     }
 
-    // ── SSE: Subscribe to live BFF telemetry stream ─────────────────────────
-    // Targets: BFF → /api/telemetry/stream/{orderId} (text/event-stream)
-    closeSseStream(); // close any prior connection
-    const sseUrl = `/api/telemetry/stream/${orderId}`;
-    const es = new EventSource(sseUrl);
-    sseRef.current = es;
-
-    es.onopen = () => {
-      logKafka('system', 'sse.connected', `EventSource connected to rider telemetry stream for Order #${orderId}`);
-    };
-
-    es.onmessage = (event) => {
-      try {
-        const tick = JSON.parse(event.data);
-        // Bind streamed coordinates to React UI state for live map marker updates
-        setRiderCoords({
-          lat: tick.latitude,
-          lng: tick.longitude,
-          temperature: tick.temperature,
-          timestamp: tick.timestamp || new Date().toISOString()
-        });
-        logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C`);
-      } catch (parseErr) {
-        console.warn('[SSE] Could not parse telemetry tick:', event.data);
-      }
-    };
-
-    es.onerror = () => {
-      // BFF not reachable — graceful silent degradation, telemetry via fetch still runs
-      console.log('[SSE] Rider stream unavailable — falling back to fetch-based telemetry.');
+    // ── SSE: Subscribe to live BFF telemetry stream with Exponential Backoff ──
+    const connectSseWithBackoff = (targetOrderId, attempt = 0) => {
       closeSseStream();
+      const sseUrl = `/api/telemetry/stream/${targetOrderId}`;
+      const es = new EventSource(sseUrl);
+      sseRef.current = es;
+
+      es.onopen = () => {
+        logKafka('system', 'sse.connected', `EventSource connected to rider telemetry stream for Order #${targetOrderId}`);
+      };
+
+      es.onmessage = (event) => {
+        try {
+          const tick = JSON.parse(event.data);
+          setRiderCoords({
+            lat: tick.latitude,
+            lng: tick.longitude,
+            temperature: tick.temperature,
+            timestamp: tick.timestamp || new Date().toISOString()
+          });
+          logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C`);
+        } catch (parseErr) {
+          console.warn('[SSE] Could not parse telemetry tick:', event.data);
+        }
+      };
+
+      es.onerror = () => {
+        closeSseStream();
+        if (attempt < 5) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logKafka('system', 'sse.reconnecting', `SSE stream dropped. Retrying in ${delay}ms (Attempt ${attempt + 1}/5)...`);
+          setTimeout(() => {
+            connectSseWithBackoff(targetOrderId, attempt + 1);
+          }, delay);
+        } else {
+          logKafka('system', 'sse.failed', 'SSE reconnection max attempts reached. Falling back to fetch-based telemetry.');
+        }
+      };
     };
+
+    connectSseWithBackoff(orderId, 0);
     // ── End SSE ──────────────────────────────────────────────────────────────
 
     riderTimerRef.current = setInterval(() => {
@@ -674,7 +683,14 @@ export default function App() {
             temperature: nextTemp || 0.0,
             dryIceInjected: false
           })
-        }).catch(err => console.log('BFF Telemetry link offline:', err.message));
+        })
+        .then(res => {
+          if (res.status === 503) {
+            setCircuitBreakerTripped(true);
+            logKafka('system', 'gateway.circuit_breaker_tripped', 'Rider Telemetry tick ingestion failed: Circuit Breaker active.');
+          }
+        })
+        .catch(err => console.log('BFF Telemetry link offline:', err.message));
 
         return {
           ...prev,
@@ -738,7 +754,15 @@ export default function App() {
       headers: {
         'Authorization': `Bearer ${authToken}`
       }
-    }).catch(err => console.log('BFF Telemetry link offline:', err.message));
+    })
+    .then(res => {
+      if (res.status === 503) {
+        setCircuitBreakerTripped(true);
+        triggerToast('BFF Gateway: Downstream service offline. Circuit Breaker TRIPPED.', 'admin');
+        logKafka('system', 'gateway.circuit_breaker_tripped', 'Coolant action blocked. Circuit Breaker active.');
+      }
+    })
+    .catch(err => console.log('BFF Telemetry link offline:', err.message));
 
     setActiveOrder(prev => ({ ...prev, temperature: 4.0 }));
     logKafka('rider', 'telemetry.mitigation_applied', 'Coolant injected: Perishable temperature reset to 4.0°C.');
@@ -934,6 +958,13 @@ export default function App() {
         })
       })
       .then(async res => {
+        if (res.status === 503) {
+          setCircuitBreakerTripped(true);
+          triggerToast('BFF Gateway: Agent service offline. Serving rule assistant fallback.', 'system');
+          setBotMessages(prev => [...prev, { sender: 'bot', text: '🤖 [OFFLINE MODE] Hi! The Swiss Q-Commerce server is currently offline. Running local rule-based safety responses.' }]);
+          runRulesEngine(text, attachmentUrl);
+          return null;
+        }
         if (!res.ok) {
           throw new Error('API error');
         }
