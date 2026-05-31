@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: frontend-host
+          mountPath: /usr/share/nginx/html/host
+          readOnly: true
+        - name: frontend-customer
+          mountPath: /usr/share/nginx/html/customer
+          readOnly: true
+        - name: frontend-admin
+          mountPath: /usr/share/nginx/html/admin
+          readOnly: true
+        - name: frontend-rider
+          mountPath: /usr/share/nginx/html/rider
+          readOnly: true
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: frontend-host
+        emptyDir: {}
+      - name: frontend-customer
+        emptyDir: {}
+      - name: frontend-admin
+        emptyDir: {}
+      - name: frontend-rider
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: nginx

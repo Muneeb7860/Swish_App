@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  labels:
+    app: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: docker.redpanda.com/redpandadata/redpanda:v23.2.3
+        ports:
+        - containerPort: 9092
+        - containerPort: 29092
+        - containerPort: 8081
+        - containerPort: 8082
+        - containerPort: 8083
+        - containerPort: 8084
+        - containerPort: 33145
+        command:
+        - redpanda
+        - start
+        - --smp
+        - "1"
+        - --overprovisioned
+        - --kafka-addr
+        - internal://0.0.0.0:9092,external://0.0.0.0:29092
+        - --advertise-kafka-addr
+        - internal://kafka:9092,external://localhost:29092
+        - --pandaproxy-addr
+        - internal://0.0.0.0:8082,external://0.0.0.0:8083
+        - --advertise-pandaproxy-addr
+        - internal://kafka:8082,external://localhost:8083
+        - --schema-registry-addr
+        - internal://0.0.0.0:8081,external://0.0.0.0:8084
+        - --rpc-addr
+        - 0.0.0.0:33145
+        - --advertise-rpc-addr
+        - kafka:33145
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+spec:
+  ports:
+  - name: kafka-internal
+    port: 9092
+  - name: kafka-external
+    port: 29092
+  - name: pandaproxy-internal
+    port: 8082
+  - name: pandaproxy-external
+    port: 8083
+  - name: schema-registry-internal
+    port: 8081
+  - name: schema-registry-external
+    port: 8084
+  - name: rpc
+    port: 33145
+  selector:
+    app: kafka
