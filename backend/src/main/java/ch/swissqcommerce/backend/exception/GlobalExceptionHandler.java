@@ -17,11 +17,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Centralised exception handler for all REST controllers.
  * Converts exceptions to standardised JSON error responses with
  * ISO-8601 timestamps, HTTP status codes, and descriptive messages.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -89,7 +92,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<Map<String, Object>> handleNPE(NullPointerException ex) {
-        ex.printStackTrace();
+        log.error("Null pointer exception encountered: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(buildErrorBody(HttpStatus.INTERNAL_SERVER_ERROR, "A null reference was encountered."));
     }
@@ -99,7 +102,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        ex.printStackTrace();
+        log.error("Unhandled exception: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(buildErrorBody(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please contact support."));
     }

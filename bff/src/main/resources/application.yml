@@ -54,4 +54,4 @@ resilience4j:
   timelimiter:
     instances:
       backendCircuitBreaker:
-        timeoutDuration: 60s
+        timeoutDuration: 5s
