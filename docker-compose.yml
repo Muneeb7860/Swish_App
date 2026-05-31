@@ -2,147 +2,126 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
-    container_name: swiss_postgres
+    image: postgres:15-alpine
+    container_name: swiss-postgres
+    ports:
+      - "5432:5432"
     environment:
-      POSTGRES_DB: swiss_db
+      POSTGRES_DB: swissq
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: swisssecure2026
+      POSTGRES_PASSWORD: postgres
     volumes:
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d swiss_db"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d swissq"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 15s
-    restart: unless-stopped
 
-  kafka:
-    image: docker.redpanda.com/redpandadata/redpanda:v23.2.3
-    container_name: swiss_kafka
+  redis:
+    image: redis:7-alpine
+    container_name: swiss-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.2.1
+    container_name: swiss-redpanda
     command:
       - redpanda start
       - --smp 1
       - --overprovisioned
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:29092
-      - --advertise-kafka-addr internal://kafka:9092,external://localhost:29092
-      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:8083
-      - --advertise-pandaproxy-addr internal://kafka:8082,external://localhost:8083
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:8084
-      - --rpc-addr 0.0.0.0:33145
-      - --advertise-rpc-addr kafka:33145
-
-  mongodb:
-    image: mongo:6.0
-    container_name: swiss_mongodb
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    container_name: swiss_redis
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr 0.0.0.0:28082,OUTSIDE://0.0.0.0:8082
+      - --advertise-pandaproxy-addr PLAINTEXT://redpanda:28082,OUTSIDE://localhost:8082
+    ports:
+      - "9092:9092"
+      - "8082:8082"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 5s
+      timeout: 5s
       retries: 5
-      start_period: 5s
-    restart: unless-stopped
 
-  backend:
+  backend-monolith:
     build:
       context: ./backend
-    container_name: swiss_backend
+      dockerfile: Dockerfile
+    container_name: swiss-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swissq
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_started
       redis:
         condition: service_healthy
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=swisssecure2026
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_AI_OPENAI_API_KEY=${SPRING_AI_OPENAI_API_KEY:-mock-key}
-      - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      redpanda:
+        condition: service_healthy
 
-
-  bff:
+  bff-gateway:
     build:
       context: ./bff
-    container_name: swiss_bff
-    depends_on:
-      backend:
-        condition: service_healthy
+      dockerfile: Dockerfile
+    container_name: swiss-bff
+    ports:
+      - "8081:8081"
     environment:
-      - BACKEND_URL=http://backend:8080
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+      - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://backend-monolith:8080
+    depends_on:
+      - backend-monolith
 
   frontend-host:
-    image: node:20-slim
-    container_name: swiss_frontend_host
-    working_dir: /app
-    volumes:
-      - ./frontend-host:/app
-    command: sh -c "npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 3000"
+    build:
+      context: ./frontend-host
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-host
+    ports:
+      - "3000:80"
+    depends_on:
+      - bff-gateway
 
   frontend-customer:
-    image: node:20-slim
-    container_name: swiss_frontend_customer
-    working_dir: /app
-    volumes:
-      - ./frontend-customer:/app
-    command: sh -c "npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 5001"
-
-  frontend-admin:
-    image: node:20-slim
-    container_name: swiss_frontend_admin
-    working_dir: /app
-    volumes:
-      - ./frontend-admin:/app
-    command: sh -c "npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 5002"
+    build:
+      context: ./frontend-customer
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-customer
+    ports:
+      - "3001:80"
+    depends_on:
+      - bff-gateway
 
   frontend-rider:
-    image: node:20-slim
-    container_name: swiss_frontend_rider
-    working_dir: /app
-    volumes:
-      - ./frontend-rider:/app
-    command: sh -c "npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 5003"
-
-  nginx:
-    image: nginx:alpine
-    container_name: swiss_nginx
+    build:
+      context: ./frontend-rider
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-rider
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - "3002:80"
     depends_on:
-      - frontend-host
-      - frontend-customer
-      - frontend-admin
-      - frontend-rider
-      - bff
-    restart: unless-stopped
+      - bff-gateway
 
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-admin
+    ports:
+      - "3003:80"
+    depends_on:
+      - bff-gateway
+
+volumes:
+  postgres-data:

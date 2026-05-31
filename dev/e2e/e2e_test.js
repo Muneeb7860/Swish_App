@@ -105,7 +105,18 @@ async function run() {
     await sleep(1500);
     await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'e2e_6_admin_view.png') });
 
+    // 11. Test Agent Chat Flow as Customer
+    console.log('[E2E TEST] Testing Agent Chat Flow...');
+    await page.click('#tab-customer');
+    await sleep(1000);
+    await page.click('#btn-support-bot-open');
+    await page.fill('#input-support-bot', 'Hello SwissBot, where is my order #1001?');
+    await page.click('#btn-support-bot-send');
+    await sleep(3000); // Allow agent API call to execute and respond
+    await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'e2e_7_agent_chat.png') });
+
     console.log('[E2E TEST] E2E Verification complete! Captures successfully exported to artifacts.');
+
   } catch (err) {
     console.error('[E2E TEST] Failure during E2E verification run:', err);
     await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'e2e_error.png') });

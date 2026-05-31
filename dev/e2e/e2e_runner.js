@@ -125,8 +125,8 @@ async function run() {
     // 3. Boot frontend App Shell Host
     runService(
       'Host App Shell',
-      'npm',
-      ['run', 'dev'],
+      '"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node.exe"',
+      ['"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node_modules/npm/bin/npm-cli.js"', 'run', 'dev'],
       path.join(WORKSPACE_DIR, 'frontend-host'),
       path.join(LOGS_DIR, 'host.log')
     );
@@ -134,8 +134,8 @@ async function run() {
     // 4. Boot Customer remote MFE (serve pre-built dist folder with remoteEntry.js)
     runService(
       'Customer Remote',
-      'npm',
-      ['run', 'preview', '--', '--port', '3001', '--strictPort'],
+      '"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node.exe"',
+      ['"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node_modules/npm/bin/npm-cli.js"', 'run', 'preview', '--', '--port', '3001', '--strictPort'],
       path.join(WORKSPACE_DIR, 'frontend-customer'),
       path.join(LOGS_DIR, 'customer.log')
     );
@@ -143,8 +143,8 @@ async function run() {
     // 5. Boot Rider remote MFE
     runService(
       'Rider Remote',
-      'npm',
-      ['run', 'preview', '--', '--port', '3002', '--strictPort'],
+      '"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node.exe"',
+      ['"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node_modules/npm/bin/npm-cli.js"', 'run', 'preview', '--', '--port', '3002', '--strictPort'],
       path.join(WORKSPACE_DIR, 'frontend-rider'),
       path.join(LOGS_DIR, 'rider.log')
     );
@@ -152,8 +152,8 @@ async function run() {
     // 6. Boot Admin remote MFE
     runService(
       'Admin Remote',
-      'npm',
-      ['run', 'preview', '--', '--port', '3003', '--strictPort'],
+      '"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node.exe"',
+      ['"C:/Users/DELL 9420/Documents/swiss_App/node-v22.12.0-win-x64/node_modules/npm/bin/npm-cli.js"', 'run', 'preview', '--', '--port', '3003', '--strictPort'],
       path.join(WORKSPACE_DIR, 'frontend-admin'),
       path.join(LOGS_DIR, 'admin.log')
     );
