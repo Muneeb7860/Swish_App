@@ -21,6 +21,7 @@ CREATE TABLE oltp.customers (
     is_anonymized BOOLEAN NOT NULL DEFAULT FALSE,
     is_on_probation BOOLEAN NOT NULL DEFAULT FALSE,
     consecutive_orders_completed INT NOT NULL DEFAULT 0 CHECK (consecutive_orders_completed >= 0),
+    version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -110,6 +111,7 @@ CREATE TABLE oltp.inventory (
     category VARCHAR(50) NOT NULL,
     emoji VARCHAR(10) NOT NULL,
     perishable BOOLEAN NOT NULL DEFAULT FALSE,
+    version BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

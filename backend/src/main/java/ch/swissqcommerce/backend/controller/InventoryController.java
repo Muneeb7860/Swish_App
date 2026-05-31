@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:8081"})
+@CrossOrigin(origins = {"http://localhost", "http://127.0.0.1"})
 public class InventoryController {
 
     @Autowired

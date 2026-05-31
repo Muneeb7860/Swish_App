@@ -67,11 +67,12 @@ public class WholesalerService {
                     .orElseThrow(() -> new NoSuchElementException("No primary wholesaler configured."));
         }
 
+        final String currentSelectedId = selected.getWholesalerId();
         // Check if primary wholesaler is eligible (trust >= 60 and active)
         if (!selected.getIsActive() || selected.getTrustScore() < 60) {
             // Switch to fallback wholesaler
             selected = wholesalerRepository.findAll().stream()
-                    .filter(w -> !w.getWholesalerId().equals(preferredWholesalerId))
+                    .filter(w -> !w.getWholesalerId().equals(currentSelectedId))
                     .filter(Wholesaler::getIsActive)
                     .filter(w -> w.getTrustScore() >= 60)
                     .findFirst()

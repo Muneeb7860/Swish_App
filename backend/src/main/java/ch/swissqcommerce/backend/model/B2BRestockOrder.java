@@ -20,11 +20,11 @@ public class B2BRestockOrder {
     @Column(name = "restock_order_id")
     private Integer restockOrderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "store_id")
     private DarkStore store;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "wholesaler_id")
     private Wholesaler wholesaler;
 
