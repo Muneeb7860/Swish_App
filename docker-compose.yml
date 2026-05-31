@@ -2,113 +2,126 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
-    container_name: swiss_postgres
-    environment:
-      POSTGRES_DB: swiss_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: swisssecure2026
+    image: postgres:15-alpine
+    container_name: swiss-postgres
     ports:
-      - "5420:5432"
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: swissq
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d swiss_db"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d swissq"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 15s
-    restart: unless-stopped
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.4
-    container_name: swiss_zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-
-  kafka:
-    image: confluentinc/cp-kafka:7.4.4
-    container_name: swiss_kafka
-    depends_on:
-      zookeeper:
-        condition: service_started
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-  mongodb:
-    image: mongo:6.0
-    container_name: swiss_mongodb
-    ports:
-      - "27017:27017"
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: swiss_redis
+    container_name: swiss-redis
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
+      interval: 5s
+      timeout: 5s
       retries: 5
-      start_period: 5s
-    restart: unless-stopped
 
-  backend:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.2.1
+    container_name: swiss-redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --overprovisioned
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr 0.0.0.0:28082,OUTSIDE://0.0.0.0:8082
+      - --advertise-pandaproxy-addr PLAINTEXT://redpanda:28082,OUTSIDE://localhost:8082
+    ports:
+      - "9092:9092"
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend-monolith:
     build:
       context: ./backend
-    container_name: swiss_backend
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      dockerfile: Dockerfile
+    container_name: swiss-backend
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swissq
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=swisssecure2026
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
 
-  bff:
+  bff-gateway:
     build:
       context: ./bff
-    container_name: swiss_bff
-    depends_on:
-      backend:
-        condition: service_healthy
+      dockerfile: Dockerfile
+    container_name: swiss-bff
     ports:
       - "8081:8081"
     environment:
-      - BACKEND_URL=http://backend:8080
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8081/fallback || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+      - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://backend-monolith:8080
+    depends_on:
+      - backend-monolith
+
+  frontend-host:
+    build:
+      context: ./frontend-host
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-host
+    ports:
+      - "3000:80"
+    depends_on:
+      - bff-gateway
+
+  frontend-customer:
+    build:
+      context: ./frontend-customer
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-customer
+    ports:
+      - "3001:80"
+    depends_on:
+      - bff-gateway
+
+  frontend-rider:
+    build:
+      context: ./frontend-rider
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-rider
+    ports:
+      - "3002:80"
+    depends_on:
+      - bff-gateway
+
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+    container_name: swiss-frontend-admin
+    ports:
+      - "3003:80"
+    depends_on:
+      - bff-gateway
+
+volumes:
+  postgres-data:
