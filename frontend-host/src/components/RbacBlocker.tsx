@@ -31,14 +31,14 @@ export default function RbacBlocker({ targetRole, currentUserSession, handleLogo
         Your authenticated session with role <strong style={{ color: 'var(--color-engine)' }}>{currentUserSession?.role?.toUpperCase()}</strong> is unauthorized to access the <strong style={{ color: 'var(--color-admin)' }}>{targetRole.toUpperCase()}</strong> environment.
       </p>
       <div className="crud-btn-group" style={{ flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: '280px' }}>
-        <button 
+        <button aria-label="Button" 
           className="btn-primary-glow" 
           style={{ background: 'var(--color-admin)', color: '#ffffff', width: '100%', border: 'none', padding: '0.5rem', cursor: 'pointer', fontFamily: 'var(--font-sans)' }} 
           onClick={handleEscalate}
         >
           Request Access Elevation
         </button>
-        <button 
+        <button aria-label="Button" 
           className="btn-secondary-glow" 
           style={{ width: '100%', padding: '0.5rem', cursor: 'pointer', fontFamily: 'var(--font-sans)' }} 
           onClick={handleLogout}

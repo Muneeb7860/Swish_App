@@ -75,7 +75,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=swisssecure2026
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
+      - JWT_SECRET=${JWT_SECRET}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_AI_OPENAI_API_KEY=${SPRING_AI_OPENAI_API_KEY:-mock-key}
@@ -101,7 +101,7 @@ services:
         condition: service_healthy
     environment:
       - BACKEND_URL=http://backend:8080
-      - JWT_SECRET=9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d
+      - JWT_SECRET=${JWT_SECRET}
       - JAVA_OPTS=-Xmx128m -Xms128m
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]

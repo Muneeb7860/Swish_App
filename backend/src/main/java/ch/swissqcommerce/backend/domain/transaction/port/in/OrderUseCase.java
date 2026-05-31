@@ -11,4 +11,6 @@ public interface OrderUseCase {
 
     Order checkout(String customerId, List<CartItem> items, String paymentMethod,
                    BigDecimal tip, Integer bagsReturned, String idempotencyKey);
+
+    java.util.Map<String, Object> requestRefund(Integer orderId, String claimReason, BigDecimal customerLatitude, BigDecimal customerLongitude);
 }

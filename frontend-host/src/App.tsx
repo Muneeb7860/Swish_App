@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import * as Lucide from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useStore } from './store';
 import { useEnvProfiles } from './hooks/useEnvProfiles';
 import MfaLoginPortal from './components/MfaLoginPortal';
 import RbacBlocker from './components/RbacBlocker';
@@ -12,7 +14,9 @@ const MFE_WHITELIST = [
   '127.0.0.1'
 ];
 
-const verifyMfeOrigin = (importPromise, remoteName) => {
+
+const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
+
   return importPromise.then(module => {
     const scriptElements = Array.from(document.querySelectorAll('script'));
     const remoteScript = scriptElements.find(s => s.src && s.src.includes(remoteName));
@@ -34,7 +38,17 @@ const BusinessApp = React.lazy(() => verifyMfeOrigin(import('admin/BusinessApp')
 const InventoryApp = React.lazy(() => verifyMfeOrigin(import('admin/InventoryApp'), 'admin'));
 const SystemEngineRoom = React.lazy(() => verifyMfeOrigin(import('admin/SystemEngineRoom'), 'admin'));
 
-class LocalErrorBoundary extends React.Component {
+
+interface ErrorBoundaryProps {
+  name: string;
+  children: React.ReactNode;
+}
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+class LocalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -82,152 +96,151 @@ const INITIAL_PRODUCTS = [
 ];
 
 export default function App() {
-  // --- CORE COCKPIT STATES ---
+  const {
+    activeRole, setActiveRole,
+    weather, setWeather,
+    merchantWallet, setMerchantWallet,
+    customerOrderCount, setCustomerOrderCount,
+    customerRefundCount, setCustomerRefundCount,
+    customerTab, setCustomerTab,
+    profileSubTab, setProfileSubTab,
+    favorites, setFavorites,
+    vipMember, setVipMember,
+    isAuthenticated, setIsAuthenticated,
+    currentUserSession, setCurrentUserSession,
+    mfaStep, setMfaStep,
+    mfaRole, setMfaRole,
+    mfaPassword, setMfaPassword,
+    mfaOtpSentCode, setMfaOtpSentCode,
+    mfaOtpInput, setMfaOtpInput,
+    mfaMethod, setMfaMethod,
+    totpSecretCode, setTotpSecretCode,
+    totpTimer, setTotpTimer,
+    sessionToken, setSessionToken,
+    authToken, setAuthToken,
+    searchVolumeMap, setSearchVolumeMap,
+    activeStockTransfers, setActiveStockTransfers,
+    tipAmount, setTipAmount,
+    esgCheckbox, setEsgCheckbox,
+    totalCo2Offset, setTotalCo2Offset,
+    pickerSlaDuration, setPickerSlaDuration,
+    pickerBadge, setPickerBadge,
+    backupPickersCount, setBackupPickersCount,
+    cartIdleTime, setCartIdleTime,
+    simulateTelemetryFraud, setSimulateTelemetryFraud,
+    pickingBacklogQueue, setPickingBacklogQueue,
+    activePickingCongested, setActivePickingCongested,
+    selectedCertRole, setSelectedCertRole,
+    activeTrainingRole, setActiveTrainingRole,
+    trainingProgress, setTrainingProgress,
+    earnedCertifications, setEarnedCertifications,
+    b2bDiscountActive, setB2bDiscountActive,
+    customerTrustScore, setCustomerTrustScore,
+    riderTrustScore, setRiderTrustScore,
+    pickerTrustScore, setPickerTrustScore,
+    wholesalerTrustScore, setWholesalerTrustScore,
+    coldChainBreakdownActive, setColdChainBreakdownActive,
+    wholesalerOutageActive, setWholesalerOutageActive,
+    paymentOutageActive, setPaymentOutageActive,
+    redisCrashActive, setRedisCrashActive,
+    dbLatencyActive, setDbLatencyActive,
+    riderTrafficActive, setRiderTrafficActive,
+    centralCapacity, setCentralCapacity,
+    eastCapacity, setEastCapacity,
+    centralScalingCount, setCentralScalingCount,
+    eastScalingCount, setEastScalingCount,
+    gdprTokenProbation, setGdprTokenProbation,
+    riderOnboardStatus, setRiderOnboardStatus,
+    businessOnboardStatus, setBusinessOnboardStatus,
+    gatewayOnboardStatus, setGatewayOnboardStatus,
+    hitlQueue, setHitlQueue,
+    agentMetrics, setAgentMetrics,
+    oltpWriteLatency, setOltpWriteLatency,
+    olapSyncTimer, setOlapSyncTimer,
+    jwtFlash, setJwtFlash,
+    vaultTimer, setVaultTimer,
+    latencyHistory, setLatencyHistory,
+    cacheHits, setCacheHits,
+    cacheMisses, setCacheMisses,
+    circuitBreakerTripped, setCircuitBreakerTripped,
+    rateLimitActive, setRateLimitActive,
+    toasts, setToasts,
+    botOpen, setBotOpen,
+    botInputText, setBotInputText,
+    certModalOpen, setCertModalOpen,
+    riderCoords, setRiderCoords,
+    products, setProducts,
+    cart, setCart,
+    activeOrder, setActiveOrder,
+    orderHistory, setOrderHistory,
+    customerWallet, setCustomerWallet,
+    customerPoints, setCustomerPoints,
+    riderWallet, setRiderWallet,
+    botMessages, setBotMessages,
+    kafkaLogs, setKafkaLogs,
+    ledger, setLedger,
+    trustLogs, setTrustLogs,
+    onboardingQueue, setOnboardingQueue,
+    savedAddresses, setSavedAddresses,
+    savedCards, setSavedCards,
+    vouchers, setVouchers
+  } = useStore();
   const { envProfiles, setEnvProfiles, activeProfileKey, setActiveProfileKey, activeProfile } = useEnvProfiles();
-  const [activeRole, setActiveRole] = useState('customer'); // customer, rider, business, inventory, admin
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [cart, setCart] = useState([]);
-  const [activeOrder, setActiveOrder] = useState(null);
-  const [orderHistory, setOrderHistory] = useState([
-    { id: 8901, date: 'May 24', items: '2x Organic Milk, 1x Bananas', total: 8.97, status: 'delivered', paymentMethod: 'Wallet' },
-    { id: 8710, date: 'May 20', items: '1x Wheat Sourdough, 1x Free Range Eggs', total: 9.28, status: 'delivered', paymentMethod: 'PayPal' }
-  ]);
-  const [weather, setWeather] = useState('Sunny'); // Sunny, Heavy Rain, Thunderstorm
+ // customer, rider, business, inventory, admin
+
+ // Sunny, Heavy Rain, Thunderstorm
   
   // Financials
-  const [customerWallet, setCustomerWallet] = useState(100.00);
-  const [customerPoints, setCustomerPoints] = useState(45);
-  const [riderWallet, setRiderWallet] = useState(15.00);
-  const [merchantWallet, setMerchantWallet] = useState(1542.80);
-  const [customerOrderCount, setCustomerOrderCount] = useState(2);
-  const [customerRefundCount, setCustomerRefundCount] = useState(0);
 
   // --- SWIGGY-STYLE USER PROFILE HUB STATES ---
-  const [customerTab, setCustomerTab] = useState('catalog'); // catalog, profile
-  const [profileSubTab, setProfileSubTab] = useState('vip'); // vip, vouchers, rewards, orders, saved, addresses, payments, statements
-  const [savedAddresses, setSavedAddresses] = useState([
-    { id: 'a1', label: 'Home (Primary)', address: 'Flat 402, Sunset Towers, Bangalore, Karnataka', coords: '12.971, 77.594' },
-    { id: 'a2', label: 'Work (Google Office)', address: 'Tower C, Google Signature Road, Bangalore, Karnataka', coords: '12.912, 77.621' }
-  ]);
-  const [savedCards, setSavedCards] = useState([
-    { id: 'c1', bank: 'Visa Premium Credit Card', number: '•••• •••• •••• 9823', expiry: '12/28' },
-    { id: 'c2', bank: 'Mastercard Gold Debit', number: '•••• •••• •••• 4120', expiry: '05/29' }
-  ]);
-  const [favorites, setFavorites] = useState(['Organic Fresh Milk', 'Chiquita Bananas (1kg)', 'Fresh Hass Avocado (Pair)']);
-  const [vipMember, setVipMember] = useState(true);
-  const [vouchers, setVouchers] = useState([
-    { code: 'SWISSWELCOME5', value: 5.00, minCart: 15.00, desc: 'Get $5.00 cash voucher on your first grocery basket!' },
-    { code: 'FRESH10', value: 10.00, minCart: 30.00, desc: 'Flat $10.00 discount coupon on organic dairy orders.' }
-  ]);
+ // catalog, profile
+ // vip, vouchers, rewards, orders, saved, addresses, payments, statements
+
+
+
 
   // --- AUTHENTICATION & MFA SECURITY SYSTEM ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUserSession, setCurrentUserSession] = useState(null); // { role: null }
-  const [mfaStep, setMfaStep] = useState('credentials'); // 'credentials', 'otp'
-  const [mfaRole, setMfaRole] = useState('customer');
-  const [mfaPassword, setMfaPassword] = useState('');
-  const [mfaOtpSentCode, setMfaOtpSentCode] = useState(null);
-  const [mfaOtpInput, setMfaOtpInput] = useState('');
-  const [mfaMethod, setMfaMethod] = useState('sms'); // 'sms', 'totp'
-  const [totpSecretCode, setTotpSecretCode] = useState('');
-  const [totpTimer, setTotpTimer] = useState(30);
-  const [sessionToken, setSessionToken] = useState('');
-  const [authToken, setAuthToken] = useState(localStorage.getItem('jwt_token') || '');
+ // { role: null }
+ // 'credentials', 'otp'
+ // 'sms', 'totp'
 
   // --- ADVANCED Q-COMMERCE AUTOMATION STATES ---
-  const [searchVolumeMap, setSearchVolumeMap] = useState({});
-  const [activeStockTransfers, setActiveStockTransfers] = useState([]);
-  const [tipAmount, setTipAmount] = useState(0);
-  const [esgCheckbox, setEsgCheckbox] = useState(false);
-  const [totalCo2Offset, setTotalCo2Offset] = useState(1250); // in grams
-  const [pickerSlaDuration, setPickerSlaDuration] = useState(3.2);
-  const [pickerBadge, setPickerBadge] = useState('Standard');
-  const [backupPickersCount, setBackupPickersCount] = useState(0);
-  const [cartIdleTime, setCartIdleTime] = useState(0);
-  const [simulateTelemetryFraud, setSimulateTelemetryFraud] = useState(false);
-  const [pickingBacklogQueue, setPickingBacklogQueue] = useState(0);
-  const [activePickingCongested, setActivePickingCongested] = useState(false);
-  const [selectedCertRole, setSelectedCertRole] = useState('customer'); // customer, rider, picker, b2b
-  const [activeTrainingRole, setActiveTrainingRole] = useState(null);
-  const [trainingProgress, setTrainingProgress] = useState(0);
-  const [earnedCertifications, setEarnedCertifications] = useState([]); 
-  const [b2bDiscountActive, setB2bDiscountActive] = useState(false);
+ // in grams
+ // customer, rider, picker, b2b
+ 
 
   // Trust Scores
-  const [customerTrustScore, setCustomerTrustScore] = useState(100);
-  const [riderTrustScore, setRiderTrustScore] = useState(100);
-  const [pickerTrustScore, setPickerTrustScore] = useState(100);
-  const [wholesalerTrustScore, setWholesalerTrustScore] = useState(100);
-  const [trustLogs, setTrustLogs] = useState([
-    { id: 'T0', time: new Date().toLocaleTimeString(), actor: 'system', event: 'Security trust systems initialized', delta: 0, current: 100 }
-  ]);
+
 
   // Chaos & Resilience Extension States
-  const [coldChainBreakdownActive, setColdChainBreakdownActive] = useState(false);
-  const [wholesalerOutageActive, setWholesalerOutageActive] = useState(false);
-  const [paymentOutageActive, setPaymentOutageActive] = useState(false);
-  const [redisCrashActive, setRedisCrashActive] = useState(false);
-  const [dbLatencyActive, setDbLatencyActive] = useState(false);
-  const [riderTrafficActive, setRiderTrafficActive] = useState(false);
 
   // Virtual Capacity & Scaling States
-  const [centralCapacity, setCentralCapacity] = useState(120);
-  const [eastCapacity, setEastCapacity] = useState(120);
-  const [centralScalingCount, setCentralScalingCount] = useState(0);
-  const [eastScalingCount, setEastScalingCount] = useState(0);
-  const [gdprTokenProbation, setGdprTokenProbation] = useState(false);
 
   // Onboarding applications
-  const [onboardingQueue, setOnboardingQueue] = useState([
-    { id: 'rid-1', name: 'Rider Dave', type: 'rider', approvals: { l1: false, l2: false, l3: false } },
-    { id: 'mer-1', name: 'FreshGrocer Store', type: 'merchant', approvals: { l1: false, l2: false, l3: false } }
-  ]);
-  const [riderOnboardStatus, setRiderOnboardStatus] = useState('unapplied'); // unapplied, pending, active
-  const [businessOnboardStatus, setBusinessOnboardStatus] = useState('unapplied');
-  const [gatewayOnboardStatus, setGatewayOnboardStatus] = useState('active');
+
+ // unapplied, pending, active
 
   // HITL Queue
-  const [hitlQueue, setHitlQueue] = useState([]);
-  const [agentMetrics, setAgentMetrics] = useState({ dailyCost: 0.0, hourlyRequestCount: 0, dailyBudgetLimit: 5.0, hourlyRequestLimit: 100 });
 
 
   // Telemetry Metrics
-  const [oltpWriteLatency, setOltpWriteLatency] = useState(4);
-  const [olapSyncTimer, setOlapSyncTimer] = useState(0);
-  const [jwtFlash, setJwtFlash] = useState(false);
-  const [vaultTimer, setVaultTimer] = useState(15);
-  const [latencyHistory, setLatencyHistory] = useState([4, 6, 4, 5, 8, 4, 4]);
-  const [cacheHits, setCacheHits] = useState(14);
-  const [cacheMisses, setCacheMisses] = useState(2);
-  const [circuitBreakerTripped, setCircuitBreakerTripped] = useState(false);
-  const [rateLimitActive, setRateLimitActive] = useState(false);
 
   // Logs
-  const [kafkaLogs, setKafkaLogs] = useState([
-    { id: 'L0', time: new Date().toLocaleTimeString(), event: 'KAFKA EVENT CONSOLE ACTIVE', source: 'system', meta: 'Connected to broker-1:9092. Subscribed to telemetry.events' }
-  ]);
-  const [ledger, setLedger] = useState([
-    { id: 'TX0', time: new Date().toLocaleTimeString(), type: 'system', ref: 'SYS-INIT', desc: 'Simulated payment processing backend initialized', debit: 0, credit: 0 }
-  ]);
-  const [toasts, setToasts] = useState([]);
-  const [botOpen, setBotOpen] = useState(false);
-  const [botInputText, setBotInputText] = useState('');
-  const [botMessages, setBotMessages] = useState([
-    { sender: 'bot', text: 'Hi! I am SwissBot, your AI support assistant. Need help with checkouts, orders, refunds, or shelf updates?' }
-  ]);
-  const [certModalOpen, setCertModalOpen] = useState(false);
 
-  const canvasRef = useRef(null);
-  const riderTimerRef = useRef(null);
-  const sseRef = useRef(null); // Holds the active EventSource for rider telemetry SSE
+
+
+
+  const canvasRef = useRef<any>(null);
+  const riderTimerRef = useRef<any>(null);
+  const sseRef = useRef<any>(null); // Holds the active EventSource for rider telemetry SSE
 
   // Live rider GPS coordinates streamed via SSE from BFF /api/telemetry/stream/{orderId}
-  const [riderCoords, setRiderCoords] = useState(null); // { lat, lng, temperature, timestamp }
+ // { lat, lng, temperature, timestamp }
 
   // Teardown SSE connection cleanly
   const closeSseStream = () => {
     if (sseRef.current) {
-      sseRef.current.close();
+      (sseRef.current as any).close();
       sseRef.current = null;
     }
   };
@@ -358,32 +371,23 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchAgentMetrics = () => {
-    if (!authToken) return;
-    fetch('http://localhost:8081/api/agent/metrics', {
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      }
-    })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Metrics offline');
-      })
-      .then(data => {
-        if (data && typeof data.dailyCost === 'number') {
-          setAgentMetrics(data);
-        }
-      })
-      .catch(() => {});
-  };
+  const { data: metricsData } = useQuery({
+    queryKey: ['agentMetrics'],
+    queryFn: () => fetch(`${import.meta.env.VITE_API_BASE_URL}/api/agent/metrics`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    }).then(res => {
+      if (!res.ok) throw new Error('Metrics offline');
+      return res.json();
+    }),
+    refetchInterval: 4000,
+    enabled: !!authToken,
+  });
 
   useEffect(() => {
-    if (authToken) {
-      fetchAgentMetrics();
-      const interval = setInterval(fetchAgentMetrics, 4000);
-      return () => clearInterval(interval);
+    if (metricsData && typeof metricsData.dailyCost === 'number') {
+      setAgentMetrics(metricsData);
     }
-  }, [authToken]);
+  }, [metricsData, setAgentMetrics]);
 
 
   // MFA Handlers
@@ -641,7 +645,7 @@ export default function App() {
       setActiveOrder(prev => {
         if (!prev) return null;
         if (prev.progress >= 100) {
-          clearInterval(riderTimerRef.current);
+          clearInterval(riderTimerRef.current as any);
           handleOrderDeliveryComplete(prev);
           return null;
         }
@@ -652,7 +656,7 @@ export default function App() {
         if (prev.perishable && coldChainBreakdownActive) {
           nextTemp = prev.temperature + 1.8;
           if (nextTemp >= 12.0) {
-            clearInterval(riderTimerRef.current);
+            clearInterval(riderTimerRef.current as any);
             handlePerishablesSpoiled(prev);
             return null;
           }
@@ -921,7 +925,7 @@ export default function App() {
 
     if (activeRole === 'customer') {
       // Connect directly to the Spring Boot Agentic backend via the BFF Gateway
-      fetch('http://localhost:8081/api/agent/chat', {
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/agent/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -949,7 +953,7 @@ export default function App() {
           logKafka('system', 'agent.hitl_escalated', `HITL Ticket generated: ${data.ticketId}. Reason: Confidence score low.`);
           
           // Re-fetch administrative queue to refresh the Admin view
-          fetch('http://localhost:8081/api/admin/hitl', {
+          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl`, {
             headers: { 'Authorization': authToken ? `Bearer ${authToken}` : '' }
           })
           .then(r => r.json())
@@ -961,7 +965,7 @@ export default function App() {
           .catch(() => {});
         }
         setBotMessages(prev => [...prev, { sender: 'bot', text: reply }]);
-        fetchAgentMetrics();
+        // useQuery handles metrics automatically now
       })
 
       .catch(() => {
@@ -1106,28 +1110,28 @@ export default function App() {
         </div>
 
         <nav className="role-navigation">
-          <button id="tab-customer" className={`role-tab ${activeRole === 'customer' ? 'active' : ''}`} onClick={() => setActiveRole('customer')}>
+          <button aria-label="Customer Tab" id="tab-customer" className={`role-tab ${activeRole === 'customer' ? 'active' : ''}`} onClick={() => setActiveRole('customer')}>
             <Lucide.ShoppingBag size={15} />
             <span>Customer Super App</span>
           </button>
-          <button id="tab-rider" className={`role-tab ${activeRole === 'rider' ? 'active' : ''}`} onClick={() => setActiveRole('rider')}>
+          <button aria-label="Rider Tab" id="tab-rider" className={`role-tab ${activeRole === 'rider' ? 'active' : ''}`} onClick={() => setActiveRole('rider')}>
             <Lucide.Bike size={15} />
             <span>Rider Light</span>
           </button>
-          <button id="tab-inventory" className={`role-tab ${activeRole === 'inventory' ? 'active' : ''}`} onClick={() => setActiveRole('inventory')}>
+          <button aria-label="Inventory Tab" id="tab-inventory" className={`role-tab ${activeRole === 'inventory' ? 'active' : ''}`} onClick={() => setActiveRole('inventory')}>
             <Lucide.Package size={15} />
             <span>Dark Store Inventory</span>
           </button>
-          <button id="tab-business" className={`role-tab ${activeRole === 'business' ? 'active' : ''}`} onClick={() => setActiveRole('business')}>
+          <button aria-label="Business Tab" id="tab-business" className={`role-tab ${activeRole === 'business' ? 'active' : ''}`} onClick={() => setActiveRole('business')}>
             <Lucide.BarChart3 size={15} />
             <span>Business Console</span>
           </button>
-          <button id="tab-admin" className={`role-tab ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
+          <button aria-label="Admin Tab" id="tab-admin" className={`role-tab ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
             <Lucide.ShieldCheck size={15} />
             <span>System Admin</span>
           </button>
           {isAuthenticated && (
-            <button className="role-tab" style={{ color: 'var(--color-admin)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={handleLogout}>
+            <button aria-label="Logout" className="role-tab" style={{ color: 'var(--color-admin)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={handleLogout}>
               <Lucide.LogOut size={15} />
               <span>Lock Cockpit</span>
             </button>
@@ -1296,18 +1300,18 @@ export default function App() {
                 <Lucide.Sparkles size={18} />
                 Swiss Loyalty Certificate Desk
               </h4>
-              <button className="ai-bot-close-btn" onClick={() => setCertModalOpen(false)}>
+              <button aria-label="Close" className="ai-bot-close-btn" onClick={() => setCertModalOpen(false)}>
                 <Lucide.X size={18} />
               </button>
             </div>
             
-            <canvas ref={canvasRef} width="560" height="360" className="cert-canvas" />
+            <canvas ref={canvasRef as any} width="560" height="360" className="cert-canvas" />
             
             <div className="cert-modal-actions">
-              <button className="btn-primary-glow" style={{ background: 'var(--color-business)', color: '#ffffff', cursor: 'pointer' }} onClick={handleDownloadCert}>
+              <button aria-label="Download Certificate" className="btn-primary-glow" style={{ background: 'var(--color-business)', color: '#ffffff', cursor: 'pointer' }} onClick={handleDownloadCert}>
                 Download Certificate (.PNG)
               </button>
-              <button className="btn-secondary-glow" style={{ cursor: 'pointer' }} onClick={() => setCertModalOpen(false)}>
+              <button aria-label="Dismiss Modal" className="btn-secondary-glow" style={{ cursor: 'pointer' }} onClick={() => setCertModalOpen(false)}>
                 Dismiss Desk
               </button>
             </div>

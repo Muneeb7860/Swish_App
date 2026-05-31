@@ -11,7 +11,7 @@ export default function SupportBot({
   triggerToast,
   activeRole
 }) {
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<any>(null);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -57,7 +57,7 @@ export default function SupportBot({
               {activeRole === 'rider' ? 'Rider Operations Copilot' : activeRole === 'inventory' ? 'Dark Store Picker Assistant' : 'Swiss AI Help Center'}
             </span>
           </div>
-          <button id="btn-support-bot-close" className="ai-bot-close-btn" onClick={() => setBotOpen(false)}>
+          <button aria-label="Button" id="btn-support-bot-close" className="ai-bot-close-btn" onClick={() => setBotOpen(false)}>
             <Lucide.X size={16} />
           </button>
         </div>
@@ -89,7 +89,7 @@ export default function SupportBot({
             onKeyDown={(e) => e.key === 'Enter' && handleSendBotMessage()}
           />
           
-          <button 
+          <button aria-label="Button" 
             id="btn-support-bot-attach"
             className="ai-bot-action-btn" 
             title="Attach photo (Simulated)"
@@ -98,7 +98,7 @@ export default function SupportBot({
             <Lucide.Image size={16} />
           </button>
           
-          <button 
+          <button aria-label="Button" 
             id="btn-support-bot-voice"
             className="ai-bot-action-btn" 
             title="Send voice message (Simulated)"
@@ -107,7 +107,7 @@ export default function SupportBot({
             <Lucide.Mic size={16} />
           </button>
 
-          <button id="btn-support-bot-send" className="ai-bot-action-btn" onClick={() => handleSendBotMessage()}>
+          <button aria-label="Button" id="btn-support-bot-send" className="ai-bot-action-btn" onClick={() => handleSendBotMessage()}>
             <Lucide.Send size={16} />
           </button>
         </div>

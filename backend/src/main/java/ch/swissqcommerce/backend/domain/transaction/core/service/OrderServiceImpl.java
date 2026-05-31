@@ -6,6 +6,7 @@ import ch.swissqcommerce.backend.domain.transaction.port.out.*;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -29,6 +30,7 @@ public class OrderServiceImpl implements OrderUseCase {
     private final ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase;
     private final OutboxEventPort outboxEventPort;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final HitlQueueRepository hitlQueueRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             CustomerPort customerPort,
@@ -38,7 +40,8 @@ public class OrderServiceImpl implements OrderUseCase {
                             SystemConfigPort systemConfigPort,
                             ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase,
                             OutboxEventPort outboxEventPort,
-                            org.springframework.context.ApplicationEventPublisher eventPublisher) {
+                            org.springframework.context.ApplicationEventPublisher eventPublisher,
+                            HitlQueueRepository hitlQueueRepository) {
         this.orderRepository = orderRepository;
         this.customerPort = customerPort;
         this.darkStorePort = darkStorePort;
@@ -48,6 +51,7 @@ public class OrderServiceImpl implements OrderUseCase {
         this.ledgerUseCase = ledgerUseCase;
         this.outboxEventPort = outboxEventPort;
         this.eventPublisher = eventPublisher;
+        this.hitlQueueRepository = hitlQueueRepository;
     }
 
     @Override
@@ -221,5 +225,51 @@ public class OrderServiceImpl implements OrderUseCase {
 
     private String getSystemConfig(String key, String defaultValue) {
         return systemConfigPort.getSystemConfig(key, defaultValue);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> requestRefund(Integer orderId, String claimReason, BigDecimal customerLatitude, BigDecimal customerLongitude) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found."));
+        
+        Customer customer = order.getCustomer();
+        
+        if (customer.getTrustScore() < 65) {
+            return Map.of(
+                "status", "rejected",
+                "message", "REFUND REFUSED: Your account trust rating has fallen below safety thresholds."
+            );
+        }
+        
+        if (customerLatitude != null && order.getRider() != null) {
+            BigDecimal distLat = customerLatitude.subtract(order.getRider().getActiveLat()).abs();
+            if (distLat.compareTo(new BigDecimal("0.05")) > 0) {
+                customer.setTrustScore(Math.max(0, customer.getTrustScore() - 25));
+                customerPort.save(customer);
+                return Map.of(
+                    "status", "rejected",
+                    "message", "REFUND BLOCKED: Telemetry Correlation GPS audit failed."
+                );
+            }
+        }
+        
+        String ticketId = "HITL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        HitlQueue ticket = HitlQueue.builder()
+                .ticketId(ticketId)
+                .type("refund_customer")
+                .customer(customer)
+                .order(order)
+                .description("Refund request for order " + orderId + ". Reason: " + claimReason)
+                .amount(order.getTotalAmount())
+                .status("pending")
+                .build();
+        hitlQueueRepository.save(ticket);
+        
+        return Map.of(
+            "status", "pending_admin_approval",
+            "message", "Refund filed. Awaiting manual Admin approval.",
+            "ticket_id", ticketId
+        );
     }
 }

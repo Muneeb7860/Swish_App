@@ -77,7 +77,7 @@ export default function MfaLoginPortal({
               </select>
             </div>
 
-            <button 
+            <button aria-label="Button" 
               id="btn-mfa-request-otp"
               className="btn-primary-glow" 
               style={{ background: 'var(--color-engine)', color: '#ffffff', border: 'none', padding: '0.5rem', width: '100%', cursor: 'pointer', marginTop: '0.5rem', fontFamily: 'var(--font-sans)', fontWeight: 'bold' }}
@@ -118,7 +118,7 @@ export default function MfaLoginPortal({
               />
             </div>
 
-            <button 
+            <button aria-label="Button" 
               id="btn-mfa-verify-otp"
               className="btn-primary-glow" 
               style={{ background: 'var(--color-engine)', color: '#ffffff', border: 'none', padding: '0.5rem', width: '100%', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 'bold' }}
@@ -127,7 +127,7 @@ export default function MfaLoginPortal({
               Authenticate and Unlock
             </button>
             
-            <button 
+            <button aria-label="Button" 
               id="btn-mfa-back"
               className="btn-secondary-glow" 
               style={{ width: '100%', padding: '0.5rem', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
