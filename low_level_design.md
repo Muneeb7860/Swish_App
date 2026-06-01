@@ -614,7 +614,10 @@ sequenceDiagram
     participant ProcSrv as "B2B Procurement Service"
     participant PG as "PostgreSQL (OLTP DB)"
     participant Poller as "Outbox Poller / CDC"
+    participant Kafka as "Apache Kafka Broker"
+    participant MongoConsumer as "MongoDB OLAP Sync Consumer"
     participant Mongo as "MongoDB (OLAP Data)"
+    participant RedisConsumer as "Redis Cache Invalidator"
     participant Redis as "Redis Cache Grid"
     
     ProcSrv->>PG: Begin Transaction
@@ -628,16 +631,21 @@ sequenceDiagram
         Poller->>PG: Fetch pending outbox events (Status: PENDING)
         PG-->>Poller: List of pending events
         
-        par CQRS Update Loop (MongoDB OLAP)
-            Poller->>Mongo: Bulk upsert metrics/aggregate reports
-            Mongo-->>Poller: OLAP Write complete
-        and Cache Invalidation Loop (Redis Cache)
-            Poller->>Redis: Invalidate / Update Inventory keys
-            Redis-->>Poller: Cache Fresh
-        end
+        Poller->>Kafka: Publish Event (Topic: restock.events, Key: storeId, Payload)
+        Kafka-->>Poller: Acknowledge receipt
         
         Poller->>PG: Update Event Status -> PUBLISHED
         PG-->>Poller: Update Committed
+    end
+    
+    par CQRS Update Loop (MongoDB OLAP)
+        Kafka->>MongoConsumer: Stream event: RESTOCK_COMMITTED
+        MongoConsumer->>Mongo: Bulk upsert metrics/aggregate reports
+        Mongo-->>MongoConsumer: OLAP Write complete
+    and Cache Invalidation Loop (Redis Cache)
+        Kafka->>RedisConsumer: Stream event: RESTOCK_COMMITTED
+        RedisConsumer->>Redis: Invalidate / Update Inventory keys
+        Redis-->>RedisConsumer: Cache Fresh
     end
 ```
 

@@ -19,9 +19,11 @@ graph TD
         BFF --> Backend[Spring Boot Core Backend]
         
         Backend --> Cache[(Redis Cache / Ingestion Buffer)]
-        
         Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
+        
         Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
+        DB_Tx -.->|Transactional Outbox| Kafka[(Apache Kafka Cluster)]
+        Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Archive)]
     end
 ```
 
@@ -37,6 +39,8 @@ graph TD
 | **Backend Core** | Spring Boot 3.2, Java 17 | Core B2B procurement and guardrails business logic |
 | **Database (Transactions)** | PostgreSQL 15 | Persistent transactional ledger storage (ACID) |
 | **Database (Telemetry)** | PostgreSQL + TimescaleDB | High-frequency time-series telemetry and SLA metrics storage |
+| **Database (OLAP Archive)** | MongoDB Atlas | Horizontal scale decoupled telemetry and historical logs |
+| **Message Broker** | Apache Kafka 3.6 | Zookeeper-less KRaft-based event streaming and decoupling |
 | **Caching & Ingest Buffer** | Redis 7 | Telemetry ingestion queue and catalog caching |
 | **Observability** | Prometheus, Grafana, Zipkin | Distributed metrics, tracing, and alerts |
 | **Deployment** | Docker Compose, Kubernetes | Multi-environment container orchestration |
@@ -64,6 +68,7 @@ graph TD
 
 *   **Hexagonal Architecture**: Isolates core business domain logic from infrastructure frameworks (databases, controllers, messaging systems), assuring full mockability.
 *   **Pessimistic Database Locking**: Transactional restocks execute under `READ_COMMITTED` isolation with explicit `SELECT FOR UPDATE` blocks, preventing write contention failures.
+*   **Event-Driven Communication**: Downstream CQRS updates and cache invalidations are driven asynchronously by Apache Kafka topics (`restock.events`), ensuring high system decoupling.
 *   **Ingestion Backpressure Buffering**: High-frequency telemetry packets are buffered dynamically via Redis streams before bulk-writing to the TimescaleDB instance.
 
 ---
