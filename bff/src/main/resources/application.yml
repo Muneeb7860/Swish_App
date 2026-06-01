@@ -58,11 +58,10 @@ spring:
           filters:
             - name: SecureHeaders
             - name: EdgeJwtVerificationFilter
-            - name: RequestRateLimiter
+            - name: RateLimiterFilter
               args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
+                capacity: 30
+                refillRatePerSecond: 10
             - name: CircuitBreaker
               args:
                 name: backendCircuitBreaker
