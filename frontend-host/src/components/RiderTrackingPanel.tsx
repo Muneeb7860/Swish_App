@@ -13,12 +13,25 @@ import * as Lucide from 'lucide-react';
 export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
   const [tickFlash, setTickFlash] = useState(false);
   const [prevCoords, setPrevCoords] = useState(null);
+  const [tempHistory, setTempHistory] = useState([]);
 
-  // Flash animation on every new tick
+  // Reset history on new order transit boot
+  useEffect(() => {
+    if (activeOrder?.status === 'transit') {
+      setTempHistory([{ temp: activeOrder.temperature ?? 4.0, time: Date.now() }]);
+    }
+  }, [activeOrder?.id, activeOrder?.status]);
+
+  // Flash animation and history tracking on every new tick
   useEffect(() => {
     if (riderCoords) {
       setPrevCoords(riderCoords);
       setTickFlash(true);
+      setTempHistory(prev => {
+        const val = riderCoords.temperature ?? activeOrder?.temperature ?? 4.0;
+        const next = [...prev, { temp: val, time: Date.now() }];
+        return next.slice(-6); // Keep last 6 ticks
+      });
       const timer = setTimeout(() => setTickFlash(false), 400);
       return () => clearTimeout(timer);
     }
@@ -35,6 +48,22 @@ export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
   // SVG mini-map: simple route visualization
   const riderX = 30 + (progress / 100) * 240;
   const riderY = 50 + Math.sin((progress / 100) * Math.PI) * -15;
+
+  const getTrendPath = () => {
+    if (tempHistory.length < 2) return '';
+    const minVal = 0;
+    const maxVal = 15;
+    const points = tempHistory.map((h, i) => {
+      const x = (i / (tempHistory.length - 1)) * 80 + 10;
+      const normalizedY = (h.temp - minVal) / (maxVal - minVal);
+      const y = 35 - normalizedY * 25; // Scale to 10-35 range
+      return `${x},${y}`;
+    });
+    return `M ${points.join(' L ')}`;
+  };
+
+  const trendPath = getTrendPath();
+  const fillPath = trendPath ? `${trendPath} L ${((tempHistory.length - 1) / (tempHistory.length - 1)) * 80 + 10},35 L 10,35 Z` : '';
 
   return (
     <div style={{
@@ -248,6 +277,29 @@ export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
               {tempLabel}
             </span>
           </div>
+
+          {/* Real-time Temperature Trend Graph */}
+          {tempHistory.length >= 2 && (
+            <div style={{ width: '100%', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.4rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.5rem', color: '#64748b', fontWeight: 700, marginBottom: '0.2rem', textTransform: 'uppercase' }}>Trend</div>
+              <svg width="80" height="30" style={{ overflow: 'visible' }}>
+                <defs>
+                  <linearGradient id="tempGlowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={tempColor} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={tempColor} stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                {fillPath && <path d={fillPath} fill="url(#tempGlowGrad)" />}
+                {trendPath && <path d={trendPath} fill="none" stroke={tempColor} strokeWidth="1.5" />}
+                {tempHistory.map((h, i) => {
+                  const x = (i / (tempHistory.length - 1)) * 80 + 10;
+                  const normalizedY = (h.temp - 0) / (15 - 0);
+                  const y = 35 - normalizedY * 25;
+                  return <circle key={i} cx={x} cy={y} r="2" fill={tempColor} />;
+                })}
+              </svg>
+            </div>
+          )}
         </div>
       </div>
 
