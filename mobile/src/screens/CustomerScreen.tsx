@@ -812,7 +812,6 @@ export default function CustomerScreen() {
               
               <Text style={styles.inputLabel}>6-DIGIT MFA SECURITY CODE</Text>
               <TextInput
-                style={styles.authInput}
                 value={mfaCode}
                 onChangeText={setMfaCode}
                 keyboardType="number-pad"
