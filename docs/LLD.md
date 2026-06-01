@@ -11,7 +11,7 @@
 ## 2. Ingestion Backpressure & Telemetry Pipeline
 - **Backpressure Buffer**: Real-time IoT temperature feeds and rider GPS updates are written to high-performance Redis streams.
 - **Relational Ledger**: All business transactions are processed under PostgreSQL `READ_COMMITTED` isolation with explicit database locks (`SELECT FOR UPDATE`).
-- **Telemetry Archive**: Unstructured telemetry records are archived directly to MongoDB to prevent transaction locks on the primary database, enabling auto-scaling of analytical data.
+- **Telemetry Archive**: Unstructured telemetry records are decoupled via Apache Kafka topics and processed by the `OlapEventSinkListener` to be archived into MongoDB, preventing transaction locks on the primary database and enabling horizontal scaling of analytical data.
 
 ## 3. Frontend Module Federation
 - [frontend-host/vite.config.ts](file:///C:/Users/DELL%209420/Documents/swiss_App/frontend-host/vite.config.ts) defines `remotes` via `@originjs/vite-plugin-federation`:

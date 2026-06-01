@@ -17,7 +17,7 @@ We prioritize the security and integrity of the Swish App ecosystem. This docume
 *   **CORS Enforcement**: Strict gateway white-listing of designated subdomains prevents Cross-Origin request attacks.
 
 ### 3. Data Tier Security
-*   **Isolation**: relational PostgreSQL databases, Redpanda event brokers, and Redis cache clusters run in isolated backend network subnets. Only the BFF Edge gateway has access to them.
+*   **Isolation**: relational PostgreSQL databases, Apache Kafka event brokers, and Redis cache clusters run in isolated backend network subnets. Only the BFF Edge gateway has access to them.
 *   **Pruned Volume Mappings**: Relational initialization scripts ([seed.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/seed.sql)) are mounted for schema bootstrapping only, with no production paths exposed.
 
 ---
