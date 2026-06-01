@@ -97,6 +97,44 @@ export default function CustomerApp({
 
   return (
     <div className="customer-dashboard">
+      <style>{`
+        @keyframes slide-up-bounce {
+          0% { transform: translate(-50%, 100%); opacity: 0; }
+          60% { transform: translate(-50%, -10px); opacity: 1; }
+          80% { transform: translate(-50%, 5px); }
+          100% { transform: translate(-50%, 0); }
+        }
+        
+        @keyframes pulse-glow {
+          0% { text-shadow: 0 0 2px var(--color-admin), 0 0 4px var(--color-admin); }
+          100% { text-shadow: 0 0 8px var(--color-admin), 0 0 16px var(--color-admin); }
+        }
+
+        .glowing-stock-counter {
+          color: var(--color-admin);
+          animation: pulse-glow 1s ease-in-out infinite alternate;
+        }
+        
+        .floating-checkout-bar {
+          position: fixed;
+          bottom: 1.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 90%;
+          max-width: 480px;
+          background: rgba(11, 15, 25, 0.95);
+          border: 1px solid var(--color-customer);
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1);
+          border-radius: 12px;
+          padding: 0.75rem 1.25rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(10px);
+          animation: slide-up-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
       <div className="customer-main-panel">
         
         {/* Navigation Tabs */}
@@ -282,7 +320,11 @@ export default function CustomerApp({
                   {p.perishable && <span className="badge-perishable">Cold Chain Perishable</span>}
                   <div className="product-emoji-row">
                     <span style={{ fontSize: '2rem' }}>{p.emoji}</span>
-                    <button className="add-cart-btn" onClick={() => addToCart(p)}>
+                    <button 
+                      key={cart.find(item => item.id === p.id)?.qty || 0}
+                      className={`add-cart-btn ${cart.find(item => item.id === p.id) ? 'scale-pop-animation' : ''}`}
+                      onClick={() => addToCart(p)}
+                    >
                       <Lucide.Plus size={16} />
                     </button>
                   </div>
@@ -290,9 +332,15 @@ export default function CustomerApp({
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.category}</span>
                   <div className="product-price-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
                     <span style={{ fontWeight: 800, color: 'var(--color-customer)' }}>${p.price.toFixed(2)}</span>
-                    <span style={{ fontSize: '0.65rem', color: p.stock < 5 ? 'var(--color-admin)' : 'var(--text-muted)' }}>
-                      Stock: {p.stock} units
-                    </span>
+                    {p.stock < 5 ? (
+                      <span className="glowing-stock-counter" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                        🔥 Only {p.stock} left!
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                        Stock: {p.stock} units
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -391,7 +439,7 @@ export default function CustomerApp({
       <div className="customer-cart-drawer">
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
           <Lucide.ShoppingCart size={18} className="event-customer" />
-          Shopping Cart ({cart.reduce((sum, item) => sum + item.qty, 0)})
+          Shopping Cart (<span key={cart.reduce((sum, item) => sum + item.qty, 0)} className="scale-pop-animation" style={{ display: 'inline-block' }}>{cart.reduce((sum, item) => sum + item.qty, 0)}</span>)
         </h3>
         
         {cart.length === 0 ? (
@@ -482,7 +530,8 @@ export default function CustomerApp({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <button 
                   id="btn-checkout-wallet" 
-                  className="btn-primary-glow" 
+                  className="btn-primary-glow scale-pop-animation" 
+                  key={totalCost}
                   style={{ width: '100%', border: 'none', background: 'var(--color-customer)', color: '#ffffff', padding: '0.5rem', cursor: 'pointer' }}
                   onClick={() => handleCheckout('Wallet')}
                 >
@@ -502,6 +551,33 @@ export default function CustomerApp({
         )}
       </div>
 
+      {cart.length > 0 && (
+        <div className="floating-checkout-bar">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Quick Checkout</span>
+            <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-customer)' }}>
+              Total: ${totalCost.toFixed(2)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              className="btn-primary-glow scale-pop-animation" 
+              key={totalCost}
+              style={{ background: 'var(--color-customer)', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}
+              onClick={() => handleCheckout('Wallet')}
+            >
+              Pay Wallet (${customerWallet.toFixed(2)})
+            </button>
+            <button 
+              className="btn-secondary-glow" 
+              style={{ padding: '0.4rem 0.8rem', cursor: 'pointer', borderRadius: '6px', fontSize: '0.75rem' }}
+              onClick={() => handleCheckout('Swipe')}
+            >
+              Swipe Pay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
