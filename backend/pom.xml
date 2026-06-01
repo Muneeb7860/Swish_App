@@ -234,8 +234,28 @@
                         <exclude>ch/swissqcommerce/backend/config/**</exclude>
                         <exclude>ch/swissqcommerce/backend/exception/**</exclude>
                         <exclude>ch/swissqcommerce/backend/BackendApplication.class</exclude>
-
+                        <exclude>**/*Dto.class</exclude>
+                        <exclude>**/*DTO.class</exclude>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/model/**</exclude>
+                        <exclude>**/config/**</exclude>
+                        <exclude>**/BackendApplication.class</exclude>
                     </excludes>
+                    <rules>
+                        <rule>
+                            <element>PACKAGE</element>
+                            <includes>
+                                <include>ch.swissqcommerce.backend.controller</include>
+                            </includes>
+                            <limits>
+                                <limit>
+                                    <counter>INSTRUCTION</counter>
+                                    <value>COVEREDRATIO</value>
+                                    <minimum>0.45</minimum>
+                                </limit>
+                            </limits>
+                        </rule>
+                    </rules>
                 </configuration>
                 <executions>
                     <execution>
@@ -255,31 +275,6 @@
                         <goals>
                             <goal>check</goal>
                         </goals>
-                        <configuration>
-                            <excludes>
-                                <exclude>**/*Dto.class</exclude>
-                                <exclude>**/*DTO.class</exclude>
-                                <exclude>**/dto/**</exclude>
-                                <exclude>**/model/**</exclude>
-                                <exclude>**/config/**</exclude>
-                                <exclude>**/BackendApplication.class</exclude>
-                            </excludes>
-                            <rules>
-                                <rule>
-                                    <element>PACKAGE</element>
-                                    <includes>
-                                        <include>ch.swissqcommerce.backend.controller</include>
-                                    </includes>
-                                    <limits>
-                                        <limit>
-                                            <counter>INSTRUCTION</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.45</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
