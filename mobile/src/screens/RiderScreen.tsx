@@ -751,7 +751,7 @@ export default function RiderScreen() {
 
                 <TouchableOpacity style={styles.actionBtnTransit} onPress={handleDepartTransit}>
                   <Text style={styles.actionBtnText}>DEPART FOR TRANSIT</Text>
-                  <Ionicons name="navigation-outline" size={16} color="#070a13" />
+                  <Ionicons name="navigate-outline" size={16} color="#070a13" />
                 </TouchableOpacity>
               </View>
             )}
