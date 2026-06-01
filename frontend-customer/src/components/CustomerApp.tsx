@@ -593,6 +593,7 @@ export default function CustomerApp({
             </button>
           </div>
         </div>
+      )}
       {showSubstitutionModal && subTargetItem && (
         <div className="cert-modal-overlay" style={{ zIndex: 2000 }}>
           <div className="cert-modal-content" style={{ maxWidth: '420px', padding: '1.5rem', textAlign: 'center' }}>
