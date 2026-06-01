@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: swiss_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - ../.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d swiss_db"]
       interval: 10s
@@ -87,6 +89,8 @@ services:
       - SPRING_AI_OPENAI_API_KEY=${SPRING_AI_OPENAI_API_KEY}
       - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
       - JAVA_OPTS=-Xmx256m -Xms256m
+    env_file:
+      - ../.env
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
@@ -111,6 +115,8 @@ services:
       - BACKEND_URL=http://backend:8080
       - JWT_SECRET=${JWT_SECRET}
       - JAVA_OPTS=-Xmx128m -Xms128m
+    env_file:
+      - ../.env
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]
       interval: 15s
