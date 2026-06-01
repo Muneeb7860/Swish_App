@@ -2,6 +2,71 @@ import React, { useState } from 'react';
 import * as Lucide from 'lucide-react';
 import { useAiStream } from '../hooks/useAiStream';
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  stockEast: number;
+  category: string;
+  emoji: string;
+  perishable: boolean;
+}
+
+export interface CartItem extends Product {
+  qty: number;
+}
+
+export interface Voucher {
+  code: string;
+  value: number;
+  desc: string;
+}
+
+export interface Order {
+  id: number;
+  items: string;
+  total: number;
+  progress: number;
+  status: string;
+  perishable: boolean;
+  temperature: number | null;
+  slaRemaining: number;
+}
+
+export interface CustomerAppProps {
+  products: Product[];
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  customerWallet: number;
+  setCustomerWallet: React.Dispatch<React.SetStateAction<number>>;
+  customerPoints: number;
+  setCustomerPoints: React.Dispatch<React.SetStateAction<number>>;
+  customerTab: string;
+  setCustomerTab: React.Dispatch<React.SetStateAction<string>>;
+  profileSubTab: string;
+  setProfileSubTab: React.Dispatch<React.SetStateAction<string>>;
+  savedAddresses?: any[];
+  savedCards?: any[];
+  favorites?: string[];
+  vipMember: boolean;
+  vouchers: Voucher[];
+  customerTrustScore: number;
+  gdprTokenProbation: boolean;
+  handleGdprPurge: () => void;
+  orderHistory: any[];
+  esgCheckbox: boolean;
+  setEsgCheckbox: React.Dispatch<React.SetStateAction<boolean>>;
+  tipAmount: number;
+  setTipAmount: React.Dispatch<React.SetStateAction<number>>;
+  handleCheckout: (method: string) => void;
+  handleApplyVoucher?: (code: string) => void;
+  voucherCode?: string;
+  setVoucherCode?: React.Dispatch<React.SetStateAction<string>>;
+  activeOrder: Order | null;
+  generateCertificate: (role: string) => void;
+}
+
 export default function CustomerApp({
   products,
   cart,
@@ -14,9 +79,9 @@ export default function CustomerApp({
   setCustomerTab,
   profileSubTab,
   setProfileSubTab,
-  savedAddresses,
-  savedCards,
-  favorites,
+  savedAddresses = [],
+  savedCards = [],
+  favorites = [],
   vipMember,
   vouchers,
   customerTrustScore,
@@ -28,15 +93,12 @@ export default function CustomerApp({
   tipAmount,
   setTipAmount,
   handleCheckout,
-  handleApplyVoucher,
-  voucherCode,
-  setVoucherCode,
   activeOrder,
   generateCertificate
-}) {
+}: CustomerAppProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
-  const [subTargetItem, setSubTargetItem] = useState(null);
+  const [subTargetItem, setSubTargetItem] = useState<Product | null>(null);
   
   // AI Shopping Planner Integration
   const { streamData, isStreaming, error, startStream } = useAiStream();
@@ -44,7 +106,7 @@ export default function CustomerApp({
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   // Helper to parse matching products from streamed response (case-insensitive hybrid)
-  const getMatchingProducts = () => {
+  const getMatchingProducts = (): Product[] => {
     if (!streamData) return [];
     const text = streamData.toLowerCase();
     return products.filter(product => {
@@ -76,7 +138,7 @@ export default function CustomerApp({
   );
 
 
-  const substitutionMap = {
+  const substitutionMap: Record<string, string> = {
     'p1': 'p7', // Milk -> Eggs
     'p2': 'p3', // Bananas -> Avocado
     'p3': 'p2', // Avocado -> Bananas
@@ -86,12 +148,12 @@ export default function CustomerApp({
     'p8': 'p4'  // Chips -> Soda
   };
 
-  const addToCart = (product) => {
+  const addToCart = (product: Product) => {
     if (product.stock < 5 && !showSubstitutionModal) {
       setSubTargetItem(product);
       setShowSubstitutionModal(true);
     }
-    setCart(prev => {
+    setCart((prev: CartItem[]) => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
         return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
@@ -100,8 +162,8 @@ export default function CustomerApp({
     });
   };
 
-  const removeFromCart = (itemId) => {
-    setCart(prev => prev.filter(item => item.id !== itemId));
+  const removeFromCart = (itemId: string) => {
+    setCart((prev: CartItem[]) => prev.filter(item => item.id !== itemId));
   };
 
   // Calculations
