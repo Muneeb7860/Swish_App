@@ -95,12 +95,7 @@ To achieve high concurrency write throughput, prevent database locking loops, an
    │  - Pessimistic Locks           │       └──────────────┘     └─────────────────────────────┘
    │  - Outbox Table                │
    └──────────────┬─────────────────┘
-                  │ (CDC / Poller)
-                  ▼
-         ┌─────────────────┐
-         │  Apache Kafka   │
-         └────────┬────────┘
-                  │ (Kafka Consumer - OlapEventSinkListener)
+                  │ (CDC / Poller - OlapEventSinkListener)
                   ▼
    ┌────────────────────────────────┐
    │         MongoDB Atlas          │
@@ -117,13 +112,13 @@ To achieve high concurrency write throughput, prevent database locking loops, an
 ### B. Event-Driven Data Pipeline (Transactional Outbox Pattern)
 To eliminate dual-write risks (where writing to a database succeeds but publishing to a message broker fails):
 1.  **Local Outbox Commit**: The business transaction and an corresponding event record are written to an `outbox` table in the PostgreSQL OLTP database in the **same local ACID transaction block**.
-2.  **Outbox Poller / CDC**: A Change Data Capture (CDC) tool (e.g. Debezium or an asynchronous polling scheduler) polls the `outbox` table and streams the messages to **Apache Kafka**.
-3.  **Reliability**: Guarantees at-least-once delivery of events (`order.placed`, `procurement.negotiating`, `stock.alarm`) across downstream microservices without locking the main thread.
+2.  **Outbox Poller / CDC**: A Change Data Capture (CDC) tool (e.g. Debezium or an asynchronous polling scheduler) polls the `outbox` table and streams the messages directly to downstream analytical stores.
+3.  **Reliability**: Guarantees at-least-once delivery of events (`order.placed`, `procurement.negotiating`, `stock.alarm`) across downstream targets without locking the main thread.
 
 ### C. Decoupled MongoDB Analytical Architecture
 To keep transactional performance latency below 5ms:
 *   High-throughput, unstructured data streams (e.g., rider coordinates, raw weather feeds, and IoT diagnostic updates) bypass PostgreSQL write paths.
-*   The `OlapEventSinkListener` consumes telemetry messages from Kafka and archives them into MongoDB collections.
+*   The `OlapEventSinkListener` consumes telemetry events from the outbox queue and archives them into MongoDB collections.
 *   **CFO Critique Resolution**: In response to concerns regarding the cost and compliance overhead of maintaining dual PostgreSQL + MongoDB databases:
     *   **PostgreSQL/TimescaleDB** remains the single source of truth for all structured financial ledgers and regulatory GDP-compliant logs (such as certified temperature audits).
     *   **MongoDB** acts strictly as an analytical cold-archive for high-volume, non-GDP telemetry. Under this model, MongoDB runs on low-cost tiered storage with strict retention rules to minimize OpEx growth.
@@ -148,7 +143,7 @@ To resolve the database write lock failures (SQLState 40001 serialization errors
              └───────────────────┬───────────────────┘
                                  ▼
                     Phase D: Technology Architecture
-                  (NGINX Ingress, Envoy Mesh, Kafka)
+                  (NGINX Ingress, Envoy Mesh, CDC)
 ```
 
 ### Preliminary Phase: Architecture Principles
@@ -191,7 +186,7 @@ This phase maps B2B replenishment and the autonomous procurement pipeline. If lo
 The data model divides structures into three segments to avoid contention:
 1.  **Transactional Schema (OLTP)**: PostgreSQL DB containing ledger entries, inventory state, and active orders.
 2.  **Session & Buffer Schema**: Redis cluster holding cached products and autocompletes.
-3.  **Analytical & Telemetry Schema (OLAP)**: TimescaleDB for time-series logs and MongoDB for unstructured telemetry, decoupled via Kafka.
+3.  **Analytical & Telemetry Schema (OLAP)**: TimescaleDB for time-series logs and MongoDB for unstructured telemetry, decoupled via the Transactional Outbox pattern.
 
 #### Application Architecture (Microservices Catalog)
 *   **`bff-gateway` (Spring Cloud Gateway)**: Headless REST router executing pre-routing security filters.
@@ -206,7 +201,7 @@ The data model divides structures into three segments to avoid contention:
 *   **Ingress Proxy**: NGINX Ingress Controller.
 *   **Service Mesh**: Envoy mTLS proxies.
 *   **Secret Management**: HashiCorp Vault for rotated database credentials.
-*   **Message Streaming**: Apache Kafka clusters.
+*   **Change Data Capture**: Log-based replication using Debezium reading the PostgreSQL WAL.
 *   **Fault Tolerance**: Resilience4j circuit breakers applied at the gateway boundary.
 
 ### Phase E & F: Opportunities & Solutions, Migration Planning
@@ -273,8 +268,6 @@ graph TB
       Timescale[(PostgreSQL TimescaleDB)]:::store
       MongoDB[(MongoDB OLAP Archive)]:::store
     end
-
-    Kafka[Kafka Event Broker]:::queue
   end
 
   Ingress -->|mTLS Traffic Route| BFF
@@ -291,8 +284,8 @@ graph TB
   DispSrv -->|Ingest Buffer Coordinates| Redis
   Redis -.->|Flush Telemetry Logs| Timescale
   
-  Postgres -.->|CDC Outbox Poller| Kafka
-  Kafka -.->|OlapEventSinkListener| MongoDB
+  Postgres -.->|CDC Outbox Poller| MongoDB
+  Postgres -.->|CDC Cache Invalidator| Redis
 ```
 
 ### Component Level (L3): Order & Procurement Processing
@@ -306,7 +299,7 @@ graph TB
   ProcAgent[B2B Procurement Agent<br>Core Negotiation Logic]:::component
   Guardrails[Procurement Guardrails Engine<br>Validates Bounds]:::component
   WholesalerSrv[Wholesaler Service<br>Executes Pessimistic Locks]:::component
-  OutboxPublisher[Outbox Event Publisher<br>Dispatches to Kafka]:::component
+  OutboxPublisher[Outbox Event Publisher<br>Dispatches Events]:::component
 
   Postgres[(PostgreSQL OLTP Database)]:::store
 
@@ -335,7 +328,7 @@ The development and rollout of Swish OS v2.0.0 are governed by the **Quick Comme
 | **Logistics Cargo Transit** | < 10 Minutes | GPS path updates tracked. GDP temperature logs < 8°C. |
 
 ### Release on Demand Strategies (Feature Toggles)
-*   **Chaos Desk Toggles**: Active database latency simulations, Kafka message delivery failures, and wholesale API outages are toggled dynamically on the platform administration portal to verify fallback resilience.
+*   **Chaos Desk Toggles**: Active database latency simulations, CDC outbox replication failures, and wholesale API outages are toggled dynamically on the platform administration portal to verify fallback resilience.
 *   **Procurement Guardrail Override Toggles**: Threshold parameters (e.g., maximum cost per contract limits, acceptable wholesale price variance) are updated in-memory without redeploying code.
 *   **Wholesaler Routing Toggles**: Allows routing traffic between `WHOLESALER-1` and `wholesaler-2` dynamically to adjust to supplier contract updates.
 
@@ -388,7 +381,7 @@ The **veriSM** mesh balances organization capabilities, environment resources, a
                                     ▲
                                     │
                                     ▼
-                 Technologies (mTLS, Kafka, Postgres, Redis)
+                 Technologies (mTLS, Postgres, Redis, MongoDB)
 ```
 
 We configure our organizational mesh by assigning weights (1 to 5) to technologies and practices based on operational goals:
