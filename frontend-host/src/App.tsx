@@ -1083,6 +1083,67 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        /* Bot Message window animation */
+        @keyframes scale-up-bot {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        .ai-bot-window {
+          animation: scale-up-bot 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+        }
+
+        /* Bot Messages slide-in */
+        @keyframes message-slide-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .ai-message {
+          animation: message-slide-in 0.25s ease-out forwards;
+        }
+
+        /* Cart drawer entry and state updates transition */
+        @keyframes drawer-slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .customer-cart-drawer {
+          animation: drawer-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Scale pop micro-animation for updates */
+        @keyframes scale-pop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
+
+        .scale-pop-animation {
+          animation: scale-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+      `}</style>
       
       <div className="toast-container">
         {toasts.map(t => (
