@@ -459,7 +459,7 @@ export default function PickerScreen() {
       itemId: dispatchItem,
       fromStoreId: dispatchSource,
       toStoreId: dispatchTarget,
-      quantity: parseInt(dispatchQty)
+      quantity: dispatchQty
     };
 
     if (useSimulator) {
