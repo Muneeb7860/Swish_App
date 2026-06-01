@@ -17,13 +17,11 @@ graph TD
     subgraph backend-tier [Core Agentic Network]
         BFF --> Backend[Spring Boot Core Backend]
         
-        Backend --> Cache[(Redis Cache)]
-        Backend --> DB[(PostgreSQL Ledger)]
+        Backend --> Cache[(Redis Cache / Ingest Buffer)]
+        Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
         
-        Backend --> Outbox[Outbox Event Relay]
-        Outbox --> Kafka[Kafka Message Broker]
-        
-        Kafka --> SLM[Local SLM Fine-Tuning Store]
+        Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
+        Backend -.-> Mongo[(MongoDB: Live Update & Telemetry Archive)]
     end
 ```
 
@@ -46,9 +44,9 @@ graph TD
 
 ### D. Message Broker & Data Warehousing
 *   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active MD5 hash chaining.
-*   **Redis**: Caches rolling product availability and catalog prices.
-*   **Kafka**: Streams asynchronously published events (e.g. `order.placed`, `restock.negotiated`).
-*   **Heuristics Store**: Collects and hashes all negotiation logs to feed local Small Language Model (SLM) training sets.
+*   **TimescaleDB**: Handles high-frequency time-series telemetry data and SLA log metrics.
+*   **Redis**: Ingests and buffers real-time coordinate and status changes (e.g. active rider updates).
+*   **MongoDB (NoSQL)**: Persists high-throughput, unstructured telemetry data (e.g. coordinates and weather streams) to scale write loads horizontally.
 
 ---
 
