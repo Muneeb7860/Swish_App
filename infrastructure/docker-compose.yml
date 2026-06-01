@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: swiss_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: swisssecure2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swisssecure2026}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d swiss_db"]
       interval: 10s
@@ -67,7 +67,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
     container_name: swiss_backend
     depends_on:
       postgres:
@@ -79,7 +79,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=swisssecure2026
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-swisssecure2026}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
       - JWT_SECRET=${JWT_SECRET}
       - SPRING_DATA_REDIS_HOST=redis
@@ -102,7 +102,7 @@ services:
 
   bff:
     build:
-      context: ./bff
+      context: ../bff
     container_name: swiss_bff
     depends_on:
       backend:
@@ -127,12 +127,14 @@ services:
     container_name: swiss_nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend-host/dist:/usr/share/nginx/html/host:ro
-      - ./frontend-customer/dist:/usr/share/nginx/html/customer:ro
-      - ./frontend-admin/dist:/usr/share/nginx/html/admin:ro
-      - ./frontend-rider/dist:/usr/share/nginx/html/rider:ro
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+      - ../frontend-host/dist:/usr/share/nginx/html/host:ro
+      - ../frontend-customer/dist:/usr/share/nginx/html/customer:ro
+      - ../frontend-admin/dist:/usr/share/nginx/html/admin:ro
+      - ../frontend-rider/dist:/usr/share/nginx/html/rider:ro
     depends_on:
       - bff
     restart: unless-stopped

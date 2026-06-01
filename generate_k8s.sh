@@ -1,8 +1,8 @@
 #!/bin/bash
 
-mkdir -p k8s
+mkdir -p infrastructure/k8s
 
-cat << 'YAML' > k8s/postgres.yaml
+cat << 'YAML' > infrastructure/k8s/postgres.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,7 +30,11 @@ spec:
         - name: POSTGRES_USER
           value: "postgres"
         - name: POSTGRES_PASSWORD
-          value: "swisssecure2026"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+              optional: true
         livenessProbe:
           exec:
             command: ["pg_isready", "-U", "postgres", "-d", "swiss_db"]
@@ -48,7 +52,7 @@ spec:
     app: postgres
 YAML
 
-cat << 'YAML' > k8s/redis.yaml
+cat << 'YAML' > infrastructure/k8s/redis.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -87,7 +91,7 @@ spec:
     app: redis
 YAML
 
-cat << 'YAML' > k8s/mongodb.yaml
+cat << 'YAML' > infrastructure/k8s/mongodb.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -125,7 +129,7 @@ spec:
     app: mongodb
 YAML
 
-cat << 'YAML' > k8s/kafka.yaml
+cat << 'YAML' > infrastructure/k8s/kafka.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -202,7 +206,7 @@ spec:
     app: kafka
 YAML
 
-cat << 'YAML' > k8s/backend.yaml
+cat << 'YAML' > infrastructure/k8s/backend.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -231,7 +235,11 @@ spec:
         - name: SPRING_DATASOURCE_USERNAME
           value: "postgres"
         - name: SPRING_DATASOURCE_PASSWORD
-          value: "swisssecure2026"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+              optional: true
         - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
           value: "org.postgresql.Driver"
         - name: JWT_SECRET
@@ -272,7 +280,7 @@ spec:
     app: backend
 YAML
 
-cat << 'YAML' > k8s/bff.yaml
+cat << 'YAML' > infrastructure/k8s/bff.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -324,7 +332,7 @@ spec:
     app: bff
 YAML
 
-cat << 'YAML' > k8s/nginx.yaml
+cat << 'YAML' > infrastructure/k8s/nginx.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -388,7 +396,7 @@ spec:
     app: nginx
 YAML
 
-cat << 'YAML' > k8s/prometheus.yaml
+cat << 'YAML' > infrastructure/k8s/prometheus.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -431,7 +439,7 @@ spec:
     app: prometheus
 YAML
 
-cat << 'YAML' > k8s/grafana.yaml
+cat << 'YAML' > infrastructure/k8s/grafana.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -466,7 +474,7 @@ spec:
     app: grafana
 YAML
 
-cat << 'YAML' > k8s/zipkin.yaml
+cat << 'YAML' > infrastructure/k8s/zipkin.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
