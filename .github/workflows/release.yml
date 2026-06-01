@@ -22,7 +22,7 @@ jobs:
       - name: Generate Release Version
         id: version
         run: |
-          VERSION="v0.2.$(github.run_number)"
+          VERSION="v0.2.${{ github.run_number }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release Node
