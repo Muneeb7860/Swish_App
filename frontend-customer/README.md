@@ -1,16 +1,51 @@
-# React + Vite
+# 🛒 Swish App: Customer Portal MFE (`frontend-customer`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the **Customer Portal Micro-Frontend**. This remote module provides the entire customer experience: browsing fresh catalog groceries, managing the cart, configuring loyalty points/vouchers, selecting delivery locations, and tracking order completion in real-time.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🏗️ Architecture & Module Federation
 
-## React Compiler
+This micro-frontend is exposed as a remote module that is dynamically loaded into the **Host Orchestrator** at runtime.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **Port Configuration**
+*   **Customer Remote**: `http://localhost:3001`
 
-## Expanding the ESLint configuration
+### **Exposed Interfaces**
+```javascript
+exposes: {
+  './CustomerApp': './src/components/CustomerApp.jsx'
+}
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### **Shared Packages**
+*   `react`
+*   `react-dom`
+
+---
+
+## ⚡ Development & Integration
+
+### **Running Locally**
+
+To run this micro-frontend independently during development:
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+3.  Build the remote assets (generates the `/assets/remoteEntry.js` bundle):
+    ```bash
+    npm run build
+    ```
+
+---
+
+## 🎨 Layout & Premium Features
+
+*   **Responsive Dark Mode Grid**: Optimized catalog viewing for fruits, bakery, drinks, and fresh dairy.
+*   **Active Cart & Promotions**: Integrated with loyalty discount slices, VIP tiers, and real-time checkout updates.
+*   **Live Order Tracking**: Dynamic step-by-step progress tracking for active deliveries.

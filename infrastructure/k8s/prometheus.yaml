@@ -19,6 +19,25 @@ spec:
         image: prom/prometheus:latest
         ports:
         - containerPort: 9090
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 5
         volumeMounts:
         - name: prometheus-config
           mountPath: /etc/prometheus/prometheus.yml

@@ -37,10 +37,22 @@ public class TelemetryController {
     private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     public static class TelemetryTickRequest {
+        @jakarta.validation.constraints.NotNull(message = "Order ID is required")
         private Integer orderId;
+
+        @jakarta.validation.constraints.NotNull(message = "Latitude is required")
+        @jakarta.validation.constraints.DecimalMin(value = "-90.0", message = "Latitude must be >= -90.0")
+        @jakarta.validation.constraints.DecimalMax(value = "90.0", message = "Latitude must be <= 90.0")
         private BigDecimal latitude;
+
+        @jakarta.validation.constraints.NotNull(message = "Longitude is required")
+        @jakarta.validation.constraints.DecimalMin(value = "-180.0", message = "Longitude must be >= -180.0")
+        @jakarta.validation.constraints.DecimalMax(value = "180.0", message = "Longitude must be <= 180.0")
         private BigDecimal longitude;
+
+        @jakarta.validation.constraints.NotNull(message = "Temperature is required")
         private BigDecimal temperature;
+
         private boolean dryIceInjected;
 
         public Integer getOrderId() { return orderId; }
@@ -62,7 +74,7 @@ public class TelemetryController {
      * on active alerts or cooling actions to minimize database write-amplification.
      */
     @PostMapping("/tick")
-    public ResponseEntity<Map<String, Object>> ingestTick(@RequestBody TelemetryTickRequest request) {
+    public ResponseEntity<Map<String, Object>> ingestTick(@jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
         // 1. Cache latest location in high-performance in-memory geo-store
         geoStore.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
 

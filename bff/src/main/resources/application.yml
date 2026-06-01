@@ -87,3 +87,13 @@ resilience4j:
     instances:
       backendCircuitBreaker:
         timeoutDuration: 5s
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: BFF Gateway APIs
+        url: /v3/api-docs
+      - name: Core Backend APIs
+        url: /api/v3/api-docs
+    enabled: true

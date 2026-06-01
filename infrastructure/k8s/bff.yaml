@@ -31,12 +31,25 @@ spec:
               optional: true
         - name: JAVA_OPTS
           value: "-Xmx128m -Xms128m"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 45
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
             port: 8081
           initialDelaySeconds: 30
-          periodSeconds: 15
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service

@@ -43,8 +43,12 @@ public class EdgeJwtVerificationFilter extends AbstractGatewayFilterFactory<Edge
             });
 
             String path = request.getURI().getPath();
-            // Bypass security verification on OPTIONS preflight requests and public auth endpoints
-            if (request.getMethod().name().equals("OPTIONS") || path.contains("/api/auth/login") || path.contains("/api/auth/mfa/verify")) {
+            // Bypass security verification on OPTIONS preflight requests, public auth endpoints, and Swagger UI/OpenAPI docs
+            if (request.getMethod().name().equals("OPTIONS") 
+                    || path.contains("/api/auth/login") 
+                    || path.contains("/api/auth/mfa/verify")
+                    || path.contains("/v3/api-docs")
+                    || path.contains("/swagger-ui")) {
                 return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
             }
 

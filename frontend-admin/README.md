@@ -1,16 +1,55 @@
-# React + Vite
+# 👑 Swish App: Admin & Control Console MFE (`frontend-admin`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the **Admin & Control Console Micro-Frontend**. This remote module provides full-platform administrative capabilities across multiple dimensions: business metrics dashboards, catalog management, inventory control, and system engine room performance testing.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🏗️ Architecture & Module Federation
 
-## React Compiler
+This micro-frontend is exposed as a remote module that is dynamically loaded into the **Host Orchestrator** at runtime.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **Port Configuration**
+*   **Admin Remote**: `http://localhost:3003`
 
-## Expanding the ESLint configuration
+### **Exposed Interfaces**
+```javascript
+exposes: {
+  './AdminPanel': './src/components/AdminPanel.jsx',
+  './BusinessApp': './src/components/BusinessApp.jsx',
+  './InventoryApp': './src/components/InventoryApp.jsx',
+  './SystemEngineRoom': './src/components/SystemEngineRoom.jsx'
+}
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### **Shared Packages**
+*   `react`
+*   `react-dom`
+
+---
+
+## ⚡ Development & Integration
+
+### **Running Locally**
+
+To run this micro-frontend independently during development:
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+3.  Build the remote assets (generates the `/assets/remoteEntry.js` bundle):
+    ```bash
+    npm run build
+    ```
+
+---
+
+## 🎨 Admin Control Panels
+
+1.  **Admin Panel**: The master console orchestrating multi-tab configurations.
+2.  **Business Dashboard**: Visualizes overall system telemetry, order velocities, refund rates, and B2B pricing modifiers.
+3.  **Inventory App**: Facilitates catalog modifications, stock updates, dark store management, and transfer requests.
+4.  **System Engine Room**: A specialized control panel designed for running high-frequency simulated transaction ticks and load benchmarks.

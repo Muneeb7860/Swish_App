@@ -1,16 +1,66 @@
-# React + Vite
+# 🚀 Swish App: Host Application Orchestrator (`frontend-host`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the **Swish App Frontend Host Orchestrator**. This application serves as the core shell and container in our Micro-Frontend (MFE) architecture, binding together the specialized portals for customers, riders, and administrators.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🏗️ Architecture & Module Federation
 
-## React Compiler
+The Host application leverages **Vite Module Federation** (`@originjs/vite-plugin-federation`) to dynamically resolve and stitch remote micro-frontends at runtime.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **Port Configuration**
+*   **Host Orchestrator**: `http://localhost:3000`
 
-## Expanding the ESLint configuration
+### **Registered Remotes**
+*   **Customer Remote** (`customer`): `http://localhost:3001/assets/remoteEntry.js`
+*   **Rider Remote** (`rider`): `http://localhost:3002/assets/remoteEntry.js`
+*   **Admin Remote** (`admin`): `http://localhost:3003/assets/remoteEntry.js`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### **Shared Packages**
+*   `react`
+*   `react-dom`
+
+---
+
+## 📊 Centralized Zustand State Architecture
+
+The host application defines and exposes the global state machine utilizing a sliced **Zustand** store. Remote MFEs consume and interact with these state hooks:
+
+1.  **`UserSlice`**:
+    *   Manages user roles, address profiles, favorite items, loyalty vouchers, addresses, payment cards, wallet balances (customer, rider, merchant), trust scores, and onboarding queues.
+2.  **`ProductSlice`**:
+    *   Tracks catalog state, real-time inventory levels across dark stores, and catalog search volume metrics.
+3.  **`OrderSlice`**:
+    *   Manages the shopping cart, active delivery order states, historical logs, tip adjustments, and stock transfer requests.
+
+---
+
+## ⚡ Developer Guide
+
+### **Getting Started**
+
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Launch the development server:
+    ```bash
+    npm run dev
+    ```
+3.  Build for production:
+    ```bash
+    npm run build
+    ```
+4.  Run End-to-End Cypress integration tests:
+    ```bash
+    npx cypress open
+    # Or in headless mode:
+    npx cypress run
+    ```
+
+---
+
+## 🎨 Design System & Styling
+
+*   **Vibrant Aesthetics**: Custom vanilla CSS tokens define high-contrast dark modes, smooth gradients, and glassmorphic backdrop filters.
+*   **Micro-Animations**: Hover-triggered interactive scale shifts, skeleton load states, and sliding panels give the interface a premium, responsive feel.
