@@ -42,9 +42,9 @@ public class OutboxEventScheduler {
 
         for (OutboxEvent event : pendingEvents) {
             try {
-                // Simulate resilient Kafka event stream broadcast
-                log.info("Outbox Scheduler [KAFKA DISPATCH]: Topic='{}', EventType='{}', Payload='{}'",
-                        "order.events", event.getEventType(), event.getPayload());
+                // Simulate resilient Kafka event stream broadcast with partition key routing by aggregateId to prevent out-of-order execution
+                log.info("Outbox Scheduler [KAFKA DISPATCH]: Topic='{}', Key='{}', EventType='{}', Payload='{}'",
+                        "order.events", event.getAggregateId(), event.getEventType(), event.getPayload());
 
                 // Mark as successfully published inside the transaction
                 event.setStatus("PUBLISHED");
