@@ -1,5 +1,7 @@
 package ch.swissqcommerce.bff.filter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Component
 public class RateLimiterFilter extends AbstractGatewayFilterFactory<RateLimiterFilter.Config> {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimiterFilter.class);
 
     private final Map<String, TokenBucket> ipBuckets = new ConcurrentHashMap<>();
 
@@ -38,10 +42,13 @@ public class RateLimiterFilter extends AbstractGatewayFilterFactory<RateLimiterF
             }
 
             TokenBucket bucket = ipBuckets.computeIfAbsent(limitKey, k -> new TokenBucket(config.getCapacity(), config.getRefillRatePerSecond()));
+            log.info("🔍 [RateLimiterFilter] Limit Key: {}, Remaining Tokens: {}/{}", limitKey, bucket.tokens.get(), config.getCapacity());
 
             if (bucket.tryConsume()) {
+                log.info("✅ [RateLimiterFilter] Allowed request for: {}", limitKey);
                 return chain.filter(exchange);
             } else {
+                log.warn("❌ [RateLimiterFilter] Rate limited request for: {}", limitKey);
                 exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
                 exchange.getResponse().getHeaders().add("Retry-After", "1");
                 return exchange.getResponse().setComplete();

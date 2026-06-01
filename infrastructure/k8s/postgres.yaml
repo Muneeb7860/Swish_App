@@ -25,7 +25,11 @@ spec:
         - name: POSTGRES_USER
           value: "postgres"
         - name: POSTGRES_PASSWORD
-          value: "swisssecure2026"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+              optional: true
         livenessProbe:
           exec:
             command: ["pg_isready", "-U", "postgres", "-d", "swiss_db"]

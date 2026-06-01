@@ -42,6 +42,7 @@ mvn-*.zip
 .env
 .env.*
 .env.development
+nginx/ssl/
 .env.staging
 .env.production
 !.env.example

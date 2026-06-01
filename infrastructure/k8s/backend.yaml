@@ -26,7 +26,11 @@ spec:
         - name: SPRING_DATASOURCE_USERNAME
           value: "postgres"
         - name: SPRING_DATASOURCE_PASSWORD
-          value: "swisssecure2026"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+              optional: true
         - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
           value: "org.postgresql.Driver"
         - name: JWT_SECRET
