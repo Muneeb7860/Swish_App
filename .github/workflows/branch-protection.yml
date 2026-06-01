@@ -1,0 +1,82 @@
+name: Enforce Branch Protection & Standards
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  validate-standards:
+    name: Enforce Standards Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for commit validation
+
+      - name: Require PR Description
+        if: github.event_name == 'pull_request'
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          if [ -z "$PR_BODY" ] || [ "${#PR_BODY}" -lt 10 ]; then
+            echo "❌ ERROR: A detailed Pull Request description is required (min 10 characters)."
+            exit 1
+          fi
+          echo "✅ PR Description exists and is sufficiently detailed."
+
+      - name: Prevent Direct Pushes to Master
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push' && github.actor != 'Muneeb7860'
+        run: |
+          echo "❌ ERROR: Direct pushes to master are restricted. Use PRs to develop/master."
+          exit 1
+
+      - name: Validate Commit Messages (Conventional Commits)
+        if: github.event_name == 'pull_request'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Auditing commits from $BASE_SHA to $HEAD_SHA..."
+          
+          # Get list of commit subjects
+          commits=$(git log --format=%s ${BASE_SHA}..${HEAD_SHA})
+          echo "Commits to validate:"
+          echo "$commits"
+          echo "------------------------------------"
+          
+          # Enforce conventional commits pattern
+          error_found=0
+          while IFS= read -r commit; do
+            if [ -z "$commit" ]; then continue; fi
+            
+            # Allow standard merge and release commits
+            if [[ "$commit" =~ ^Merge.* ]] || [[ "$commit" =~ ^Revert.* ]] || [[ "$commit" =~ ^release:.* ]]; then
+              echo "✅ Allowed: $commit"
+              continue
+            fi
+            
+            # Match conventional commit patterns
+            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\(.*\))?\!:?.* ]] || [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\(.*\))?:\ .* ]]; then
+              echo "✅ Valid: $commit"
+            else
+              echo "❌ Invalid: $commit"
+              error_found=1
+            fi
+          done <<< "$commits"
+          
+          if [ $error_found -eq 1 ]; then
+            echo ""
+            echo "❌ ERROR: Non-conventional commit found."
+            echo "Conventional Commits format is required. Examples:"
+            echo "  - feat: add Stripe payment gateway"
+            echo "  - fix(cart): resolve double taxation bug"
+            echo "  - docs: update API Swagger spec"
+            echo "  - test: implement integration test suite"
+            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf"
+            exit 1
+          fi
+          echo "✅ All commits pass Conventional Commits check."

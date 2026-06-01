@@ -1,0 +1,23 @@
+# Conventional Commits Git Template
+# Format: <type>(<scope>): <subject>
+# E.g. feat(cart): add Stripe payment gateway
+# -------------------------------------------------------------
+# Supported types:
+#   feat     : A new feature
+#   fix      : A bug fix
+#   docs     : Documentation changes only
+#   style    : Code formatting, missing semi-colons, etc (no logic changes)
+#   refactor : A code change that neither fixes a bug nor adds a feature
+#   test     : Adding missing tests or correcting existing tests
+#   chore    : Changes to the build process or auxiliary tools and libraries
+#   ci       : CI configuration changes (e.g. GitHub Actions)
+#   build    : Packaging, builds, dependencies, or publishing changes
+#   perf     : Performance-improving logic changes
+# -------------------------------------------------------------
+# Provide a concise imperative title (max 50 chars), then a detailed body.
+
+<type>(<scope>): <subject>
+
+<body>
+
+# Relates to issue #[ISSUE_NUMBER] or [TICKET_ID]
