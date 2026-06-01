@@ -1,6 +1,6 @@
-# Swish Q-Commerce Platform: Architecture Blueprint 🏗️
+# Swish OS Platform: Architecture Blueprint 🏗️
 
-Swish is a high-availability, event-driven 3-sided quick-commerce marketplace designed for rapid, sub-15-minute grocery deliveries. This document outlines the technology stack, system architecture, data flow patterns, and deployment configurations.
+Swish OS is a high-availability, B2B SaaS micro-fulfillment and agentic procurement platform. This document outlines the technology stack, system architecture, data flow patterns, and deployment configurations.
 
 ---
 
@@ -8,31 +8,20 @@ Swish is a high-availability, event-driven 3-sided quick-commerce marketplace de
 
 ```mermaid
 graph TD
-    Client[Web/Mobile Clients] --> Edge[Nginx Edge Proxy (DMZ)]
+    Client[Enterprise AI / Operator Console] --> Edge[Nginx Edge Proxy (DMZ)]
     
-    subgraph frontend-tier [Frontend Tier Network]
-        Edge --> Host[MFE: frontend-host]
-        Edge --> BFF[Spring Boot BFF Gateway]
+    subgraph frontend-tier [Edge API & Cockpit Tier]
+        Edge --> Cockpit[Exception Feed: frontend-host]
+        Edge --> BFF[Agentic BFF Gateway]
     end
 
-    subgraph backend-tier [Backend Tier Network]
+    subgraph backend-tier [Core Agentic Network]
         BFF --> Backend[Spring Boot Core Backend]
         
-        Backend --> Cache[(Redis Cache)]
-        Backend --> DB[(PostgreSQL)]
-        Backend --> Mongo[(MongoDB)]
+        Backend --> Cache[(Redis Cache / Ingestion Buffer)]
         
-        Backend --> Kafka[Kafka Event Bus]
-        Kafka --> DLQ[Dead Letter Topic]
-    end
-    
-    subgraph observability [Mission Control]
-        Backend -.-> Prom[Prometheus]
-        BFF -.-> Prom
-        Prom --> Grafana[Grafana Dashboards]
-        
-        Backend -.-> Zipkin[Zipkin Distributed Tracing]
-        BFF -.-> Zipkin
+        Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
+        Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
     end
 ```
 
@@ -44,11 +33,11 @@ graph TD
 | :--- | :--- | :--- |
 | **Frontend** | React 18, Vite, TypeScript | Interactive UI & runtime bundling |
 | **State Management** | Zustand (Sliced Stores) | Decentralized global MFE state sharing |
-| **API Gateway** | Spring Cloud Gateway (BFF) | Rate limiting, JWT verification, CORS |
-| **Backend Core** | Spring Boot 3.2, Java 17 | Core Q-Commerce business logics |
-| **Database** | PostgreSQL 15 | Persistent transaction ledger storage |
-| **Caching** | Redis 7 | High-performance catalog and session caching |
-| **Messaging** | Redpanda (Kafka v23.2) | Real-time event streaming and DLQs |
+| **API Gateway** | Spring Cloud Gateway (BFF) | Headless OpenAPI gateway, rate limiting, JWT verification |
+| **Backend Core** | Spring Boot 3.2, Java 17 | Core B2B procurement and guardrails business logic |
+| **Database (Transactions)** | PostgreSQL 15 | Persistent transactional ledger storage (ACID) |
+| **Database (Telemetry)** | PostgreSQL + TimescaleDB | High-frequency time-series telemetry and SLA metrics storage |
+| **Caching & Ingest Buffer** | Redis 7 | Telemetry ingestion queue and catalog caching |
 | **Observability** | Prometheus, Grafana, Zipkin | Distributed metrics, tracing, and alerts |
 | **Deployment** | Docker Compose, Kubernetes | Multi-environment container orchestration |
 
@@ -63,10 +52,10 @@ graph TD
 *   **`frontend-admin` (Port 3003)**: Admin dashboard detailing business metrics, catalog modifiers, and system engine simulation triggers.
 
 ### 2. Edge Gateway BFF
-*   **BFF Gateway (Port 8081)**: Resolves React requests. Bypasses security for Swagger documentation and coordinates OAuth2 JWT verification, Resilience4j circuit breakers, and rate limiters.
+*   **BFF Gateway (Port 8081)**: Resolves requests. Bypasses security for Swagger documentation and coordinates OAuth2 JWT verification, Resilience4j circuit breakers, and rate limiters.
 
 ### 3. Backend Core Service (Port 8080)
-*   Implements core quick-commerce logic under a structured **Hexagonal (Ports & Adapters) Architecture**.
+*   Implements core business logic under a structured **Hexagonal (Ports & Adapters) Architecture**.
 *   Exposes APIs for orders, payments, riders, inventory, and telemetry processing.
 
 ---
@@ -74,9 +63,8 @@ graph TD
 ## 🧩 Architectural & Resilience Design Patterns
 
 *   **Hexagonal Architecture**: Isolates core business domain logic from infrastructure frameworks (databases, controllers, messaging systems), assuring full mockability.
-*   **Event-Driven Communication**: Services trigger Kafka events (e.g., `order.placed`, `payment.charged`) to execute asynchronous updates.
-*   **Resilience & Dead Letter Queues**: Mapped `DeadLetterPublishingRecoverer` handlers move failing Kafka events into dedicated DLQs to prevent message ingestion blocks.
-*   **Cache-Aside Pattern**: Frequently fetched catalog inventories are cached via Redis, dropping lookups to milliseconds.
+*   **Pessimistic Database Locking**: Transactional restocks execute under `READ_COMMITTED` isolation with explicit `SELECT FOR UPDATE` blocks, preventing write contention failures.
+*   **Ingestion Backpressure Buffering**: High-frequency telemetry packets are buffered dynamically via Redis streams before bulk-writing to the TimescaleDB instance.
 
 ---
 
