@@ -20,28 +20,6 @@ services:
     networks:
       - backend-tier
 
-  kafka:
-    image: docker.redpanda.com/redpandadata/redpanda:v23.2.3
-    container_name: swiss_kafka
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-    command:
-      - redpanda start
-      - --smp 1
-      - --overprovisioned
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:29092
-      - --advertise-kafka-addr internal://kafka:9092,external://localhost:29092
-      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:8083
-      - --advertise-pandaproxy-addr internal://kafka:8082,external://localhost:8083
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:8084
-      - --rpc-addr 0.0.0.0:33145
-      - --advertise-rpc-addr kafka:33145
-    networks:
-      - backend-tier
-
   mongodb:
     image: mongo:6.0
     container_name: swiss_mongodb
@@ -74,8 +52,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_started
       redis:
         condition: service_healthy
     environment:
