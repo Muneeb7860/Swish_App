@@ -1231,6 +1231,55 @@ export default function App() {
         </nav>
       </header>
 
+      {activeOrder && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(15, 23, 42, 0.9)',
+          borderBottom: '1px solid rgba(59, 130, 246, 0.25)',
+          padding: '0.4rem 1.25rem',
+          backdropFilter: 'blur(10px)',
+          animation: 'fadeIn 0.5s ease-out',
+          position: 'relative',
+          zIndex: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Lucide.Zap size={14} className="animate-pulse" style={{ color: '#fbbf24' }} />
+            <div>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.05em' }}>
+                ⚡ ACTIVE SLA COUNTDOWN
+              </span>
+              <span style={{ fontSize: '0.65rem', color: '#94a3b8', marginLeft: '0.5rem' }}>
+                Order #{activeOrder.id} • Status: <strong style={{ color: '#10b981' }}>{activeOrder.status.toUpperCase()}</strong>
+              </span>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'monospace', color: activeOrder.slaRemaining < 30 ? '#ef4444' : '#fbbf24' }}>
+              {activeOrder.slaRemaining}s remaining
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2.5" />
+              <circle 
+                cx="12" 
+                cy="12" 
+                r="10" 
+                fill="none" 
+                stroke={activeOrder.slaRemaining < 30 ? '#ef4444' : '#fbbf24'} 
+                strokeWidth="2.5"
+                strokeDasharray="63"
+                strokeDashoffset={63 - (Math.min(activeOrder.slaRemaining, activeOrder.status === 'picking' ? (activePickingCongested ? 280 : 180) : 180) / (activeOrder.status === 'picking' ? (activePickingCongested ? 280 : 180) : 180)) * 63}
+                strokeLinecap="round"
+                transform="rotate(-90 12 12)"
+                style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease' }}
+              />
+            </svg>
+          </div>
+        </div>
+      )}
+
       <main className="cockpit-main-layout">
         
         <section className="workspace-main-panel">
