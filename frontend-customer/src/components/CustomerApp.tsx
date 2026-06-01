@@ -35,6 +35,8 @@ export default function CustomerApp({
   generateCertificate
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [subTargetItem, setSubTargetItem] = useState(null);
   
   // AI Shopping Planner Integration
   const { streamData, isStreaming, error, startStream } = useAiStream();
@@ -74,7 +76,21 @@ export default function CustomerApp({
   );
 
 
+  const substitutionMap = {
+    'p1': 'p7', // Milk -> Eggs
+    'p2': 'p3', // Bananas -> Avocado
+    'p3': 'p2', // Avocado -> Bananas
+    'p5': 'p6', // Sourdough -> Muffins
+    'p6': 'p5', // Muffins -> Sourdough
+    'p7': 'p1', // Eggs -> Milk
+    'p8': 'p4'  // Chips -> Soda
+  };
+
   const addToCart = (product) => {
+    if (product.stock < 5 && !showSubstitutionModal) {
+      setSubTargetItem(product);
+      setShowSubstitutionModal(true);
+    }
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -575,6 +591,81 @@ export default function CustomerApp({
             >
               Swipe Pay
             </button>
+          </div>
+        </div>
+      {showSubstitutionModal && subTargetItem && (
+        <div className="cert-modal-overlay" style={{ zIndex: 2000 }}>
+          <div className="cert-modal-content" style={{ maxWidth: '420px', padding: '1.5rem', textAlign: 'center' }}>
+            <h4 style={{ color: 'var(--color-customer)', fontWeight: 800, margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+              <Lucide.Sparkles size={18} />
+              Stock Alert: Running Low!
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              <strong>{subTargetItem.emoji} {subTargetItem.name}</strong> is in high demand (Only {subTargetItem.stock} left!). Would you like to select a high-availability backup substitute to ensure your delivery isn't delayed?
+            </p>
+            
+            {(() => {
+              const subId = substitutionMap[subTargetItem.id];
+              const substitute = products.find(p => p.id === subId);
+              if (!substitute) return null;
+              
+              return (
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2rem' }}>{substitute.emoji}</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{substitute.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{substitute.category} • ${substitute.price.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn-primary-glow" 
+                    style={{ background: 'var(--color-customer)', color: '#ffffff', padding: '0.4rem 0.8rem', fontSize: '0.75rem', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => {
+                      setCart(prev => {
+                        const targetInCart = prev.find(item => item.id === subTargetItem.id);
+                        if (targetInCart) {
+                          const filtered = prev.filter(item => item.id !== subTargetItem.id);
+                          const subInCart = filtered.find(item => item.id === substitute.id);
+                          if (subInCart) {
+                            return filtered.map(item => item.id === substitute.id ? { ...item, qty: item.qty + targetInCart.qty } : item);
+                          }
+                          return [...filtered, { ...substitute, qty: targetInCart.qty }];
+                        }
+                        return prev;
+                      });
+                      setShowSubstitutionModal(false);
+                      setSubTargetItem(null);
+                    }}
+                  >
+                    Swap Item
+                  </button>
+                </div>
+              );
+            })()}
+            
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                className="btn-secondary-glow" 
+                style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                onClick={() => {
+                  setShowSubstitutionModal(false);
+                  setSubTargetItem(null);
+                }}
+              >
+                Keep Original
+              </button>
+            </div>
           </div>
         </div>
       )}
