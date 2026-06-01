@@ -1,20 +1,32 @@
-# Business Requirements Document (BRD)
+# Business Requirements Document (BRD): Swish OS
+**Version**: 2.0.0 (B2B SaaS Pivot)
+
+---
 
 ## 1. Executive Summary
-Swish_App aims to capture 40% of the Swiss Q-Commerce market by outcompeting rivals on speed, reliability, and application resilience. This document outlines the business needs that drive the technical architecture.
+Swish OS aims to capture a significant share of the global B2B procurement market by providing retail chains with an autonomous AI negotiation engine. By automating supplier procurement and ledger auditing, Swish OS turns legacy physical stores into high-efficiency micro-fulfillment networks.
 
-## 2. Business Objectives
-- **Minimize Order Drop-off**: Reduce cart abandonment by ensuring sub-second catalog loading.
-- **Optimize Fleet Utilization**: Ensure 100% of generated orders are processed by Riders without system drop-outs.
-- **Maintain Data Integrity**: Guarantee consistent financial and inventory records.
+---
+
+## 2. Business Objectives & Revenue Model
+*   **$100M+ ARR Target**: Scaled globally via pure-play software-as-a-service (SaaS) licensing to avoid capital-heavy delivery operations.
+*   **Value-Shared Monetization**: 
+  - **Base Subscription**: Monthly recurring licensing fee per active store/warehouse.
+  - **Transaction Performance Fee**: A fractional fee (0.5% - 1.0%) based on documented discount savings negotiated by the autonomous AI agents.
+*   **Zero Operational Liability**: Eliminate driver fleet overhead, dark store rents, and labor liability by licensing directly to retailers who own the physical assets.
+
+---
 
 ## 3. Scope & Capabilities
-1. **Customer App**: Browse catalog, place orders, real-time tracking.
-2. **Rider App**: Accept orders, update geolocation.
-3. **Admin App**: Monitor active deliveries, manage inventory, view system health.
+1.  **AI Procurement Agent**: Automatically negotiates bids, balances inventories, and triggers restocks.
+2.  **Edge Agent Gateway**: Exposes API schemas for external agentic integrations.
+3.  **Audited Financial Ledger**: Provides double-entry cryptographic security checking for all transactions.
+4.  **Exceptions Console**: Interactive dashboard for human operators to override and approve transactions exceeding guardrails.
+
+---
 
 ## 4. Key Performance Indicators (KPIs)
-- System Uptime (Target: 99.99%)
-- Order Fulfillment Rate (Target: 99.5%)
-- API Latency (Target: < 50ms for Catalog)
-- Mean Time to Recovery (MTTR) (Target: < 5 mins via Observability dashboards)
+*   **Procurement Savings**: Target 3% to 7% average discount achieved per wholesale contract.
+*   **SLA Compliance**: Auto-dispatch picking cycles completed in under 4 minutes.
+*   **Net Revenue Retention (NRR)**: Target > 120% through expansion licensing per store hub.
+*   **System Integrity**: 100% of committed ledger balances verify mathematically against tamper-evident hash chains.
