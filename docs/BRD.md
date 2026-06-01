@@ -10,9 +10,9 @@ Swish OS aims to capture a significant share of the global B2B procurement marke
 
 ## 2. Business Objectives & Revenue Model
 *   **$100M+ ARR Target**: Scaled globally via pure-play software-as-a-service (SaaS) licensing to avoid capital-heavy delivery operations.
-*   **Value-Shared Monetization**: 
-  - **Base Subscription**: Monthly recurring licensing fee per active store/warehouse.
-  - **Transaction Performance Fee**: A fractional fee (0.5% - 1.0%) based on documented discount savings negotiated by the autonomous AI agents.
+*   **Tiered SaaS Pricing Model**: 
+  - **Tier 1 (Telemetry & Ledger Compliance)**: $1,000/month per active hub. Provides cold-chain thermal tracking, IoT spoilage alerts, and SHA-256 ledger audit chaining.
+  - **Tier 2 (Replenishment & Agentic Procurement)**: $1,500/month per active hub. Adds B2B autonomous procurement negotiations and fallback wholesaler failovers.
 *   **Zero Operational Liability**: Eliminate driver fleet overhead, dark store rents, and labor liability by licensing directly to retailers who own the physical assets.
 
 ---
@@ -22,6 +22,9 @@ Swish OS aims to capture a significant share of the global B2B procurement marke
 2.  **Edge Agent Gateway**: Exposes API schemas for external agentic integrations.
 3.  **Audited Financial Ledger**: Provides double-entry cryptographic security checking for all transactions.
 4.  **Exceptions Console**: Interactive dashboard for human operators to override and approve transactions exceeding guardrails.
+5.  **Pilot Alignment & Scope Restrictions**: 
+  - **Year 1 Pilot (Valora - k kiosk)**: Restricted exclusively to **retail cold-chain and fresh food shelf-life optimization**.
+  - **Pharmaceutical Sector**: True clinical distribution validation (complying with GDP guidelines) is deferred until a certified pharmaceutical distributor is signed as a co-pilot.
 
 ---
 

@@ -23,8 +23,8 @@ For additional architectural, business, and low-level details, refer to the foll
 
 #### Chief Financial Officers (CFOs)
 CFOs demand strict capital efficiency, risk mitigation, and clear profitability metrics:
-*   **High LTV:CAC Ratio (36:1)**: Achieved through a pure-play SaaS model where customer acquisition costs ($15k/chain) are offset by multi-year subscription contracts and performance-shared fees.
-*   **Performance Commission Fees (1.2%)**: Swish OS captures 1.2% of all invoice cost savings negotiated dynamically by our AI agents against wholesale market baselines, creating a self-funding software model.
+*   **High LTV:CAC Ratio (36:1)**: Achieved through a pure-play SaaS model where customer acquisition costs ($15k/chain) are offset by multi-year subscription contracts.
+*   **Tiered SaaS Subscriptions**: Eliminates messy variable commission tracking by charging a base subscription of $1,000/month/hub (Tier 1 compliance) and $1,500/month/hub (Tier 2 agentic procurement).
 *   **Auditable Ledger Integration**: Direct double-entry transactional accounting in PostgreSQL prevents ledger leakage, providing full audit compliance.
 *   **Zero Fleet Liability**: All courier logistics and warehouse space are owned by the client retail chains, leaving Swish OS with zero physical overhead or labor risk.
 
@@ -32,7 +32,7 @@ CFOs demand strict capital efficiency, risk mitigation, and clear profitability 
 Distributors require high API uptime, automated order clearing, and clear SLA enforcement:
 *   **Automated B2B Agentic Negotiations**: The system uses autonomous AI to compare pricing tables and execute restock contracts under strict guardrails.
 *   **Active Fallback Wholesaling**: Continuous stock checks fall back to secondary wholesalers (`wholesaler-2`) if the primary API (`WHOLESALER-1`) fails, ensuring near-zero stockout events.
-*   **Regulatory GDP Compliance**: A core framework for tracking cold chain logistics (ambient temp < 8°C or dry ice mitigation) guarantees product integrity for high-margin pharmaceuticals and groceries.
+*   **Regulatory Cold-Chain Compliance**: A core framework for tracking cold chain logistics (ambient temp < 8°C or dry ice mitigation) guarantees product integrity for fresh foods and potential future pharmaceuticals.
 
 ### Pilot Proposal Scoping: The Valora ("k kiosk") Pilot
 The system's real-world model is derived from the Valora convenience store pilot:
@@ -159,7 +159,7 @@ To resolve the database write lock failures (SQLState 40001 serialization errors
 ### Phase A: Architecture Vision
 *   **B2B Value Proposition**: Eliminate operational costs by licensing a software-only micro-fulfillment engine directly to retail chains.
 *   **Stakeholder Maps**:
-    *   *CFOs*: Require high LTV:CAC, performance commission tracking, and strict GDP-compliant CapEx provisioning.
+    *   *CFOs*: Require high LTV:CAC, simplified tiered SaaS subscription auditing, and CapEx mitigation via software-only orchestration.
     *   *Wholesale Distributors*: Require REST webhook integrations and robust fallback pathways.
     *   *Store Operators*: Require high-accuracy checklist tools (picking SLA < 4 mins).
     *   *System Admins*: Require Chaos Desks for fault injection testing.
