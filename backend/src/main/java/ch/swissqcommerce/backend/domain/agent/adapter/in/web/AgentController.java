@@ -4,9 +4,15 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
+import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -20,6 +26,12 @@ public class AgentController {
 
     @Autowired
     private ch.swissqcommerce.backend.domain.agent.core.service.ProcurementGuardrailsEngine procurementGuardrailsEngine;
+
+    @Autowired
+    private HitlQueueRepository hitlQueueRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @PostMapping("/chat")
     public ResponseEntity<AgentResponse> chat(@RequestBody AgentRequest request) {
@@ -40,6 +52,28 @@ public class AgentController {
         var guardrailResult = procurementGuardrailsEngine.validate(
                 analysis.proposedPrice, request.getBasePrice(), request.getQuantity());
 
+        if (!guardrailResult.isApproved()) {
+            Customer customer = null;
+            if (request.getCustomerId() != null && !request.getCustomerId().trim().isEmpty()) {
+                customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+            }
+            String ticketId = "HITL-" + UUID.randomUUID().toString();
+            String description = "Guardrail violation: " + guardrailResult.getMessage()
+                    + ", Item ID: " + request.getItemId()
+                    + ", Wholesaler: " + request.getWholesalerName();
+
+            HitlQueue ticket = HitlQueue.builder()
+                    .ticketId(ticketId)
+                    .type("restock_audit")
+                    .status("pending")
+                    .description(description)
+                    .amount(BigDecimal.valueOf(analysis.proposedPrice * request.getQuantity()))
+                    .customer(customer)
+                    .build();
+
+            hitlQueueRepository.save(ticket);
+        }
+
         NegotiationResponse response = new NegotiationResponse(
                 guardrailResult.isApproved(),
                 guardrailResult.getMessage(),
@@ -58,6 +92,7 @@ public class AgentController {
         private double basePrice;
         private String wholesalerName;
         private int quantity;
+        private String customerId;
 
         public String getItemId() { return itemId; }
         public void setItemId(String itemId) { this.itemId = itemId; }
@@ -69,6 +104,8 @@ public class AgentController {
         public void setWholesalerName(String wholesalerName) { this.wholesalerName = wholesalerName; }
         public int getQuantity() { return quantity; }
         public void setQuantity(int quantity) { this.quantity = quantity; }
+        public String getCustomerId() { return customerId; }
+        public void setCustomerId(String customerId) { this.customerId = customerId; }
     }
 
     public static class NegotiationResponse {

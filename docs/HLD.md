@@ -43,7 +43,7 @@ graph TD
 *   Uses a **deterministic ledger validator** to inspect and approve AI agent orders before commit.
 
 ### D. Message Broker & Data Warehousing
-*   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active MD5 hash chaining.
+*   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active SHA-256 hash chaining.
 *   **TimescaleDB**: Handles high-frequency time-series telemetry data and SLA log metrics.
 *   **Redis**: Ingests and buffers real-time coordinate and status changes (e.g. active rider updates).
 *   **MongoDB (NoSQL)**: Persists high-throughput, unstructured telemetry data (e.g. coordinates and weather streams) to scale write loads horizontally.

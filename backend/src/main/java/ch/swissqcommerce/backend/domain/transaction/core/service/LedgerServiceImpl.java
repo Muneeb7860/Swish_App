@@ -63,7 +63,7 @@ public class LedgerServiceImpl implements LedgerUseCase {
 
         // 3. Create Journal Entry
         UUID uuid = UUID.randomUUID();
-        String entryHash = computeMD5Hash(uuid.toString(), reference, description, prevHash);
+        String entryHash = computeSHA256Hash(uuid.toString(), reference, description, prevHash);
 
         JournalEntry entry = JournalEntry.builder()
                 .entryUuid(uuid)
@@ -137,10 +137,10 @@ public class LedgerServiceImpl implements LedgerUseCase {
         }
     }
 
-    private String computeMD5Hash(String uuid, String reference, String description, String prevHash) {
+    private String computeSHA256Hash(String uuid, String reference, String description, String prevHash) {
         try {
             String raw = uuid + reference + description + prevHash;
-            MessageDigest md = MessageDigest.getInstance("MD5");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = md.digest(raw.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             for (byte b : hashBytes) {
@@ -148,7 +148,7 @@ public class LedgerServiceImpl implements LedgerUseCase {
             }
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5 digest algorithm not available", e);
+            throw new RuntimeException("SHA-256 digest algorithm not available", e);
         }
     }
 
