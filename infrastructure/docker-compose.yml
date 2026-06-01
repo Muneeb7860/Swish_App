@@ -133,19 +133,15 @@ services:
     container_name: swiss_nginx
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../nginx/ssl:/etc/nginx/ssl:ro
-      - ../frontend-host/dist:/usr/share/nginx/html/host:ro
-      - ../frontend-customer/dist:/usr/share/nginx/html/customer:ro
-      - ../frontend-admin/dist:/usr/share/nginx/html/admin:ro
-      - ../frontend-rider/dist:/usr/share/nginx/html/rider:ro
     depends_on:
       - bff
     restart: unless-stopped
     networks:
       - frontend-tier
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   prometheus:
     image: prom/prometheus:latest
