@@ -1,6 +1,8 @@
 package ch.swissqcommerce.backend.controller;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,8 +14,8 @@ public class RecommendationController {
 
     private final ChatClient chatClient;
 
-    public RecommendationController(ChatClient.Builder chatClientBuilder) {
-        this.chatClient = chatClientBuilder.build();
+    public RecommendationController(@Qualifier("openAiChatModel") ChatModel chatModel) {
+        this.chatClient = ChatClient.builder(chatModel).build();
     }
 
     @GetMapping
