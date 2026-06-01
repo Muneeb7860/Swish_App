@@ -2,6 +2,71 @@ import React, { useState } from 'react';
 import * as Lucide from 'lucide-react';
 import { useAiStream } from '../hooks/useAiStream';
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  stockEast: number;
+  category: string;
+  emoji: string;
+  perishable: boolean;
+}
+
+export interface CartItem extends Product {
+  qty: number;
+}
+
+export interface Voucher {
+  code: string;
+  value: number;
+  desc: string;
+}
+
+export interface Order {
+  id: number;
+  items: string;
+  total: number;
+  progress: number;
+  status: string;
+  perishable: boolean;
+  temperature: number | null;
+  slaRemaining: number;
+}
+
+export interface CustomerAppProps {
+  products: Product[];
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  customerWallet: number;
+  setCustomerWallet: React.Dispatch<React.SetStateAction<number>>;
+  customerPoints: number;
+  setCustomerPoints: React.Dispatch<React.SetStateAction<number>>;
+  customerTab: string;
+  setCustomerTab: React.Dispatch<React.SetStateAction<string>>;
+  profileSubTab: string;
+  setProfileSubTab: React.Dispatch<React.SetStateAction<string>>;
+  savedAddresses?: any[];
+  savedCards?: any[];
+  favorites?: string[];
+  vipMember: boolean;
+  vouchers: Voucher[];
+  customerTrustScore: number;
+  gdprTokenProbation: boolean;
+  handleGdprPurge: () => void;
+  orderHistory: any[];
+  esgCheckbox: boolean;
+  setEsgCheckbox: React.Dispatch<React.SetStateAction<boolean>>;
+  tipAmount: number;
+  setTipAmount: React.Dispatch<React.SetStateAction<number>>;
+  handleCheckout: (method: string) => void;
+  handleApplyVoucher?: (code: string) => void;
+  voucherCode?: string;
+  setVoucherCode?: React.Dispatch<React.SetStateAction<string>>;
+  activeOrder: Order | null;
+  generateCertificate: (role: string) => void;
+}
+
 export default function CustomerApp({
   products,
   cart,
@@ -14,9 +79,9 @@ export default function CustomerApp({
   setCustomerTab,
   profileSubTab,
   setProfileSubTab,
-  savedAddresses,
-  savedCards,
-  favorites,
+  savedAddresses = [],
+  savedCards = [],
+  favorites = [],
   vipMember,
   vouchers,
   customerTrustScore,
@@ -28,13 +93,12 @@ export default function CustomerApp({
   tipAmount,
   setTipAmount,
   handleCheckout,
-  handleApplyVoucher,
-  voucherCode,
-  setVoucherCode,
   activeOrder,
   generateCertificate
-}) {
+}: CustomerAppProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [subTargetItem, setSubTargetItem] = useState<Product | null>(null);
   
   // AI Shopping Planner Integration
   const { streamData, isStreaming, error, startStream } = useAiStream();
@@ -42,7 +106,7 @@ export default function CustomerApp({
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   // Helper to parse matching products from streamed response (case-insensitive hybrid)
-  const getMatchingProducts = () => {
+  const getMatchingProducts = (): Product[] => {
     if (!streamData) return [];
     const text = streamData.toLowerCase();
     return products.filter(product => {
@@ -74,8 +138,22 @@ export default function CustomerApp({
   );
 
 
-  const addToCart = (product) => {
-    setCart(prev => {
+  const substitutionMap: Record<string, string> = {
+    'p1': 'p7', // Milk -> Eggs
+    'p2': 'p3', // Bananas -> Avocado
+    'p3': 'p2', // Avocado -> Bananas
+    'p5': 'p6', // Sourdough -> Muffins
+    'p6': 'p5', // Muffins -> Sourdough
+    'p7': 'p1', // Eggs -> Milk
+    'p8': 'p4'  // Chips -> Soda
+  };
+
+  const addToCart = (product: Product) => {
+    if (product.stock < 5 && !showSubstitutionModal) {
+      setSubTargetItem(product);
+      setShowSubstitutionModal(true);
+    }
+    setCart((prev: CartItem[]) => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
         return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
@@ -84,8 +162,8 @@ export default function CustomerApp({
     });
   };
 
-  const removeFromCart = (itemId) => {
-    setCart(prev => prev.filter(item => item.id !== itemId));
+  const removeFromCart = (itemId: string) => {
+    setCart((prev: CartItem[]) => prev.filter(item => item.id !== itemId));
   };
 
   // Calculations
@@ -97,6 +175,44 @@ export default function CustomerApp({
 
   return (
     <div className="customer-dashboard">
+      <style>{`
+        @keyframes slide-up-bounce {
+          0% { transform: translate(-50%, 100%); opacity: 0; }
+          60% { transform: translate(-50%, -10px); opacity: 1; }
+          80% { transform: translate(-50%, 5px); }
+          100% { transform: translate(-50%, 0); }
+        }
+        
+        @keyframes pulse-glow {
+          0% { text-shadow: 0 0 2px var(--color-admin), 0 0 4px var(--color-admin); }
+          100% { text-shadow: 0 0 8px var(--color-admin), 0 0 16px var(--color-admin); }
+        }
+
+        .glowing-stock-counter {
+          color: var(--color-admin);
+          animation: pulse-glow 1s ease-in-out infinite alternate;
+        }
+        
+        .floating-checkout-bar {
+          position: fixed;
+          bottom: 1.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 90%;
+          max-width: 480px;
+          background: rgba(11, 15, 25, 0.95);
+          border: 1px solid var(--color-customer);
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1);
+          border-radius: 12px;
+          padding: 0.75rem 1.25rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(10px);
+          animation: slide-up-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
       <div className="customer-main-panel">
         
         {/* Navigation Tabs */}
@@ -282,7 +398,11 @@ export default function CustomerApp({
                   {p.perishable && <span className="badge-perishable">Cold Chain Perishable</span>}
                   <div className="product-emoji-row">
                     <span style={{ fontSize: '2rem' }}>{p.emoji}</span>
-                    <button className="add-cart-btn" onClick={() => addToCart(p)}>
+                    <button 
+                      key={cart.find(item => item.id === p.id)?.qty || 0}
+                      className={`add-cart-btn ${cart.find(item => item.id === p.id) ? 'scale-pop-animation' : ''}`}
+                      onClick={() => addToCart(p)}
+                    >
                       <Lucide.Plus size={16} />
                     </button>
                   </div>
@@ -290,9 +410,15 @@ export default function CustomerApp({
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.category}</span>
                   <div className="product-price-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
                     <span style={{ fontWeight: 800, color: 'var(--color-customer)' }}>${p.price.toFixed(2)}</span>
-                    <span style={{ fontSize: '0.65rem', color: p.stock < 5 ? 'var(--color-admin)' : 'var(--text-muted)' }}>
-                      Stock: {p.stock} units
-                    </span>
+                    {p.stock < 5 ? (
+                      <span className="glowing-stock-counter" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                        🔥 Only {p.stock} left!
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                        Stock: {p.stock} units
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -391,7 +517,7 @@ export default function CustomerApp({
       <div className="customer-cart-drawer">
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
           <Lucide.ShoppingCart size={18} className="event-customer" />
-          Shopping Cart ({cart.reduce((sum, item) => sum + item.qty, 0)})
+          Shopping Cart (<span key={cart.reduce((sum, item) => sum + item.qty, 0)} className="scale-pop-animation" style={{ display: 'inline-block' }}>{cart.reduce((sum, item) => sum + item.qty, 0)}</span>)
         </h3>
         
         {cart.length === 0 ? (
@@ -482,7 +608,8 @@ export default function CustomerApp({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <button 
                   id="btn-checkout-wallet" 
-                  className="btn-primary-glow" 
+                  className="btn-primary-glow scale-pop-animation" 
+                  key={totalCost}
                   style={{ width: '100%', border: 'none', background: 'var(--color-customer)', color: '#ffffff', padding: '0.5rem', cursor: 'pointer' }}
                   onClick={() => handleCheckout('Wallet')}
                 >
@@ -502,6 +629,109 @@ export default function CustomerApp({
         )}
       </div>
 
+      {cart.length > 0 && (
+        <div className="floating-checkout-bar">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Quick Checkout</span>
+            <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-customer)' }}>
+              Total: ${totalCost.toFixed(2)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              className="btn-primary-glow scale-pop-animation" 
+              key={totalCost}
+              style={{ background: 'var(--color-customer)', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}
+              onClick={() => handleCheckout('Wallet')}
+            >
+              Pay Wallet (${customerWallet.toFixed(2)})
+            </button>
+            <button 
+              className="btn-secondary-glow" 
+              style={{ padding: '0.4rem 0.8rem', cursor: 'pointer', borderRadius: '6px', fontSize: '0.75rem' }}
+              onClick={() => handleCheckout('Swipe')}
+            >
+              Swipe Pay
+            </button>
+          </div>
+        </div>
+      )}
+      {showSubstitutionModal && subTargetItem && (
+        <div className="cert-modal-overlay" style={{ zIndex: 2000 }}>
+          <div className="cert-modal-content" style={{ maxWidth: '420px', padding: '1.5rem', textAlign: 'center' }}>
+            <h4 style={{ color: 'var(--color-customer)', fontWeight: 800, margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+              <Lucide.Sparkles size={18} />
+              Stock Alert: Running Low!
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              <strong>{subTargetItem.emoji} {subTargetItem.name}</strong> is in high demand (Only {subTargetItem.stock} left!). Would you like to select a high-availability backup substitute to ensure your delivery isn't delayed?
+            </p>
+            
+            {(() => {
+              const subId = substitutionMap[subTargetItem.id];
+              const substitute = products.find(p => p.id === subId);
+              if (!substitute) return null;
+              
+              return (
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2rem' }}>{substitute.emoji}</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{substitute.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{substitute.category} • ${substitute.price.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn-primary-glow" 
+                    style={{ background: 'var(--color-customer)', color: '#ffffff', padding: '0.4rem 0.8rem', fontSize: '0.75rem', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => {
+                      setCart(prev => {
+                        const targetInCart = prev.find(item => item.id === subTargetItem.id);
+                        if (targetInCart) {
+                          const filtered = prev.filter(item => item.id !== subTargetItem.id);
+                          const subInCart = filtered.find(item => item.id === substitute.id);
+                          if (subInCart) {
+                            return filtered.map(item => item.id === substitute.id ? { ...item, qty: item.qty + targetInCart.qty } : item);
+                          }
+                          return [...filtered, { ...substitute, qty: targetInCart.qty }];
+                        }
+                        return prev;
+                      });
+                      setShowSubstitutionModal(false);
+                      setSubTargetItem(null);
+                    }}
+                  >
+                    Swap Item
+                  </button>
+                </div>
+              );
+            })()}
+            
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                className="btn-secondary-glow" 
+                style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                onClick={() => {
+                  setShowSubstitutionModal(false);
+                  setSubTargetItem(null);
+                }}
+              >
+                Keep Original
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
