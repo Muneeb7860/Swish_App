@@ -1,5 +1,12 @@
 # Swish App 🚀
 
+[![Quality Gates](https://github.com/Muneeb7860/Swish_App/actions/workflows/ci.yml/badge.svg)](https://github.com/Muneeb7860/Swish_App/actions)
+[![Branch Protection](https://github.com/Muneeb7860/Swish_App/actions/workflows/branch-protection.yml/badge.svg)](https://github.com/Muneeb7860/Swish_App/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Java 17](https://img.shields.io/badge/Java-17-blue.svg)](https://www.oracle.com/java/)
+[![Spring Boot 3.2](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)](https://spring.io/projects/spring-boot)
+[![React 18](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
+
 Welcome to **Swish**, a highly scalable, event-driven Quick Commerce (Q-Commerce) platform designed to guarantee grocery delivery within 15 minutes. 
 
 Swish is not a simple prototype. It is a **true 3-sided enterprise marketplace** built with advanced architectural frameworks (TOGAF, COBIT 2019 resilience) and features a cutting-edge **Module Federation** micro-frontend architecture backed by a **Spring Boot Hexagonal Microservices** backend.

@@ -1,23 +1,33 @@
 {
-  "name": "swiss-app",
-  "private": true,
+  "name": "swish-app",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Enterprise Quick Commerce Platform - 15-Minute Grocery Delivery Microservices Cluster",
+  "keywords": [
+    "quick-commerce",
+    "q-commerce",
+    "grocery-delivery",
+    "microservices",
+    "event-driven",
+    "spring-boot",
+    "react",
+    "kafka",
+    "redis",
+    "hexagonal-architecture"
+  ],
+  "author": "Muneeb7860",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Muneeb7860/Swish_App.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Muneeb7860/Swish_App/issues"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "vite": "^4.4.5"
+    "dev:host": "cd frontend-host && npm run dev",
+    "dev:customer": "cd frontend-customer && npm run dev",
+    "dev:rider": "cd frontend-rider && npm run dev",
+    "dev:admin": "cd frontend-admin && npm run dev",
+    "build:all": "npm run build --prefix frontend-host && npm run build --prefix frontend-customer && npm run build --prefix frontend-rider && npm run build --prefix frontend-admin"
   }
 }
