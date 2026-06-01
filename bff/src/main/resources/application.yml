@@ -57,14 +57,20 @@ spring:
             - Path=/api/**
           filters:
             - name: EdgeJwtVerificationFilter
-            - name: RateLimiterFilter
+            - name: RequestRateLimiter
               args:
-                capacity: 30
-                refillRatePerSecond: 10
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
             - name: CircuitBreaker
               args:
                 name: backendCircuitBreaker
                 fallbackUri: ${FALLBACK_URL:forward:/fallback}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 resilience4j:
   circuitbreaker:

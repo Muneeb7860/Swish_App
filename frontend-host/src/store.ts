@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { create, StateCreator } from 'zustand'
 
 const INITIAL_PRODUCTS = [
   { id: 'p1', name: 'Organic Fresh Milk', price: 3.49, stock: 12, stockEast: 15, category: 'Dairy & Eggs', emoji: '🥛', perishable: true },
@@ -31,19 +31,10 @@ export interface OrderItem {
   paymentMethod: string;
 }
 
-export interface State {
+
+export interface UserSlice {
   activeRole: any;
   setActiveRole: (val: any) => void;
-  products: any;
-  setProducts: (val: any) => void;
-  cart: any;
-  setCart: (val: any) => void;
-  activeOrder: any;
-  setActiveOrder: (val: any) => void;
-  orderHistory: any;
-  setOrderHistory: (val: any) => void;
-  weather: any;
-  setWeather: (val: any) => void;
   customerWallet: any;
   setCustomerWallet: (val: any) => void;
   customerPoints: any;
@@ -70,6 +61,76 @@ export interface State {
   setVipMember: (val: any) => void;
   vouchers: any;
   setVouchers: (val: any) => void;
+  b2bDiscountActive: any;
+  setB2bDiscountActive: (val: any) => void;
+  customerTrustScore: any;
+  setCustomerTrustScore: (val: any) => void;
+  riderTrustScore: any;
+  setRiderTrustScore: (val: any) => void;
+  riderTrafficActive: any;
+  setRiderTrafficActive: (val: any) => void;
+  onboardingQueue: any;
+  setOnboardingQueue: (val: any) => void;
+  riderOnboardStatus: any;
+  setRiderOnboardStatus: (val: any) => void;
+  businessOnboardStatus: any;
+  setBusinessOnboardStatus: (val: any) => void;
+  gatewayOnboardStatus: any;
+  setGatewayOnboardStatus: (val: any) => void;
+  riderCoords: any;
+  setRiderCoords: (val: any) => void;
+}
+
+export interface ProductSlice {
+  products: any;
+  setProducts: (val: any) => void;
+  searchVolumeMap: any;
+  setSearchVolumeMap: (val: any) => void;
+}
+
+export interface OrderSlice {
+  cart: any;
+  setCart: (val: any) => void;
+  activeOrder: any;
+  setActiveOrder: (val: any) => void;
+  orderHistory: any;
+  setOrderHistory: (val: any) => void;
+  activeStockTransfers: any;
+  setActiveStockTransfers: (val: any) => void;
+  tipAmount: any;
+  setTipAmount: (val: any) => void;
+  esgCheckbox: any;
+  setEsgCheckbox: (val: any) => void;
+  totalCo2Offset: any;
+  setTotalCo2Offset: (val: any) => void;
+  pickerSlaDuration: any;
+  setPickerSlaDuration: (val: any) => void;
+  pickerBadge: any;
+  setPickerBadge: (val: any) => void;
+  backupPickersCount: any;
+  setBackupPickersCount: (val: any) => void;
+  cartIdleTime: any;
+  setCartIdleTime: (val: any) => void;
+  pickingBacklogQueue: any;
+  setPickingBacklogQueue: (val: any) => void;
+  activePickingCongested: any;
+  setActivePickingCongested: (val: any) => void;
+}
+
+export interface AppSlice {
+  weather: any;
+  setWeather: (val: any) => void;
+  toasts: any;
+  setToasts: (val: any) => void;
+  botOpen: any;
+  setBotOpen: (val: any) => void;
+  botInputText: any;
+  setBotInputText: (val: any) => void;
+  botMessages: any;
+  setBotMessages: (val: any) => void;
+}
+
+export interface AuthSlice {
   isAuthenticated: any;
   setIsAuthenticated: (val: any) => void;
   currentUserSession: any;
@@ -94,30 +155,15 @@ export interface State {
   setSessionToken: (val: any) => void;
   authToken: any;
   setAuthToken: (val: any) => void;
-  searchVolumeMap: any;
-  setSearchVolumeMap: (val: any) => void;
-  activeStockTransfers: any;
-  setActiveStockTransfers: (val: any) => void;
-  tipAmount: any;
-  setTipAmount: (val: any) => void;
-  esgCheckbox: any;
-  setEsgCheckbox: (val: any) => void;
-  totalCo2Offset: any;
-  setTotalCo2Offset: (val: any) => void;
-  pickerSlaDuration: any;
-  setPickerSlaDuration: (val: any) => void;
-  pickerBadge: any;
-  setPickerBadge: (val: any) => void;
-  backupPickersCount: any;
-  setBackupPickersCount: (val: any) => void;
-  cartIdleTime: any;
-  setCartIdleTime: (val: any) => void;
+  gdprTokenProbation: any;
+  setGdprTokenProbation: (val: any) => void;
+  jwtFlash: any;
+  setJwtFlash: (val: any) => void;
+}
+
+export interface SystemSlice {
   simulateTelemetryFraud: any;
   setSimulateTelemetryFraud: (val: any) => void;
-  pickingBacklogQueue: any;
-  setPickingBacklogQueue: (val: any) => void;
-  activePickingCongested: any;
-  setActivePickingCongested: (val: any) => void;
   selectedCertRole: any;
   setSelectedCertRole: (val: any) => void;
   activeTrainingRole: any;
@@ -126,12 +172,6 @@ export interface State {
   setTrainingProgress: (val: any) => void;
   earnedCertifications: any;
   setEarnedCertifications: (val: any) => void;
-  b2bDiscountActive: any;
-  setB2bDiscountActive: (val: any) => void;
-  customerTrustScore: any;
-  setCustomerTrustScore: (val: any) => void;
-  riderTrustScore: any;
-  setRiderTrustScore: (val: any) => void;
   pickerTrustScore: any;
   setPickerTrustScore: (val: any) => void;
   wholesalerTrustScore: any;
@@ -148,8 +188,6 @@ export interface State {
   setRedisCrashActive: (val: any) => void;
   dbLatencyActive: any;
   setDbLatencyActive: (val: any) => void;
-  riderTrafficActive: any;
-  setRiderTrafficActive: (val: any) => void;
   centralCapacity: any;
   setCentralCapacity: (val: any) => void;
   eastCapacity: any;
@@ -158,16 +196,6 @@ export interface State {
   setCentralScalingCount: (val: any) => void;
   eastScalingCount: any;
   setEastScalingCount: (val: any) => void;
-  gdprTokenProbation: any;
-  setGdprTokenProbation: (val: any) => void;
-  onboardingQueue: any;
-  setOnboardingQueue: (val: any) => void;
-  riderOnboardStatus: any;
-  setRiderOnboardStatus: (val: any) => void;
-  businessOnboardStatus: any;
-  setBusinessOnboardStatus: (val: any) => void;
-  gatewayOnboardStatus: any;
-  setGatewayOnboardStatus: (val: any) => void;
   hitlQueue: any;
   setHitlQueue: (val: any) => void;
   agentMetrics: any;
@@ -176,8 +204,6 @@ export interface State {
   setOltpWriteLatency: (val: any) => void;
   olapSyncTimer: any;
   setOlapSyncTimer: (val: any) => void;
-  jwtFlash: any;
-  setJwtFlash: (val: any) => void;
   vaultTimer: any;
   setVaultTimer: (val: any) => void;
   latencyHistory: any;
@@ -194,36 +220,15 @@ export interface State {
   setKafkaLogs: (val: any) => void;
   ledger: any;
   setLedger: (val: any) => void;
-  toasts: any;
-  setToasts: (val: any) => void;
-  botOpen: any;
-  setBotOpen: (val: any) => void;
-  botInputText: any;
-  setBotInputText: (val: any) => void;
-  botMessages: any;
-  setBotMessages: (val: any) => void;
   certModalOpen: any;
   setCertModalOpen: (val: any) => void;
-  riderCoords: any;
-  setRiderCoords: (val: any) => void;
 }
 
-export const useStore = create<State>((set) => ({
+export type State = UserSlice & ProductSlice & OrderSlice & AppSlice & AuthSlice & SystemSlice;
+
+export const createUserSlice: StateCreator<State, [], [], UserSlice> = (set) => ({
   activeRole: 'customer',
   setActiveRole: (val) => set((state: any) => ({ activeRole: typeof val === 'function' ? val(state.activeRole) : val } as any)),
-  products: INITIAL_PRODUCTS,
-  setProducts: (val) => set((state: any) => ({ products: typeof val === 'function' ? val(state.products) : val } as any)),
-  cart: [],
-  setCart: (val) => set((state: any) => ({ cart: typeof val === 'function' ? val(state.cart) : val } as any)),
-  activeOrder: null,
-  setActiveOrder: (val) => set((state: any) => ({ activeOrder: typeof val === 'function' ? val(state.activeOrder) : val } as any)),
-  orderHistory: [
-    { id: 8901, date: 'May 24', items: '2x Organic Milk, 1x Bananas', total: 8.97, status: 'delivered', paymentMethod: 'Wallet' },
-    { id: 8710, date: 'May 20', items: '1x Wheat Sourdough, 1x Free Range Eggs', total: 9.28, status: 'delivered', paymentMethod: 'PayPal' }
-  ],
-  setOrderHistory: (val) => set((state: any) => ({ orderHistory: typeof val === 'function' ? val(state.orderHistory) : val } as any)),
-  weather: 'Sunny',
-  setWeather: (val) => set((state: any) => ({ weather: typeof val === 'function' ? val(state.weather) : val } as any)),
   customerWallet: 100.00,
   setCustomerWallet: (val) => set((state: any) => ({ customerWallet: typeof val === 'function' ? val(state.customerWallet) : val } as any)),
   customerPoints: 45,
@@ -259,6 +264,84 @@ export const useStore = create<State>((set) => ({
     { code: 'FRESH10', value: 10.00, minCart: 30.00, desc: 'Flat $10.00 discount coupon on organic dairy orders.' }
   ],
   setVouchers: (val) => set((state: any) => ({ vouchers: typeof val === 'function' ? val(state.vouchers) : val } as any)),
+  b2bDiscountActive: false,
+  setB2bDiscountActive: (val) => set((state: any) => ({ b2bDiscountActive: typeof val === 'function' ? val(state.b2bDiscountActive) : val } as any)),
+  customerTrustScore: 100,
+  setCustomerTrustScore: (val) => set((state: any) => ({ customerTrustScore: typeof val === 'function' ? val(state.customerTrustScore) : val } as any)),
+  riderTrustScore: 100,
+  setRiderTrustScore: (val) => set((state: any) => ({ riderTrustScore: typeof val === 'function' ? val(state.riderTrustScore) : val } as any)),
+  riderTrafficActive: false,
+  setRiderTrafficActive: (val) => set((state: any) => ({ riderTrafficActive: typeof val === 'function' ? val(state.riderTrafficActive) : val } as any)),
+  onboardingQueue: [
+    { id: 'rid-1', name: 'Rider Dave', type: 'rider', approvals: { l1: false, l2: false, l3: false } },
+    { id: 'mer-1', name: 'FreshGrocer Store', type: 'merchant', approvals: { l1: false, l2: false, l3: false } }
+  ],
+  setOnboardingQueue: (val) => set((state: any) => ({ onboardingQueue: typeof val === 'function' ? val(state.onboardingQueue) : val } as any)),
+  riderOnboardStatus: 'unapplied',
+  setRiderOnboardStatus: (val) => set((state: any) => ({ riderOnboardStatus: typeof val === 'function' ? val(state.riderOnboardStatus) : val } as any)),
+  businessOnboardStatus: 'unapplied',
+  setBusinessOnboardStatus: (val) => set((state: any) => ({ businessOnboardStatus: typeof val === 'function' ? val(state.businessOnboardStatus) : val } as any)),
+  gatewayOnboardStatus: 'active',
+  setGatewayOnboardStatus: (val) => set((state: any) => ({ gatewayOnboardStatus: typeof val === 'function' ? val(state.gatewayOnboardStatus) : val } as any)),
+  riderCoords: null,
+  setRiderCoords: (val) => set((state: any) => ({ riderCoords: typeof val === 'function' ? val(state.riderCoords) : val } as any))
+});
+
+export const createProductSlice: StateCreator<State, [], [], ProductSlice> = (set) => ({
+  products: INITIAL_PRODUCTS,
+  setProducts: (val) => set((state: any) => ({ products: typeof val === 'function' ? val(state.products) : val } as any)),
+  searchVolumeMap: {},
+  setSearchVolumeMap: (val) => set((state: any) => ({ searchVolumeMap: typeof val === 'function' ? val(state.searchVolumeMap) : val } as any)),
+});
+
+export const createOrderSlice: StateCreator<State, [], [], OrderSlice> = (set) => ({
+  cart: [],
+  setCart: (val) => set((state: any) => ({ cart: typeof val === 'function' ? val(state.cart) : val } as any)),
+  activeOrder: null,
+  setActiveOrder: (val) => set((state: any) => ({ activeOrder: typeof val === 'function' ? val(state.activeOrder) : val } as any)),
+  orderHistory: [
+    { id: 8901, date: 'May 24', items: '2x Organic Milk, 1x Bananas', total: 8.97, status: 'delivered', paymentMethod: 'Wallet' },
+    { id: 8710, date: 'May 20', items: '1x Wheat Sourdough, 1x Free Range Eggs', total: 9.28, status: 'delivered', paymentMethod: 'PayPal' }
+  ],
+  setOrderHistory: (val) => set((state: any) => ({ orderHistory: typeof val === 'function' ? val(state.orderHistory) : val } as any)),
+  activeStockTransfers: [],
+  setActiveStockTransfers: (val) => set((state: any) => ({ activeStockTransfers: typeof val === 'function' ? val(state.activeStockTransfers) : val } as any)),
+  tipAmount: 0,
+  setTipAmount: (val) => set((state: any) => ({ tipAmount: typeof val === 'function' ? val(state.tipAmount) : val } as any)),
+  esgCheckbox: false,
+  setEsgCheckbox: (val) => set((state: any) => ({ esgCheckbox: typeof val === 'function' ? val(state.esgCheckbox) : val } as any)),
+  totalCo2Offset: 1250,
+  setTotalCo2Offset: (val) => set((state: any) => ({ totalCo2Offset: typeof val === 'function' ? val(state.totalCo2Offset) : val } as any)),
+  pickerSlaDuration: 3.2,
+  setPickerSlaDuration: (val) => set((state: any) => ({ pickerSlaDuration: typeof val === 'function' ? val(state.pickerSlaDuration) : val } as any)),
+  pickerBadge: 'Standard',
+  setPickerBadge: (val) => set((state: any) => ({ pickerBadge: typeof val === 'function' ? val(state.pickerBadge) : val } as any)),
+  backupPickersCount: 0,
+  setBackupPickersCount: (val) => set((state: any) => ({ backupPickersCount: typeof val === 'function' ? val(state.backupPickersCount) : val } as any)),
+  cartIdleTime: 0,
+  setCartIdleTime: (val) => set((state: any) => ({ cartIdleTime: typeof val === 'function' ? val(state.cartIdleTime) : val } as any)),
+  pickingBacklogQueue: 0,
+  setPickingBacklogQueue: (val) => set((state: any) => ({ pickingBacklogQueue: typeof val === 'function' ? val(state.pickingBacklogQueue) : val } as any)),
+  activePickingCongested: false,
+  setActivePickingCongested: (val) => set((state: any) => ({ activePickingCongested: typeof val === 'function' ? val(state.activePickingCongested) : val } as any)),
+});
+
+export const createAppSlice: StateCreator<State, [], [], AppSlice> = (set) => ({
+  weather: 'Sunny',
+  setWeather: (val) => set((state: any) => ({ weather: typeof val === 'function' ? val(state.weather) : val } as any)),
+  toasts: [],
+  setToasts: (val) => set((state: any) => ({ toasts: typeof val === 'function' ? val(state.toasts) : val } as any)),
+  botOpen: false,
+  setBotOpen: (val) => set((state: any) => ({ botOpen: typeof val === 'function' ? val(state.botOpen) : val } as any)),
+  botInputText: '',
+  setBotInputText: (val) => set((state: any) => ({ botInputText: typeof val === 'function' ? val(state.botInputText) : val } as any)),
+  botMessages: [
+    { sender: 'bot', text: 'Hi! I am SwissBot, your AI support assistant. Need help with checkouts, orders, refunds, or shelf updates?' }
+  ],
+  setBotMessages: (val) => set((state: any) => ({ botMessages: typeof val === 'function' ? val(state.botMessages) : val } as any)),
+});
+
+export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (set) => ({
   isAuthenticated: false,
   setIsAuthenticated: (val) => set((state: any) => ({ isAuthenticated: typeof val === 'function' ? val(state.isAuthenticated) : val } as any)),
   currentUserSession: null,
@@ -283,30 +366,15 @@ export const useStore = create<State>((set) => ({
   setSessionToken: (val) => set((state: any) => ({ sessionToken: typeof val === 'function' ? val(state.sessionToken) : val } as any)),
   authToken: localStorage.getItem('jwt_token') || '',
   setAuthToken: (val) => set((state: any) => ({ authToken: typeof val === 'function' ? val(state.authToken) : val } as any)),
-  searchVolumeMap: {},
-  setSearchVolumeMap: (val) => set((state: any) => ({ searchVolumeMap: typeof val === 'function' ? val(state.searchVolumeMap) : val } as any)),
-  activeStockTransfers: [],
-  setActiveStockTransfers: (val) => set((state: any) => ({ activeStockTransfers: typeof val === 'function' ? val(state.activeStockTransfers) : val } as any)),
-  tipAmount: 0,
-  setTipAmount: (val) => set((state: any) => ({ tipAmount: typeof val === 'function' ? val(state.tipAmount) : val } as any)),
-  esgCheckbox: false,
-  setEsgCheckbox: (val) => set((state: any) => ({ esgCheckbox: typeof val === 'function' ? val(state.esgCheckbox) : val } as any)),
-  totalCo2Offset: 1250,
-  setTotalCo2Offset: (val) => set((state: any) => ({ totalCo2Offset: typeof val === 'function' ? val(state.totalCo2Offset) : val } as any)),
-  pickerSlaDuration: 3.2,
-  setPickerSlaDuration: (val) => set((state: any) => ({ pickerSlaDuration: typeof val === 'function' ? val(state.pickerSlaDuration) : val } as any)),
-  pickerBadge: 'Standard',
-  setPickerBadge: (val) => set((state: any) => ({ pickerBadge: typeof val === 'function' ? val(state.pickerBadge) : val } as any)),
-  backupPickersCount: 0,
-  setBackupPickersCount: (val) => set((state: any) => ({ backupPickersCount: typeof val === 'function' ? val(state.backupPickersCount) : val } as any)),
-  cartIdleTime: 0,
-  setCartIdleTime: (val) => set((state: any) => ({ cartIdleTime: typeof val === 'function' ? val(state.cartIdleTime) : val } as any)),
+  gdprTokenProbation: false,
+  setGdprTokenProbation: (val) => set((state: any) => ({ gdprTokenProbation: typeof val === 'function' ? val(state.gdprTokenProbation) : val } as any)),
+  jwtFlash: false,
+  setJwtFlash: (val) => set((state: any) => ({ jwtFlash: typeof val === 'function' ? val(state.jwtFlash) : val } as any)),
+});
+
+export const createSystemSlice: StateCreator<State, [], [], SystemSlice> = (set) => ({
   simulateTelemetryFraud: false,
   setSimulateTelemetryFraud: (val) => set((state: any) => ({ simulateTelemetryFraud: typeof val === 'function' ? val(state.simulateTelemetryFraud) : val } as any)),
-  pickingBacklogQueue: 0,
-  setPickingBacklogQueue: (val) => set((state: any) => ({ pickingBacklogQueue: typeof val === 'function' ? val(state.pickingBacklogQueue) : val } as any)),
-  activePickingCongested: false,
-  setActivePickingCongested: (val) => set((state: any) => ({ activePickingCongested: typeof val === 'function' ? val(state.activePickingCongested) : val } as any)),
   selectedCertRole: 'customer',
   setSelectedCertRole: (val) => set((state: any) => ({ selectedCertRole: typeof val === 'function' ? val(state.selectedCertRole) : val } as any)),
   activeTrainingRole: null,
@@ -315,12 +383,6 @@ export const useStore = create<State>((set) => ({
   setTrainingProgress: (val) => set((state: any) => ({ trainingProgress: typeof val === 'function' ? val(state.trainingProgress) : val } as any)),
   earnedCertifications: [],
   setEarnedCertifications: (val) => set((state: any) => ({ earnedCertifications: typeof val === 'function' ? val(state.earnedCertifications) : val } as any)),
-  b2bDiscountActive: false,
-  setB2bDiscountActive: (val) => set((state: any) => ({ b2bDiscountActive: typeof val === 'function' ? val(state.b2bDiscountActive) : val } as any)),
-  customerTrustScore: 100,
-  setCustomerTrustScore: (val) => set((state: any) => ({ customerTrustScore: typeof val === 'function' ? val(state.customerTrustScore) : val } as any)),
-  riderTrustScore: 100,
-  setRiderTrustScore: (val) => set((state: any) => ({ riderTrustScore: typeof val === 'function' ? val(state.riderTrustScore) : val } as any)),
   pickerTrustScore: 100,
   setPickerTrustScore: (val) => set((state: any) => ({ pickerTrustScore: typeof val === 'function' ? val(state.pickerTrustScore) : val } as any)),
   wholesalerTrustScore: 100,
@@ -339,8 +401,6 @@ export const useStore = create<State>((set) => ({
   setRedisCrashActive: (val) => set((state: any) => ({ redisCrashActive: typeof val === 'function' ? val(state.redisCrashActive) : val } as any)),
   dbLatencyActive: false,
   setDbLatencyActive: (val) => set((state: any) => ({ dbLatencyActive: typeof val === 'function' ? val(state.dbLatencyActive) : val } as any)),
-  riderTrafficActive: false,
-  setRiderTrafficActive: (val) => set((state: any) => ({ riderTrafficActive: typeof val === 'function' ? val(state.riderTrafficActive) : val } as any)),
   centralCapacity: 120,
   setCentralCapacity: (val) => set((state: any) => ({ centralCapacity: typeof val === 'function' ? val(state.centralCapacity) : val } as any)),
   eastCapacity: 120,
@@ -349,19 +409,6 @@ export const useStore = create<State>((set) => ({
   setCentralScalingCount: (val) => set((state: any) => ({ centralScalingCount: typeof val === 'function' ? val(state.centralScalingCount) : val } as any)),
   eastScalingCount: 0,
   setEastScalingCount: (val) => set((state: any) => ({ eastScalingCount: typeof val === 'function' ? val(state.eastScalingCount) : val } as any)),
-  gdprTokenProbation: false,
-  setGdprTokenProbation: (val) => set((state: any) => ({ gdprTokenProbation: typeof val === 'function' ? val(state.gdprTokenProbation) : val } as any)),
-  onboardingQueue: [
-    { id: 'rid-1', name: 'Rider Dave', type: 'rider', approvals: { l1: false, l2: false, l3: false } },
-    { id: 'mer-1', name: 'FreshGrocer Store', type: 'merchant', approvals: { l1: false, l2: false, l3: false } }
-  ],
-  setOnboardingQueue: (val) => set((state: any) => ({ onboardingQueue: typeof val === 'function' ? val(state.onboardingQueue) : val } as any)),
-  riderOnboardStatus: 'unapplied',
-  setRiderOnboardStatus: (val) => set((state: any) => ({ riderOnboardStatus: typeof val === 'function' ? val(state.riderOnboardStatus) : val } as any)),
-  businessOnboardStatus: 'unapplied',
-  setBusinessOnboardStatus: (val) => set((state: any) => ({ businessOnboardStatus: typeof val === 'function' ? val(state.businessOnboardStatus) : val } as any)),
-  gatewayOnboardStatus: 'active',
-  setGatewayOnboardStatus: (val) => set((state: any) => ({ gatewayOnboardStatus: typeof val === 'function' ? val(state.gatewayOnboardStatus) : val } as any)),
   hitlQueue: [],
   setHitlQueue: (val) => set((state: any) => ({ hitlQueue: typeof val === 'function' ? val(state.hitlQueue) : val } as any)),
   agentMetrics: { dailyCost: 0.0, hourlyRequestCount: 0, dailyBudgetLimit: 5.0, hourlyRequestLimit: 100 },
@@ -370,8 +417,6 @@ export const useStore = create<State>((set) => ({
   setOltpWriteLatency: (val) => set((state: any) => ({ oltpWriteLatency: typeof val === 'function' ? val(state.oltpWriteLatency) : val } as any)),
   olapSyncTimer: 0,
   setOlapSyncTimer: (val) => set((state: any) => ({ olapSyncTimer: typeof val === 'function' ? val(state.olapSyncTimer) : val } as any)),
-  jwtFlash: false,
-  setJwtFlash: (val) => set((state: any) => ({ jwtFlash: typeof val === 'function' ? val(state.jwtFlash) : val } as any)),
   vaultTimer: 15,
   setVaultTimer: (val) => set((state: any) => ({ vaultTimer: typeof val === 'function' ? val(state.vaultTimer) : val } as any)),
   latencyHistory: [4, 6, 4, 5, 8, 4, 4],
@@ -392,18 +437,15 @@ export const useStore = create<State>((set) => ({
     { id: 'TX0', time: new Date().toLocaleTimeString(), type: 'system', ref: 'SYS-INIT', desc: 'Simulated payment processing backend initialized', debit: 0, credit: 0 }
   ],
   setLedger: (val) => set((state: any) => ({ ledger: typeof val === 'function' ? val(state.ledger) : val } as any)),
-  toasts: [],
-  setToasts: (val) => set((state: any) => ({ toasts: typeof val === 'function' ? val(state.toasts) : val } as any)),
-  botOpen: false,
-  setBotOpen: (val) => set((state: any) => ({ botOpen: typeof val === 'function' ? val(state.botOpen) : val } as any)),
-  botInputText: '',
-  setBotInputText: (val) => set((state: any) => ({ botInputText: typeof val === 'function' ? val(state.botInputText) : val } as any)),
-  botMessages: [
-    { sender: 'bot', text: 'Hi! I am SwissBot, your AI support assistant. Need help with checkouts, orders, refunds, or shelf updates?' }
-  ],
-  setBotMessages: (val) => set((state: any) => ({ botMessages: typeof val === 'function' ? val(state.botMessages) : val } as any)),
   certModalOpen: false,
   setCertModalOpen: (val) => set((state: any) => ({ certModalOpen: typeof val === 'function' ? val(state.certModalOpen) : val } as any)),
-  riderCoords: null,
-  setRiderCoords: (val) => set((state: any) => ({ riderCoords: typeof val === 'function' ? val(state.riderCoords) : val } as any))
+});
+
+export const useStore = create<State>()((...a) => ({
+  ...createUserSlice(...a),
+  ...createProductSlice(...a),
+  ...createOrderSlice(...a),
+  ...createAppSlice(...a),
+  ...createAuthSlice(...a),
+  ...createSystemSlice(...a),
 }));
