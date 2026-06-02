@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as Lucide from 'lucide-react';
 import { useEnvProfiles } from './hooks/useEnvProfiles';
 import MfaLoginPortal from './components/MfaLoginPortal';
@@ -10,6 +10,34 @@ import BusinessApp from './components/BusinessApp';
 import AdminPanel from './components/AdminPanel';
 import SystemEngineRoom from './components/SystemEngineRoom';
 import SupportBot from './components/SupportBot';
+
+const PROFILE_SWITCHER_STYLE = {
+  marginLeft: '1rem',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.4rem',
+  background: 'rgba(255,255,255,0.03)',
+  padding: '0.2rem 0.5rem',
+  borderRadius: '6px',
+  border: '1px solid var(--border-color)'
+};
+
+const PROFILE_SELECT_STYLE = {
+  background: 'transparent',
+  color: 'var(--text-primary)',
+  border: 'none',
+  fontSize: '0.7rem',
+  fontWeight: 'bold',
+  fontFamily: 'var(--font-sans)',
+  outline: 'none',
+  cursor: 'pointer'
+};
+
+const CERT_BUTTON_STYLE = {
+  background: 'var(--color-business)',
+  color: '#ffffff',
+  cursor: 'pointer'
+};
 
 // Default mock product catalog
 const INITIAL_PRODUCTS = [
@@ -157,17 +185,36 @@ export default function App() {
 
   const canvasRef = useRef(null);
   const riderTimerRef = useRef(null);
+  const toastTimeoutsRef = useRef(new Map());
+  const botResponseTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      toastTimeoutsRef.current.forEach(clearTimeout);
+      toastTimeoutsRef.current.clear();
+      if (botResponseTimerRef.current) {
+        clearTimeout(botResponseTimerRef.current);
+      }
+      if (riderTimerRef.current) {
+        clearInterval(riderTimerRef.current);
+      }
+    };
+  }, []);
 
   // Helper log triggers
-  const triggerToast = (msg, borderType = 'system') => {
+  const triggerToast = useCallback((msg, borderType = 'system') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, msg, borderType }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
-  };
 
-  const logKafka = (source, event, meta) => {
+    const timeoutId = window.setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+      toastTimeoutsRef.current.delete(id);
+    }, 4500);
+
+    toastTimeoutsRef.current.set(id, timeoutId);
+  }, []);
+
+  const logKafka = useCallback((source, event, meta) => {
     // Dynamic log filtering based on active environment profile
     if (activeProfile.logLevel === 'error') {
       if (source !== 'admin' && !event.includes('error') && !event.includes('fail') && !event.includes('limit')) return;
@@ -178,8 +225,8 @@ export default function App() {
     setKafkaLogs(prev => [
       ...prev,
       { id: 'L-' + Date.now() + '-' + Math.random(), time: new Date().toLocaleTimeString(), event: `${event.toUpperCase()}`, source, meta }
-    ].slice(-40)); // Keep last 40 logs
-  };
+    ].slice(-40));
+  }, [activeProfile.logLevel]);
 
   const logLedger = (type, ref, desc, debit, credit) => {
     setLedger(prev => [
@@ -230,30 +277,28 @@ export default function App() {
 
   // Dynamic system timers effects
   useEffect(() => {
-    let timer;
+    let interval;
     if (!isAuthenticated) {
       const generateCode = () => {
         const timeStep = Math.floor(Date.now() / 30000);
         const code = String((timeStep * 1337) % 900000 + 100000);
         setTotpSecretCode(code);
       };
-      generateCode();
-      timer = setInterval(() => {
-        generateCode();
-        setTotpTimer(30);
-      }, 30000);
-    }
-    return () => clearInterval(timer);
-  }, [isAuthenticated]);
 
-  useEffect(() => {
-    let timer;
-    if (!isAuthenticated) {
-      timer = setInterval(() => {
-        setTotpTimer(t => (t <= 1 ? 30 : t - 1));
+      generateCode();
+      setTotpTimer(30);
+
+      interval = setInterval(() => {
+        setTotpTimer(t => {
+          const next = t <= 1 ? 30 : t - 1;
+          if (next === 30) {
+            generateCode();
+          }
+          return next;
+        });
       }, 1000);
     }
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   // Telemetry loop effect
@@ -661,14 +706,18 @@ export default function App() {
   };
 
   // Support bot triggers
-  const handleSendBotMessage = (attachmentUrl = null) => {
+  const handleSendBotMessage = useCallback((attachmentUrl = null) => {
     const text = botInputText.trim();
     if (!text && !attachmentUrl) return;
 
     setBotMessages(prev => [...prev, { sender: 'user', text: text || 'Vision Image Uploaded', attachmentUrl }]);
     setBotInputText('');
 
-    setTimeout(() => {
+    if (botResponseTimerRef.current) {
+      clearTimeout(botResponseTimerRef.current);
+    }
+
+    botResponseTimerRef.current = window.setTimeout(() => {
       let botResponse = `I received: "${text}". How can I help resolve this operational request?`;
 
       // Adaptive solutions based on activeRole
@@ -847,7 +896,7 @@ export default function App() {
           <span className="brand-badge">Quick Commerce Architecture V1.0</span>
           
           {/* Profile Environment Switcher */}
-          <div style={{ marginLeft: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.03)', padding: '0.2rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+          <div style={PROFILE_SWITCHER_STYLE}>
             <Lucide.Globe size={12} className="event-system" />
             <select 
               id="select-env-profile"
@@ -858,7 +907,7 @@ export default function App() {
                 triggerToast(`ENVIRONMENT SWITCHED: Loaded config for [${newProfile.toUpperCase()}] profile.`, 'system');
                 logKafka('system', 'profile.switched', `Switched environment profile to ${newProfile.toUpperCase()}. Loaded variables: Rate Limit = ${envProfiles[newProfile].rateLimit} req/s, Base Latency = ${envProfiles[newProfile].dbLatencyDefault}ms, MFA = ${envProfiles[newProfile].mfaRequired ? 'Required' : 'Bypassed'}.`);
               }}
-              style={{ background: 'transparent', color: 'var(--text-primary)', border: 'none', fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer' }}
+              style={PROFILE_SELECT_STYLE}
             >
               <option value="development" style={{ background: '#0b0f19', color: '#ffffff' }}>development</option>
               <option value="staging" style={{ background: '#0b0f19', color: '#ffffff' }}>staging</option>
