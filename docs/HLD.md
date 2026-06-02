@@ -21,7 +21,8 @@ graph TD
         Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
         
         Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
-        Backend -.-> Mongo[(MongoDB: Live Update & Telemetry Archive)]
+        DB_Tx -.->|Transactional Outbox| Kafka[(Apache Kafka Cluster)]
+        Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Telemetry Archive)]
     end
 ```
 
@@ -43,10 +44,11 @@ graph TD
 *   Uses a **deterministic ledger validator** to inspect and approve AI agent orders before commit.
 
 ### D. Message Broker & Data Warehousing
-*   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active MD5 hash chaining.
+*   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active SHA-256 hash chaining.
 *   **TimescaleDB**: Handles high-frequency time-series telemetry data and SLA log metrics.
 *   **Redis**: Ingests and buffers real-time coordinate and status changes (e.g. active rider updates).
-*   **MongoDB (NoSQL)**: Persists high-throughput, unstructured telemetry data (e.g. coordinates and weather streams) to scale write loads horizontally.
+*   **Apache Kafka (KRaft Mode)**: Serves as the high-throughput message broker implementing the transactional outbox pattern to decouple transactional database operations from downstream analytical storage systems.
+*   **MongoDB (NoSQL)**: Persists high-throughput, unstructured telemetry data (e.g. coordinates and weather streams) received from Kafka, scaling write loads horizontally.
 
 ---
 

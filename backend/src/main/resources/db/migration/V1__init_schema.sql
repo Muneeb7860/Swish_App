@@ -358,13 +358,13 @@ BEGIN
 
     NEW.previous_entry_hash := COALESCE(v_prev_hash, '0000000000000000000000000000000000000000000000000000000000000000');
     
-    -- Compute md5 representing the current block hash for ledger integrity
-    NEW.entry_hash := MD5(CONCAT(
+    -- Compute sha256 representing the current block hash for ledger integrity
+    NEW.entry_hash := encode(sha256(CONCAT(
         NEW.entry_uuid::text,
         NEW.reference,
         NEW.description,
         NEW.previous_entry_hash
-    ));
+    )::bytea), 'hex');
 
     RETURN NEW;
 END;

@@ -26,8 +26,8 @@ Swish OS is positioned as a B2B SaaS micro-fulfillment and agentic procurement e
 *   **Operational Goal**: Monitor and optimize inventory replenishment for fresh perishables (sandwiches, sushi, cold beverages) while logging IoT temperature ticks.
 *   **Contract Terms (LOI Summary)**:
     - **Duration**: 12 weeks.
-    - **Base Fee**: $1,000/month per active node (Total: $5,000/month).
-    - **Savings Performance Bonus**: Swish OS captures **1.2%** of all documented invoice cost savings negotiated by our `B2BProcurementAgent` against wholesale baselines.
+    - **Tiered SaaS Base Fee**: $1,000/month per active node (Tier 1: Telemetry & Ledger compliance, total $5,000/month).
+    - **GTM Expansion Plan**: Transition stores to Tier 2 ($1,500/month per node) post-pilot to activate autonomous replenishment negotiations.
     - **SLA Penalty**: If the picking time exceeds the 4-minute SLA by more than 15% on average, the base fee is discounted by 5% for that month.
 
 ### B. Wholesaler Integration & Fallbacks
@@ -47,10 +47,9 @@ We do not advertise on Google Search or Social Media. Our GTM is driven by **Dir
 ### B. Customer Acquisition Cost (CAC) vs. LTV
 *   **CAC Projection**: $15,000 per retail chain (sales effort, custom pilot setups, API integration engineering hours).
 *   **LTV Projection (3-Year Horizon)**: 
-    - Base Subscription (10 stores × $1,200/month × 36 months) = $432,000.
-    - Savings Performance Fees (Estimated $300/store/month × 10 stores × 36 months) = $108,000.
+    - Tier 2 Subscription (10 stores × $1,500/month × 36 months) = $540,000.
     - **Total LTV**: $540,000.
-    - **LTV:CAC Ratio**: **36:1** (Highly profitable and scalable SaaS metrics).
+    - **LTV:CAC Ratio**: **36:1** (Highly profitable and scalable SaaS metrics, matching our consolidated pricing structure).
 
 ---
 
@@ -61,8 +60,8 @@ All figures in USD ($).
 | Financial Metric | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Active Store Nodes** | 5 | 100 | 500 | 2,000 | 5,000 |
-| **SaaS Subscription Revenue** | $60,000 | $1,440,000 | $7,200,000 | $28,800,000 | $72,000,000 |
-| **Performance Commission Fees** | $12,000 | $360,000 | $1,800,000 | $7,200,000 | $18,000,000 |
+| **Tier 1 Subscription Revenue** | $60,000 | $0 | $0 | $0 | $0 |
+| **Tier 2 Subscription Revenue** | $12,000 | $1,800,000 | $9,000,000 | $36,000,000 | $90,000,000 |
 | **Gross Revenue** | **$72,000** | **$1,800,000** | **$9,000,000** | **$36,000,000** | **$90,000,000** |
 | **Operating Expenses (OpEx)** | $90,000 | $1,200,000 | $4,500,000 | $12,000,000 | $25,000,000 |
 | **Capital Expenditures (CapEx)** | $10,000 | $50,000 | $150,000 | $400,000 | $1,000,000 |
@@ -71,7 +70,7 @@ All figures in USD ($).
 
 ### **Notes on Financial Assumptions**:
 1.  **OpEx**: Includes SaaS hosting, LLM API tokens, developer salaries, and enterprise sales commissions.
-2.  **CapEx**: Includes custom hardware test kits for IoT temperature tracking during pilot deployments.
+2.  **CapEx**: Includes custom hardware test kits for IoT temperature tracking during pilot deployments (restricted to retail cold-chain, pharmaceutical GDP hardware is deferred).
 3.  **Interest & Debt**: We project zero debt leverage during Year 1–2, funding early operations via our $1.5M Venture seed round.
 
 ---

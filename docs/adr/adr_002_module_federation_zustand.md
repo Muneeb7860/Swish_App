@@ -19,7 +19,7 @@ We adopt **Vite Module Federation** to establish a decoupled Micro-Frontend (MFE
 
 To coordinate state across the host and remote MFEs:
 - We adopt **Zustand** as our lightweight state engine.
-- Refactored our global store in `frontend-host/src/store.ts` into isolated, type-safe slice states (e.g., CartSlice, RoleSlice, TelemetrySlice, ChaosSlice).
+- Refactored our global store in [store.ts](file:///C:/Users/DELL%209420/Documents/swiss_App/frontend-host/src/store.ts) into isolated, type-safe slice states (e.g., CartSlice, RoleSlice, TelemetrySlice, ChaosSlice).
 - Remote MFEs consume state properties via standardized React props, ensuring the host serves as the single source of truth while remote MFEs remain stateless and reusable.
 
 ## Consequences
