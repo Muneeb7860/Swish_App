@@ -49,7 +49,16 @@ jobs:
 
       - name: OWASP Dependency Security Check
         working-directory: ./backend
-        run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -n "$NVD_API_KEY" ]; then
+            echo "🔐 NVD API key provided — running dependency-check with NVD updates."
+            mvn org.owasp:dependency-check-maven:check -Dnvd.apiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
+          else
+            echo "⚠️ NVD API key not set — running dependency-check without NVD updates (may miss recent vulnerabilities)."
+            mvn org.owasp:dependency-check-maven:check -Ddependency-check.disableUpdate=true -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
+          fi
 
   bff-quality:
     name: BFF Gateway Quality Gate
