@@ -63,7 +63,7 @@ public class AdminServiceTest {
         Map<String, Object> res = adminService.resolveHitlTicket("T-1", "approve", "Looks good");
 
         assertEquals("approved", ticket.getStatus());
-        verify(ledgerService, times(1)).recordTransaction(anyString(), anyString(), anyList());
+        verify(ledgerService, times(2)).recordTransaction(anyString(), anyString(), anyList());
         assertEquals("approved", res.get("status"));
     }
 }

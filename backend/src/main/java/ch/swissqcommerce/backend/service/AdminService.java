@@ -209,6 +209,21 @@ public class AdminService {
             trustLedgerRepository.save(audit);
         }
 
+        BigDecimal ticketAmount = BigDecimal.valueOf(1.00);
+        if (ticket.getAmount() != null) {
+            ticketAmount = ticket.getAmount().max(BigDecimal.valueOf(1.00));
+        }
+
+        String resolution = approved ? "APPROVED" : "REJECTED";
+        String overrideDescription = "HITL resolution " + resolution + " for ticket " + ticketId + ". Reason: " + reason;
+
+        List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> systemLegs = List.of(
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, ticketAmount, BigDecimal.ZERO),
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, ticketAmount)
+        );
+
+        ledgerService.recordTransaction("HITL-OVERRIDE", overrideDescription, systemLegs);
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("ticketId", ticketId);
         result.put("decision", decision);
