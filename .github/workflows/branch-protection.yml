@@ -43,7 +43,7 @@ jobs:
           echo "Auditing commits from $BASE_SHA to $HEAD_SHA..."
           
           # Get list of commit subjects
-          commits=$(git log --format=%s ${BASE_SHA}..${HEAD_SHA})
+          commits=$(git log --format=%s "$BASE_SHA".."$HEAD_SHA")
           echo "Commits to validate:"
           echo "$commits"
           echo "------------------------------------"
@@ -52,15 +52,18 @@ jobs:
           error_found=0
           while IFS= read -r commit; do
             if [ -z "$commit" ]; then continue; fi
-            
-            # Allow standard merge and release commits
-            if [[ "$commit" =~ ^Merge.* ]] || [[ "$commit" =~ ^Revert.* ]] || [[ "$commit" =~ ^release:.* ]]; then
+
+            # Normalize Windows CRLF and leading/trailing whitespace
+            commit=$(echo "$commit" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')
+
+            # Allow standard merge, revert, and release commits
+            if [[ "$commit" =~ ^([Mm]erge|[Rr]evert|release:).* ]]; then
               echo "✅ Allowed: $commit"
               continue
             fi
-            
-            # Match conventional commit patterns
-            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\(.*\))?\!:?.* ]] || [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\(.*\))?:\ .* ]]; then
+
+            # Match conventional commit patterns (type(scope)!?: message)
+            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\([^)]+\))?(!)?:[[:space:]]?.+ ]]; then
               echo "✅ Valid: $commit"
             else
               echo "❌ Invalid: $commit"
