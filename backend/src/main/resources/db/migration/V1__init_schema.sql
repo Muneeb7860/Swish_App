@@ -141,6 +141,19 @@ CREATE TABLE oltp.order_items (
     PRIMARY KEY (order_id, item_id)
 );
 
+-- Transactional Outbox Events
+CREATE TABLE oltp.outbox_events (
+    id SERIAL PRIMARY KEY,
+    aggregate_type VARCHAR(100) NOT NULL,
+    aggregate_id VARCHAR(100) NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    payload TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_outbox_events_status ON oltp.outbox_events (status);
+
 -- B2B Restock Orders (with status track and idempotency keys)
 CREATE TABLE oltp.b2b_restock_orders (
     restock_order_id SERIAL PRIMARY KEY,

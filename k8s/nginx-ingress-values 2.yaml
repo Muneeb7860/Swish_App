@@ -1,0 +1,24 @@
+controller:
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+    port: 443
+  extraArgs:
+    default-ssl-certificate: "ingress-nginx/bff-tls"
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

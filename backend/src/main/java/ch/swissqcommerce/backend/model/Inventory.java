@@ -20,7 +20,7 @@ public class Inventory {
     @Size(max = 50)
     private String itemId;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id")
     private DarkStore store;
 

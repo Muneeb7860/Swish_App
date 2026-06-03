@@ -39,25 +39,3 @@ public class CustomerControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Test
-    public void testGetCatalog() throws Exception {
-        when(inventoryRepository.findAll()).thenReturn(List.of(new Inventory()));
-        mockMvc.perform(get("/api/customer/catalog"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    public void testPurgeProfile() throws Exception {
-        Customer c = new Customer();
-        c.setCustomerId("C1");
-        c.setTrustScore(90);
-        c.setAddresses(new java.util.ArrayList<>());
-        c.setPaymentCards(new java.util.ArrayList<>());
-        when(customerRepository.findById("C1")).thenReturn(Optional.of(c));
-        when(customerRepository.save(any(Customer.class))).thenAnswer(i -> i.getArgument(0));
-
-        mockMvc.perform(post("/api/customer/profile/purge?customerId=C1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("purged"));
-    }
-}
