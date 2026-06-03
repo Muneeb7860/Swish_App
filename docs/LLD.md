@@ -29,3 +29,9 @@
 - [.github/workflows/ci.yml](file:///C:/Users/DELL%209420/Documents/swiss_App/.github/workflows/ci.yml) defines a matrix build:
   - Java 17 `mvn test` execution for `backend` and `bff`.
   - Node.js 20 `npm run build` execution for all 4 micro-frontends.
+
+## 5. Design Artifacts
+Additional formal LLD artifacts are available in the `docs/diagrams` folder:
+- `docs/diagrams/lld-diagrams.md` — sequence, class, and use case diagrams
+- `docs/diagrams/api-contracts.md` — summarized BFF/OpenAPI contract surface
+- `docs/diagrams/data-model-erd.md` — transactional ERD model

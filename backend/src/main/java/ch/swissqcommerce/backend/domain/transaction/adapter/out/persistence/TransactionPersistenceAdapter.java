@@ -1,5 +1,7 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
 
+import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
+import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
@@ -12,7 +14,7 @@ import java.util.Optional;
 
 @Component
 public class TransactionPersistenceAdapter implements 
-        CustomerPort, RiderPort, InventoryPort, DarkStorePort, SystemConfigPort, OutboxEventPort {
+        CustomerPort, RiderPort, InventoryPort, DarkStorePort, SystemConfigPort, OutboxEventPort, PaymentPort {
 
     private final CustomerRepository customerRepository;
     private final RiderRepository riderRepository;
@@ -20,19 +22,22 @@ public class TransactionPersistenceAdapter implements
     private final DarkStoreRepository darkStoreRepository;
     private final SystemConfigurationRepository systemConfigurationRepository;
     private final OutboxEventRepository outboxEventRepository;
+    private final PaymentRepository paymentRepository;
 
     public TransactionPersistenceAdapter(CustomerRepository customerRepository,
                                          RiderRepository riderRepository,
                                          InventoryRepository inventoryRepository,
                                          DarkStoreRepository darkStoreRepository,
                                          SystemConfigurationRepository systemConfigurationRepository,
-                                         OutboxEventRepository outboxEventRepository) {
+                                         OutboxEventRepository outboxEventRepository,
+                                         PaymentRepository paymentRepository) {
         this.customerRepository = customerRepository;
         this.riderRepository = riderRepository;
         this.inventoryRepository = inventoryRepository;
         this.darkStoreRepository = darkStoreRepository;
         this.systemConfigurationRepository = systemConfigurationRepository;
         this.outboxEventRepository = outboxEventRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Override
@@ -75,5 +80,25 @@ public class TransactionPersistenceAdapter implements
     @Override
     public OutboxEvent save(OutboxEvent event) {
         return outboxEventRepository.save(event);
+    }
+
+    @Override
+    public Optional<Payment> findById(Integer paymentId) {
+        return paymentRepository.findById(paymentId);
+    }
+
+    @Override
+    public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
+        return paymentRepository.findByIdempotencyKey(idempotencyKey);
+    }
+
+    @Override
+    public List<Payment> findByCustomerCustomerIdOrderByCreatedAtDesc(String customerId) {
+        return paymentRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+    }
+
+    @Override
+    public Payment save(Payment payment) {
+        return paymentRepository.save(payment);
     }
 }

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface OrderUseCase {
+    List<Order> getCustomerOrders(String customerId);
 
     record CartItem(String itemId, int quantity) {}
 

@@ -272,4 +272,11 @@ public class OrderServiceImpl implements OrderUseCase {
             "ticket_id", ticketId
         );
     }
+
+
+    @Override
+    public List<Order> getCustomerOrders(String customerId) {
+        return orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+    }
+
 }

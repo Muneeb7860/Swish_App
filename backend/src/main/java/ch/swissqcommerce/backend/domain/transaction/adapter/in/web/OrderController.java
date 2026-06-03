@@ -45,7 +45,7 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<?> getCustomerOrders(@RequestParam String customerId) {
-        List<Order> orders = orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+        List<Order> orders = orderUseCase.getCustomerOrders(customerId);
         List<OrderResponseDTO> responseDTOs = orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         return ResponseEntity.ok(responseDTOs);
     }

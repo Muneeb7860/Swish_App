@@ -55,3 +55,6 @@ graph TD
 ## 3. Observability & Mission Control
 *   **Zipkin**: Captures correlation tracking (`correlationId`) across distributed agent transactions.
 *   **Prometheus**: Scrapes `/actuator/prometheus` to monitor agent processing rates and budget consumption logs.
+
+## 4. Formal Architecture Artifacts
+For the complete C4 context, container, and component diagrams, see `docs/diagrams/architecture-diagrams.md`.
