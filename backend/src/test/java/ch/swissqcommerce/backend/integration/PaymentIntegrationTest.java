@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
@@ -55,6 +56,9 @@ public class PaymentIntegrationTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     private Customer customer;
     private DarkStore store;
@@ -110,6 +114,9 @@ public class PaymentIntegrationTest {
             entityManager.persist(config);
             entityManager.flush();
         });
+
+        // Seed Redis cache
+        redisTemplate.opsForValue().set("wallet:balance:CUST-200", "1000.00");
     }
 
     @Test
@@ -153,6 +160,7 @@ public class PaymentIntegrationTest {
 
         List<OutboxEvent> eventsAfterAuthorize = outboxEventRepository.findAll();
         assertTrue(eventsAfterAuthorize.stream().anyMatch(e -> "payment.authorized".equals(e.getEventType())));
+        assertTrue(eventsAfterAuthorize.stream().anyMatch(e -> "payment.fraud_check".equals(e.getEventType())));
 
         Payment capturedPayment = paymentUseCase.capturePayment(authorization.getPaymentId());
         assertEquals("CAPTURED", capturedPayment.getStatus());
@@ -165,6 +173,7 @@ public class PaymentIntegrationTest {
 
         List<OutboxEvent> eventsAfterCapture = outboxEventRepository.findAll();
         assertTrue(eventsAfterCapture.stream().anyMatch(e -> "payment.captured".equals(e.getEventType())));
+        assertTrue(eventsAfterCapture.stream().anyMatch(e -> "payment.notification".equals(e.getEventType())));
     }
 
     @Test

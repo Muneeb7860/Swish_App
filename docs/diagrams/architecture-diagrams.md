@@ -113,21 +113,34 @@ flowchart TB
     Auth[AuthController / AuthService]
     Orders[OrderController / OrderService]
     Telemetry[TelemetryController / TelemetryService]
+    Payment[PaymentController / PaymentService]
+    Fraud[Fraud Detection Service]
+    Notify[Notification Service]
     Outbox[OutboxEventScheduler / OutboxEventRepository]
     Persistence[Spring Data JPA Repositories]
     KafkaProducer[Kafka Producer Adapter]
     MongoSink[OlapEventSinkListener]
+    RedisCache[Redis Cache]
   end
 
   JWT --> Routing
   Routing --> Auth
   Routing --> Orders
   Routing --> Telemetry
+  Routing --> Payment
+  
+  Payment -->|Balance Check| RedisCache
+  Payment --> Persistence
+  Payment --> Outbox
+
   Auth --> Persistence
   Orders --> Persistence
   Telemetry --> Persistence
   Orders --> Outbox
   Outbox --> KafkaProducer
+  
+  KafkaProducer -->|payment.fraud_check| Fraud
+  KafkaProducer -->|payment.notification| Notify
   Telemetry --> MongoSink
 ```
 ```

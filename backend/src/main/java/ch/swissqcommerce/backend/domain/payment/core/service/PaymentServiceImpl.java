@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 public class PaymentServiceImpl implements PaymentUseCase {
 
@@ -22,17 +23,20 @@ public class PaymentServiceImpl implements PaymentUseCase {
     private final LedgerUseCase ledgerUseCase;
     private final OutboxEventPort outboxEventPort;
     private final ApplicationEventPublisher eventPublisher;
+    private final StringRedisTemplate redisTemplate;
 
     public PaymentServiceImpl(PaymentPort paymentPort,
                               OrderRepository orderRepository,
                               LedgerUseCase ledgerUseCase,
                               OutboxEventPort outboxEventPort,
-                              ApplicationEventPublisher eventPublisher) {
+                              ApplicationEventPublisher eventPublisher,
+                              StringRedisTemplate redisTemplate) {
         this.paymentPort = paymentPort;
         this.orderRepository = orderRepository;
         this.ledgerUseCase = ledgerUseCase;
         this.outboxEventPort = outboxEventPort;
         this.eventPublisher = eventPublisher;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -66,6 +70,17 @@ public class PaymentServiceImpl implements PaymentUseCase {
             throw new IllegalArgumentException("Payment customer must match order customer.");
         }
 
+        // Redis Fast Cache Balance Check
+        if ("Wallet".equalsIgnoreCase(paymentMethod)) {
+            String balanceStr = redisTemplate.opsForValue().get("wallet:balance:" + customerId);
+            if (balanceStr != null) {
+                BigDecimal cachedBalance = new BigDecimal(balanceStr);
+                if (cachedBalance.compareTo(amount) < 0) {
+                    throw new IllegalStateException("Insufficient wallet balance in Redis cache.");
+                }
+            }
+        }
+
         Payment payment = Payment.builder()
                 .order(order)
                 .customer(order.getCustomer())
@@ -97,6 +112,16 @@ public class PaymentServiceImpl implements PaymentUseCase {
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
 
+        OutboxEvent fraudEvent = OutboxEvent.builder()
+                .aggregateType("Payment")
+                .aggregateId(saved.getPaymentId().toString())
+                .eventType("payment.fraud_check")
+                .payload(String.format("{\"paymentId\": %d, \"customerId\": \"%s\", \"amount\": %s}",
+                        saved.getPaymentId(), customerId, saved.getAmount()))
+                .build();
+        outboxEventPort.save(fraudEvent);
+        eventPublisher.publishEvent(fraudEvent);
+
         return saved;
     }
 
@@ -123,6 +148,16 @@ public class PaymentServiceImpl implements PaymentUseCase {
                 .build();
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
+
+        OutboxEvent notifyEvent = OutboxEvent.builder()
+                .aggregateType("Payment")
+                .aggregateId(saved.getPaymentId().toString())
+                .eventType("payment.notification")
+                .payload(String.format("{\"paymentId\": %d, \"customerId\": \"%s\", \"status\": \"CAPTURED\"}",
+                        saved.getPaymentId(), saved.getCustomer() != null ? saved.getCustomer().getCustomerId() : ""))
+                .build();
+        outboxEventPort.save(notifyEvent);
+        eventPublisher.publishEvent(notifyEvent);
 
         return saved;
     }
