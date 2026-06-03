@@ -114,7 +114,7 @@
       const [envProfiles, setEnvProfiles] = useState(ENV_PROFILES);
       const [activeProfileKey, setActiveProfileKey] = useState('development');
       const activeProfile = envProfiles[activeProfileKey];
-      const [activeRole, setActiveRole] = useState('customer'); // customer, rider, business, inventory, admin
+      const [activeRole, setActiveRole] = useState('customer'); // customer, rider, inventory, darkstore_manager, business, admin
       const [products, setProducts] = useState(INITIAL_PRODUCTS);
       const [cart, setCart] = useState([]);
       const [activeOrder, setActiveOrder] = useState(null);
@@ -225,6 +225,23 @@
        const [centralScalingCount, setCentralScalingCount] = useState(0);
        const [eastScalingCount, setEastScalingCount] = useState(0);
        const [gdprTokenProbation, setGdprTokenProbation] = useState(false);
+
+      // --- REGISTRATION SYSTEM ---
+      const [isRegistering, setIsRegistering] = useState(false);
+      const [regName, setRegName] = useState('');
+      const [regPhone, setRegPhone] = useState('');
+      const [regEmail, setRegEmail] = useState('');
+      const [regRole, setRegRole] = useState('customer');
+      const [regVehicleType, setRegVehicleType] = useState('');
+      const [regStoreLocation, setRegStoreLocation] = useState('');
+      const [regBusinessName, setRegBusinessName] = useState('');
+
+      // --- DARK STORE MANAGER ---
+      const [dsmShifts, setDsmShifts] = useState([
+        { id: 's1', worker: 'Picker Alex', shift: '06:00-14:00', status: 'Active', performance: 92 },
+        { id: 's2', worker: 'Picker Maria', shift: '14:00-22:00', status: 'Scheduled', performance: 88 },
+        { id: 's3', worker: 'Picker Tom', shift: '22:00-06:00', status: 'Off-Duty', performance: 75 }
+      ]);
 
       // Dynamic Environment Profile Loader
       useEffect(() => {
@@ -355,7 +372,8 @@
       const [onboardingQueue, setOnboardingQueue] = useState([
         { id: 'O1', type: 'rider', name: 'Rider Dave (E-Bike)', details: 'License Class A, background check clear.', approvals: { l1: false, l2: false, l3: false } },
         { id: 'O2', type: 'merchant', name: 'FreshGrocer Store #44', details: 'Location: Central District, Category: Groceries', approvals: { l1: false, l2: false, l3: false } },
-        { id: 'O3', type: 'gateway', name: 'Swipe Instant Pro', details: 'Sandbox testing validated. Encryption active.', approvals: { l1: false, l2: false, l3: false } }
+        { id: 'O3', type: 'gateway', name: 'Swipe Instant Pro', details: 'Sandbox testing validated. Encryption active.', approvals: { l1: false, l2: false, l3: false } },
+        { id: 'O4', type: 'darkstore', name: 'MFC Hub #12 – Zurich East', details: 'Cold-chain certified, 120-unit capacity, 3 picker bays', approvals: { l1: false, l2: false, l3: false } }
       ]);
 
       // --- AUTOMATED B2B PROCUREMENT & REPLENISHMENT ---
@@ -420,6 +438,10 @@
         } else if (activeRole === 'inventory') {
           setBotMessages([
             { sender: 'bot', text: '📦 Dark Store Picker Assistant active. Report out-of-stock items, damaged inventory (e.g. damaged, spoiled), or request backup picker support.' }
+          ]);
+        } else if (activeRole === 'darkstore_manager') {
+          setBotMessages([
+            { sender: 'bot', text: '📊 Store Manager Ops Copilot active. Ask about shift scheduling, inventory KPIs, sales trends, or escalate worker performance issues.' }
           ]);
         } else {
           setBotMessages([
@@ -1681,6 +1703,9 @@
                 setGatewayOnboardStatus('active');
                 triggerToast('Onboarding Complete: Swipe Instant Pro is now ACTIVE!', 'system');
                 logKafka('admin', 'gateway.onboarded', 'Swipe Instant Pro integrated into production API gateway.');
+              } else if (app.type === 'darkstore' || app.type === 'darkstore_mgr' || app.type === 'darkstore_worker') {
+                triggerToast(`Onboarding Complete: ${app.name} is now ACTIVE!`, 'inventory');
+                logKafka('admin', 'darkstore.onboarded', `${app.name} approved across all 3 layers. Inventory sync activated.`);
               }
             } else {
               logKafka('admin', `onboard.l${level.slice(1)}_approved`, `Approved Level ${level.slice(1)} check for ${app.name}`);
@@ -2118,10 +2143,11 @@
         }
       };
 
-      // RBAC session access helper
+      // RBAC session access helper (role hierarchy: admin > darkstore_manager > inventory)
       const hasRoleAccess = (targetRole) => {
         if (!isAuthenticated) return false;
         if (currentUserSession?.role === 'admin') return true;
+        if (currentUserSession?.role === 'darkstore_manager' && targetRole === 'inventory') return true;
         return currentUserSession?.role === targetRole;
       };
 
@@ -2208,7 +2234,8 @@
                       >
                         <option value="customer">Customer Super App</option>
                         <option value="rider">Rider Light</option>
-                        <option value="inventory">Dark Store Inventory</option>
+                        <option value="inventory">Dark Store Worker</option>
+                        <option value="darkstore_manager">Dark Store Manager</option>
                         <option value="business">Business Web Console</option>
                         <option value="admin">System Admin Cockpit</option>
                       </select>
@@ -2299,6 +2326,95 @@
                     </button>
                   </div>
                 )}
+
+                {/* Registration Toggle */}
+                <div style={{ textAlign: 'center', marginTop: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                  <button 
+                    className="btn-secondary-glow" 
+                    style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem' }}
+                    onClick={() => { setIsRegistering(!isRegistering); setMfaStep('credentials'); }}
+                  >
+                    {isRegistering ? '← Back to Login' : 'New User? Register Here'}
+                  </button>
+                </div>
+
+                {isRegistering && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(6,182,212,0.03)', border: '1px solid rgba(6,182,212,0.15)', borderRadius: '8px' }}>
+                    <h4 style={{ color: 'var(--color-engine)', fontWeight: 800, fontSize: '0.75rem', margin: 0, textAlign: 'center' }}>PLATFORM REGISTRATION</h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <label style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)' }}>REGISTER AS</label>
+                      <select 
+                        value={regRole} onChange={(e) => setRegRole(e.target.value)}
+                        style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }}
+                      >
+                        <option value="customer">Customer (Self-Enroll)</option>
+                        <option value="rider">Rider (Self-Enroll)</option>
+                        <option value="inventory">Dark Store Worker (Admin Approval)</option>
+                        <option value="darkstore_manager">Dark Store Manager (Admin Approval)</option>
+                        <option value="business">Business Owner (Admin Approval)</option>
+                      </select>
+                    </div>
+
+                    <input placeholder="Full Name" value={regName} onChange={(e) => setRegName(e.target.value)}
+                      style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+                    <input placeholder="Phone Number" value={regPhone} onChange={(e) => setRegPhone(e.target.value)}
+                      style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+                    <input placeholder="Email Address" value={regEmail} onChange={(e) => setRegEmail(e.target.value)}
+                      style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+
+                    {regRole === 'rider' && (
+                      <input placeholder="Vehicle Type (e.g. E-Bike, Scooter)" value={regVehicleType} onChange={(e) => setRegVehicleType(e.target.value)}
+                        style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+                    )}
+
+                    {(regRole === 'inventory' || regRole === 'darkstore_manager') && (
+                      <input placeholder="Store Location (e.g. MFC Hub Zurich Central)" value={regStoreLocation} onChange={(e) => setRegStoreLocation(e.target.value)}
+                        style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+                    )}
+
+                    {regRole === 'business' && (
+                      <input placeholder="Business / Store Name" value={regBusinessName} onChange={(e) => setRegBusinessName(e.target.value)}
+                        style={{ width: '100%', background: '#020408', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem', fontSize: '0.8rem' }} />
+                    )}
+
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', background: 'rgba(245,158,11,0.05)', padding: '0.4rem', borderRadius: '4px', border: '1px solid rgba(245,158,11,0.15)' }}>
+                      {(regRole === 'customer' || regRole === 'rider') 
+                        ? '✅ Self-enrollment: You will be activated immediately after OTP verification.'
+                        : '⏳ Admin approval required: Your application will go through 3-level approval (L1 → L2 → L3) before activation.'}
+                    </div>
+
+                    <button 
+                      className="btn-primary-glow" 
+                      style={{ background: 'var(--color-engine)', color: '#ffffff', border: 'none', padding: '0.45rem', width: '100%', cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        if (!regName || !regPhone || !regEmail) { triggerToast('Please fill all required fields.', 'admin'); return; }
+                        if (regRole === 'customer' || regRole === 'rider') {
+                          setIsRegistering(false);
+                          setMfaRole(regRole);
+                          logKafka('system', 'auth.self_registration', `Self-enrolled new ${regRole}: ${regName} (${regEmail})`);
+                          triggerToast(`Registration successful! You can now log in as ${regRole}.`, 'customer');
+                        } else {
+                          const newId = 'O' + Date.now();
+                          const typeName = regRole === 'business' ? 'merchant' : (regRole === 'darkstore_manager' ? 'darkstore_mgr' : 'darkstore_worker');
+                          setOnboardingQueue(prev => [...prev, {
+                            id: newId,
+                            type: typeName,
+                            name: regRole === 'business' ? regBusinessName : `${regName} (${regStoreLocation})`,
+                            details: `Email: ${regEmail}, Phone: ${regPhone}`,
+                            approvals: { l1: false, l2: false, l3: false }
+                          }]);
+                          setIsRegistering(false);
+                          logKafka('system', 'auth.admin_registration', `New ${regRole} registration submitted for 3-level admin approval: ${regName}`);
+                          triggerToast(`Registration submitted! Awaiting 3-level admin approval.`, 'system');
+                        }
+                        setRegName(''); setRegPhone(''); setRegEmail(''); setRegVehicleType(''); setRegStoreLocation(''); setRegBusinessName('');
+                      }}
+                    >
+                      {(regRole === 'customer' || regRole === 'rider') ? 'Register & Activate' : 'Submit for Admin Approval'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2361,6 +2477,16 @@
               >
                 <Lucide.Package size={15} />
                 <span>Dark Store Inventory</span>
+              </button>
+
+              <button 
+                id="tab-darkstore-manager"
+                className={`role-tab ${activeRole === 'darkstore_manager' ? 'active' : ''}`}
+                data-role="darkstore_manager"
+                onClick={() => setActiveRole('darkstore_manager')}
+              >
+                <Lucide.ClipboardList size={15} />
+                <span>Store Manager</span>
               </button>
 
               <button 
@@ -4223,6 +4349,186 @@
                 </div>
               ) : <RbacBlocker targetRole="business" />)}
 
+              {activeRole === 'darkstore_manager' && (hasRoleAccess('darkstore_manager') ? (
+                <div className="business-dashboard">
+                  <div className="customer-main-panel">
+                    <h3 style={{ color: 'var(--color-engine)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Lucide.ClipboardList size={20} /> Dark Store Manager Console
+                    </h3>
+
+                    {/* Sales & Store-Specific Metrics */}
+                    <div className="glass-card" style={{ marginBottom: '1rem' }}>
+                      <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        <Lucide.TrendingUp size={16} className="event-business" /> Sales & Store Operations Monitor
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                        <div className="stat-card">
+                          <span className="stat-label">Merchant Revenue</span>
+                          <span className="stat-value" style={{ color: 'var(--color-business)' }}>${merchantWallet.toFixed(2)}</span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">Orders Processed</span>
+                          <span className="stat-value" style={{ color: 'var(--color-customer)' }}>{customerOrderCount}</span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">Refund Ratio</span>
+                          <span className="stat-value" style={{ color: customerRefundCount > 0 ? 'var(--color-admin)' : 'var(--color-customer)' }}>
+                            {customerOrderCount > 0 ? Math.round((customerRefundCount / customerOrderCount) * 100) : 0}%
+                          </span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">Picker Queue</span>
+                          <span className="stat-value" style={{ color: pickingBacklogQueue > 1 ? 'var(--color-admin)' : 'var(--color-customer)' }}>
+                            {pickingBacklogQueue} pending
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <div className="stat-card">
+                          <span className="stat-label">Central Utilization</span>
+                          <span className="stat-value" style={{ color: products.reduce((s, p) => s + p.stock, 0) / centralCapacity > 0.85 ? 'var(--color-admin)' : 'var(--color-engine)' }}>
+                            {Math.round((products.reduce((s, p) => s + p.stock, 0) / centralCapacity) * 100)}%
+                          </span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">East Utilization</span>
+                          <span className="stat-value" style={{ color: products.reduce((s, p) => s + p.stockEast, 0) / eastCapacity > 0.85 ? 'var(--color-admin)' : 'var(--color-engine)' }}>
+                            {Math.round((products.reduce((s, p) => s + p.stockEast, 0) / eastCapacity) * 100)}%
+                          </span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">Low Stock Alerts</span>
+                          <span className="stat-value" style={{ color: products.filter(p => (p.stock + p.stockEast) < 5).length > 0 ? 'var(--color-admin)' : 'var(--color-customer)' }}>
+                            {products.filter(p => (p.stock + p.stockEast) < 5).length} items
+                          </span>
+                        </div>
+                        <div className="stat-card">
+                          <span className="stat-label">Avg Picker Perf</span>
+                          <span className="stat-value" style={{ color: (dsmShifts.reduce((s, sh) => s + sh.performance, 0) / dsmShifts.length) > 85 ? 'var(--color-customer)' : '#f59e0b' }}>
+                            {Math.round(dsmShifts.reduce((s, sh) => s + sh.performance, 0) / dsmShifts.length)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Staff Shift Management */}
+                    <div className="glass-card" style={{ marginBottom: '1rem' }}>
+                      <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        <Lucide.Users size={16} className="event-rider" /> Staff & Shift Management
+                      </h4>
+                      <table className="ledger-table" style={{ width: '100%' }}>
+                        <thead>
+                          <tr>
+                            <th>Worker</th>
+                            <th>Shift</th>
+                            <th>Status</th>
+                            <th>Performance</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dsmShifts.map(s => (
+                            <tr key={s.id}>
+                              <td style={{ fontWeight: 700 }}>{s.worker}</td>
+                              <td>{s.shift}</td>
+                              <td>
+                                <span style={{ 
+                                  padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700,
+                                  background: s.status === 'Active' ? 'rgba(16,185,129,0.15)' : s.status === 'Scheduled' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                                  color: s.status === 'Active' ? 'var(--color-customer)' : s.status === 'Scheduled' ? '#f59e0b' : 'var(--color-admin)'
+                                }}>
+                                  {s.status}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                  <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${s.performance}%`, height: '100%', background: s.performance > 85 ? 'var(--color-customer)' : s.performance > 70 ? '#f59e0b' : 'var(--color-admin)', borderRadius: '3px' }} />
+                                  </div>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{s.performance}%</span>
+                                </div>
+                              </td>
+                              <td>
+                                <button 
+                                  className="btn-secondary-glow" 
+                                  style={{ fontSize: '0.6rem', padding: '0.15rem 0.35rem' }}
+                                  onClick={() => {
+                                    setDsmShifts(prev => prev.map(sh => sh.id === s.id ? { ...sh, status: sh.status === 'Active' ? 'Off-Duty' : 'Active' } : sh));
+                                    logKafka('inventory', 'dsm.shift_toggled', `Manager toggled ${s.worker} shift status.`);
+                                    triggerToast(`${s.worker} status updated.`, 'inventory');
+                                  }}
+                                >
+                                  Toggle
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Inventory Overview */}
+                    <div className="glass-card" style={{ marginBottom: '1rem' }}>
+                      <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        <Lucide.Package size={16} className="event-inventory" /> Inventory Overview
+                      </h4>
+                      <table className="ledger-table" style={{ width: '100%' }}>
+                        <thead>
+                          <tr><th>Product</th><th>Central</th><th>East</th><th>Total</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                          {products.map(p => (
+                            <tr key={p.id}>
+                              <td>{p.emoji} {p.name}</td>
+                              <td>{p.stock}</td>
+                              <td>{p.stockEast}</td>
+                              <td style={{ fontWeight: 700 }}>{p.stock + p.stockEast}</td>
+                              <td>
+                                <span style={{ 
+                                  fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.3rem', borderRadius: '4px',
+                                  background: (p.stock + p.stockEast) < 5 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.1)',
+                                  color: (p.stock + p.stockEast) < 5 ? 'var(--color-admin)' : 'var(--color-customer)'
+                                }}>
+                                  {(p.stock + p.stockEast) < 5 ? 'LOW' : 'OK'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button className="btn-primary-glow" style={{ background: 'var(--color-engine)', color: '#fff', border: 'none', padding: '0.35rem 0.75rem', fontSize: '0.7rem' }} onClick={handleRestock}>Restock All (+15)</button>
+                        <button className="btn-secondary-glow" style={{ fontSize: '0.7rem', padding: '0.35rem 0.75rem' }} onClick={handleBalanceStores}>Balance Stores</button>
+                      </div>
+                    </div>
+
+                    {/* HITL Queue Monitor */}
+                    <div className="glass-card">
+                      <h4 style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        <Lucide.Eye size={16} className="event-admin" /> HITL Approval Queue Monitor
+                      </h4>
+                      {hitlQueue.length === 0 ? (
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No pending approvals.</p>
+                      ) : (
+                        hitlQueue.map(ticket => (
+                          <div key={ticket.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', marginBottom: '0.4rem' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{ticket.desc}</div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Amount: ${ticket.amount.toFixed(2)}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.3rem' }}>
+                              <button className="btn-primary-glow" style={{ background: 'var(--color-customer)', color: '#070a13', border: 'none', fontSize: '0.6rem', padding: '0.2rem 0.4rem' }} onClick={() => handleReleaseHitl(ticket)}>Approve</button>
+                              <button className="btn-secondary-glow" style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', borderColor: 'var(--color-admin)', color: 'var(--color-admin)' }} onClick={() => handleVoidHitl(ticket)}>Void</button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              ) : <RbacBlocker targetRole="darkstore_manager" />)}
+
               {activeRole === 'admin' && (hasRoleAccess('admin') ? (
                 <div className="admin-dashboard">
                   
@@ -4242,6 +4548,7 @@
                             <th>L1 (Ops)</th>
                             <th>L2 (Risk)</th>
                             <th>L3 (Admin)</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -4275,6 +4582,21 @@
                                 >
                                   {app.approvals.l3 ? '✓ Admin Ok' : 'Pending'}
                                 </button>
+                              </td>
+                              <td>
+                                {!(app.approvals.l1 && app.approvals.l2 && app.approvals.l3) && (
+                                  <button 
+                                    className="approval-badge" 
+                                    style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--color-admin)', border: '1px solid rgba(239,68,68,0.3)' }}
+                                    onClick={() => {
+                                      setOnboardingQueue(prev => prev.filter(a => a.id !== app.id));
+                                      logKafka('admin', 'onboard.rejected', `Rejected applicant: ${app.name} (${app.type})`);
+                                      triggerToast(`Application rejected: ${app.name}`, 'admin');
+                                    }}
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
