@@ -195,6 +195,102 @@ paths:
         '403':
           description: Refund refused due to low trust score.
 
+  /api/payments:
+    post:
+      summary: Authorize a distributed payment transaction
+      description: Creates a payment authorization record, reserves funds, and emits a transactional outbox event for settlement.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Payment authorized successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Invalid payment request or insufficient funds.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    get:
+      summary: List customer payments
+      description: Retrieves payment authorizations and settlements for a customer.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: customerId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer payment list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/payments/{id}:
+    get:
+      summary: Retrieve payment details
+      description: Returns details for a single payment authorization or settlement.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Payment not found.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/payments/{id}/capture:
+    post:
+      summary: Capture an authorized payment
+      description: Captures a previously authorized payment and transitions settlement status.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment captured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Invalid capture request or payment state.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
   /api/customer/profile/purge:
     post:
       summary: GDPR Article 17 Erasure Request
@@ -721,6 +817,54 @@ components:
         bags_returned:
           type: integer
         created_at:
+          type: string
+          format: date-time
+    PaymentRequest:
+      type: object
+      required:
+        - order_id
+        - customer_id
+        - amount
+        - payment_method
+      properties:
+        order_id:
+          type: integer
+        customer_id:
+          type: string
+        amount:
+          type: number
+          format: float
+        payment_method:
+          type: string
+          enum: [Wallet, Swipe, PayPal, Paytm, Cash on Delivery, Direct Debit, Bank Transfer]
+    Payment:
+      type: object
+      properties:
+        payment_id:
+          type: integer
+        order_id:
+          type: integer
+        customer_id:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        payment_method:
+          type: string
+        status:
+          type: string
+        idempotency_key:
+          type: string
+        external_reference:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        captured_at:
+          type: string
+          format: date-time
+        refunded_at:
           type: string
           format: date-time
     B2BRestockOrder:

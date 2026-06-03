@@ -23,11 +23,6 @@ public class CustomerController {
     @Autowired
     private CustomerRepository customerRepository;
 
-    @org.springframework.cache.annotation.Cacheable("catalog")
-    @GetMapping("/catalog")
-    public ResponseEntity<List<Inventory>> getCatalog() {
-        return ResponseEntity.ok(inventoryRepository.findAll());
-    }
 
     @PostMapping("/profile/purge")
     @Transactional

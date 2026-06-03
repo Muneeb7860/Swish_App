@@ -31,6 +31,9 @@ public class OrderIntegrationTest {
     private OrderRepository orderRepository;
 
     @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
     private CustomerRepository customerRepository;
 
     @Autowired
@@ -59,6 +62,7 @@ public class OrderIntegrationTest {
     void setUp() {
         transactionTemplate.executeWithoutResult(status -> {
             // Clear repositories to ensure test isolation
+            paymentRepository.deleteAll();
             orderRepository.deleteAll();
             inventoryRepository.deleteAll();
             darkStoreRepository.deleteAll();
