@@ -22,6 +22,7 @@
         <module>platform-gateway</module>
         <module>core-business-engine</module>
         <module>shared-async-services</module>
+        <module>notification-engine</module>
     </modules>
 
     <properties>

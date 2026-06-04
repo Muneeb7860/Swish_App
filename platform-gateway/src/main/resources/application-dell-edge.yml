@@ -25,6 +25,10 @@ spring:
               args:
                 name: checkoutCircuitBreaker
                 fallbackUri: forward:/api/v1/fallback/checkout-stalled
+        - id: notification-websocket
+          uri: ws://localhost:8082
+          predicates:
+            - Path=/ws/notifications/**
 
   ai:
     ollama:
