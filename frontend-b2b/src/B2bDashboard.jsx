@@ -50,31 +50,46 @@ const B2bDashboard = () => {
       <div style={{ marginTop: '20px', padding: '20px', background: '#f7fafc', borderRadius: '8px' }}>
         <h3>Bulk Order Placement</h3>
         <p>Order Total: $1,250,000</p>
-        <button 
-          onClick={() => setOrderStatus('PENDING')}
-          style={{ background: '#4299e1', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Submit Order (Simulate)
-        </button>
         
-        <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #cbd5e0', borderRadius: '6px' }}>
-          <h4>AI Evaluation Status</h4>
-          <span style={{ 
-            display: 'inline-block', 
-            padding: '5px 10px', 
-            borderRadius: '15px', 
-            backgroundColor: orderStatus === 'PENDING' ? '#ecc94b' : orderStatus === 'APPROVED' ? '#48bb78' : '#f6ad55',
-            color: 'white',
-            fontWeight: 'bold'
-          }}>
-            {orderStatus}
-          </span>
-          {orderStatus === 'HUMAN_TRIAGE' && (
-            <p style={{ color: '#c53030', marginTop: '10px' }}>
-              ⚠️ Alert: Order exceeds $1M threshold. Routed to human underwriter queue.
-            </p>
-          )}
-        </div>
+        {orderStatus === 'PENDING' ? (
+          <div style={{ padding: '15px', border: '1px solid #cbd5e0', borderRadius: '6px', background: '#fff' }}>
+             <h4 style={{ margin: '0 0 10px 0' }}>Secure Checkout (Stripe Mock)</h4>
+             <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                <input type="text" placeholder="Card Number" defaultValue="4242 4242 4242 4242" disabled style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }} />
+                <input type="text" placeholder="MM/YY" defaultValue="12/26" disabled style={{ width: '80px', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }} />
+                <input type="text" placeholder="CVC" defaultValue="123" disabled style={{ width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }} />
+             </div>
+             <button 
+                onClick={() => setOrderStatus('PAYMENT_PROCESSING')}
+                style={{ width: '100%', background: '#4299e1', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Pay $1,250,000 (Simulate Webhook)
+              </button>
+          </div>
+        ) : orderStatus === 'PAYMENT_PROCESSING' ? (
+           <div style={{ padding: '15px', textAlign: 'center', color: '#718096' }}>
+              Processing Payment via Stripe API...
+           </div>
+        ) : (
+          <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #cbd5e0', borderRadius: '6px' }}>
+            <h4>AI Evaluation Status</h4>
+            <span style={{ 
+              display: 'inline-block', 
+              padding: '5px 10px', 
+              borderRadius: '15px', 
+              backgroundColor: orderStatus === 'APPROVED' ? '#48bb78' : '#f6ad55',
+              color: 'white',
+              fontWeight: 'bold'
+            }}>
+              {orderStatus}
+            </span>
+            {orderStatus === 'HUMAN_TRIAGE' && (
+              <p style={{ color: '#c53030', marginTop: '10px' }}>
+                ⚠️ Alert: Order exceeds $1M threshold. Routed to human underwriter queue.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

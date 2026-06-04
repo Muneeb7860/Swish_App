@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/api/checkout")
+@RequestMapping("/api/v1/checkout")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -18,8 +18,8 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    @PostMapping("/payments")
-    public ResponseEntity<Payment> createPayment(
+    @PostMapping("/intents")
+    public ResponseEntity<PaymentIntentResponse> createPaymentIntent(
             @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
             @RequestBody PaymentRequest request) {
         
@@ -27,6 +27,7 @@ public class PaymentController {
             return ResponseEntity.badRequest().build();
         }
 
+        // 1. Persist the pending payment internally
         Payment payment = paymentService.processCheckoutPayment(
                 idempotencyKey,
                 request.customerId(),
@@ -34,8 +35,14 @@ public class PaymentController {
                 request.amount()
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(payment);
+        // 2. Generate Mock Stripe Client Secret
+        String mockClientSecret = "pi_mock_" + payment.getId() + "_secret_123456789";
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                new PaymentIntentResponse(payment.getId().toString(), mockClientSecret, "requires_payment_method")
+        );
     }
 }
 
 record PaymentRequest(String customerId, String orderId, BigDecimal amount) {}
+record PaymentIntentResponse(String paymentId, String clientSecret, String status) {}
