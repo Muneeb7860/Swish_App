@@ -5,7 +5,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "inventory_items")
-public class InventoryItem {
+class InventoryItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,7 +25,7 @@ public class InventoryItem {
 
 @Entity
 @Table(name = "inventory_transactions")
-public class InventoryTransaction {
+class InventoryTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
