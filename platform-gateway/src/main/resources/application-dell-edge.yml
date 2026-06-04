@@ -1,0 +1,40 @@
+spring:
+  config:
+    activate:
+      on-profile: dell-edge
+
+  # Pointing directly across the USB4 Bridge to the primary database node
+  datasource:
+    url: jdbc:postgresql://169.254.1.1:5432/b2b_qcomm
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:secure_postgres_pass}
+
+  data:
+    redis:
+      host: localhost # Local replica instance running on Dell for zero-latency idempotency checks
+      port: 6379
+
+  cloud:
+    gateway:
+      routes:
+        - id: core-checkout-route
+          uri: http://169.254.1.1:8080
+          predicates:
+            - Path=/api/v1/checkout/**
+          filters:
+            - name: RedisIdempotencyFilter
+            - name: CircuitBreaker
+              args:
+                name: checkoutCircuitBreaker
+                fallbackUri: forward:/api/v1/fallback/checkout-stalled
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434 # Local LM Studio instance running on the Intel CPU
+      chat:
+        options:
+          model: gemma4:e4b
+          temperature: 0.1
+
+server:
+  port: 8080

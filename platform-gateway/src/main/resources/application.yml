@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: platform-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: core-business-engine
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/checkout/**, /api/inventory/**
+          filters:
+            - name: IdempotencyFilter
+        - id: shared-async-services
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/rewards/**, /api/ledger/**
+  data:
+    redis:
+      host: localhost
+      port: 6379

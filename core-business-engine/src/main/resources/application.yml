@@ -1,0 +1,34 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: core-business-engine
+  threads:
+    virtual:
+      enabled: true # Enables Loom Virtual Threads
+  datasource:
+    url: jdbc:postgresql://localhost:5432/b2b_qcomm
+    username: admin
+    password: adminpassword
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cloud:
+    function:
+      definition: checkoutProcessor
+    stream:
+      bindings:
+        checkoutProcessor-out-0:
+          destination: b2b.checkout.events
+      kafka:
+        binder:
+          brokers: localhost:9092
