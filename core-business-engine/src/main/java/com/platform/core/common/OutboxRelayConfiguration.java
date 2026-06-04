@@ -29,7 +29,7 @@ public class OutboxRelayConfiguration {
     @InboundChannelAdapter(value = "outboxChannel", poller = @Poller(fixedDelay = "1000"))
     public MessageSource<Object> jdbcOutboxPoller(DataSource dataSource) {
         JdbcPollingChannelAdapter adapter = new JdbcPollingChannelAdapter(dataSource,
-                "SELECT id, aggregate_type, aggregate_id, type, payload FROM transactional_outbox WHERE processed_at IS NULL LIMIT 100");
+                "SELECT id, aggregate_type, aggregate_id, type, payload FROM transactional_outbox WHERE processed_at IS NULL ORDER BY created_at ASC LIMIT 100 FOR UPDATE SKIP LOCKED");
         adapter.setUpdateSql("UPDATE transactional_outbox SET processed_at = CURRENT_TIMESTAMP WHERE id IN (:id)");
         adapter.setRowMapper((rs, rowNum) -> Map.of(
                 "id", rs.getString("id"),

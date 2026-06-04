@@ -18,6 +18,17 @@ spring:
           group: notification-b2b-group
           content-type: application/json
           binder: local-kafka
+          consumer:
+            max-attempts: 3
+      kafka:
+        bindings:
+          broadcastNotification-in-0:
+            consumer:
+              enableDlq: true
+              dlqName: b2b.wholesale.order.evaluated.DLQ
+              autoCommitOnError: false
+        binder:
+          brokers: localhost:9092
       binders:
         local-kafka:
           type: kafka

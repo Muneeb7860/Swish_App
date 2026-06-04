@@ -23,10 +23,12 @@ services:
     image: redis/redis-stack:latest
     container_name: redis-stack
     environment:
-      REDIS_ARGS: "--notify-keyspace-events Ex"
+      REDIS_ARGS: "--notify-keyspace-events Ex --appendonly yes --appendfsync everysec"
     ports:
       - "6379:6379"
       - "8001:8001"
+    volumes:
+      - redisdata:/data
     networks:
       - hybrid-net
     deploy:
@@ -144,6 +146,7 @@ services:
 volumes:
   pgdata:
   mongodata:
+  redisdata:
 
 networks:
   hybrid-net:

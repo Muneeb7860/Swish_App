@@ -48,6 +48,16 @@ spring:
           uri: ws://localhost:8082
           predicates:
             - Path=/ws/notifications/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: notificationCircuitBreaker
+                fallbackUri: forward:/api/v1/fallback/notification-unavailable
 
   ai:
     ollama:
