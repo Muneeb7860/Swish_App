@@ -54,10 +54,10 @@ jobs:
         run: |
           if [ -n "$NVD_API_KEY" ]; then
             echo "🔐 NVD API key provided — running dependency-check with NVD updates."
-            mvn org.owasp:dependency-check-maven:check -Dnvd.apiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
+            mvn org.owasp:dependency-check-maven:check -Dnvd.apiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7
           else
             echo "⚠️ NVD API key not set — running dependency-check without NVD updates (may miss recent vulnerabilities)."
-            mvn org.owasp:dependency-check-maven:check -Ddependency-check.disableUpdate=true -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
+            mvn org.owasp:dependency-check-maven:check -Ddependency-check.disableUpdate=true -DfailBuildOnCVSS=7
           fi
 
   bff-quality:
@@ -113,7 +113,7 @@ jobs:
 
       - name: Run ESLint Standards Validation
         working-directory: ./${{ matrix.mfe }}
-        run: npm run lint || echo "ESLint Check Completed"
+        run: npm run lint
 
       - name: Build MFE Assets for Production
         working-directory: ./${{ matrix.mfe }}
@@ -128,9 +128,8 @@ jobs:
 
       - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          exit-code: '0' # Audit mode: do not fail build for minor warnings, let engineers review logs
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'

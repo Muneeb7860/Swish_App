@@ -5,9 +5,9 @@ services:
     image: postgis/postgis:15-3.3
     container_name: postgres-gis
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpassword
-      POSTGRES_DB: b2b_qcomm
+      POSTGRES_USER: ${DB_USER:admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:adminpassword}
+      POSTGRES_DB: ${DB_NAME:b2b_qcomm}
     ports:
       - "5432:5432"
     volumes:
@@ -40,8 +40,8 @@ services:
     image: mongo:6
     container_name: mongo
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: adminpassword
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:adminpassword}
     ports:
       - "27017:27017"
     volumes:
@@ -82,11 +82,11 @@ services:
     container_name: keycloak
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-gis:5432/b2b_qcomm
-      KC_DB_USERNAME: admin
-      KC_DB_PASSWORD: adminpassword
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB_URL: jdbc:postgresql://postgres-gis:5432/${DB_NAME:b2b_qcomm}
+      KC_DB_USERNAME: ${DB_USER:admin}
+      KC_DB_PASSWORD: ${DB_PASSWORD:adminpassword}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:admin}
     command: start-dev
     ports:
       - "8180:8080"

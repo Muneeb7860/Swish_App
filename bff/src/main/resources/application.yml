@@ -36,7 +36,13 @@ spring:
               - DELETE
               - OPTIONS
               - PATCH
-            allowedHeaders: "*"
+            allowedHeaders:
+              - Authorization
+              - Content-Type
+              - X-Requested-With
+              - X-XSRF-TOKEN
+              - X-Idempotency-Key
+              - X-Correlation-ID
             allowCredentials: true
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST

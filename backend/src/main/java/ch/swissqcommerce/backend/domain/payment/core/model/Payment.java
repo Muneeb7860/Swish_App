@@ -31,7 +31,7 @@ public class Payment {
 
     @Column(name = "amount", precision = 10, scale = 2, nullable = false)
     @NotNull
-    @DecimalMin(value = "0.00")
+    @DecimalMin(value = "0.01", inclusive = true)
     private BigDecimal amount;
 
     @Column(name = "currency", length = 3, nullable = false)

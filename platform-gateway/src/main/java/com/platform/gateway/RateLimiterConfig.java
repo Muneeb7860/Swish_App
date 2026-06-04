@@ -10,7 +10,12 @@ public class RateLimiterConfig {
 
     @Bean
     public KeyResolver userKeyResolver() {
-        // Limit by IP address for DDoS protection
-        return exchange -> Mono.just(exchange.getRequest().getRemoteAddress().getAddress().getHostAddress());
+        return exchange -> {
+            java.net.InetSocketAddress remoteAddress = exchange.getRequest().getRemoteAddress();
+            if (remoteAddress != null && remoteAddress.getAddress() != null) {
+                return Mono.just(remoteAddress.getAddress().getHostAddress());
+            }
+            return Mono.just("127.0.0.1");
+        };
     }
 }

@@ -7,10 +7,11 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header Host $host;
 spec:
+  ingressClassName: nginx
   tls:
     - hosts:
         - app.yourcompany.com
@@ -20,7 +21,7 @@ spec:
       http:
         paths:
           - path: /api/v1/(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: bff

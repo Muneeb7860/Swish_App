@@ -26,6 +26,19 @@ public class CustomerController {
     @PostMapping("/profile/purge")
     @Transactional
     public ResponseEntity<?> purgeProfile(@RequestParam String customerId) {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized."));
+        }
+        String principalName = auth.getName();
+        boolean isAdmin = auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (!customerId.equalsIgnoreCase(principalName) && !isAdmin) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied. Cannot purge another customer's profile."));
+        }
+
         Optional<Customer> customerOpt = customerRepository.findById(customerId);
         if (customerOpt.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("error", "Customer not found."));
