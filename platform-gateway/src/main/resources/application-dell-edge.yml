@@ -14,6 +14,20 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5000"
+              - "http://localhost:5001"
+              - "http://localhost:5002"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
       routes:
         - id: core-checkout-route
           uri: http://169.254.1.1:8080
@@ -21,6 +35,11 @@ spring:
             - Path=/api/v1/checkout/**
           filters:
             - name: RedisIdempotencyFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
             - name: CircuitBreaker
               args:
                 name: checkoutCircuitBreaker
@@ -35,3 +54,13 @@ spring:
       base-url: http://localhost:11434
     groq:
       api-key: ${GROQ_API_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
