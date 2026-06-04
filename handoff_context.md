@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2026-06-04  
 > **Current Version**: v0.2.16  
-> **Active Branch**: `Mac_Machine` @ `956c455`  
+> **Active Branch**: `Mac_Machine` @ `9a07c7f`  
 > **Repo**: [github.com/Muneeb7860/Swish_App](https://github.com/Muneeb7860/Swish_App)
 
 ---
@@ -12,6 +12,9 @@
 **Swish** is a 3-sided Q-Commerce (Quick Commerce) marketplace guaranteeing grocery delivery within 15 minutes. It connects **Customers**, **Riders**, and **Admins/Hosts** through a unified platform. It also includes a **B2B wholesale** channel.
 
 The platform is designed as an **enterprise-grade, event-driven, hexagonal microservices** architecture following TOGAF and COBIT 2019 resilience frameworks.
+
+**Target Pilot**: Valora ("k kiosk") — 5 high-traffic Swiss transport hubs (Zurich HB, Bern, Basel SBB, Geneva Cornavin, Lucerne).  
+**Business Model**: Low-CapEx B2B SaaS that retrofits existing storefronts with decentralized micro-frontends and agentic AI procurement workflows.
 
 ---
 
@@ -32,8 +35,10 @@ The platform is designed as an **enterprise-grade, event-driven, hexagonal micro
 | **Mobile** | React Native |
 | **Observability** | Micrometer, Prometheus, Grafana, Zipkin/OpenTelemetry |
 | **CI/CD** | GitHub Actions (CI + SemVer Release) |
-| **Security** | JWT, OWASP Dependency Check, Trivy, Jacoco 75% coverage |
+| **AI** | Spring AI (OpenAI + Ollama) — B2B procurement agent |
+| **Security** | JWT, mTLS (Envoy), OWASP Dependency Check, Trivy, Jacoco, GDPR Art.17 |
 | **Infra** | Docker Compose, Kubernetes manifests, n8n workflows |
+| **Logging** | Logstash Logback encoder (structured JSON) |
 
 ---
 
@@ -185,17 +190,50 @@ All 4 branches are kept **in sync** — changes are committed on `Mac_Machine`, 
 
 ---
 
-## 12. Known Issues / Tech Debt
+## 12. API Surface (via BFF)
+
+~25 endpoints organized by persona:
+- **Auth**: `/api/auth/login`, `/api/auth/mfa/verify`
+- **Customer**: catalog, orders, AI-assisted refunds, GDPR purge, ledger
+- **Payments**: authorize, capture, list
+- **Rider**: onboarding, academy courses
+- **Picker**: pick queue, handover
+- **Inventory**: rebalance MFCs
+- **Wholesaler**: restocking queue, fulfill, invoices
+- **Admin**: chaos fault injection, onboarding queue, HITL ticket resolution
+
+All mutation routes support `X-Idempotency-Key` headers.
+
+---
+
+## 13. Known Issues / Tech Debt
 
 - **Legacy code coexists with hexagonal domains** — `controller/`, `model/`, `repository/`, `service/` directories still hold some non-refactored code
 - **Two gateway modules** — `bff/` (legacy) and `platform-gateway/` (new) both exist
 - **Multiple payment implementations** — `backend/domain/payment/` and `core-business-engine/checkout/`
 - **Duplicate k8s configs** — `k8s/` and `infrastructure/k8s/` directories
 - `patch.diff` and `test_video.mp4` — leftover files in root
+- Branch renaming pending (`Mac_Machine` → `mac-machine`, etc.)
 
 ---
 
-## 13. How to Run
+## 14. ADRs (Architecture Decision Records)
+
+1. **ADR-001**: Hexagonal Architecture — isolate business logic from external adapters
+2. **ADR-002**: Module Federation + Zustand — sliced micro-frontend state via `StateCreator` pattern
+3. **ADR-003**: Kafka DLQ — guaranteed message processing with dead letter recovery
+
+---
+
+## 15. Disaster Recovery Runbooks
+
+1. **Kafka Poison Pill & DLQ Recovery** — isolate, examine, hotfix, replay
+2. **Database Replication Lag** — check health, failover, GDPR purge verification
+3. **Redis Cache Crash** — restart, warm cache, verify hit rate > 85%
+
+---
+
+## 16. How to Run
 
 ```bash
 # Full stack via Docker
@@ -213,7 +251,7 @@ cd frontend-customer && npm install && npm run dev
 
 ---
 
-## 14. Key Config Files
+## 17. Key Config Files
 
 | File | Purpose |
 |---|---|
