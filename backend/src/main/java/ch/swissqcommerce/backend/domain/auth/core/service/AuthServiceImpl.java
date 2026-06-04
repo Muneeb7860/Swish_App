@@ -10,12 +10,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+
+    @Autowired
+    private Environment env;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -34,11 +40,17 @@ public class AuthServiceImpl implements AuthService {
     private long mfaOtpExpirationSec;
 
     private final Map<String, MfaSession> mfaSessions = new ConcurrentHashMap<>();
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     @Override
     public LoginResponse login(String username, String password) {
         if (!"swissadmin".equalsIgnoreCase(username) && !"swissuser".equalsIgnoreCase(username)) {
+            throw new IllegalArgumentException("Invalid username or password.");
+        }
+
+        // Secure password validation for MVP profiles
+        String expectedPassword = "swissadmin".equalsIgnoreCase(username) ? "adminpassword" : "userpassword";
+        if (password == null || !expectedPassword.equals(password)) {
             throw new IllegalArgumentException("Invalid username or password.");
         }
 
@@ -51,12 +63,18 @@ public class AuthServiceImpl implements AuthService {
 
             mfaSessions.put(sessionToken, new MfaSession(username, otpCode, expiry));
 
-            System.out.println(String.format(
-                "\n[MFA GATEWAY] SMS OTP Broadcast to user %s. PIN code: %s (Expires in %ds)\n",
-                username, otpCode, mfaOtpExpirationSec
-            ));
-            System.out.flush();
-            log.info("[MFA GATEWAY] SMS OTP Broadcast to user {}. PIN code: {} (Expires in {}s)", username, otpCode, mfaOtpExpirationSec);
+            boolean isProduction = java.util.Arrays.asList(env.getActiveProfiles()).contains("prod") 
+                                || java.util.Arrays.asList(env.getActiveProfiles()).contains("production");
+            if (!isProduction) {
+                System.out.println(String.format(
+                    "\n[MFA GATEWAY] SMS OTP Broadcast to user %s. PIN code: %s (Expires in %ds)\n",
+                    username, otpCode, mfaOtpExpirationSec
+                ));
+                System.out.flush();
+                log.info("[MFA GATEWAY] SMS OTP Broadcast to user {}. PIN code: {} (Expires in {}s)", username, otpCode, mfaOtpExpirationSec);
+            } else {
+                log.info("[MFA GATEWAY] SMS OTP Broadcast initiated for user {}.", username);
+            }
 
             return new LoginResponse(true, sessionToken, null);
         } else {

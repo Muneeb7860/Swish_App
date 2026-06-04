@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class EdgeJwtVerificationFilter extends AbstractGatewayFilterFactory<EdgeJwtVerificationFilter.Config> {
 
-    @Value("${jwt.secret:9a4f2c5e8b1d3a7c6f0e2b4d6a8c0e2f4a6b8d0c2e4f6a8b0c2d4e6f8a0b2c4d}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     public EdgeJwtVerificationFilter() {

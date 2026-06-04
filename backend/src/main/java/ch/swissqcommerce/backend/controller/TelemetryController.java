@@ -24,7 +24,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @RestController
 @RequestMapping("/api/telemetry")
-@CrossOrigin(origins = "*")
 public class TelemetryController {
 
     @Autowired

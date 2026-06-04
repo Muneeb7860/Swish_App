@@ -19,6 +19,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +52,11 @@ public class PaymentIntegrationTest {
     @Autowired
     private OutboxRepository outboxRepository;
 
+    @Autowired
+    private com.platform.core.checkout.adapters.PaymentRepository paymentRepository;
+
+    record TestPaymentIntentResponse(String paymentId, String clientSecret, String status) {}
+
     @Test
     void shouldProcessPaymentAndWriteToOutbox() {
         // Given
@@ -68,23 +74,34 @@ public class PaymentIntegrationTest {
         headers.set("X-Idempotency-Key", idempotencyKey);
         HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
-        // When
-        ResponseEntity<Payment> response = restTemplate.postForEntity("/api/checkout/payments", request, Payment.class);
+        // When: call the correct intents endpoint
+        ResponseEntity<TestPaymentIntentResponse> response = restTemplate.postForEntity(
+                "/api/v1/checkout/intents", request, TestPaymentIntentResponse.class);
 
-        // Then: HTTP Response is successful
+        // Then: HTTP Response is successful and matches Stripe-style intent format
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        Payment createdPayment = response.getBody();
-        assertThat(createdPayment).isNotNull();
-        assertThat(createdPayment.getStatus()).isEqualTo(PaymentStatus.INITIATED);
-        assertThat(createdPayment.getIdempotencyKey()).isEqualTo(idempotencyKey);
+        TestPaymentIntentResponse intentResponse = response.getBody();
+        assertThat(intentResponse).isNotNull();
+        assertThat(intentResponse.paymentId()).isNotNull();
+        assertThat(intentResponse.clientSecret()).startsWith("pi_mock_" + intentResponse.paymentId());
+        assertThat(intentResponse.status()).isEqualTo("requires_payment_method");
+
+        // Then: DB Payment entry exists and has INITIATED status
+        Long paymentId = Long.parseLong(intentResponse.paymentId());
+        Optional<Payment> dbPayment = paymentRepository.findById(paymentId);
+        assertThat(dbPayment).isPresent();
+        assertThat(dbPayment.get().getStatus()).isEqualTo(PaymentStatus.INITIATED);
+        assertThat(dbPayment.get().getIdempotencyKey()).isEqualTo(idempotencyKey);
+        assertThat(dbPayment.get().getCustomerId()).isEqualTo("CUST-1001");
+        assertThat(dbPayment.get().getOrderId()).isEqualTo("ORD-5555");
 
         // Then: Outbox table contains the event
         List<OutboxEntity> outboxEvents = outboxRepository.findAll();
         assertThat(outboxEvents).hasSize(1);
         OutboxEntity event = outboxEvents.get(0);
         assertThat(event.getAggregateType()).isEqualTo("Payment");
-        assertThat(event.getAggregateId()).isEqualTo(String.valueOf(createdPayment.getId()));
+        assertThat(event.getAggregateId()).isEqualTo(intentResponse.paymentId());
         assertThat(event.getType()).isEqualTo("PaymentInitiated");
-        assertThat(event.getPayload()).contains(String.valueOf(createdPayment.getId()));
+        assertThat(event.getPayload()).contains(intentResponse.paymentId());
     }
 }

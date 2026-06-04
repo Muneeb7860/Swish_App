@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/ledger")
-@CrossOrigin(origins = "*")
 public class LedgerController {
 
     @Autowired
