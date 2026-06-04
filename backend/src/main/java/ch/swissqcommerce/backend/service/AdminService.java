@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
 
+import ch.swissqcommerce.backend.config.SecurityAudit;
+
 /**
  * Admin domain service for system operations including
  * chaos fault injection/resolution, onboarding gate approvals,
@@ -55,6 +57,7 @@ public class AdminService {
      * Injects a chaos fault into the system for resilience testing.
      * Supports fault types: LATENCY_SPIKE, STORE_OFFLINE, PAYMENT_GATEWAY_DOWN.
      */
+    @SecurityAudit(action = "admin.chaos.inject")
     @Transactional
     public ChaosFaultLog injectFault(String faultType, String details) {
         List<String> validFaults = List.of("LATENCY_SPIKE", "STORE_OFFLINE", "PAYMENT_GATEWAY_DOWN",

@@ -87,8 +87,10 @@ public class AuthServiceImpl implements AuthService {
 
     private String generateJwtToken(String username) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        String role = "swissadmin".equalsIgnoreCase(username) ? "ADMIN" : "CUSTOMER";
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key)

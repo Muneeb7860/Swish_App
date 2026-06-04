@@ -1,0 +1,78 @@
+package ch.swissqcommerce.backend.integration;
+
+import ch.swissqcommerce.backend.model.OutboxEvent;
+import ch.swissqcommerce.backend.repository.OutboxEventRepository;
+import ch.swissqcommerce.backend.service.AdminService;
+import ch.swissqcommerce.backend.service.SecurityAnomalyAnalyzer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+public class SecurityAnomalyIntegrationTest {
+
+    @Autowired
+    private AdminService adminService;
+
+    @Autowired
+    private SecurityAnomalyAnalyzer securityAnomalyAnalyzer;
+
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @BeforeEach
+    void setUp() {
+        transactionTemplate.executeWithoutResult(status -> {
+            outboxEventRepository.deleteAll();
+        });
+
+        // Set security context authentication representing swissadmin
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                "swissadmin", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    @Test
+    public void testSuccessfulActionGeneratesAuditTrail() {
+        // Run action
+        assertNotNull(adminService.injectFault("LATENCY_SPIKE", "Successful telemetry test"));
+
+        // Verify outbox entry
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        assertFalse(events.isEmpty());
+        assertTrue(events.stream().anyMatch(e -> "admin.chaos.inject".equals(e.getEventType()) && "PENDING".equals(e.getStatus())));
+    }
+
+    @Test
+    public void testExceptionGeneratesSecurityAnomalyAndRunsAiAnalysis() {
+        // Assert action fails
+        assertThrows(IllegalArgumentException.class, () -> {
+            adminService.injectFault("INVALID_FAULT_LOG", "Should fail and trigger anomaly logging");
+        });
+
+        // Verify outbox contains anomaly event
+        List<OutboxEvent> eventsAfterAnomaly = outboxEventRepository.findAll();
+        assertTrue(eventsAfterAnomaly.stream().anyMatch(e -> "security.anomaly".equals(e.getEventType()) && "PENDING".equals(e.getStatus())));
+
+        // Execute dynamic AI security anomaly threat analyst scheduler processing
+        securityAnomalyAnalyzer.analyzeSecurityAnomalies();
+
+        // Verify anomaly status is updated to ANALYZED
+        List<OutboxEvent> eventsAfterAnalysis = outboxEventRepository.findAll();
+        assertTrue(eventsAfterAnalysis.stream().anyMatch(e -> "security.anomaly".equals(e.getEventType()) && "ANALYZED".equals(e.getStatus())));
+    }
+}

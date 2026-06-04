@@ -26,7 +26,7 @@ public class OutboxEvent {
     @Column(name = "event_type")
     private String eventType;
 
-    @Column(name = "payload")
+    @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
 
     @Column(name = "status")
