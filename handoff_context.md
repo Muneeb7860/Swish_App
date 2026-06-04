@@ -1,8 +1,10 @@
-# Swish App — Handoff Context 🚀
+# Swish App — Detailed Handoff Context 🚀
+
+> **For the Mac AI Agent:** Read this document carefully. It contains the complete structural context of the Swish App. Rely on this instead of scanning the codebase to save tokens. We have just completed a rigorous bug-squashing and branch synchronization sprint. All branches (`Mac_Machine`, `Windows_Machine`, `develop`, `master`) are perfectly synced.
 
 > **Last Updated**: 2026-06-04  
 > **Current Version**: v0.2.16  
-> **Active Branch**: `Mac_Machine` @ `9a07c7f`  
+> **Active Branch**: `Mac_Machine` @ `51e96e9`  
 > **Repo**: [github.com/Muneeb7860/Swish_App](https://github.com/Muneeb7860/Swish_App)
 
 ---
@@ -171,7 +173,7 @@ Each domain follows: `domain/{name}/adapter/in/web`, `adapter/out/persistence`, 
 | `develop` | Integration branch |
 | `master` | Production-ready releases |
 
-All 4 branches are kept **in sync** — changes are committed on `Mac_Machine`, then merged to the other 3.
+All 4 branches are currently perfectly synced at commit `51e96e9`. No rebase or merging is required upon switching machines; simply run `git pull origin Mac_Machine`.
 
 ---
 
@@ -186,7 +188,10 @@ All 4 branches are kept **in sync** — changes are committed on `Mac_Machine`, 
 7. **B2B Frontend** — New React dashboard for wholesale
 8. **WebSocket Remediation** — Fixed 401 blocks, PII data leaks
 9. **Notification Hardening** — 17/21 loopholes fixed
-10. **TransactionPersistenceAdapter** — Compilation fix for signature mismatch
+10. **TransactionPersistenceAdapter** — Compilation fix for signature mismatch (`findByCustomerIdOrderByCreatedAtDesc`)
+11. **CustomerControllerTest Fix** — Fixed test compilation syntax error (missing brace) leading to fully green CI builds.
+
+---
 
 ---
 
