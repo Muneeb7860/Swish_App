@@ -5,11 +5,15 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/b2b_qcomm
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:secure_postgres_pass}
+    username: ${DB_USER:admin}
+    password: ${DB_PASS:adminpassword}
     hikari:
       maximum-pool-size: 32
       minimum-idle: 8
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
   data:
     mongodb:
