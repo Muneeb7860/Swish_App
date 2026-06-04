@@ -8,7 +8,6 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.cache.annotation.EnableCaching;
 
 @SpringBootApplication
-@EnableScheduling // Enables schedules like the 8s OLAP ETL sync replication loop
 @EnableCaching
 
 @EnableAspectJAutoProxy

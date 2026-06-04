@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.domain.event.core.service;
 
+import ch.swissqcommerce.backend.config.TelemetrySchemaRegistry;
 import ch.swissqcommerce.backend.model.OutboxEvent;
 import ch.swissqcommerce.backend.repository.OutboxEventRepository;
 import org.slf4j.Logger;
@@ -63,6 +64,8 @@ public class OutboxEventScheduler {
             Map.entry("security.jwt.anomaly",        "security.jwt.anomaly"),
             Map.entry("security.vault.rotation",     "security.vault.rotation"),
             Map.entry("security.compliance.check",   "security.compliance.check"),
+            Map.entry("security.anomaly",            "security.jwt.anomaly"),
+            Map.entry("admin.chaos.inject",          "security.audit.log"),
 
             // Enrollment
             Map.entry("enrollment.state_change",     "enrollment.state_change"),
@@ -77,11 +80,14 @@ public class OutboxEventScheduler {
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final TelemetrySchemaRegistry telemetrySchemaRegistry;
 
     public OutboxEventScheduler(OutboxEventRepository outboxEventRepository,
-                                KafkaTemplate<String, String> kafkaTemplate) {
+                                KafkaTemplate<String, String> kafkaTemplate,
+                                TelemetrySchemaRegistry telemetrySchemaRegistry) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.telemetrySchemaRegistry = telemetrySchemaRegistry;
     }
 
     @Scheduled(fixedDelay = 4000)
@@ -105,6 +111,17 @@ public class OutboxEventScheduler {
     private void dispatchEvent(OutboxEvent event) {
         String targetTopic = resolveTopicForEvent(event.getEventType());
         String correlationId = UUID.randomUUID().toString();
+
+        try {
+            // Perform schema validation before publishing
+            telemetrySchemaRegistry.validate(event.getEventType(), event.getPayload());
+        } catch (IllegalArgumentException valEx) {
+            log.error("Outbox Schema Validation [REJECTED]: event id={}, eventType='{}' failed validation: {}. Payload: {}",
+                    event.getId(), event.getEventType(), valEx.getMessage(), event.getPayload());
+            event.setStatus("FAILED");
+            outboxEventRepository.save(event);
+            return; // Reject event from publishing
+        }
 
         try {
             MDC.put("correlationId", correlationId);
