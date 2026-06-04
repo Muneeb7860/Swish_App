@@ -96,4 +96,50 @@ public class TelemetrySchemaRegistryTest {
                 registry.validate("security.anomaly", payload));
         assertTrue(ex.getMessage().contains("Payload is not valid JSON"));
     }
+
+    @Test
+    void testCumulativeValidationErrors() {
+        // Missing action, operator, and status all at once
+        String payload = "{"
+                + "\"method\":\"injectFault\","
+                + "\"timestamp\":\"2026-06-04T12:00:00Z\""
+                + "}";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> 
+                registry.validate("admin.chaos.inject", payload));
+        String msg = ex.getMessage();
+        assertTrue(msg.contains("Missing required field 'action'"));
+        assertTrue(msg.contains("Missing required field 'operator'"));
+        assertTrue(msg.contains("Missing required field 'status'"));
+    }
+
+    @Test
+    void testSchemaDisallowsAdditionalProperties() {
+        // Includes an extra field "unauthorized_prop"
+        String payload = "{"
+                + "\"action\":\"admin.chaos.inject\","
+                + "\"method\":\"injectFault\","
+                + "\"operator\":\"swissadmin\","
+                + "\"timestamp\":\"2026-06-04T12:00:00Z\","
+                + "\"status\":\"SUCCESS\","
+                + "\"unauthorized_prop\":\"some value\""
+                + "}";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> 
+                registry.validate("admin.chaos.inject", payload));
+        assertTrue(ex.getMessage().contains("Undeclared additional property 'unauthorized_prop' is not allowed"));
+    }
+
+    @Test
+    void testInvalidDateTimeFormat() {
+        // Timestamp is not ISO-8601 formatted
+        String payload = "{"
+                + "\"action\":\"admin.chaos.inject\","
+                + "\"method\":\"injectFault\","
+                + "\"operator\":\"swissadmin\","
+                + "\"timestamp\":\"invalid-date-format\","
+                + "\"status\":\"SUCCESS\""
+                + "}";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> 
+                registry.validate("admin.chaos.inject", payload));
+        assertTrue(ex.getMessage().contains("is not a valid ISO-8601 date-time string"));
+    }
 }

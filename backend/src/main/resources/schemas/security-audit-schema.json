@@ -13,7 +13,8 @@
       "type": "string"
     },
     "timestamp": {
-      "type": "string"
+      "type": "string",
+      "format": "date-time"
     },
     "status": {
       "type": "string",
@@ -26,5 +27,6 @@
       "type": "string"
     }
   },
+  "additionalProperties": false,
   "required": ["action", "method", "operator", "timestamp", "status"]
 }
