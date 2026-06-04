@@ -1,5 +1,5 @@
-# High-Level Design (HLD): Swish OS
-**Version**: 2.0.0 (Agentic Headless Edition)
+# High-Level Design (HLD): Swish Quick Commerce
+**Version**: 3.0.0 (Microservices Edition)
 
 ---
 
@@ -7,54 +7,81 @@
 
 ```mermaid
 graph TD
-    Client[Enterprise AI / Operator Console] --> Edge[Nginx Edge Proxy (DMZ)]
+    Client["Mobile/Web Clients"] --> Edge["Nginx Edge Proxy (DMZ)"]
     
-    subgraph frontend-tier [Edge API & Cockpit Tier]
-        Edge --> Cockpit[Exception Feed: frontend-host]
-        Edge --> BFF[Agentic BFF Gateway]
+    subgraph Gateway_Tier
+        Edge --> BFF["BFF API Gateway (Spring Cloud)"]
     end
 
-    subgraph backend-tier [Core Agentic Network]
-        BFF --> Backend[Spring Boot Core Backend]
-        
-        Backend --> Cache[(Redis Cache / Ingest Buffer)]
-        Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
-        
-        Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
-        DB_Tx -.->|Transactional Outbox| Kafka[(Apache Kafka Cluster)]
-        Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Telemetry Archive)]
+    subgraph Microservices_Tier
+        BFF --> UserSvc["User Service"]
+        BFF --> PaySvc["Payment Service"]
+        BFF --> AccSvc["Account Service"]
+        BFF --> TxSvc["Transaction Service"]
+        BFF --> FraudSvc["Fraud Detection Service"]
+        BFF --> NotifSvc["Notification Service"]
+        BFF --> SecSvc["Security Engine"]
+    end
+
+    subgraph Database_Tier
+        UserSvc --> UserDB[("user_db")]
+        PaySvc --> PayDB[("payment_db")]
+        AccSvc --> AccDB[("account_db")]
+        TxSvc --> TxDB[("transaction_db")]
+        FraudSvc --> FraudDB[("fraud_db")]
+        NotifSvc --> NotifDB[("notification_db")]
+        SecSvc --> SecDB[("security_db")]
+    end
+
+    subgraph Async_Backbone
+        Kafka[("Apache Kafka (KRaft)")]
+        UserSvc -.-> Kafka
+        PaySvc -.-> Kafka
+        AccSvc -.-> Kafka
+        TxSvc -.-> Kafka
+        FraudSvc -.-> Kafka
+        NotifSvc -.-> Kafka
+        SecSvc -.-> Kafka
     end
 ```
 
 ---
 
-## 2. Component Design
+## 2. Component Design & Patterns
 
-### A. Nginx Proxy & DMZ
-*   Serves as the SSL/TLS termination layer.
-*   Enforces IP-based rate limiting on external routes, separating high-frequency telemetry from transactional APIs.
+### A. Database-per-Service (Sharding)
+The legacy monolith has been decomposed. Each microservice owns its PostgreSQL database exclusively to prevent cross-service lock contention. Data consistency across boundaries is maintained via Kafka-driven Eventual Consistency.
 
-### B. Agentic BFF Gateway (Port 8081)
-*   Acts as a Headless API Gateway, exposing structured OpenAPI specifications.
-*   Bypasses validation for preflight `OPTIONS` calls and intercepts security headers.
-*   Implements Resilience4j circuit breakers to fail-fast under database latency.
+### B. Strangler Fig Migration
+The transition from monolith to microservices employs the Strangler Fig pattern with **Blue/Green deployments**. Clients use `Accept-Version: v1` or `Accept-Version: v2` headers. v2 requests are routed to the new extracted microservices, while v1 remains tied to the legacy monolith until cutover is complete.
 
-### C. Backend Core & Hexagonal Architecture
-*   Isolates core B2B business logic (`domain.agent`, `domain.transaction`, `domain.event`) from infrastructural frameworks.
-*   Uses a **deterministic ledger validator** to inspect and approve AI agent orders before commit.
+### C. Kafka Topic Topology
+We operate 9 core transactional topics, each with a `.dlq` companion topic:
+1. `payment.initiated`
+2. `payment.balance-check`
+3. `payment.fraud-screen`
+4. `payment.authorized`
+5. `payment.captured`
+6. `payment.failed`
+7. `payment.refunded`
+8. `payment.notification`
+9. `payment.compensation`
 
-### D. Message Broker & Data Warehousing
-*   **PostgreSQL**: Handles persistent transactional double-entry ledger lines with active SHA-256 hash chaining.
-*   **TimescaleDB**: Handles high-frequency time-series telemetry data and SLA log metrics.
-*   **Redis**: Ingests and buffers real-time coordinate and status changes (e.g. active rider updates).
-*   **Apache Kafka (KRaft Mode)**: Serves as the high-throughput message broker implementing the transactional outbox pattern to decouple transactional database operations from downstream analytical storage systems.
-*   **MongoDB (NoSQL)**: Persists high-throughput, unstructured telemetry data (e.g. coordinates and weather streams) received from Kafka, scaling write loads horizontally.
+### D. Security Architecture
+*   **HashiCorp Vault**: Manages DB credentials, JWT secrets, and issues mTLS certificates.
+*   **Audit Logging**: The `Security Engine` asynchronously consumes all domain events via the `security.audit` topic and writes immutable records to a dedicated MongoDB cluster.
 
----
+### E. Redis Logical Isolation
+A shared Redis 7 cluster provides fast data structures, logically isolated via DB indexes:
+*   `DB0`: User Sessions
+*   `DB1`: Account Balance Cache-Aside
+*   `DB2`: Fraud Velocity Counters
+*   `DB3`: Gamification Leaderboards
 
-## 3. Observability & Mission Control
-*   **Zipkin**: Captures correlation tracking (`correlationId`) across distributed agent transactions.
-*   **Prometheus**: Scrapes `/actuator/prometheus` to monitor agent processing rates and budget consumption logs.
+## 3. Observability
+*   **Correlation ID**: `X-Correlation-ID` injected at the BFF, passed via HTTP headers and Kafka headers, and bound to `MDC` logs.
+*   **Zipkin / Jaeger**: End-to-end distributed tracing.
+*   **Prometheus**: Metrics scraping across all 7 services.
 
 ## 4. Formal Architecture Artifacts
-For the complete C4 context, container, and component diagrams, see `docs/diagrams/architecture-diagrams.md`.
+For C4 diagrams, ERDs, and API contracts, see `docs/diagrams/`.

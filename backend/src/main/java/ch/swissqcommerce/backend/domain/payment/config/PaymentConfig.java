@@ -9,6 +9,7 @@ import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
 public class PaymentConfig {
@@ -18,13 +19,15 @@ public class PaymentConfig {
                                        OrderRepository orderRepository,
                                        LedgerUseCase ledgerUseCase,
                                        OutboxEventPort outboxEventPort,
-                                       ApplicationEventPublisher eventPublisher) {
+                                       ApplicationEventPublisher eventPublisher,
+                                       StringRedisTemplate redisTemplate) {
         return new PaymentServiceImpl(
                 paymentPort,
                 orderRepository,
                 ledgerUseCase,
                 outboxEventPort,
-                eventPublisher
+                eventPublisher,
+                redisTemplate
         );
     }
 }

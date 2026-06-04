@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/payments")
-@CrossOrigin(origins = "*")
 public class PaymentController {
 
     @Autowired
@@ -73,8 +72,8 @@ public class PaymentController {
     private PaymentResponseDTO mapToDTO(Payment payment) {
         return PaymentResponseDTO.builder()
                 .paymentId(payment.getPaymentId())
-                .orderId(payment.getOrder() != null ? payment.getOrder().getOrderId() : null)
-                .customerId(payment.getCustomer() != null ? payment.getCustomer().getCustomerId() : null)
+                .orderId(payment.getOrderId())
+                .customerId(payment.getCustomerId())
                 .amount(payment.getAmount())
                 .currency(payment.getCurrency())
                 .paymentMethod(payment.getPaymentMethod())

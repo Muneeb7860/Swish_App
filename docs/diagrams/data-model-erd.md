@@ -1,83 +1,98 @@
-# Data Model ERD
+# Data Model ERD (Sharded Architecture)
 
-This ERD represents the primary transactional data model used by the backend.
-It is aligned with the `backend/src/main/resources/db/migration/V1__init_schema.sql` schema definitions.
+This ERD represents the target microservices data model. The monolith's `oltp` schema has been sharded across 7 dedicated PostgreSQL databases (one per service).
 
-## Entity Relationship Diagram
+## 1. User Service Database (`user_db`)
 
 ```mermaid
 erDiagram
-  CUSTOMERS {
-    varchar customer_id PK
+  USERS {
+    varchar user_id PK
     varchar full_name
     varchar email
     varchar hashed_email
-    numeric wallet_balance
-    int loyalty_points
-    boolean vip_status
-    int trust_score
+    boolean is_anonymized
   }
-  CUSTOMER_ADDRESSES {
+  USER_ADDRESSES {
     int address_id PK
-    varchar customer_id FK
+    varchar user_id FK
     text address_line
-    numeric latitude
-    numeric longitude
   }
-  CUSTOMER_PAYMENT_CARDS {
-    int card_id PK
-    varchar customer_id FK
-    varchar card_type
-    varchar last_four_digits
-    varchar token_reference
+  USER_SESSIONS {
+    varchar session_id PK
+    varchar user_id FK
+    timestamp expires_at
   }
-  RIDERS {
-    varchar rider_id PK
-    varchar full_name
-    varchar vehicle_type
-    boolean active
-    int trust_score
-  }
-  INVENTORY {
-    varchar item_id PK
-    varchar store_id FK
-    varchar name
-    numeric price
-    int stock
-  }
-  DARK_STORES {
-    varchar store_id PK
-    varchar store_name
-    text address
-  }
-  ORDERS {
-    int order_id PK
-    varchar customer_id FK
-    varchar store_id FK
-    varchar rider_id FK
-    numeric total_amount
+  USERS ||--o{ USER_ADDRESSES : has
+  USERS ||--o{ USER_SESSIONS : active
+```
+
+## 2. Payment Service Database (`payment_db`)
+
+```mermaid
+erDiagram
+  PAYMENTS {
+    int payment_id PK
+    int order_id
+    varchar customer_id
+    numeric amount
+    varchar currency
+    varchar payment_method
     varchar status
     varchar idempotency_key
+    timestamp created_at
   }
-  ORDER_ITEMS {
-    int order_id FK
-    varchar item_id FK
-    int quantity
-    numeric price
+  PAYMENT_OUTBOX {
+    int id PK
+    varchar aggregate_type
+    varchar aggregate_id
+    varchar event_type
+    text payload
+    varchar status
+    int retry_count
   }
-  ORDER_TELEMETRY_LOGS {
-    int log_id PK
-    int order_id FK
-    timestamp device_timestamp
-    numeric latitude
-    numeric longitude
-    numeric temperature
+  PROCESSED_EVENTS {
+    varchar event_id PK
+    timestamp processed_at
   }
+```
+
+## 3. Account Service Database (`account_db`)
+
+```mermaid
+erDiagram
+  ACCOUNTS {
+    varchar account_id PK
+    varchar owner_id
+    varchar owner_type
+    numeric balance
+    varchar status
+  }
+  ACCOUNT_TRANSACTIONS {
+    int tx_id PK
+    varchar account_id FK
+    varchar ref_id
+    numeric debit
+    numeric credit
+    timestamp created_at
+  }
+  PROCESSED_EVENTS {
+    varchar event_id PK
+  }
+  ACCOUNTS ||--o{ ACCOUNT_TRANSACTIONS : records
+```
+
+## 4. Transaction Service Database (`transaction_db`)
+
+```mermaid
+erDiagram
   JOURNAL_ENTRIES {
     int entry_id PK
     uuid entry_uuid
     varchar reference
-    text description
+    varchar previous_entry_hash
+    varchar entry_hash
+    timestamp created_at
   }
   LEDGER_LINES {
     int line_id PK
@@ -87,31 +102,77 @@ erDiagram
     numeric debit
     numeric credit
   }
-  OUTBOX_EVENTS {
-    int id PK
-    varchar aggregate_type
-    varchar aggregate_id
-    varchar event_type
-    text payload
-    varchar status
+  PROCESSED_EVENTS {
+    varchar event_id PK
   }
-
-  CUSTOMERS ||--o{ CUSTOMER_ADDRESSES : has
-  CUSTOMERS ||--o{ CUSTOMER_PAYMENT_CARDS : owns
-  CUSTOMERS ||--o{ ORDERS : places
-  ORDERS ||--o{ ORDER_ITEMS : contains
-  ORDER_ITEMS }o--|| INVENTORY : references
-  ORDERS }o--|| DARK_STORES : fulfilled_by
-  ORDERS }o--|| RIDERS : assigned_to
-  ORDERS ||--o{ ORDER_TELEMETRY_LOGS : logs
-  ORDERS ||--o{ JOURNAL_ENTRIES : accounts_for
   JOURNAL_ENTRIES ||--o{ LEDGER_LINES : contains
-  OUTBOX_EVENTS : ||..|| ORDERS : references
 ```
 
-## Notes
-- The schema is predominantly normalized for OLTP order processing, rider telemetry, and financial journal auditing.
-- `OUTBOX_EVENTS` is now included in the transactional schema and used for eventual consistency and publish/subscribe dispatch.
-- Customer identifiers are `VARCHAR(50)` in the OLTP schema, not `BIGINT`.
-- Telemetry logs are persisted separately from the core order write path to reduce transactional contention.
-- The schema also includes additional OLTP tables such as `hitl_queue`, `security_trust_ledger`, `system_configurations`, `chaos_fault_logs`, and OLAP warehouse tables under the `olap` schema.
+## 5. Fraud Detection Database (`fraud_db`)
+
+```mermaid
+erDiagram
+  FRAUD_RULES {
+    int rule_id PK
+    varchar condition
+    int weight
+    boolean active
+  }
+  FRAUD_DECISIONS {
+    int decision_id PK
+    int payment_id
+    varchar customer_id
+    int risk_score
+    varchar outcome
+    timestamp created_at
+  }
+  PROCESSED_EVENTS {
+    varchar event_id PK
+  }
+```
+
+## 6. Notification Service Database (`notification_db`)
+
+```mermaid
+erDiagram
+  USER_PREFERENCES {
+    varchar user_id PK
+    boolean allow_sms
+    boolean allow_email
+    boolean allow_push
+  }
+  NOTIFICATION_LOG {
+    int log_id PK
+    varchar user_id FK
+    varchar channel
+    varchar template
+    varchar status
+    timestamp sent_at
+  }
+  PROCESSED_EVENTS {
+    varchar event_id PK
+  }
+  USER_PREFERENCES ||--o{ NOTIFICATION_LOG : tracks
+```
+
+## 7. Security Engine Database (`security_db`)
+
+```mermaid
+erDiagram
+  COMPLIANCE_SNAPSHOTS {
+    int snapshot_id PK
+    varchar report_type
+    text summary
+    timestamp generated_at
+  }
+  PROCESSED_EVENTS {
+    varchar event_id PK
+  }
+```
+
+> **Note on Auditing**: The Security Engine also writes immutable audit logs to an external `MongoDB` archive collection.
+
+## Notes on Microservices Data Boundaries
+- **No Foreign Keys across databases**. A `user_id` in the `PAYMENTS` table is just a `VARCHAR`, not an FK to the `USERS` table.
+- **Outbox Pattern**: Each database producing Kafka events needs its own outbox table (e.g., `PAYMENT_OUTBOX`).
+- **Idempotency**: Every consuming service implements a `PROCESSED_EVENTS` table to deduplicate consumed Kafka messages.

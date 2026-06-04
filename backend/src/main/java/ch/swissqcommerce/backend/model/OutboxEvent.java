@@ -31,7 +31,11 @@ public class OutboxEvent {
 
     @Column(name = "status")
     @Builder.Default
-    private String status = "PENDING"; // PENDING, PUBLISHED
+    private String status = "PENDING"; // PENDING, PUBLISHED, FAILED
+
+    @Column(name = "retry_count")
+    @Builder.Default
+    private Integer retryCount = 0;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;

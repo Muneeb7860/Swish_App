@@ -23,13 +23,11 @@ public class Payment {
     @Column(name = "payment_id")
     private Integer paymentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
-    private Order order;
+    @Column(name = "order_id")
+    private Integer orderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
-    private Customer customer;
+    @Column(name = "customer_id", length = 50)
+    private String customerId;
 
     @Column(name = "amount", precision = 10, scale = 2, nullable = false)
     @NotNull

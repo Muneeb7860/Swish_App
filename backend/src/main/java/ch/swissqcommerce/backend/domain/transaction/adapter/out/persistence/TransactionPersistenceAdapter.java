@@ -93,8 +93,8 @@ public class TransactionPersistenceAdapter implements
     }
 
     @Override
-    public List<Payment> findByCustomerCustomerIdOrderByCreatedAtDesc(String customerId) {
-        return paymentRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+    public List<Payment> findByCustomerIdOrderByCreatedAtDesc(String customerId) {
+        return paymentRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
     @Override

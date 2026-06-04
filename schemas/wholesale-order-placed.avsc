@@ -1,0 +1,28 @@
+{
+  "type": "record",
+  "name": "WholesaleOrderPlaced",
+  "namespace": "com.platform.schemas.b2b",
+  "doc": "Event published by the Mac Mini Java Core when a B2B wholesale order is placed.",
+  "fields": [
+    { "name": "order_id", "type": "string", "doc": "Unique UUID of the placed order" },
+    { "name": "customer_id", "type": "string", "doc": "Unique UUID of the B2B customer" },
+    { "name": "total_amount", "type": "double", "doc": "Total cost of the wholesale order" },
+    { "name": "currency", "type": "string", "default": "INR" },
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "OrderItem",
+          "fields": [
+            { "name": "sku", "type": "string" },
+            { "name": "quantity", "type": "int" },
+            { "name": "unit_price", "type": "double" }
+          ]
+        }
+      }
+    },
+    { "name": "placed_at", "type": "long", "logicalType": "timestamp-millis", "doc": "Epoch milliseconds" }
+  ]
+}

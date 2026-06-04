@@ -1,103 +1,180 @@
 # Business Requirements Document (BRD)
-**Project**: Swish OS Platform (v2.0.0)  
-**Classification**: Proprietary Strategic Document  
-**Status**: APPROVED WITH CONDITIONS (SR-2026-B2B-004)  
-**Date**: June 2, 2026  
+
+## Project: Swish OS Platform (v0.2.10) – B2B SaaS Pivot (Updated)
+
+### Document Control
+| Version | Date | Author | Status |
+|---|---|---|---|
+| v2.0.0 | 2026‑06‑02 | Technical Product Owner / Architect | **Approved – Conditions** |
 
 ---
 
-## 🏛️ Document Governance & Control
+## 1. Executive Summary & Strategic Rationale
+Swish OS is transitioning from a consumer‑facing quick‑commerce delivery app to a **pure‑play B2B SaaS** platform that supplies retail chains with autonomous AI‑driven procurement, telemetry, and cryptographically‑verified ledger auditing. This pivot eliminates capital‑intensive fleet and warehouse liabilities while leveraging our core competencies:
+- Autonomous negotiation agents that continuously source optimal wholesale pricing.
+- Real‑time IoT temperature telemetry ensuring cold‑chain compliance.
+- Double‑entry ledger with SHA‑256 chaining for immutable audit trails.
 
-| Version | Date | Author(s) | Description |
-| :--- | :--- | :--- | :--- |
-| **v2.0.0** | June 2, 2026 | Technical Product Owner / Architect | Transferred to B2B SaaS automated procurement, telemetry, and ledger auditing model under Board directive. |
-
----
-
-## 1. Executive Summary & Strategic Pivot
-
-### A. The Pivot Rationale
-**Swish OS v2.0.0** represents a complete strategic transition from a consumer-facing quick-commerce delivery platform to a pure-play **B2B Software-as-a-Service (SaaS)** replenishment, telemetry, and ledger compliance platform. 
-
-Consumer logistics in Switzerland suffer from severe capital overheads (vehicle depreciation, warehouse leases, courier hourly rates, and payroll taxes). Moving upstream to license software directly to established retail chains (e.g., Valora) eliminates operational liability while capitalizing on our core technology: autonomous agentic negotiation, IoT thermal telemetry, and cryptographic double-entry auditing.
-
-### B. Core Vision
-To provide regional and global retail chains with a lightweight, software-first solution that retrofits existing physical brick-and-mortar storefronts into autonomous, high-velocity distribution hubs without expensive mechanical automation (Zero-CapEx WMS).
+The target market is **global B2B procurement & warehouse management** (TAM ≈ $20B). Early adopters are mid‑size convenience‑store chains (e.g., Valora) that require low‑CapEx, rapid‑deployment solutions.
 
 ---
 
-## 2. Market Analysis & Competitive Positioning
-
-### A. Total Addressable Market (TAM)
-Swish OS targets the global B2B procurement and warehouse management software market, estimated at **$20B+**. We prioritize FMCG retail convenience networks, grocery hubs, and temperature-sensitive food/beverage distributors.
-
-### B. Competitor Matrix
-
-| Competitor / System | Product Model | Strengths | Swish OS Advantage |
-| :--- | :--- | :--- | :--- |
-| **Instacart Platform Services** | White-label B2C grocery SaaS | Huge scale, pre-integrated courier pool, strong brand recognition. | **Data Sovereignty**: Instacart retains user profiles and sets pricing. Swish OS yields 100% data ownership and pricing control to the retail client. |
-| **Takeoff Technologies** | Hardware-centric Micro-Fulfillment | Heavy automated picking machinery, high throughput. | **Zero-CapEx Software-Only**: Takeoff requires multi-million dollar mechanical installs. Swish OS retrofits existing store shelves with simple mobile picking apps. |
-| **Fabric WMS** | Robotic Micro-Fulfillment | High storage density, advanced physical sorting. | **Rapid Deployment**: Fabric builds take 6–12 months. Swish OS deploys within 7 days via federated micro-frontends and API gateway mapping. |
-| **Manhattan Associates WMS** | Legacy Enterprise WMS | Highly mature, deeply integrated database systems. | **Autonomous Negotiations**: Manhattan WMS has no automated negotiation capabilities. Swish OS features autonomous AI procurement agents that actively drive down wholesaler costs. |
+## 2. Business Objectives & Success Metrics
+| Objective | Metric | Target |
+|---|---|---|
+| Revenue | Annual Recurring Revenue (ARR) | $100M by Year 3 |
+| Retention | Net Revenue Retention (NRR) | >120% |
+| Operational Efficiency | Fleet & Real‑Estate Costs | $0 (software‑only) |
+| Compliance | Ledger Integrity | 100% transaction verification |
+| Customer Satisfaction | SLA Uptime | ≥99.9% |
 
 ---
 
-## 3. Business Objectives & Revenue Model
+## 3. Market Analysis & Competitive Landscape
+### 3.1 Total Addressable Market (TAM)
+- Global B2B procurement & WMS market: **$20B+**.
+- Primary verticals: FMCG retail, cold‑chain grocery, pharmaceuticals (Phase 2).
 
-### A. Core Objectives
-- Achieve **$100M+ ARR** within 36 months of pilot rollout.
-- Maintain **Net Revenue Retention (NRR) > 120%** through expansion licensing per store hub.
-- Ensure **Zero Fleet and Real Estate Liability** by forcing retail clients to provide physical infrastructure.
-
-### B. Tiered SaaS Pricing Model
-To resolve the billing dispute risks and auditing overhead associated with variable "savings commission" pricing, the pricing model is structured into two transparent flat tiers:
-
-1.  **Tier 1 (Telemetry & Ledger Compliance)**: **$1,000/month per active hub**.
-    - Covers IoT thermal coordinate tracking, spoilage alarm notifications, and SHA-256 ledger security auditing.
-    - Fits the operational budget constraints of regional convenience store nodes.
-2.  **Tier 2 (Agentic Replenishment & Automation)**: **$1,500/month per active hub**.
-    - Adds B2B autonomous procurement negotiations, pricing guardrail validations, and primary/secondary wholesaler failovers.
-    - Represents the high-value automated SaaS layer.
+### 3.2 Competitor Matrix
+| Competitor | Model | Strength | Swish OS Advantage |
+|---|---|---|---|
+| Instacart Platform Services | White‑label B2C SaaS | Scale, brand | **Data sovereignty & pricing control** |
+| Takeoff Technologies | Hardware‑centric MFU | High throughput | **Zero‑CapEx software‑only** |
+| Fabric WMS | Robotic MFU | Dense storage | **7‑day deployment** |
+| Manhattan Associates | Legacy ERP | Maturity | **Autonomous AI procurement** |
 
 ---
 
-## 4. Product Scoping & Pilot Boundaries
+## 4. Product Scope & Pilot Definition
+### 4.1 Core SaaS Modules
+1. **AI Procurement Engine** – real‑time price negotiation, contract lifecycle management.
+2. **Telemetry Service** – IoT temperature sensors, edge validation, GDPR‑compliant data pipeline.
+3. **Ledger Service** – double‑entry accounting, SHA‑256 chained journal, audit API.
+4. **Operator Console** – dashboard for store managers, monitoring, manual overrides.
+5. **API Gateway / BFF** – unified API surface for third‑party integration.
 
-### A. Year 1 Pilot Scope (Valora - k kiosk)
-To enforce capital-efficiency and satisfy the Board of Directors, the Year 1 pilot is subject to strict boundaries:
-*   **Target Segment**: Restricted exclusively to **retail convenience cold-chain and fresh food shelf-life optimization** (sandwiches, sushi, cold beverages).
-*   **Scale**: Deployed across 5 high-traffic transport hub stores (Zurich HB, Bern, Basel SBB, Geneva Cornavin, Lucerne).
-*   **Pharma Deferral**: Entry into the clinical pharmaceutical logistics sector is formally deferred until a secondary certified pharmaceutical distributor is secured as a pilot partner.
-
----
-
-## 5. Key Performance Indicators (KPIs)
-
-*   **Procurement Savings**: Target **3% to 7%** average invoice cost savings negotiated dynamically by AI agents against wholesale market baselines.
-*   **Fulfillment Speed**: Maintain picking cycles completed in **under 4 minutes** (SLA target).
-*   **SLA Uptime**: Auto-replenishment service uptime $\ge 99.9\%$. A 5% base fee penalty discount applies to any active hub if picking times exceed the 4-minute SLA by more than 15% on average for that month.
-*   **System Integrity**: **100%** of ledger transactions must verify mathematically against the cryptographically chained journal (`oltp.journal_entries`).
+### 4.2 Year‑1 Pilot (Valora – “k‑kiosk”)
+- **Scope**: 5 high‑traffic convenience hubs (Zurich HB, Bern, Basel SBB, Geneva Cornavin, Lucerne). 
+- **Modules Enabled**: Tier 1 telemetry & ledger + Tier 2 AI procurement. 
+- **Exclusions**: Pharmaceutical logistics, full‑scale robot picking, variable commission pricing.
+- **Success Criteria**: ≥3% average procurement savings, <4 min pick‑cycle, 99.9% service uptime, 100% ledger verification.
 
 ---
 
-## 6. Financial Projections & EBITDA Roadmap
+## 5. Functional Requirements
+| ID | Requirement | Description |
+|---|---|---|
+| FR‑01 | Retailer On‑boarding | Self‑service portal for store registration, sensor provisioning, and API key issuance. |
+| FR‑02 | AI Negotiation Workflow | Event‑driven CDC outbox → Kafka → MongoDB pipeline that triggers price‑negotiation micro‑service. |
+| FR‑03 | Telemetry Ingestion | Secure MQTT / HTTPS ingestion of temperature readings, stored in TimescaleDB for analytics. |
+| FR‑04 | Ledger Auditing | Immutable transaction journal with SHA‑256 hash chaining; searchable via REST API. |
+| FR‑05 | Operator Dashboard | Real‑time view of SKU inventory, alerts, and negotiation status; role‑based access control. |
+| FR‑06 | Billing Engine | Flat‑tier pricing per active hub; automated invoice generation. |
+| FR‑07 | Alert & Notification Service | SMS/Email/Webhook alerts on SLA breaches, temperature excursions, or ledger anomalies. |
 
-All figures in USD ($). Projections assume a Year 1 pilot scaling to 100 stores in Year 2 and 500 stores in Year 3.
+---
 
-| Financial Metric | Year 1 (Pilot) | Year 2 (Rollout) | Year 3 (Scale) | Year 4 | Year 5 |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Active Store Nodes** | 5 | 100 | 500 | 2,000 | 5,000 |
-| **Tier 1 SaaS Revenue** | $60,000 | $0 | $0 | $0 | $0 |
-| **Tier 2 SaaS Revenue** | $12,000 | $1,800,000 | $9,000,000 | $36,000,000 | $90,000,000 |
-| **Gross Revenue** | **$72,000** | **$1,800,000** | **$9,000,000** | **$36,000,000** | **$90,000,000** |
-| **Operating Expenses (OpEx)** | $90,000 | $1,200,000 | $4,500,000 | $12,000,000 | $25,000,000 |
-| **Capital Expenditures (CapEx)** | $10,000 | $50,000 | $150,000 | $400,000 | $1,000,000 |
-| **EBITDA** | **-$28,000** | **+$550,000** | **+$4,350,000** | **+$23,600,000** | **+$64,000,000** |
-| **EBITDA Margin** | **-38.8%** | **+30.5%** | **+48.3%** | **+65.5%** | **+71.1%** |
+## 6. Non‑Functional Requirements (NFR)
+| ID | Category | Requirement |
+|---|---|---|
+| NFR‑01 | Performance | Kafka throughput ≥ 50 k messages/sec; end‑to‑end latency ≤ 200 ms for CDC events. |
+| NFR‑02 | Scalability | Horizontal pod autoscaling (CPU > 60% → scale) for Kafka & MongoDB in Kubernetes. |
+| NFR‑03 | Availability | 99.9% SLA per micro‑service; automated failover for Kafka controllers (KRaft mode). |
+| NFR‑04 | Security | TLS‑mutual authentication for all inter‑service communication; OWASP Top‑10 compliance. |
+| NFR‑05 | Data Residency | All EU store data stored in EU‑hosted PostgreSQL/TimescaleDB clusters. |
+| NFR‑06 | Observability | OpenTelemetry tracing + Grafana dashboards for latency, error rates, and resource utilization. |
+| NFR‑07 | Compliance | GDPR‑ready data deletion workflow; audit logs retained ≥7 years. |
 
-### **Notes on Financial Assumptions**:
-1.  **OpEx**: Covers cloud hosting (Postgres, Mongo, Redis, Kafka), LLM API token billing, developer salaries, and account management commissions.
-2.  **CapEx**: Covers local hardware testing kits (calibrated IoT thermal sensors) deployed during onboarding. GDP-grade medical sensors are deferred, keeping Year 2 CapEx capped at $50,000.
-3.  **Revenue Math**:
-    - Year 1: 5 stores × $1,000/month × 12 months = $60,000 (Tier 1 base) + onboarding setup fees.
-    - Year 2: 100 stores × $1,500/month × 12 months = $1,800,000 (Tier 2 base). This flat pricing replaces the legacy variable commission while matching the identical gross revenue trajectory.
+---
+
+## 7. Technical Architecture Overview
+### 7.1 High‑Level Diagram
+```mermaid
+graph TD;
+    Client[Operator Console] --> Edge[Nginx Edge Proxy];
+    Edge --> API[API Gateway (BFF)];
+    API --> Kafka[Kafka (KRaft)];
+    API --> TimescaleDB[PostgreSQL + Timescale];
+    API --> MongoDB[MongoDB Atlas];
+    Kafka --> Outbox[CDC Outbox Service];
+    Outbox --> AI[AI Procurement Service];
+    AI --> MongoDB;
+    TimescaleDB --> Telemetry[Telemetry Service];
+    Telemetry --> Dashboard[Operator Dashboard];
+    Dashboard --> Ledger[Ledger Service];
+    Ledger --> Audit[Audit API];
+```
+### 7.2 Component Details
+- **Kafka (KRaft)** – broker‑only mode, Zookeeper‑less, three‑node cluster with replication factor 3.
+- **MongoDB Atlas** – sharded cluster for event‑sourced CDC data, TLS enforced.
+- **PostgreSQL / TimescaleDB** – relational OLTP for ledger & telemetry analytics.
+- **Redis** – caching layer for session state and rate‑limiting.
+- **Kubernetes (EKS)** – deployment platform with Helm charts; HPA configured for Kafka & MongoDB.
+
+---
+
+## 8. Data Model Summary
+| Entity | Primary Store | Key Fields |
+|---|---|---|
+| Store | PostgreSQL | store_id, location, tier, status |
+| SKU | PostgreSQL | sku_id, description, unit_price |
+| Telemetry | TimescaleDB | sensor_id, timestamp, temperature, humidity |
+| NegotiationEvent | MongoDB | event_id, sku_id, proposed_price, vendor_id, status |
+| LedgerEntry | PostgreSQL | entry_id, txn_hash, prev_hash, payload |
+
+---
+
+## 9. Risk & Mitigation Register
+| Risk | Impact | Likelihood | Mitigation |
+|---|---|---|---|
+| Kafka throughput bottleneck | Service degradation | Medium | Conduct baseline JMeter load test (70% peak) before MVP; schedule full load test later. |
+| Security gaps in Kafka‑MongoDB auth | Data breach | Low | Implement mutual TLS and rotate credentials every 90 days. |
+| Autoscaling mis‑configuration | Out‑of‑memory crashes | Medium | Use conservative HPA thresholds; run chaos‑engineering smoke tests in staging. |
+| Incomplete E2E coverage | Functional regressions | High | Add three CDC‑flow scenarios to Playwright suite; enforce CI gate. |
+| Stakeholder sign‑off delay | Timeline slip | Low | Lightweight Confluence checkpoint after HLD review. |
+
+---
+
+## 10. Softened Gap Mitigation Measures (Updated)
+1. **Stakeholder Sign‑off** – Replace a formal, multi‑department sign‑off with a **lightweight Confluence checkpoint** after HLD review. Approvers provide brief comments rather than a full sign‑off document.
+2. **Security Audit** – Perform an **internal targeted security review** focused on Kafka configuration and MongoDB access controls. A full third‑party penetration test is deferred to post‑MVP.
+3. **Performance Benchmarking** – Execute **baseline load tests** (≈70 % of expected peak) using existing JMeter scripts. Full‑scale stress testing will be scheduled for the next sprint.
+4. **Scalability Validation** – Enable **horizontal pod autoscaling** for Kafka and MongoDB with conservative metrics (CPU > 60 %). Validate scaling behavior in a staging cluster; comprehensive chaos‑engineering tests are postponed.
+5. **E2E Acceptance Testing** – Expand Playwright suite with **three critical CDC path scenarios** (create, update, delete) covering the Kafka → MongoDB pipeline. This addition is scoped to **one sprint** and will be merged into the CI pipeline.
+
+---
+
+## 11. Implementation Timeline (Milestones)
+| Phase | Dates | Deliverable |
+|---|---|---|
+| **Phase 0 – Foundations** | 2026‑05‑15 → 2026‑05‑31 | Infra (K8s, Kafka KRaft, MongoDB), CI/CD pipeline |
+| **Phase 1 – Core Services** | 2026‑06‑01 → 2026‑06‑30 | AI Procurement, Ledger, Telemetry services; basic dashboard |
+| **Phase 2 – Pilot Enablement** | 2026‑07‑01 → 2026‑07‑31 | Valora pilot deployment, flat‑tier billing, monitoring |
+| **Phase 3 – Validation & Scaling** | 2026‑08‑01 → 2026‑09‑15 | Load testing, HPA tuning, security audit |
+| **Phase 4 – General Availability** | 2026‑10‑01 | GA release to additional retail partners |
+
+---
+
+## 12. Financial Projections (Re‑stated)
+| Metric | Year 1 (Pilot) | Year 2 (Rollout) | Year 3 (Scale) |
+|---|---|---|---|
+| Active Hub Nodes | 5 | 100 | 500 |
+| Tier 1 Revenue | $60,000 | $0 | $0 |
+| Tier 2 Revenue | $12,000 | $1.8M | $9M |
+| Gross Revenue | $72k | $1.8M | $9M |
+| OpEx | $90k | $1.2M | $4.5M |
+| EBITDA | -$28k | +$0.55M | +$4.35M |
+
+---
+
+## 13. Approval Sign‑off
+| Role | Name | Signature | Date |
+|---|---|---|---|
+| CFO | Beat Keller |  | 2026‑06‑02 |
+| CTO | Lina Schmidt |  | 2026‑06‑02 |
+| Product Owner | Maya Patel |  | 2026‑06‑02 |
+| Architect | Alex Novak |  | 2026‑06‑02 |
+
+---
+
+*Prepared by the Swish OS Architecture Team.*
