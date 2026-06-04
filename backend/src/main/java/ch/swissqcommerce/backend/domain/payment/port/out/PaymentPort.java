@@ -8,6 +8,6 @@ import java.util.Optional;
 public interface PaymentPort {
     Optional<Payment> findById(Integer paymentId);
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
-    List<Payment> findByCustomerCustomerIdOrderByCreatedAtDesc(String customerId);
+    List<Payment> findByCustomerIdOrderByCreatedAtDesc(String customerId);
     Payment save(Payment payment);
 }

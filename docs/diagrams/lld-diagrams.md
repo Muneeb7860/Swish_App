@@ -1,8 +1,117 @@
-# Low-Level Design Diagrams
+# Low-Level Design Diagrams (Microservices)
 
-This document captures the missing LLD artifacts for sequence, class, and use case diagrams.
+This document captures the LLD artifacts for sequence, class, and use case diagrams in the new microservices architecture.
 
-## Use Case Diagram
+## 1. Payment Saga Sequence Diagram (Choreography)
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant BFF as BFF Gateway
+  participant Pay as Payment Service
+  participant Kafka
+  participant Acc as Account Service
+  participant Fraud as Fraud Service
+  participant GW as Ext Gateway
+  participant Tx as Transaction Service
+  participant Notif as Notification Service
+
+  Client->>BFF: POST /api/payments (+ X-Idempotency-Key)
+  BFF->>Pay: Forward w/ X-Correlation-ID
+  Pay->>Pay: Save Payment (INITIATED)
+  Pay->>Kafka: publish payment.initiated
+  
+  Kafka->>Acc: consume payment.initiated
+  Acc->>Acc: Deduplicate & Check Balance
+  Acc->>Kafka: publish payment.balance-check (success)
+  
+  Kafka->>Pay: consume payment.balance-check
+  Pay->>Pay: Update Payment (BALANCE_CHECKED)
+  Pay->>Kafka: publish payment.fraud-screen
+  
+  Kafka->>Fraud: consume payment.fraud-screen
+  Fraud->>Fraud: Deduplicate & Velocity Check
+  Fraud->>Kafka: publish payment.authorized (fraud cleared)
+  
+  Kafka->>Pay: consume payment.authorized
+  Pay->>Pay: Update Payment (FRAUD_SCREENED)
+  Pay->>GW: REST call to Stripe/PayPal (Circuit Breaker)
+  GW-->>Pay: 200 OK (Gateway Authorized)
+  Pay->>Pay: Update Payment (AUTHORIZED)
+  
+  Pay->>Kafka: publish payment.captured
+  
+  par Parallel Async Processing
+    Kafka->>Tx: consume payment.captured (Write Ledger)
+    Kafka->>Notif: consume payment.captured (Send SMS)
+    Kafka->>Acc: consume payment.captured (Debit Wallet)
+  end
+```
+
+## 2. Compensation / Rollback Sequence (Failure Path)
+
+```mermaid
+sequenceDiagram
+  participant Pay as Payment Service
+  participant Kafka
+  participant Acc as Account Service
+  
+  Note over Pay: Fraud Check Fails OR Gateway Declines
+  Pay->>Pay: Update Payment (FAILED)
+  Pay->>Kafka: publish payment.compensation (ROLLBACK)
+  
+  Kafka->>Acc: consume payment.compensation
+  Acc->>Acc: Refund wallet balance (credit)
+```
+
+## 3. Class Diagram (Payment Service)
+
+```mermaid
+classDiagram
+  class PaymentController {
+    +createPayment()
+    +capturePayment()
+  }
+  class CorrelationIdFilter {
+    +doFilterInternal()
+  }
+  class IdempotencyFilter {
+    +checkProcessed()
+  }
+  class SagaOrchestrator {
+    +handleBalanceCheck()
+    +handleFraudScreen()
+    +handleGatewayAuth()
+  }
+  class PaymentStateMachine {
+    +transitionTo(status)
+  }
+  class PaymentGatewayStrategy {
+    <<interface>>
+    +authorize()
+    +capture()
+  }
+  class StripeAdapter {
+    +authorize()
+  }
+  class CircuitBreakerConfig {
+    +getGatewayResilience()
+  }
+  class OutboxPublisher {
+    +publish(eventType, payload)
+  }
+
+  PaymentController --> CorrelationIdFilter
+  CorrelationIdFilter --> IdempotencyFilter
+  IdempotencyFilter --> SagaOrchestrator
+  SagaOrchestrator --> PaymentStateMachine
+  SagaOrchestrator --> PaymentGatewayStrategy
+  SagaOrchestrator --> OutboxPublisher
+  PaymentGatewayStrategy <|-- StripeAdapter
+  PaymentGatewayStrategy --> CircuitBreakerConfig
+```
+
+## 4. Use Case Diagram
 
 ```mermaid
 flowchart TB
@@ -12,136 +121,15 @@ flowchart TB
   actor System
 
   Customer -->|Place order| UC1[Place Order]
-  Customer -->|Track order| UC2[Track Order]
-  Customer -->|Authenticate| UC3[Login / MFA]
+  Customer -->|Make payment| UC2[Authorize Payment]
 
   Rider -->|Onboard| UC4[Register Rider]
-  Rider -->|Report telemetry| UC5[Submit Delivery Telemetry]
-  Rider -->|Complete delivery| UC6[Deliver Order]
+  Rider -->|Report telemetry| UC5[Submit Telemetry]
 
-  Admin -->|Manage operations| UC7[Inject / Resolve Chaos Faults]
-  Admin -->|Approve onboarding| UC8[Approve Rider or Merchant]
-  Admin -->|Review HITL| UC9[Process Human-in-the-Loop Tickets]
+  Admin -->|Review tickets| UC9[Process HITL Tickets]
+  Admin -->|Manage access| UC8[Approve B2B Onboarding]
 
-  System -->|Publish events| UC10[Dispatch Outbox Events]
-  System -->|Archive analytics| UC11[Persist Telemetry Archive]
+  System -->|Detect anomalies| UC10[JWT Anomaly Detection]
+  System -->|Rotate secrets| UC11[Vault Secret Rotation]
+  System -->|Audit log| UC12[Persist Immutable Audit]
 ```
-
-## Sequence Diagram: Order Placement
-
-```mermaid
-sequenceDiagram
-  participant CustomerUI as Customer Frontend
-  participant BFF as BFF Gateway
-  participant Backend as Swish Backend
-  participant Postgres as PostgreSQL
-  participant Outbox as Outbox Scheduler
-  participant Kafka as Kafka Broker
-
-  CustomerUI->>BFF: POST /api/customer/orders
-  BFF->>Backend: forward authenticated request
-  Backend->>Backend: validate checkout and reserve inventory
-  Backend->>Postgres: insert order + order_items
-  Backend->>Postgres: insert outbox_events record
-  Backend-->>BFF: 201 Created
-  Outbox->>Postgres: poll pending outbox events
-  Outbox->>Kafka: publish event and mark PUBLISHED
-  Kafka-->>Backend: downstream consumers process event
-```
-```
-
-## Sequence Diagram: Telemetry Ingestion
-
-```mermaid
-sequenceDiagram
-  participant RiderApp as Rider Frontend
-  participant BFF as BFF Gateway
-  participant Backend as Swish Backend
-  participant Redis as Redis Geo Store
-  participant Kafka as Kafka Broker
-  participant Mongo as MongoDB Archive
-
-  RiderApp->>BFF: POST /api/telemetry/tick
-  BFF->>Backend: forward telemetry payload
-  Backend->>Redis: update geo/telemetry cache
-  Backend->>Kafka: emit telemetry event
-  Kafka->>Mongo: archive event document
-  Backend-->>BFF: 202 Accepted
-```
-```
-
-## Class Diagram
-
-```mermaid
-classDiagram
-  class AuthController {
-    +login()
-    +verifyMfa()
-  }
-  class CustomerController {
-    +getCatalog()
-    +purgeProfile()
-  }
-  class OrderController {
-    +createOrder()
-    +getOrders()
-    +refundOrder()
-  }
-  class RiderController {
-    +onboard()
-    +submitTelemetry()
-    +deliverOrder()
-    +completeCourse()
-  }
-  class InventoryController {
-    +getPickerQueue()
-    +rebalance()
-    +handover()
-  }
-  class WholesalerController {
-    +getRestocks()
-    +createRestock()
-    +fulfillRestock()
-    +listInvoices()
-  }
-  class AdminController {
-    +createChaosFault()
-    +resolveChaosFault()
-    +getActiveChaos()
-    +approveOnboard()
-    +getHitlQueue()
-    +resolveHitlTicket()
-  }
-  class TelemetryController {
-    +tick()
-    +streamTelemetry()
-    +dryIce()
-  }
-  class OutboxEventScheduler {
-    +processPendingEvents()
-  }
-  class OutboxEventRepository {
-    +save()
-    +findAll()
-  }
-  class OutboxEvent {
-    +id
-    +aggregateType
-    +aggregateId
-    +eventType
-    +payload
-    +status
-  }
-
-  AuthController --> CustomerController
-  CustomerController --> OrderController
-  OrderController --> OutboxEventRepository
-  RiderController --> TelemetryController
-  InventoryController --> OrderController
-  AdminController --> TelemetryController
-  OutboxEventScheduler --> OutboxEventRepository
-```
-
-> Notes:
-> - The class diagram reflects the broader backend controller surface discovered in the repository.
-> - The sequence diagrams are aligned with the live BFF contract and actual telemetry/outbox implementation.

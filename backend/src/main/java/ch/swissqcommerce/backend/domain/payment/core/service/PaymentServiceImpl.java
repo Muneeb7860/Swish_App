@@ -82,8 +82,8 @@ public class PaymentServiceImpl implements PaymentUseCase {
         }
 
         Payment payment = Payment.builder()
-                .order(order)
-                .customer(order.getCustomer())
+                .orderId(orderId)
+                .customerId(customerId)
                 .amount(amount)
                 .currency("CHF")
                 .paymentMethod(paymentMethod)
@@ -144,7 +144,7 @@ public class PaymentServiceImpl implements PaymentUseCase {
                 .aggregateId(saved.getPaymentId().toString())
                 .eventType("payment.captured")
                 .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
-                        saved.getPaymentId(), saved.getOrder() != null ? saved.getOrder().getOrderId() : null, saved.getAmount()))
+                        saved.getPaymentId(), saved.getOrderId(), saved.getAmount()))
                 .build();
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
@@ -154,7 +154,7 @@ public class PaymentServiceImpl implements PaymentUseCase {
                 .aggregateId(saved.getPaymentId().toString())
                 .eventType("payment.notification")
                 .payload(String.format("{\"paymentId\": %d, \"customerId\": \"%s\", \"status\": \"CAPTURED\"}",
-                        saved.getPaymentId(), saved.getCustomer() != null ? saved.getCustomer().getCustomerId() : ""))
+                        saved.getPaymentId(), saved.getCustomerId() != null ? saved.getCustomerId() : ""))
                 .build();
         outboxEventPort.save(notifyEvent);
         eventPublisher.publishEvent(notifyEvent);
@@ -173,6 +173,6 @@ public class PaymentServiceImpl implements PaymentUseCase {
         if (customerId == null || customerId.isBlank()) {
             throw new IllegalArgumentException("Customer ID is required to query payments.");
         }
-        return paymentPort.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+        return paymentPort.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 }

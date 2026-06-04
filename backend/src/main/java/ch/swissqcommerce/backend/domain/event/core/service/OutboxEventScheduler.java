@@ -4,33 +4,87 @@ import ch.swissqcommerce.backend.model.OutboxEvent;
 import ch.swissqcommerce.backend.repository.OutboxEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Highly reliable Transactional Outbox event processor.
- * Periodically polls the H2/PostgreSQL database for "PENDING" outbox events,
- * dispatches them via Kafka, and commits their status as "PUBLISHED".
- * Guarantees at-least-once delivery semantics even in the face of sudden JVM crashes.
+ * Transactional Outbox event processor with intelligent topic routing,
+ * retry counting, and dead-letter escalation.
+ *
+ * <p>Routes each outbox event to the correct Kafka topic based on its
+ * {@code eventType} field. After {@value #MAX_RETRIES} failed attempts
+ * an event is marked FAILED and will no longer be retried.</p>
+ *
+ * <p>Every dispatched message carries an {@code X-Correlation-ID} header
+ * for distributed tracing via MDC + Jaeger.</p>
  */
 @Service
 public class OutboxEventScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxEventScheduler.class);
+    private static final int MAX_RETRIES = 3;
+
+    /** Maps event-type prefixes to their target Kafka topics. */
+    private static final Map<String, String> TOPIC_ROUTING = Map.ofEntries(
+            // Payment ecosystem
+            Map.entry("payment.authorized",          "payment.events"),
+            Map.entry("payment.captured",            "payment.events"),
+            Map.entry("payment.failed",              "payment.events"),
+            Map.entry("payment.refunded",            "payment.events"),
+            Map.entry("payment.fraud_check",         "fraud.detection.request"),
+            Map.entry("payment.notification",        "notification.send"),
+            Map.entry("payment.compensation",        "payment.compensation"),
+
+            // Balance / Account
+            Map.entry("balance.check.request",       "balance.check.request"),
+            Map.entry("balance.check.response",      "balance.check.response"),
+            Map.entry("account.update",              "account.update"),
+
+            // Transaction
+            Map.entry("transaction.request",         "transaction.request"),
+
+            // Gateway
+            Map.entry("payment.gateway.request",     "payment.gateway.request"),
+            Map.entry("gateway.response",            "gateway.response"),
+
+            // Security
+            Map.entry("security.audit.log",          "security.audit.log"),
+            Map.entry("security.jwt.anomaly",        "security.jwt.anomaly"),
+            Map.entry("security.vault.rotation",     "security.vault.rotation"),
+            Map.entry("security.compliance.check",   "security.compliance.check"),
+
+            // Enrollment
+            Map.entry("enrollment.state_change",     "enrollment.state_change"),
+
+            // Order lifecycle (legacy / fallback)
+            Map.entry("order.placed",                "order.events"),
+            Map.entry("order.delivered",             "order.events"),
+            Map.entry("order.cancelled",             "order.events")
+    );
+
+    private static final String DEFAULT_TOPIC = "order.events";
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OutboxEventScheduler(OutboxEventRepository outboxEventRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+    public OutboxEventScheduler(OutboxEventRepository outboxEventRepository,
+                                KafkaTemplate<String, Object> kafkaTemplate) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @Scheduled(fixedDelay = 4000) // Polls every 4 seconds
+    @Scheduled(fixedDelay = 4000)
     @Transactional
     public void processOutbox() {
         List<OutboxEvent> pendingEvents = outboxEventRepository.findAll().stream()
@@ -41,24 +95,65 @@ public class OutboxEventScheduler {
             return;
         }
 
-        log.info("Outbox Scheduler: Found {} pending transactional events to process.", pendingEvents.size());
+        log.info("Outbox Scheduler: Found {} pending events to dispatch.", pendingEvents.size());
 
         for (OutboxEvent event : pendingEvents) {
-            try {
-                log.info("Outbox Scheduler [KAFKA DISPATCH]: Topic='{}', EventType='{}', Payload='{}'",
-                        "order.events", event.getEventType(), event.getPayload());
-
-                kafkaTemplate.send("order.events", event.getPayload());
-
-                // Mark as successfully published inside the transaction
-                event.setStatus("PUBLISHED");
-                outboxEventRepository.save(event);
-                
-                log.info("Outbox Scheduler [COMMIT SUCCESS]: Transactional outbox event id={} marked as PUBLISHED.", event.getId());
-            } catch (Exception ex) {
-                log.error("Outbox Scheduler Alert: Failed to process transactional outbox event id={}. Will auto-retry on next polling block. Error: {}", 
-                        event.getId(), ex.getMessage(), ex);
-            }
+            dispatchEvent(event);
         }
+    }
+
+    private void dispatchEvent(OutboxEvent event) {
+        String targetTopic = resolveTopicForEvent(event.getEventType());
+        String correlationId = UUID.randomUUID().toString();
+
+        try {
+            MDC.put("correlationId", correlationId);
+
+            Message<String> message = MessageBuilder
+                    .withPayload(event.getPayload())
+                    .setHeader(KafkaHeaders.TOPIC, targetTopic)
+                    .setHeader(KafkaHeaders.KEY, event.getAggregateId())
+                    .setHeader("X-Correlation-ID", correlationId.getBytes(StandardCharsets.UTF_8))
+                    .setHeader("X-Event-Type", event.getEventType().getBytes(StandardCharsets.UTF_8))
+                    .setHeader("X-Aggregate-Type", event.getAggregateType().getBytes(StandardCharsets.UTF_8))
+                    .build();
+
+            kafkaTemplate.send(message);
+
+            event.setStatus("PUBLISHED");
+            outboxEventRepository.save(event);
+
+            log.info("Outbox [PUBLISHED]: topic='{}', eventType='{}', aggregateId='{}', correlationId='{}'",
+                    targetTopic, event.getEventType(), event.getAggregateId(), correlationId);
+
+        } catch (Exception ex) {
+            int retryCount = event.getRetryCount() != null ? event.getRetryCount() : 0;
+            retryCount++;
+
+            if (retryCount >= MAX_RETRIES) {
+                event.setStatus("FAILED");
+                log.error("Outbox [FAILED]: event id={} exhausted {} retries. Marked FAILED. Error: {}",
+                        event.getId(), MAX_RETRIES, ex.getMessage(), ex);
+            } else {
+                log.warn("Outbox [RETRY {}/{}]: event id={} will retry on next poll. Error: {}",
+                        retryCount, MAX_RETRIES, event.getId(), ex.getMessage());
+            }
+
+            event.setRetryCount(retryCount);
+            outboxEventRepository.save(event);
+        } finally {
+            MDC.remove("correlationId");
+        }
+    }
+
+    /**
+     * Resolves the Kafka topic for a given event type.
+     * Falls back to {@value #DEFAULT_TOPIC} for unrecognized event types.
+     */
+    String resolveTopicForEvent(String eventType) {
+        if (eventType == null) {
+            return DEFAULT_TOPIC;
+        }
+        return TOPIC_ROUTING.getOrDefault(eventType, DEFAULT_TOPIC);
     }
 }

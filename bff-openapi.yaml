@@ -291,6 +291,26 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
+  /api/payments/{id}/compensate:
+    post:
+      summary: Admin rollback compensation
+      description: Reverses a failed or fraudulent payment across downstreams.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Compensation initiated.
+        '400':
+          description: Invalid request.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
   /api/customer/profile/purge:
     post:
       summary: GDPR Article 17 Erasure Request
@@ -720,6 +740,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HitlTicket'
+
+  /api/security/audit:
+    get:
+      summary: Retrieve Audit Logs
+      description: Fetches immutable audit logs from MongoDB.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Audit logs retrieved successfully.
+
+  /api/security/vault/rotate:
+    post:
+      summary: Rotate Vault Secrets
+      description: Rotates JWT keys and DB credentials across microservices via Vault.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Secret rotation initiated.
+
+  /api/security/compliance:
+    get:
+      summary: GDPR/PCI Compliance Check
+      description: Generates a compliance snapshot report.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Report generated.
 
 components:
   securitySchemes:

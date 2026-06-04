@@ -10,5 +10,5 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
-    List<Payment> findByCustomerCustomerIdOrderByCreatedAtDesc(String customerId);
+    List<Payment> findByCustomerIdOrderByCreatedAtDesc(String customerId);
 }
