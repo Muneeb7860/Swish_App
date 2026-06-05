@@ -6,8 +6,15 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.Wholesaler;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.repository.WholesalerRepository;
+import ch.swissqcommerce.backend.repository.DarkStoreRepository;
+import ch.swissqcommerce.backend.repository.B2BRestockOrderRepository;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +40,18 @@ public class AgentController {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @Autowired
+    private WholesalerRepository wholesalerRepository;
+
+    @Autowired
+    private DarkStoreRepository darkStoreRepository;
+
+    @Autowired
+    private B2BRestockOrderRepository restockOrderRepository;
+
+    @Autowired
+    private GovernanceUseCase governanceUseCase;
+
     @PostMapping("/chat")
     public ResponseEntity<AgentResponse> chat(@RequestBody AgentRequest request) {
         AgentResponse response = agentUseCase.processMessage(request);
@@ -53,25 +72,29 @@ public class AgentController {
                 analysis.proposedPrice, request.getBasePrice(), request.getQuantity());
 
         if (!guardrailResult.isApproved()) {
-            Customer customer = null;
-            if (request.getCustomerId() != null && !request.getCustomerId().trim().isEmpty()) {
-                customer = customerRepository.findById(request.getCustomerId()).orElse(null);
-            }
-            String ticketId = "HITL-" + UUID.randomUUID().toString();
-            String description = "Guardrail violation: " + guardrailResult.getMessage()
-                    + ", Item ID: " + request.getItemId()
-                    + ", Wholesaler: " + request.getWholesalerName();
+            Wholesaler wholesaler = wholesalerRepository.findById(request.getWholesalerName())
+                    .or(() -> wholesalerRepository.findAll().stream()
+                            .filter(w -> w.getName().equalsIgnoreCase(request.getWholesalerName()))
+                            .findFirst())
+                    .orElseGet(() -> wholesalerRepository.findByIsPrimary(true).orElse(null));
 
-            HitlQueue ticket = HitlQueue.builder()
-                    .ticketId(ticketId)
-                    .type("restock_audit")
+            DarkStore store = darkStoreRepository.findAll().stream().findFirst()
+                    .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
+
+            BigDecimal orderAmount = BigDecimal.valueOf(analysis.proposedPrice * request.getQuantity());
+
+            B2BRestockOrder restockOrder = B2BRestockOrder.builder()
+                    .store(store)
+                    .wholesaler(wholesaler)
+                    .invoiceAmount(orderAmount)
                     .status("pending")
-                    .description(description)
-                    .amount(BigDecimal.valueOf(analysis.proposedPrice * request.getQuantity()))
-                    .customer(customer)
+                    .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
                     .build();
 
-            hitlQueueRepository.save(ticket);
+            restockOrder = restockOrderRepository.save(restockOrder);
+
+            String wholesalerId = wholesaler != null ? wholesaler.getWholesalerId() : "WHOLESALER-1";
+            governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);
         }
 
         NegotiationResponse response = new NegotiationResponse(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, useCallback } from 'react';
 import * as Lucide from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useStore } from './store';
@@ -860,26 +860,157 @@ export default function App() {
     triggerToast(`MANUAL SCALE: ${store} capacity expanded! (Charged $${fee})`, 'inventory');
   };
 
+  const fetchHitlQueues = useCallback(() => {
+    const headers = {
+      'Authorization': authToken ? `Bearer ${authToken}` : ''
+    };
+
+    const fetchB2b = fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl`, { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return [];
+        return data.map(item => ({
+          id: `b2b-${item.id}`,
+          originalId: item.id,
+          type: 'b2b_funds',
+          desc: `Restock Order #${item.restockOrderId} override request for wholesaler ${item.wholesalerId}`,
+          amount: item.amount,
+          actionData: { restockOrderId: item.restockOrderId, wholesalerId: item.wholesalerId }
+        }));
+      })
+      .catch(() => []);
+
+    const fetchGeneral = fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue`, { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return [];
+        return data.map(item => ({
+          id: item.ticketId,
+          originalId: item.ticketId,
+          type: item.type,
+          desc: item.description,
+          amount: item.amount,
+          actionData: { customerId: item.customer?.customerId, orderId: item.order?.orderId }
+        }));
+      })
+      .catch(() => []);
+
+    Promise.all([fetchB2b, fetchGeneral])
+      .then(([b2bList, generalList]) => {
+        const merged = [...b2bList, ...generalList];
+        setHitlQueue(merged);
+      })
+      .catch(() => {});
+  }, [authToken, setHitlQueue]);
+
+  useEffect(() => {
+    fetchHitlQueues();
+    if (activeRole === 'admin') {
+      const timer = setInterval(fetchHitlQueues, 10000);
+      return () => clearInterval(timer);
+    }
+  }, [activeRole, fetchHitlQueues]);
+
   const handleReleaseHitl = (ticket) => {
-    setHitlQueue(prev => prev.filter(t => t.id !== ticket.id));
-    if (ticket.type === 'b2b_funds') {
-      setMerchantWallet(w => w - ticket.amount);
-      logLedger('system', 'RESTOCK-FUND-RELEASE', `Restocked inventory: approved release to wholesaler`, ticket.amount, 0);
-      logKafka('system', 'hitl.authorized', `Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`);
+    if (ticket.id && ticket.id.toString().startsWith('b2b-')) {
+      const realId = ticket.originalId;
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          operator: 'swissadmin',
+          reason: 'B2B Restock approved via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('B2B Restock order approved and released!', 'admin');
+          setMerchantWallet(w => w - ticket.amount);
+          logLedger('system', 'RESTOCK-FUND-RELEASE', `Restocked inventory: approved release to wholesaler`, ticket.amount, 0);
+          logKafka('system', 'hitl.authorized', `Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to approve B2B restock override.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to approve B2B restock override (network error).', 'admin'));
     } else {
-      setCustomerWallet(w => w + ticket.amount);
-      setMerchantWallet(w => w - ticket.amount);
-      logLedger('system', 'CUSTOMER-REFUND', 'Approved support bot customer refund request', ticket.amount, 0);
-      logKafka('system', 'hitl.authorized', `Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`);
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          decision: 'approve',
+          reason: 'Approved via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('HITL ticket approved successfully.', 'admin');
+          setCustomerWallet(w => w + ticket.amount);
+          setMerchantWallet(w => w - ticket.amount);
+          logLedger('system', 'CUSTOMER-REFUND', 'Approved support bot customer refund request', ticket.amount, 0);
+          logKafka('system', 'hitl.authorized', `Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to approve HITL ticket.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to approve HITL ticket (network error).', 'admin'));
     }
   };
 
   const handleVoidHitl = (ticket) => {
-    setHitlQueue(prev => prev.filter(t => t.id !== ticket.id));
-    if (ticket.type === 'b2b_funds') {
-      logKafka('admin', 'hitl.voided', `Admin VOIDED B2B procurement request for ${ticket.actionData.itemName}`);
+    if (ticket.id && ticket.id.toString().startsWith('b2b-')) {
+      const realId = ticket.originalId;
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          operator: 'swissadmin',
+          reason: 'B2B Restock rejected via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('B2B Restock order rejected and canceled.', 'admin');
+          logKafka('admin', 'hitl.voided', `Admin VOIDED B2B procurement request for restock order.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to reject B2B restock override.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to reject B2B restock override (network error).', 'admin'));
     } else {
-      logKafka('admin', 'hitl.voided', 'Admin VOIDED AI Bot customer refund request.');
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          decision: 'reject',
+          reason: 'Rejected via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('HITL ticket rejected successfully.', 'admin');
+          logKafka('admin', 'hitl.voided', 'Admin VOIDED AI Bot customer refund request.');
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to reject HITL ticket.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to reject HITL ticket (network error).', 'admin'));
     }
   };
 
@@ -984,16 +1115,7 @@ export default function App() {
           logKafka('system', 'agent.hitl_escalated', `HITL Ticket generated: ${data.ticketId}. Reason: Confidence score low.`);
           
           // Re-fetch administrative queue to refresh the Admin view
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl`, {
-            headers: { 'Authorization': authToken ? `Bearer ${authToken}` : '' }
-          })
-          .then(r => r.json())
-          .then(hitlData => {
-            if (Array.isArray(hitlData)) {
-              setHitlQueue(hitlData);
-            }
-          })
-          .catch(() => {});
+          fetchHitlQueues();
         }
         setBotMessages(prev => [...prev, { sender: 'bot', text: reply }]);
         // useQuery handles metrics automatically now

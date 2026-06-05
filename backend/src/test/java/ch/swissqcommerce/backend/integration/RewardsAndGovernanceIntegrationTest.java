@@ -12,6 +12,8 @@ import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerL
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.repository.*;
+import ch.swissqcommerce.backend.domain.agent.adapter.in.web.AgentController;
+import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -66,6 +68,15 @@ public class RewardsAndGovernanceIntegrationTest {
     @Autowired
     private RiderLeaderboardService leaderboardService;
 
+    @Autowired
+    private DarkStoreRepository darkStoreRepository;
+
+    @Autowired
+    private AgentController agentController;
+
+    @MockBean
+    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent b2BProcurementAgent;
+
     @MockBean
     private StringRedisTemplate redisTemplate;
 
@@ -79,6 +90,18 @@ public class RewardsAndGovernanceIntegrationTest {
         // Mock ZSet operations for leaderboard
         ZSetOperations zSetOps = Mockito.mock(ZSetOperations.class);
         Mockito.when(redisTemplate.opsForZSet()).thenReturn(zSetOps);
+
+        // Seed DarkStore if not exists
+        if (darkStoreRepository.count() == 0) {
+            DarkStore store = DarkStore.builder()
+                    .storeId("store-1")
+                    .storeName("Zurich Hub")
+                    .address("Bahnhofstrasse")
+                    .latitude(BigDecimal.valueOf(47.3769))
+                    .longitude(BigDecimal.valueOf(8.5417))
+                    .build();
+            darkStoreRepository.save(store);
+        }
 
         // Seed Customer
         customer = Customer.builder()
@@ -228,5 +251,49 @@ public class RewardsAndGovernanceIntegrationTest {
         // Verify it is a valid Base64 encoded string
         byte[] decodedBytes = Base64.getDecoder().decode(signature);
         assertTrue(decodedBytes.length > 0);
+    }
+
+    @Test
+    public void testB2BProcurementNegotiationGuardrailFailure() {
+        // Given
+        AgentController.NegotiationRequest request = new AgentController.NegotiationRequest();
+        request.setItemId("item-1");
+        request.setItemName("Swiss Milk Premium");
+        request.setBasePrice(2.50);
+        request.setWholesalerName("WHOLE-999");
+        request.setQuantity(3000); // 3000 * 2.50 = 7500 CHF (exceeds 5000 CHF limit)
+        request.setCustomerId("CUST-999");
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.anyString()))
+                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                        2.50, 0.95, "Good price", "ACCEPTED", 0.00005));
+
+        // When
+        ResponseEntity<AgentController.NegotiationResponse> responseEntity = agentController.negotiate(request);
+
+        // Then
+        assertNotNull(responseEntity);
+        assertEquals(200, responseEntity.getStatusCode().value());
+        assertFalse(responseEntity.getBody().isApproved());
+
+        // Verify that B2BRestockOrder was created in pending state
+        List<B2BRestockOrder> restockOrders = restockOrderRepository.findAll();
+        // The one seeded in setUp is "KEY-HITL-1", we find the new one
+        B2BRestockOrder pendingOrder = restockOrders.stream()
+                .filter(o -> !"KEY-HITL-1".equals(o.getIdempotencyKey()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("pending", pendingOrder.getStatus());
+        assertEquals(0, pendingOrder.getInvoiceAmount().compareTo(BigDecimal.valueOf(7500.00)));
+
+        // Verify that ProcurementApproval request was created pointing to the restock order
+        List<ProcurementApproval> approvals = approvalsRepository.findAll();
+        ProcurementApproval pendingApproval = approvals.stream()
+                .filter(a -> pendingOrder.getRestockOrderId().equals(a.getRestockOrderId()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("PENDING", pendingApproval.getStatus());
+        assertEquals(0, pendingApproval.getAmount().compareTo(BigDecimal.valueOf(7500.00)));
     }
 }
