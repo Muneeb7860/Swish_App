@@ -257,41 +257,47 @@ graph TB
   Ingress[NGINX Ingress Controller<br>DMZ / TLS Termination]:::edge
   
   subgraph k8s-service-mesh [Kubernetes Pod Mesh]
-    BFF[BFF Gateway Component<br>Spring Cloud Gateway Port 8081]:::gateway
+    GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
+    LegacyBFF[Legacy BFF Gateway<br>Spring Cloud Gateway Port 8081]:::gateway
     
     subgraph core-services [Core Services (Envoy mTLS Sidecars)]
-      CatSrv[Catalog Service]:::container
-      OrdSrv[Order Processor]:::container
-      ProcSrv[B2B Procurement Agent]:::container
-      PaySrv[Payment Engine]:::container
-      DispSrv[Dispatch Coordinator]:::container
+      Backend[backend Service<br>Hexagonal Core Port 8080]:::container
+      BusinessEngine[core-business-engine<br>Checkout/Inv/B2B Port 8081]:::container
+      NotifEngine[notification-engine<br>Kafka Consumer/WS Port 8082]:::container
+      SharedAsync[shared-async-services<br>AI & Ledger]:::container
     end
     
     subgraph databases [Data & Storage Tier]
-      Redis[(Redis Session Cache)]:::store
-      Postgres[(PostgreSQL OLTP DB)]:::store
-      Timescale[(PostgreSQL TimescaleDB)]:::store
-      MongoDB[(MongoDB OLAP Archive)]:::store
+      Redis[(Redis Cache & Rate Limiting)]:::store
+      Postgres[(PostgreSQL OLTP Database)]:::store
+      MongoDB[(MongoDB Analytical Archive)]:::store
     end
 
     Kafka[Kafka Event Broker]:::queue
   end
 
-  Ingress -->|mTLS Traffic Route| BFF
-  BFF -->|Lookup Catalog| CatSrv
-  BFF -->|Submit Order| OrdSrv
-  BFF -->|Procurement Exception Check| ProcSrv
-  BFF -->|Verify Settlement Ledger| PaySrv
-  BFF -->|Process IoT & Track GPS| DispSrv
-
-  CatSrv -->|Read Autocomplete| Redis
-  CatSrv -->|DB Lookup fallback| Postgres
-  OrdSrv -->|Transactional Outbox write| Postgres
-  PaySrv -->|Commit Cryptographic Ledger| Postgres
-  DispSrv -->|Ingest Buffer Coordinates| Redis
-  Redis -.->|Flush Telemetry Logs| Timescale
+  Ingress -->|mTLS Traffic Route| GW
+  Ingress -.->|Legacy Route| LegacyBFF
   
-  Postgres -.->|CDC Outbox Poller| Kafka
+  GW -->|Route| Backend
+  GW -->|Route| BusinessEngine
+  GW -->|Route| NotifEngine
+  GW -->|Route| SharedAsync
+
+  Backend --> Postgres
+  BusinessEngine --> Postgres
+  NotifEngine --> Postgres
+  SharedAsync --> Postgres
+
+  Backend -.-> Redis
+  BusinessEngine -.-> Redis
+  NotifEngine -.-> Redis
+  GW -.-> Redis
+
+  BusinessEngine -.->|"publish"| Kafka
+  Kafka -.->|"consume"| NotifEngine
+  Kafka -.->|"consume"| SharedAsync
+  Postgres -.->|"Outbox publish"| Kafka
   Kafka -.->|OlapEventSinkListener| MongoDB
 ```
 

@@ -8,21 +8,29 @@ Swish OS is a high-availability, B2B SaaS micro-fulfillment and agentic procurem
 
 ```mermaid
 graph TD
-    Client[Enterprise AI / Operator Console] --> Edge[Nginx Edge Proxy (DMZ)]
+    Client[Enterprise Web/Mobile Clients] --> Edge[Nginx Edge Proxy (DMZ)]
     
-    subgraph frontend-tier [Edge API & Cockpit Tier]
-        Edge --> Cockpit[Exception Feed: frontend-host]
-        Edge --> BFF[Agentic BFF Gateway]
+    subgraph frontend-tier [MFE Frontends & Host Cockpit]
+        Edge --> Host[frontend-host Cockpit]
+        Edge --> MFEs[MFE Frontends: customer, rider, b2b, admin]
     end
 
-    subgraph backend-tier [Core Agentic Network]
-        BFF --> Backend[Spring Boot Core Backend]
+    subgraph gateway-tier [API Routing & Security]
+        Edge --> GW[platform-gateway (Port 8080)]
+        Edge -.-> LegacyBFF[Legacy BFF Gateway (Port 8081)]
+    end
+
+    subgraph backend-tier [Core Microservice Suite]
+        GW --> Backend[backend Core Service (Port 8080)]
+        GW --> BusinessEngine[core-business-engine (Port 8081)]
+        GW --> NotifEngine[notification-engine (Port 8082)]
+        GW --> SharedAsync[shared-async-services]
         
-        Backend --> Cache[(Redis Cache / Ingestion Buffer)]
-        Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
+        Backend & BusinessEngine & NotifEngine & SharedAsync --> DB_Tx[(PostgreSQL: transactional schema)]
+        Backend & BusinessEngine & NotifEngine & GW --> Cache[(Redis Cache / Rate Limiting)]
         
-        Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
-        DB_Tx -.->|Transactional Outbox| Kafka[(Apache Kafka Cluster)]
+        BusinessEngine -.->|Kafka Events| Kafka[(Apache Kafka Cluster)]
+        Kafka -.->|Notification Consuming| NotifEngine
         Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Archive)]
     end
 ```
