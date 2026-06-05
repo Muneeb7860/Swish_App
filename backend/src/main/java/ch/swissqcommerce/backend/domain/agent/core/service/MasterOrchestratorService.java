@@ -8,9 +8,7 @@ import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.repository.CustomerRepository;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,9 +23,7 @@ public class MasterOrchestratorService implements AgentUseCase {
     private final CustomerSupportAgent customerSupportAgent;
     private final AgentToolExecutor agentToolExecutor;
     
-    private final CustomerRepository customerRepository;
-    private final OrderRepository orderRepository;
-    private final HitlQueueRepository hitlQueueRepository;
+    private final AgentOutPort agentOutPort;
     private final EventUseCase eventUseCase;
 
     private double dailyCost = 0.0;
@@ -88,7 +84,7 @@ public class MasterOrchestratorService implements AgentUseCase {
             try {
                 if (analysis.toolArgument != null) {
                     int orderId = Integer.parseInt(analysis.toolArgument.trim());
-                    order = orderRepository.findById(orderId).orElse(null);
+                    order = agentOutPort.findOrderById(orderId).orElse(null);
                 }
             } catch (NumberFormatException ignored) {}
 
@@ -127,7 +123,7 @@ public class MasterOrchestratorService implements AgentUseCase {
         
         Customer customer = null;
         if (request.getCustomerId() != null) {
-            customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+            customer = agentOutPort.findCustomerById(request.getCustomerId()).orElse(null);
         }
         if (customer == null && order != null) {
             customer = order.getCustomer();
@@ -143,7 +139,7 @@ public class MasterOrchestratorService implements AgentUseCase {
                 .status("pending")
                 .build();
 
-        hitlQueueRepository.save(ticket);
+        agentOutPort.saveHitlQueue(ticket);
 
         try {
             eventUseCase.publishEvent("agent.hitl_escalated", String.format("{\"ticketId\":\"%s\",\"reason\":\"%s\"}", ticketId, reason));

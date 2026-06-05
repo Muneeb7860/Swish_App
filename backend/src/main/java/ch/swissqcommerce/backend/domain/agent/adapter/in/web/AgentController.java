@@ -11,9 +11,9 @@ import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -41,13 +41,13 @@ public class AgentController {
     private CustomerRepository customerRepository;
 
     @Autowired
-    private WholesalerRepository wholesalerRepository;
+    private WholesalerPort wholesalerPort;
 
     @Autowired
     private DarkStoreRepository darkStoreRepository;
 
     @Autowired
-    private B2BRestockOrderRepository restockOrderRepository;
+    private B2BRestockOrderPort restockOrderPort;
 
     @Autowired
     private GovernanceUseCase governanceUseCase;
@@ -65,7 +65,7 @@ public class AgentController {
 
     @PostMapping("/negotiate")
     public ResponseEntity<NegotiationResponse> negotiate(@RequestBody NegotiationRequest request) {
-        java.util.List<Wholesaler> activeWholesalers = wholesalerRepository.findAll().stream()
+        java.util.List<Wholesaler> activeWholesalers = wholesalerPort.findAll().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getIsActive()))
                 .toList();
 
@@ -112,7 +112,7 @@ public class AgentController {
                     .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
                     .build();
 
-            restockOrder = restockOrderRepository.save(restockOrder);
+            restockOrder = restockOrderPort.save(restockOrder);
 
             String wholesalerId = bestWholesaler != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
             governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);

@@ -3,7 +3,7 @@ package ch.swissqcommerce.backend.controller;
 import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ public class TelemetryControllerTest {
     private InMemoryGeoStore geoStore;
 
     @MockBean
-    private OrderTelemetryLogRepository telemetryLogRepository;
+    private TelemetryPort telemetryPort;
 
     @MockBean
     private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;

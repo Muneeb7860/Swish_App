@@ -2,16 +2,16 @@ package ch.swissqcommerce.backend.domain.reward.core.service;
 
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
 import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
 import org.springframework.stereotype.Component;
 
 @Component
 public class BadgeRewardProcessor implements RewardProcessor {
 
-    private final CustomerRepository customerRepository;
+    private final RewardOutPort rewardOutPort;
 
-    public BadgeRewardProcessor(CustomerRepository customerRepository) {
-        this.customerRepository = customerRepository;
+    public BadgeRewardProcessor(RewardOutPort rewardOutPort) {
+        this.rewardOutPort = rewardOutPort;
     }
 
     @Override
@@ -21,13 +21,13 @@ public class BadgeRewardProcessor implements RewardProcessor {
 
     @Override
     public void process(String customerId, int amount, String description) {
-        customerRepository.findById(customerId).ifPresent(customer -> {
+        rewardOutPort.findCustomerById(customerId).ifPresent(customer -> {
             int newScore = Math.min(100, customer.getTrustScore() + amount);
             customer.setTrustScore(newScore);
             if (customer.getConsecutiveOrdersCompleted() >= 5) {
                 customer.setVipStatus(true);
             }
-            customerRepository.save(customer);
+            rewardOutPort.saveCustomer(customer);
         });
     }
 }

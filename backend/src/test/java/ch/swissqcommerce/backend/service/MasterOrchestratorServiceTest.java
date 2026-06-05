@@ -5,13 +5,11 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
 import ch.swissqcommerce.backend.domain.agent.core.service.AgentToolExecutor;
 import ch.swissqcommerce.backend.domain.agent.core.service.CustomerSupportAgent;
 import ch.swissqcommerce.backend.domain.agent.core.service.MasterOrchestratorService;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.repository.CustomerRepository;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
-import ch.swissqcommerce.backend.repository.OrderRepository;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,13 +35,7 @@ public class MasterOrchestratorServiceTest {
     private AgentToolExecutor agentToolExecutor;
 
     @Mock
-    private CustomerRepository customerRepository;
-
-    @Mock
-    private OrderRepository orderRepository;
-
-    @Mock
-    private HitlQueueRepository hitlQueueRepository;
+    private AgentOutPort agentOutPort;
 
     @Mock
     private EventUseCase eventUseCase;
@@ -69,7 +61,7 @@ public class MasterOrchestratorServiceTest {
         assertFalse(response.isHitlStatus());
         assertNull(response.getTicketId());
 
-        verify(hitlQueueRepository, never()).save(any(HitlQueue.class));
+        verify(agentOutPort, never()).saveHitlQueue(any(HitlQueue.class));
         verify(eventUseCase, times(1)).publishEvent(eq("agent.message_processed"), anyString());
     }
 
@@ -87,7 +79,7 @@ public class MasterOrchestratorServiceTest {
                 .build();
 
         when(customerSupportAgent.analyze(request)).thenReturn(analysis);
-        when(customerRepository.findById("cust-456")).thenReturn(Optional.of(customer));
+        when(agentOutPort.findCustomerById("cust-456")).thenReturn(Optional.of(customer));
 
         AgentResponse response = masterOrchestratorService.processMessage(request);
 
@@ -98,7 +90,7 @@ public class MasterOrchestratorServiceTest {
         assertNotNull(response.getTicketId());
 
         ArgumentCaptor<HitlQueue> ticketCaptor = ArgumentCaptor.forClass(HitlQueue.class);
-        verify(hitlQueueRepository, times(1)).save(ticketCaptor.capture());
+        verify(agentOutPort, times(1)).saveHitlQueue(ticketCaptor.capture());
 
         HitlQueue ticket = ticketCaptor.getValue();
         assertEquals("agent_escalation", ticket.getType());
@@ -137,7 +129,7 @@ public class MasterOrchestratorServiceTest {
         assertNotNull(response2.getTicketId());
 
         ArgumentCaptor<HitlQueue> ticketCaptor = ArgumentCaptor.forClass(HitlQueue.class);
-        verify(hitlQueueRepository, times(1)).save(ticketCaptor.capture());
+        verify(agentOutPort, times(1)).saveHitlQueue(ticketCaptor.capture());
 
         HitlQueue ticket = ticketCaptor.getValue();
         assertEquals("agent_escalation", ticket.getType());

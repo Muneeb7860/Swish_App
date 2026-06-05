@@ -5,8 +5,8 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.repository.OrderRepository;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
+import ch.swissqcommerce.backend.domain.transaction.port.out.HitlQueuePort;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -21,7 +21,7 @@ import java.util.*;
  */
 public class OrderServiceImpl implements OrderUseCase {
 
-    private final OrderRepository orderRepository;
+    private final OrderPort orderPort;
     private final CustomerPort customerPort;
     private final DarkStorePort darkStorePort;
     private final RiderPort riderPort;
@@ -30,9 +30,9 @@ public class OrderServiceImpl implements OrderUseCase {
     private final ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase;
     private final OutboxEventPort outboxEventPort;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
-    private final HitlQueueRepository hitlQueueRepository;
+    private final HitlQueuePort hitlQueuePort;
 
-    public OrderServiceImpl(OrderRepository orderRepository,
+    public OrderServiceImpl(OrderPort orderPort,
                             CustomerPort customerPort,
                             DarkStorePort darkStorePort,
                             RiderPort riderPort,
@@ -41,8 +41,8 @@ public class OrderServiceImpl implements OrderUseCase {
                             ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase,
                             OutboxEventPort outboxEventPort,
                             org.springframework.context.ApplicationEventPublisher eventPublisher,
-                            HitlQueueRepository hitlQueueRepository) {
-        this.orderRepository = orderRepository;
+                            HitlQueuePort hitlQueuePort) {
+        this.orderPort = orderPort;
         this.customerPort = customerPort;
         this.darkStorePort = darkStorePort;
         this.riderPort = riderPort;
@@ -51,7 +51,7 @@ public class OrderServiceImpl implements OrderUseCase {
         this.ledgerUseCase = ledgerUseCase;
         this.outboxEventPort = outboxEventPort;
         this.eventPublisher = eventPublisher;
-        this.hitlQueueRepository = hitlQueueRepository;
+        this.hitlQueuePort = hitlQueuePort;
     }
 
     @Override
@@ -69,7 +69,7 @@ public class OrderServiceImpl implements OrderUseCase {
 
         // 1. Initial quick idempotency check
         if (idempotencyKey != null) {
-            Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);
+            Optional<Order> existingOrder = orderPort.findByIdempotencyKey(idempotencyKey);
             if (existingOrder.isPresent()) {
                 return existingOrder.get();
             }
@@ -164,11 +164,11 @@ public class OrderServiceImpl implements OrderUseCase {
         // 2. Safe unique-key checkout insert with fallback lookup
         Order savedOrder;
         try {
-            savedOrder = orderRepository.save(order);
-            orderRepository.flush(); // Flush immediately to trigger unique constraint check
+            savedOrder = orderPort.save(order);
+            orderPort.flush(); // Flush immediately to trigger unique constraint check
         } catch (DataIntegrityViolationException e) {
             if (idempotencyKey != null) {
-                return orderRepository.findByIdempotencyKey(idempotencyKey)
+                return orderPort.findByIdempotencyKey(idempotencyKey)
                         .orElseThrow(() -> new IllegalStateException("Idempotency key violation occurred, but safe lookup failed.", e));
             }
             throw e;
@@ -273,7 +273,7 @@ public class OrderServiceImpl implements OrderUseCase {
     @Override
     @Transactional
     public Map<String, Object> requestRefund(Integer orderId, String claimReason, BigDecimal customerLatitude, BigDecimal customerLongitude) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderPort.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found."));
         
         Customer customer = order.getCustomer();
@@ -316,7 +316,7 @@ public class OrderServiceImpl implements OrderUseCase {
                     .amount(order.getTotalAmount())
                     .status("approved")
                     .build();
-            hitlQueueRepository.save(ticket);
+            hitlQueuePort.save(ticket);
 
             // Refund Customer Wallet
             customer.setWalletBalance(customer.getWalletBalance().add(order.getTotalAmount()));
@@ -347,7 +347,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .amount(order.getTotalAmount())
                 .status("pending")
                 .build();
-        hitlQueueRepository.save(ticket);
+        hitlQueuePort.save(ticket);
         
         return Map.of(
             "status", "pending_admin_approval",
@@ -359,7 +359,7 @@ public class OrderServiceImpl implements OrderUseCase {
 
     @Override
     public List<Order> getCustomerOrders(String customerId) {
-        return orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+        return orderPort.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
 }
