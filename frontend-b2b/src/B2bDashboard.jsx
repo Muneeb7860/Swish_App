@@ -8,8 +8,8 @@ const B2bDashboard = () => {
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
   const MAX_RECONNECT_ATTEMPTS = 10;
-
   const connectRef = useRef(null);
+
 
   const connect = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;

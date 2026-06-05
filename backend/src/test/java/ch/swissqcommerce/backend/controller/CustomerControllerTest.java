@@ -1,25 +1,30 @@
 package ch.swissqcommerce.backend.controller;
 
 import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,7 +41,118 @@ public class CustomerControllerTest {
     @MockBean private CustomerRepository customerRepository;
     @MockBean private HitlQueueRepository hitlQueueRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private SecurityContext originalContext;
 
+    @BeforeEach
+    public void setUp() {
+        originalContext = SecurityContextHolder.getContext();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        SecurityContextHolder.setContext(originalContext);
+    }
+
+    @Test
+    public void testPurgeProfile_Unauthorized() throws Exception {
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(null);
+        SecurityContextHolder.setContext(securityContext);
+
+        mockMvc.perform(post("/api/customer/profile/purge")
+                .param("customerId", "cust123"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testPurgeProfile_Forbidden() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("otherUser");
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        mockMvc.perform(post("/api/customer/profile/purge")
+                .param("customerId", "cust123"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testPurgeProfile_NotFound() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("cust123");
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        when(customerRepository.findById("cust123")).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/customer/profile/purge")
+                .param("customerId", "cust123"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testPurgeProfile_Success() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("cust123");
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        Customer customer = new Customer();
+        customer.setCustomerId("cust123");
+        customer.setFullName("John Doe");
+        customer.setEmail("john@example.com");
+        customer.setAddresses(new ArrayList<>());
+        customer.setPaymentCards(new ArrayList<>());
+
+        when(customerRepository.findById("cust123")).thenReturn(Optional.of(customer));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(post("/api/customer/profile/purge")
+                .param("customerId", "cust123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("purged"))
+                .andExpect(jsonPath("$.probationary_trust_score").value(75));
+    }
+
+    @Test
+    public void testPurgeProfile_Success_AdminOverride() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(auth.getName()).thenReturn("adminUser");
+        
+        GrantedAuthority adminAuthority = new SimpleGrantedAuthority("ROLE_ADMIN");
+        when(auth.getAuthorities()).thenAnswer(inv -> Collections.singletonList(adminAuthority));
+
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        Customer customer = new Customer();
+        customer.setCustomerId("cust123");
+        customer.setFullName("John Doe");
+        customer.setEmail("john@example.com");
+        customer.setAddresses(new ArrayList<>());
+        customer.setPaymentCards(new ArrayList<>());
+
+        when(customerRepository.findById("cust123")).thenReturn(Optional.of(customer));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(post("/api/customer/profile/purge")
+                .param("customerId", "cust123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("purged"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T any(Class<T> type) {
+        return Mockito.any(type);
+    }
 }
