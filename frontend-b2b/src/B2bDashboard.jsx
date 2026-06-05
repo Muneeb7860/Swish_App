@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const B2bDashboard = () => {
   const [orderStatus, setOrderStatus] = useState('PENDING');
@@ -8,6 +8,8 @@ const B2bDashboard = () => {
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
   const MAX_RECONNECT_ATTEMPTS = 10;
+
+  const connectRef = useRef(null);
 
   const connect = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
@@ -69,7 +71,9 @@ const B2bDashboard = () => {
         );
         console.log(`Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttemptRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
         reconnectAttemptRef.current += 1;
-        reconnectTimeoutRef.current = setTimeout(connect, delay);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (connectRef.current) connectRef.current();
+        }, delay);
       } else {
         setWsStatus('Disconnected (max retries)');
         console.error('Max reconnection attempts reached. Please refresh the page.');
@@ -85,6 +89,7 @@ const B2bDashboard = () => {
   }, []);
 
   useEffect(() => {
+    connectRef.current = connect;
     connect();
     return () => {
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
