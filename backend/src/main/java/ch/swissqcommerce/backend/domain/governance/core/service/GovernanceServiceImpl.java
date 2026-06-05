@@ -160,8 +160,8 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     }
 
     @Override
-    public String signDeliverySummary(String orderId) {
-        log.info("GovernanceServiceImpl: Generating digital signature for order id={}", orderId);
+    public String signDeliverySummary(String orderId, String podHash) {
+        log.info("GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}", orderId, podHash);
         try {
             int orderIdInt = Integer.parseInt(orderId);
             List<OrderTelemetryLog> logs = telemetryLogRepository.findByOrderOrderIdOrderByDeviceTimestampDesc(orderIdInt);
@@ -181,8 +181,8 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             }
 
             BigDecimal avgTemp = sumTemp.divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP);
-            String summaryPayload = String.format("orderId:%s|minTemp:%s|maxTemp:%s|avgTemp:%s", 
-                    orderId, minTemp, maxTemp, avgTemp);
+            String summaryPayload = String.format("orderId:%s|minTemp:%s|maxTemp:%s|avgTemp:%s|podHash:%s", 
+                    orderId, minTemp, maxTemp, avgTemp, podHash);
 
             Signature privateSignature = Signature.getInstance("SHA256withRSA");
             privateSignature.initSign(privateKey);

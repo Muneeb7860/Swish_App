@@ -6,5 +6,5 @@ public interface GovernanceUseCase {
     void auditNegotiation(Integer restockOrderId, String wholesalerId, BigDecimal amount);
     void approveOverride(Integer approvalId, String operator, String reason);
     void rejectOverride(Integer approvalId, String operator, String reason);
-    String signDeliverySummary(String orderId);
+    String signDeliverySummary(String orderId, String podHash);
 }

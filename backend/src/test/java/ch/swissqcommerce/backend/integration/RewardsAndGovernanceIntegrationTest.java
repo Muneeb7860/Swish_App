@@ -242,7 +242,7 @@ public class RewardsAndGovernanceIntegrationTest {
         String orderId = String.valueOf(order.getOrderId());
 
         // When
-        String signature = governanceUseCase.signDeliverySummary(orderId);
+        String signature = governanceUseCase.signDeliverySummary(orderId, "mock-pod-hash-xyz");
 
         // Then
         assertNotNull(signature);
@@ -295,5 +295,44 @@ public class RewardsAndGovernanceIntegrationTest {
                 .orElseThrow();
         assertEquals("PENDING", pendingApproval.getStatus());
         assertEquals(0, pendingApproval.getAmount().compareTo(BigDecimal.valueOf(7500.00)));
+    }
+
+    @Test
+    public void testMultiWholesalerRfqAuction() {
+        // Given
+        Wholesaler otherWholesaler = Wholesaler.builder()
+                .wholesalerId("WHOLE-888")
+                .name("Galactic Supplies")
+                .isActive(true)
+                .build();
+        wholesalerRepository.save(otherWholesaler);
+
+        AgentController.NegotiationRequest request = new AgentController.NegotiationRequest();
+        request.setItemId("item-1");
+        request.setItemName("Swiss Milk Premium");
+        request.setBasePrice(2.50);
+        request.setWholesalerName("WHOLE-999"); 
+        request.setQuantity(100); 
+        request.setCustomerId("CUST-999");
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Starfleet Supplies")))
+                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                        2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Galactic Supplies")))
+                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                        2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
+
+        // When
+        ResponseEntity<AgentController.NegotiationResponse> responseEntity = agentController.negotiate(request);
+
+        // Then
+        assertNotNull(responseEntity);
+        assertEquals(200, responseEntity.getStatusCode().value());
+        assertTrue(responseEntity.getBody().isApproved());
+        assertEquals(2.30, responseEntity.getBody().getProposedPrice(), 0.01);
+        assertTrue(responseEntity.getBody().getMessage().contains("Galactic Supplies"));
     }
 }

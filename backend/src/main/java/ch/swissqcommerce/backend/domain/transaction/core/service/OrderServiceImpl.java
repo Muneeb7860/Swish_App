@@ -94,6 +94,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .tipAmount(tip)
                 .build();
 
+        boolean containsPerishable = false;
         for (CartItem cartItem : items) {
             Inventory inventory = inventoryPort.findInventoryById(cartItem.itemId())
                     .orElseThrow(() -> new NoSuchElementException("Item not found: " + cartItem.itemId()));
@@ -104,6 +105,10 @@ public class OrderServiceImpl implements OrderUseCase {
 
             inventory.setStock(inventory.getStock() - cartItem.quantity());
             inventoryPort.save(inventory);
+
+            if (Boolean.TRUE.equals(inventory.getPerishable())) {
+                containsPerishable = true;
+            }
 
             BigDecimal itemCost = inventory.getPrice().multiply(BigDecimal.valueOf(cartItem.quantity()));
             cartSubtotal = cartSubtotal.add(itemCost);
@@ -125,12 +130,6 @@ public class OrderServiceImpl implements OrderUseCase {
         }
         order.setWeatherSurcharge(weatherSurcharge);
 
-        int baseSlaSeconds = 540;
-        if ("East Store".equalsIgnoreCase(store.getStoreName())) {
-            baseSlaSeconds += 240;
-        }
-        order.setSlaCountdownSec(baseSlaSeconds);
-
         BigDecimal totalCheckoutCost = cartSubtotal.add(weatherSurcharge);
         BigDecimal customerTotalDebit = totalCheckoutCost.add(tip);
         
@@ -141,9 +140,26 @@ public class OrderServiceImpl implements OrderUseCase {
         }
         order.setTotalAmount(totalCheckoutCost);
 
-        Rider rider = findAvailableRider();
+        Rider rider = findOptimalRider(containsPerishable);
         order.setRider(rider);
         order.setStatus("pending");
+
+        int baseSlaSeconds = 540;
+        if (rider != null && rider.getVehicleType() != null) {
+            String vType = rider.getVehicleType().toLowerCase();
+            if (vType.contains("scooter")) {
+                baseSlaSeconds = 420;
+            } else if (vType.contains("van")) {
+                baseSlaSeconds = 720;
+            }
+        }
+        if (containsPerishable) {
+            baseSlaSeconds -= 60;
+        }
+        if ("East Store".equalsIgnoreCase(store.getStoreName())) {
+            baseSlaSeconds += 240;
+        }
+        order.setSlaCountdownSec(baseSlaSeconds);
 
         // 2. Safe unique-key checkout insert with fallback lookup
         Order savedOrder;
@@ -216,11 +232,38 @@ public class OrderServiceImpl implements OrderUseCase {
         return "Central Store";
     }
 
-    private Rider findAvailableRider() {
-        return riderPort.findAll().stream()
+    private Rider findOptimalRider(boolean containsPerishable) {
+        List<Rider> activeRiders = riderPort.findAll().stream()
                 .filter(r -> "active".equalsIgnoreCase(r.getOnboardingStatus()))
-                .findFirst()
-                .orElse(null);
+                .toList();
+
+        if (activeRiders.isEmpty()) {
+            return null;
+        }
+
+        if (containsPerishable) {
+            // Prioritize Scooter (1) -> E-Bike (2) -> Van / other (3)
+            return activeRiders.stream()
+                    .min(Comparator.comparingInt(r -> {
+                        if (r.getVehicleType() == null) return 3;
+                        String type = r.getVehicleType().toLowerCase();
+                        if (type.contains("scooter")) return 1;
+                        if (type.contains("bike")) return 2;
+                        return 3;
+                    }))
+                    .orElse(activeRiders.get(0));
+        } else {
+            // Prioritize Van (1) -> Scooter (2) -> E-Bike (3)
+            return activeRiders.stream()
+                    .min(Comparator.comparingInt(r -> {
+                        if (r.getVehicleType() == null) return 3;
+                        String type = r.getVehicleType().toLowerCase();
+                        if (type.contains("van")) return 1;
+                        if (type.contains("scooter")) return 2;
+                        return 3;
+                    }))
+                    .orElse(activeRiders.get(0));
+        }
     }
 
     private String getSystemConfig(String key, String defaultValue) {
@@ -253,7 +296,47 @@ public class OrderServiceImpl implements OrderUseCase {
                 );
             }
         }
+
+        boolean isLateClaim = claimReason != null && (
+            claimReason.toLowerCase().contains("late") || 
+            claimReason.toLowerCase().contains("delay") || 
+            claimReason.toLowerCase().contains("sla") || 
+            claimReason.toLowerCase().contains("slow")
+        );
+
+        if (isLateClaim && order.getSlaCountdownSec() <= 0) {
+            // AI-Autopilot Auto-Approval Path
+            String ticketId = "AUTO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            HitlQueue ticket = HitlQueue.builder()
+                    .ticketId(ticketId)
+                    .type("refund_customer")
+                    .customer(customer)
+                    .order(order)
+                    .description("AI-AUTOPILOT: Refund request auto-approved due to verified SLA breach for order " + orderId + ". Override By: ai-autopilot. Reason: Verified SLA countdown breach (countdown <= 0)")
+                    .amount(order.getTotalAmount())
+                    .status("approved")
+                    .build();
+            hitlQueueRepository.save(ticket);
+
+            // Refund Customer Wallet
+            customer.setWalletBalance(customer.getWalletBalance().add(order.getTotalAmount()));
+            customerPort.save(customer);
+
+            // Double-entry Ledger Entry
+            List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = List.of(
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, order.getTotalAmount(), BigDecimal.ZERO),
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("customer", customer.getCustomerId(), BigDecimal.ZERO, order.getTotalAmount())
+            );
+            ledgerUseCase.recordTransaction("REFUND-AUTO", "AI-Autopilot SLA breach refund for order " + orderId, legs);
+
+            return Map.of(
+                "status", "approved",
+                "message", "AI-AUTOPILOT: Delivery SLA breach verified. Refund of $" + order.getTotalAmount() + " automatically approved and credited to your wallet.",
+                "ticket_id", ticketId
+            );
+        }
         
+        // Manual Admin HITL Path
         String ticketId = "HITL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         HitlQueue ticket = HitlQueue.builder()
                 .ticketId(ticketId)

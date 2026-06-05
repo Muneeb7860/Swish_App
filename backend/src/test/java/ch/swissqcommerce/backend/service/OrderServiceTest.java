@@ -18,7 +18,9 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,6 +40,7 @@ public class OrderServiceTest {
     @Mock private LedgerUseCase ledgerUseCase;
     @Mock private OutboxEventPort outboxEventPort;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private HitlQueueRepository hitlQueueRepository;
 
     @InjectMocks private OrderServiceImpl orderService;
 
@@ -82,5 +85,101 @@ public class OrderServiceTest {
         verify(ledgerUseCase, times(1)).recordTransaction(anyString(), anyString(), anyList());
         verify(outboxEventPort, times(1)).save(any(OutboxEvent.class));
         assertEquals(8, inventory.getStock());
+    }
+
+    @Test
+    public void testCheckout_PerishableScooterAssignmentAndSlaDeduction() {
+        Customer customer = new Customer();
+        customer.setCustomerId("CUST-1");
+        customer.setLoyaltyPoints(0);
+
+        DarkStore store = new DarkStore();
+        store.setStoreId("Central Store");
+        store.setStoreName("Central Store");
+
+        Inventory inventory = new Inventory();
+        inventory.setItemId("ITEM-1");
+        inventory.setName("Fresh Milk");
+        inventory.setPrice(new BigDecimal("2.50"));
+        inventory.setStock(10);
+        inventory.setStore(store);
+        inventory.setPerishable(true);
+
+        Rider ebikeRider = new Rider();
+        ebikeRider.setRiderId("RIDER-BIKE");
+        ebikeRider.setVehicleType("E-Bike");
+        ebikeRider.setOnboardingStatus("active");
+
+        Rider scooterRider = new Rider();
+        scooterRider.setRiderId("RIDER-SCOOTER");
+        scooterRider.setVehicleType("Scooter");
+        scooterRider.setOnboardingStatus("active");
+
+        when(customerPort.findCustomerById("CUST-1")).thenReturn(Optional.of(customer));
+        when(inventoryPort.findInventoryById("ITEM-1")).thenReturn(Optional.of(inventory));
+        when(darkStorePort.findDarkStoreById("Central Store")).thenReturn(Optional.of(store));
+        when(riderPort.findAll()).thenReturn(List.of(ebikeRider, scooterRider));
+        when(systemConfigPort.getSystemConfig("current_weather", "Sunny")).thenReturn("Sunny");
+        when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
+        
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order o = invocation.getArgument(0);
+            o.setOrderId(2);
+            return o;
+        });
+
+        Order result = orderService.checkout("CUST-1", List.of(new OrderUseCase.CartItem("ITEM-1", 1)), "Swipe", BigDecimal.ZERO, 0, "IDEM-KEY-2");
+
+        assertNotNull(result);
+        assertEquals("RIDER-SCOOTER", result.getRider().getRiderId());
+        assertEquals(360, result.getSlaCountdownSec());
+    }
+
+    @Test
+    public void testRequestRefund_AiAutopilotAutoApproval() {
+        Customer customer = new Customer();
+        customer.setCustomerId("CUST-1");
+        customer.setTrustScore(90);
+        customer.setWalletBalance(new BigDecimal("10.00"));
+
+        Order order = new Order();
+        order.setOrderId(100);
+        order.setCustomer(customer);
+        order.setTotalAmount(new BigDecimal("15.50"));
+        order.setSlaCountdownSec(0);
+
+        when(orderRepository.findById(100)).thenReturn(Optional.of(order));
+
+        Map<String, Object> result = orderService.requestRefund(100, "The delivery was very late, SLA expired", null, null);
+
+        assertNotNull(result);
+        assertEquals("approved", result.get("status"));
+        assertTrue(result.get("message").toString().contains("AI-AUTOPILOT"));
+        assertEquals(new BigDecimal("25.50"), customer.getWalletBalance());
+        verify(ledgerUseCase, times(1)).recordTransaction(eq("REFUND-AUTO"), anyString(), anyList());
+        verify(hitlQueueRepository, times(1)).save(any(HitlQueue.class));
+    }
+
+    @Test
+    public void testRequestRefund_ManualHitlPath() {
+        Customer customer = new Customer();
+        customer.setCustomerId("CUST-1");
+        customer.setTrustScore(90);
+        customer.setWalletBalance(new BigDecimal("10.00"));
+
+        Order order = new Order();
+        order.setOrderId(100);
+        order.setCustomer(customer);
+        order.setTotalAmount(new BigDecimal("15.50"));
+        order.setSlaCountdownSec(120);
+
+        when(orderRepository.findById(100)).thenReturn(Optional.of(order));
+
+        Map<String, Object> result = orderService.requestRefund(100, "Late delivery", null, null);
+
+        assertNotNull(result);
+        assertEquals("pending_admin_approval", result.get("status"));
+        assertEquals(new BigDecimal("10.00"), customer.getWalletBalance());
+        verify(hitlQueueRepository, times(1)).save(any(HitlQueue.class));
     }
 }

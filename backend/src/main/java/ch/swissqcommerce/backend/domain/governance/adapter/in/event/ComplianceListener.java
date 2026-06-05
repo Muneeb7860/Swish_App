@@ -24,9 +24,21 @@ public class ComplianceListener {
         log.info("ComplianceListener: Received OrderFulfilledEvent for order id={}, generating signed GDP telemetry summary.", 
                 event.getOrderId());
         try {
-            String signature = governanceUseCase.signDeliverySummary(event.getOrderId());
-            log.info("ComplianceListener: Successfully generated digital signature for order {}: {}", 
-                    event.getOrderId(), signature);
+            // Simulate generating / retrieving doorstep photo scan proof SHA-256 hash
+            String rawProofData = "doorstep-photo-raw-pixels-order-" + event.getOrderId();
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(rawProofData.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            String podHash = hexString.toString();
+
+            String signature = governanceUseCase.signDeliverySummary(event.getOrderId(), podHash);
+            log.info("ComplianceListener: Successfully generated digital signature for order {} with PoD hash {}: {}", 
+                    event.getOrderId(), podHash, signature);
         } catch (Exception e) {
             log.error("ComplianceListener: Failed to generate signed telemetry summary for order {}. Error: {}", 
                     event.getOrderId(), e.getMessage(), e);

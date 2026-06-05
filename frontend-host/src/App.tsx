@@ -656,8 +656,11 @@ export default function App() {
         if (!prev) return null;
         if (prev.progress >= 100) {
           clearInterval(riderTimerRef.current as any);
-          handleOrderDeliveryComplete(prev);
-          return null;
+          return {
+            ...prev,
+            status: 'arrived',
+            progress: 100
+          };
         }
 
         const nextProgress = prev.progress + 10;
@@ -707,7 +710,7 @@ export default function App() {
     }, 1000);
   };
 
-  const handleOrderDeliveryComplete = (order) => {
+  const handleOrderDeliveryComplete = (order, podHash = '') => {
     // Close SSE stream — order lifecycle complete
     closeSseStream();
     setRiderCoords(null);
@@ -725,12 +728,12 @@ export default function App() {
     updateCustomerTrust(5, 'Order completed without issue');
 
     setOrderHistory(prev => [
-      { id: order.id, date: 'Today', items: order.items, total: order.total, status: 'delivered', paymentMethod: 'Wallet' },
+      { id: order.id, date: 'Today', items: order.items, total: order.total, status: 'delivered', paymentMethod: 'Wallet', podHash: podHash },
       ...prev
     ]);
 
-    logKafka('rider', 'order.delivered', `Order #${order.id} delivered to customer flat.`);
-    triggerToast(`Order #${order.id} delivered!`, 'customer');
+    logKafka('rider', 'order.delivered', `Order #${order.id} delivered. PoD Handshake Hash: ${podHash || 'N/A'}`);
+    triggerToast(`Order #${order.id} delivered! PoD Hash: ${podHash ? podHash.substring(0, 10) + '...' : 'N/A'}`, 'customer');
     setActiveOrder(null);
     setTipAmount(0);
   };
@@ -1460,6 +1463,7 @@ export default function App() {
                   coldChainBreakdownActive={coldChainBreakdownActive}
                   handleInjectDryIce={handleInjectDryIce}
                   handleApplyOnboard={handleApplyOnboard}
+                  handleCompleteDelivery={handleOrderDeliveryComplete}
                   logKafka={logKafka}
                 />
               </LocalErrorBoundary>

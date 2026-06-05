@@ -23,7 +23,7 @@ Traffic enters exclusively via the unified entry point **Port 8080** managed by 
 *   `GET /api/governance/hitl` — Retrieve all pending B2B procurement budget override requests.
 *   `POST /api/governance/hitl/{id}/approve` — Approve restock budget override and set order status to `fulfilled`.
 *   `POST /api/governance/hitl/{id}/reject` — Reject restock override and cancel order.
-*   `POST /api/governance/sign/{orderId}` — RSA cryptographically signs delivery run summaries (temperature & SLA checks) upon final drop.
+*   `POST /api/governance/sign/{orderId}` — RSA cryptographically signs delivery run summaries (temperature, SLA checks, and final doorstep `podHash` handshake) upon final drop.
 
 ### 2. General Administrative Controls
 *   `GET /api/admin/hitl/queue` — Fetch pending customer support tickets (e.g. AI-triggered refund approvals).
@@ -33,7 +33,7 @@ Traffic enters exclusively via the unified entry point **Port 8080** managed by 
 
 ### 3. Agentic & Negotiation Core
 *   `POST /api/agent/chat` — Connect to the LLM agentic assistant.
-*   `POST /api/agent/negotiate` — Initiate B2B AI agent negotiation. If proposed prices exceed limits, a pending B2BRestockOrder is saved and routed to `/api/governance/hitl`.
+*   `POST /api/agent/negotiate` — Solicit real-time bids/quotes from all active wholesalers (RFQ / Auction Engine). Selects the lowest bid. If proposed prices exceed limits, a pending B2BRestockOrder is saved for the winning wholesaler and routed to `/api/governance/hitl`.
 
 ### 4. Telemetry Ingestion (CQRS)
 *   `POST /api/telemetry/tick` — Batch coordinate/temperature ticks (persisted asynchronously to minimize DB write-amplification).
