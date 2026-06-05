@@ -163,7 +163,7 @@ public class AdminService {
      * Resolves a HITL queue ticket (approve or reject).
      * For refund approvals, processes the refund through the ledger.
      */
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public Map<String, Object> resolveHitlTicket(String ticketId, String decision, String reason) {
         HitlQueue ticket = hitlQueueRepository.findById(ticketId)
                 .orElseThrow(() -> new NoSuchElementException("HITL ticket not found: " + ticketId));

@@ -45,7 +45,7 @@ public class WholesalerService {
      * Creates a new B2B restock order.
      * Implements F13 primary/fallback wholesaler selection and F14 academy discount pricing.
      */
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public B2BRestockOrder createRestockOrder(String storeId, String preferredWholesalerId, String idempotencyKey) {
         // Idempotency guard
         if (idempotencyKey != null) {
@@ -100,7 +100,7 @@ public class WholesalerService {
     /**
      * Fulfills a restock order, updates its status, and records the B2B payment in the ledger.
      */
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public Map<String, Object> fulfillRestock(Integer restockOrderId) {
         B2BRestockOrder restock = restockOrderRepository.findById(restockOrderId)
                 .orElseThrow(() -> new NoSuchElementException("Restock order not found: " + restockOrderId));

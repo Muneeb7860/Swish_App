@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.List;
 
@@ -46,14 +48,50 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     @PostConstruct
     public void initKeyPair() {
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(2048);
-            KeyPair pair = keyGen.generateKeyPair();
-            this.privateKey = pair.getPrivate();
-            this.publicKey = pair.getPublic();
-            log.info("GovernanceServiceImpl: Initialized RSA 2048-bit KeyPair successfully for digital signing.");
-        } catch (NoSuchAlgorithmException e) {
-            log.error("GovernanceServiceImpl: Failed to initialize RSA KeyPair generator", e);
+            java.io.File keyDir = new java.io.File("config/keys");
+            if (!keyDir.exists()) {
+                keyDir.mkdirs();
+            }
+            java.io.File privKeyFile = new java.io.File(keyDir, "governance_private.key");
+            java.io.File pubKeyFile = new java.io.File(keyDir, "governance_public.key");
+
+            if (privKeyFile.exists() && pubKeyFile.exists()) {
+                byte[] privKeyBytes = java.nio.file.Files.readAllBytes(privKeyFile.toPath());
+                byte[] pubKeyBytes = java.nio.file.Files.readAllBytes(pubKeyFile.toPath());
+
+                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                
+                PKCS8EncodedKeySpec privSpec = new PKCS8EncodedKeySpec(privKeyBytes);
+                this.privateKey = keyFactory.generatePrivate(privSpec);
+
+                X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(pubKeyBytes);
+                this.publicKey = keyFactory.generatePublic(pubSpec);
+
+                log.info("GovernanceServiceImpl: Loaded persistent RSA KeyPair successfully from config/keys.");
+            } else {
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                keyGen.initialize(2048);
+                KeyPair pair = keyGen.generateKeyPair();
+                this.privateKey = pair.getPrivate();
+                this.publicKey = pair.getPublic();
+
+                java.nio.file.Files.write(privKeyFile.toPath(), this.privateKey.getEncoded());
+                java.nio.file.Files.write(pubKeyFile.toPath(), this.publicKey.getEncoded());
+
+                log.info("GovernanceServiceImpl: Generated and saved new persistent RSA KeyPair in config/keys.");
+            }
+        } catch (Exception e) {
+            log.error("GovernanceServiceImpl: Failed to initialize/load RSA KeyPair, falling back to in-memory key generation", e);
+            try {
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                keyGen.initialize(2048);
+                KeyPair pair = keyGen.generateKeyPair();
+                this.privateKey = pair.getPrivate();
+                this.publicKey = pair.getPublic();
+                log.warn("GovernanceServiceImpl: Fell back to in-memory transient RSA KeyPair.");
+            } catch (Exception ex) {
+                log.error("GovernanceServiceImpl: Fallback in-memory KeyPair generation failed", ex);
+            }
         }
     }
 

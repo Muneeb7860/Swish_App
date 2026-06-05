@@ -823,15 +823,15 @@ export default function App() {
   };
 
   const handleGdprPurge = () => {
-    if (window.confirm("CRITICAL WARNING: This action will permanently erase your order transaction logs under GDPR Article 17 (Right to Erasure). Financial ledger metrics will be anonymized. Continue?")) {
+    if (window.confirm("CRITICAL WARNING: This action will permanently erase your personal order history and user profile data under GDPR Article 17 (Right to Erasure). Double-entry financial ledgers will remain intact for regulatory accounting compliance. Continue?")) {
       setOrderHistory([]);
       setCustomerOrderCount(0);
       setCustomerRefundCount(0);
-      setLedger(prev => prev.map(l => l.type === 'customer' ? { ...l, ref: 'ANONYMIZED-GDPR-CUST', desc: 'Anonymized Transaction Details (GDPR Article 17 Purge)' } : l));
+      // We DO NOT modify or anonymize the ledger, preserving double-entry accounting compliance.
       setGdprTokenProbation(true);
       updateCustomerTrust(-customerTrustScore + 75, 'GDPR Purge Probationary Score Applied (Token Anonymization)');
-      logKafka('customer', 'gdpr.data_purge', 'GDPR ARTICLE 17 PURGE: Erased past customer order logs. Anonymized double-entry transaction ledgers.');
-      triggerToast('GDPR Data Purge complete: Purchase history wiped.', 'admin');
+      logKafka('customer', 'gdpr.data_purge', 'GDPR ARTICLE 17 PURGE: Erased customer order history and profile details. Immutable financial ledgers retained intact.');
+      triggerToast('GDPR Data Purge complete: Personal history wiped.', 'admin');
     }
   };
 
