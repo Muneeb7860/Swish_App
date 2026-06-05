@@ -9,10 +9,9 @@ import SupportBot from './components/SupportBot';
 import RiderTrackingPanel from './components/RiderTrackingPanel';
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
-const MFE_WHITELIST = [
-  'localhost',
-  '127.0.0.1'
-];
+const MFE_WHITELIST = (import.meta.env.VITE_MFE_WHITELIST || 'localhost,127.0.0.1')
+  .split(',')
+  .map((host: string) => host.trim());
 
 
 const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
