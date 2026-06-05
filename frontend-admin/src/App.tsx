@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import AdminPanel from './components/AdminPanel';
 import BusinessApp from './components/BusinessApp';
 import InventoryApp from './components/InventoryApp';
