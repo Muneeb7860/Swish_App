@@ -1211,7 +1211,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-container" data-active-role={activeRole} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         /* Bot Message window animation */
         @keyframes scale-up-bot {
@@ -1331,28 +1331,28 @@ export default function App() {
         </div>
 
         <nav className="role-navigation">
-          <button aria-label="Customer Tab" id="tab-customer" className={`role-tab ${activeRole === 'customer' ? 'active' : ''}`} onClick={() => setActiveRole('customer')}>
+          <button aria-label="Customer Tab" id="tab-customer" data-role="customer" className={`role-tab ${activeRole === 'customer' ? 'active' : ''}`} onClick={() => setActiveRole('customer')}>
             <Lucide.ShoppingBag size={15} />
             <span>Customer Super App</span>
           </button>
-          <button aria-label="Rider Tab" id="tab-rider" className={`role-tab ${activeRole === 'rider' ? 'active' : ''}`} onClick={() => setActiveRole('rider')}>
+          <button aria-label="Rider Tab" id="tab-rider" data-role="rider" className={`role-tab ${activeRole === 'rider' ? 'active' : ''}`} onClick={() => setActiveRole('rider')}>
             <Lucide.Bike size={15} />
             <span>Rider Light</span>
           </button>
-          <button aria-label="Inventory Tab" id="tab-inventory" className={`role-tab ${activeRole === 'inventory' ? 'active' : ''}`} onClick={() => setActiveRole('inventory')}>
+          <button aria-label="Inventory Tab" id="tab-inventory" data-role="inventory" className={`role-tab ${activeRole === 'inventory' ? 'active' : ''}`} onClick={() => setActiveRole('inventory')}>
             <Lucide.Package size={15} />
             <span>Dark Store Inventory</span>
           </button>
-          <button aria-label="Business Tab" id="tab-business" className={`role-tab ${activeRole === 'business' ? 'active' : ''}`} onClick={() => setActiveRole('business')}>
+          <button aria-label="Business Tab" id="tab-business" data-role="business" className={`role-tab ${activeRole === 'business' ? 'active' : ''}`} onClick={() => setActiveRole('business')}>
             <Lucide.BarChart3 size={15} />
             <span>Business Console</span>
           </button>
-          <button aria-label="Admin Tab" id="tab-admin" className={`role-tab ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
+          <button aria-label="Admin Tab" id="tab-admin" data-role="admin" className={`role-tab ${activeRole === 'admin' ? 'active' : ''}`} onClick={() => setActiveRole('admin')}>
             <Lucide.ShieldCheck size={15} />
             <span>System Admin</span>
           </button>
           {isAuthenticated && (
-            <button aria-label="Logout" className="role-tab" style={{ color: 'var(--color-admin)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={handleLogout}>
+            <button aria-label="Logout" className="role-tab" data-role="admin" style={{ color: 'var(--color-admin)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={handleLogout}>
               <Lucide.LogOut size={15} />
               <span>Lock Cockpit</span>
             </button>
