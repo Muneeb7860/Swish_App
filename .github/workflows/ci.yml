@@ -56,8 +56,8 @@ jobs:
             echo "🔐 NVD API key provided — running dependency-check with NVD updates."
             mvn org.owasp:dependency-check-maven:check -Dnvd.apiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7
           else
-            echo "⚠️ NVD API key not set — running dependency-check without NVD updates (may miss recent vulnerabilities)."
-            mvn org.owasp:dependency-check-maven:check -Ddependency-check.disableUpdate=true -DfailBuildOnCVSS=7
+            echo "⚠️ WARNING: NVD API key not set. Skipping OWASP Dependency Check to avoid rate-limiting failures on empty databases."
+            echo "To run this check, please configure the 'NVD_API_KEY' secret in your repository settings."
           fi
 
   microservices-quality:
@@ -125,7 +125,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@57a97c770c0c6e0828555e1a1005a761765c9c31
         with:
           scan-type: 'fs'
           scan-ref: '.'

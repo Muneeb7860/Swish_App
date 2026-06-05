@@ -63,7 +63,7 @@ jobs:
             fi
 
             # Match conventional commit patterns (type(scope)!?: message)
-            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\([^)]+\))?(!)?:[[:space:]]?.+ ]]; then
+            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security)(\([^)]+\))?(!)?:[[:space:]]?.+ ]]; then
               echo "✅ Valid: $commit"
             else
               echo "❌ Invalid: $commit"
@@ -79,7 +79,8 @@ jobs:
             echo "  - fix(cart): resolve double taxation bug"
             echo "  - docs: update API Swagger spec"
             echo "  - test: implement integration test suite"
-            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf"
+            echo "  - security: fix SQL injection vulnerability"
+            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf, security"
             exit 1
           fi
           echo "✅ All commits pass Conventional Commits check."
