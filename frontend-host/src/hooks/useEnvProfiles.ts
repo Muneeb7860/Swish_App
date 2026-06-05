@@ -87,7 +87,7 @@ export function useEnvProfiles() {
         }
         const profileText = await profileResponse.text();
         
-        const parsedConfig = {};
+        const parsedConfig: Record<string, string> = {};
         const lines = profileText.split('\n');
         lines.forEach(line => {
           const cleaned = line.trim();

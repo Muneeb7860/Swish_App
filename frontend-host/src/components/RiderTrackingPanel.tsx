@@ -10,10 +10,10 @@ import * as Lucide from 'lucide-react';
  * 
  * Visible only when activeOrder.status === 'transit'.
  */
-export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
+export default function RiderTrackingPanel({ activeOrder, riderCoords }: any) {
   const [tickFlash, setTickFlash] = useState(false);
-  const [prevCoords, setPrevCoords] = useState(null);
-  const [tempHistory, setTempHistory] = useState([]);
+  const [prevCoords, setPrevCoords] = useState<any>(null);
+  const [tempHistory, setTempHistory] = useState<{ temp: number; time: number }[]>([]);
 
   // Reset history on new order transit boot
   useEffect(() => {
