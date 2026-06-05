@@ -7,7 +7,7 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OutboxEventPort;
 import ch.swissqcommerce.backend.model.OutboxEvent;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,20 +19,20 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class PaymentServiceImpl implements PaymentUseCase {
 
     private final PaymentPort paymentPort;
-    private final OrderRepository orderRepository;
+    private final OrderPort orderPort;
     private final LedgerUseCase ledgerUseCase;
     private final OutboxEventPort outboxEventPort;
     private final ApplicationEventPublisher eventPublisher;
     private final StringRedisTemplate redisTemplate;
 
     public PaymentServiceImpl(PaymentPort paymentPort,
-                              OrderRepository orderRepository,
+                              OrderPort orderPort,
                               LedgerUseCase ledgerUseCase,
                               OutboxEventPort outboxEventPort,
                               ApplicationEventPublisher eventPublisher,
                               StringRedisTemplate redisTemplate) {
         this.paymentPort = paymentPort;
-        this.orderRepository = orderRepository;
+        this.orderPort = orderPort;
         this.ledgerUseCase = ledgerUseCase;
         this.outboxEventPort = outboxEventPort;
         this.eventPublisher = eventPublisher;
@@ -63,7 +63,7 @@ public class PaymentServiceImpl implements PaymentUseCase {
     }
 
     private Payment createAuthorization(Integer orderId, String customerId, BigDecimal amount, String paymentMethod, String idempotencyKey) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderPort.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
 
         if (order.getCustomer() == null || !customerId.equals(order.getCustomer().getCustomerId())) {

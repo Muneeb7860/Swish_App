@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AgentToolExecutor {
 
-    private final OrderRepository orderRepository;
+    private final AgentOutPort agentOutPort;
 
     public String executeTool(String toolName, String argument) {
         if ("ORDER_STATUS".equalsIgnoreCase(toolName)) {
@@ -22,14 +22,14 @@ public class AgentToolExecutor {
             }
             try {
                 int orderId = Integer.parseInt(argument.trim());
-                Optional<Order> orderOpt = orderRepository.findById(orderId);
+                Optional<Order> orderOpt = agentOutPort.findOrderById(orderId);
                 if (orderOpt.isPresent()) {
                     Order o = orderOpt.get();
                     return "Order ID: " + o.getOrderId() + ", Status: " + o.getStatus() + 
                            ", Total Amount: " + o.getTotalAmount() + ", Created At: " + o.getCreatedAt();
                 }
             } catch (NumberFormatException e) {
-                List<Order> orders = orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(argument.trim());
+                List<Order> orders = agentOutPort.findOrdersByCustomerId(argument.trim());
                 if (orders.isEmpty()) {
                     return "No orders found for customer: " + argument;
                 }

@@ -2,17 +2,17 @@ package ch.swissqcommerce.backend.domain.reward.core.service;
 
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
 import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
 public class CashbackRewardProcessor implements RewardProcessor {
 
-    private final CustomerRepository customerRepository;
+    private final RewardOutPort rewardOutPort;
 
-    public CashbackRewardProcessor(CustomerRepository customerRepository) {
-        this.customerRepository = customerRepository;
+    public CashbackRewardProcessor(RewardOutPort rewardOutPort) {
+        this.rewardOutPort = rewardOutPort;
     }
 
     @Override
@@ -22,10 +22,10 @@ public class CashbackRewardProcessor implements RewardProcessor {
 
     @Override
     public void process(String customerId, int amount, String description) {
-        customerRepository.findById(customerId).ifPresent(customer -> {
+        rewardOutPort.findCustomerById(customerId).ifPresent(customer -> {
             BigDecimal cashbackAmount = BigDecimal.valueOf(amount);
             customer.setWalletBalance(customer.getWalletBalance().add(cashbackAmount));
-            customerRepository.save(customer);
+            rewardOutPort.saveCustomer(customer);
         });
     }
 }

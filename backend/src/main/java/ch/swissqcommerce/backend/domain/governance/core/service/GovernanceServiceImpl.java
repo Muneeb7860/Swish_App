@@ -2,11 +2,11 @@ package ch.swissqcommerce.backend.domain.governance.core.service;
 
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
+import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.exception.RuleViolationException;
 import org.slf4j.Logger;
@@ -30,19 +30,19 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GovernanceServiceImpl.class);
 
-    private final ProcurementApprovalRepository approvalsRepository;
-    private final B2BRestockOrderRepository restockOrderRepository;
-    private final OrderTelemetryLogRepository telemetryLogRepository;
+    private final ProcurementApprovalPort approvalsPort;
+    private final B2BRestockOrderPort restockOrderPort;
+    private final TelemetryPort telemetryPort;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public GovernanceServiceImpl(ProcurementApprovalRepository approvalsRepository,
-                                 B2BRestockOrderRepository restockOrderRepository,
-                                 OrderTelemetryLogRepository telemetryLogRepository) {
-        this.approvalsRepository = approvalsRepository;
-        this.restockOrderRepository = restockOrderRepository;
-        this.telemetryLogRepository = telemetryLogRepository;
+    public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
+                                 B2BRestockOrderPort restockOrderPort,
+                                 TelemetryPort telemetryPort) {
+        this.approvalsPort = approvalsPort;
+        this.restockOrderPort = restockOrderPort;
+        this.telemetryPort = telemetryPort;
     }
 
     @PostConstruct
@@ -97,7 +97,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void auditNegotiation(Integer restockOrderId, String wholesalerId, BigDecimal amount) {
-        B2BRestockOrder restockOrder = restockOrderRepository.findById(restockOrderId)
+        B2BRestockOrder restockOrder = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
 
         ProcurementApproval approval = ProcurementApproval.builder()
@@ -106,14 +106,14 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 .amount(amount)
                 .status("PENDING")
                 .build();
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
         log.info("GovernanceServiceImpl: Created pending override request for restock order id={}, amount={}", 
                 restockOrderId, amount);
     }
 
     @Override
     public void approveOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsRepository.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -123,12 +123,12 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setStatus("APPROVED");
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
 
         if (approval.getRestockOrderId() != null) {
-            restockOrderRepository.findById(approval.getRestockOrderId()).ifPresent(order -> {
+            restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
                 order.setStatus("fulfilled");
-                restockOrderRepository.save(order);
+                restockOrderPort.save(order);
                 log.info("GovernanceServiceImpl: B2B Restock order id={} approved by operator={}.", 
                         order.getRestockOrderId(), operator);
             });
@@ -137,7 +137,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void rejectOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsRepository.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -147,12 +147,12 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setStatus("REJECTED");
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
 
         if (approval.getRestockOrderId() != null) {
-            restockOrderRepository.findById(approval.getRestockOrderId()).ifPresent(order -> {
+            restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
                 order.setStatus("failed");
-                restockOrderRepository.save(order);
+                restockOrderPort.save(order);
                 log.warn("GovernanceServiceImpl: B2B Restock order id={} rejected by operator={}.", 
                         order.getRestockOrderId(), operator);
             });
@@ -164,7 +164,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         log.info("GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}", orderId, podHash);
         try {
             int orderIdInt = Integer.parseInt(orderId);
-            List<OrderTelemetryLog> logs = telemetryLogRepository.findByOrderOrderIdOrderByDeviceTimestampDesc(orderIdInt);
+            List<OrderTelemetryLog> logs = telemetryPort.findByOrderId(orderIdInt);
             if (logs.isEmpty()) {
                 throw new ResourceNotFoundException("No telemetry logs found for order " + orderId);
             }

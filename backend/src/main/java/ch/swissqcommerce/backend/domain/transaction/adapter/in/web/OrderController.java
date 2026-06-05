@@ -3,7 +3,6 @@ package ch.swissqcommerce.backend.domain.transaction.adapter.in.web;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.adapter.in.web.dto.*;
-import ch.swissqcommerce.backend.repository.OrderRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +18,6 @@ public class OrderController {
 
     @Autowired
     private OrderUseCase orderUseCase;
-
-    @Autowired
-    private OrderRepository orderRepository;
 
     @PostMapping
     public ResponseEntity<?> placeOrder(

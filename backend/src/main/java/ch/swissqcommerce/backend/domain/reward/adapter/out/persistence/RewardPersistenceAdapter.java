@@ -12,11 +12,14 @@ public class RewardPersistenceAdapter implements RewardOutPort {
 
     private final RewardPointsRepository repository;
     private final CustomerLoyaltyRepository loyaltyRepository;
+    private final ch.swissqcommerce.backend.repository.CustomerRepository customerRepository;
 
     public RewardPersistenceAdapter(RewardPointsRepository repository,
-                                    CustomerLoyaltyRepository loyaltyRepository) {
+                                    CustomerLoyaltyRepository loyaltyRepository,
+                                    ch.swissqcommerce.backend.repository.CustomerRepository customerRepository) {
         this.repository = repository;
         this.loyaltyRepository = loyaltyRepository;
+        this.customerRepository = customerRepository;
     }
 
     @Override
@@ -37,5 +40,15 @@ public class RewardPersistenceAdapter implements RewardOutPort {
     @Override
     public List<CustomerLoyalty> findLoyaltyRecordsByCustomerId(String customerId) {
         return loyaltyRepository.findByCustomerId(customerId);
+    }
+
+    @Override
+    public Optional<ch.swissqcommerce.backend.model.Customer> findCustomerById(String id) {
+        return customerRepository.findById(id);
+    }
+
+    @Override
+    public ch.swissqcommerce.backend.model.Customer saveCustomer(ch.swissqcommerce.backend.model.Customer customer) {
+        return customerRepository.save(customer);
     }
 }
