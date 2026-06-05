@@ -1,4 +1,4 @@
-package ch.swissqcommerce.backend.model;
+package ch.swissqcommerce.backend.domain.wholesaler.core.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;

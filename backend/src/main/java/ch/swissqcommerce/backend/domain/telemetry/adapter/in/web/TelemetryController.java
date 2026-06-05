@@ -1,9 +1,9 @@
-package ch.swissqcommerce.backend.controller;
+package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
 
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
-import ch.swissqcommerce.backend.service.TelemetryService;
-import ch.swissqcommerce.backend.repository.OrderTelemetryLogRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -19,17 +19,12 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Enterprise Blueprint: Telemetry Controller.
- * Ingests high-frequency rider ticks and broadcasts them to clients in real-time
- * using Server-Sent Events (SSE). Optimizes DB resources by avoiding write amplification.
- */
 @RestController
 @RequestMapping("/api/telemetry")
 public class TelemetryController {
 
     @Autowired
-    private TelemetryService telemetryService;
+    private TelemetryUseCase telemetryService;
 
     @Autowired
     private InMemoryGeoStore geoStore;
@@ -71,7 +66,6 @@ public class TelemetryController {
         }
     }
 
-    // Thread-safe map of orderId to active client SSE streams
     private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     public static class TelemetryTickRequest {
@@ -105,22 +99,14 @@ public class TelemetryController {
         public void setDryIceInjected(boolean dryIceInjected) { this.dryIceInjected = dryIceInjected; }
     }
 
-    /**
-     * POST /api/telemetry/tick
-     * Ingests a new GPS and thermal telemetry tick.
-     * Caches in-memory for low-latency distribution, and only persists to database
-     * on active alerts or cooling actions to minimize database write-amplification.
-     */
     @PostMapping("/tick")
     public ResponseEntity<Map<String, Object>> ingestTick(@jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
-        // 1. Cache latest location in high-performance in-memory geo-store
         geoStore.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
 
         boolean thresholdBreached = request.getTemperature().compareTo(new BigDecimal("8.0")) > 0;
         boolean dryIceInjected = request.isDryIceInjected();
 
         OrderTelemetryLog savedDbLog = null;
-        // 2. Database Decoupling: Direct critical alerts immediately, queue normal telemetry ticks to avoid write-amplification
         if (thresholdBreached || dryIceInjected) {
             savedDbLog = telemetryService.recordTelemetry(
                     request.getOrderId(),
@@ -135,7 +121,6 @@ public class TelemetryController {
 
         boolean thermalBreachActive = telemetryService.isThermalBreachActive(request.getOrderId(), request.getTemperature());
 
-        // 3. Construct the payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", request.getOrderId());
         payload.put("latitude", request.getLatitude());
@@ -148,19 +133,14 @@ public class TelemetryController {
         payload.put("persisted", savedDbLog != null || !thresholdBreached);
         payload.put("queued", savedDbLog == null && !thresholdBreached);
 
-        // 4. Push updates to all active SSE streaming clients
         pushToSubscribers(request.getOrderId(), payload);
 
         return ResponseEntity.ok(payload);
     }
 
-    /**
-     * GET /api/telemetry/stream/{orderId}
-     * Establishes a real-time Server-Sent Events (SSE) stream for customer tracking.
-     */
     @GetMapping(value = "/stream/{orderId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamTelemetry(@PathVariable Integer orderId) {
-        SseEmitter emitter = new SseEmitter(180_000L); // 3-minute socket timeout
+        SseEmitter emitter = new SseEmitter(180_000L);
         
         CopyOnWriteArrayList<SseEmitter> list = emitters.computeIfAbsent(orderId, k -> new CopyOnWriteArrayList<>());
         list.add(emitter);
@@ -169,7 +149,6 @@ public class TelemetryController {
         emitter.onTimeout(() -> removeEmitter(orderId, emitter));
         emitter.onError((ex) -> removeEmitter(orderId, emitter));
 
-        // Push immediate current location if available
         InMemoryGeoStore.RiderLocation currentLoc = geoStore.getLatestLocation(orderId);
         if (currentLoc != null) {
             try {
@@ -189,10 +168,6 @@ public class TelemetryController {
         return emitter;
     }
 
-    /**
-     * POST /api/telemetry/{orderId}/dry-ice
-     * Exposes dry ice coolant injection interface.
-     */
     @PostMapping("/{orderId}/dry-ice")
     public ResponseEntity<Map<String, Object>> injectDryIce(@PathVariable Integer orderId) {
         telemetryService.injectDryIce(orderId);
@@ -201,7 +176,6 @@ public class TelemetryController {
         BigDecimal lat = currentLoc != null ? currentLoc.getLatitude() : new BigDecimal("47.3769");
         BigDecimal lng = currentLoc != null ? currentLoc.getLongitude() : new BigDecimal("8.5417");
         
-        // Reset cached temperature to 4.0 after dry ice cooling
         geoStore.updateLocation(orderId, lat, lng, new BigDecimal("4.0"));
         
         Map<String, Object> payload = new HashMap<>();

@@ -2,7 +2,7 @@ package ch.swissqcommerce.backend.controller;
 
 import ch.swissqcommerce.backend.domain.enrollment.adapter.in.web.RiderController;
 import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

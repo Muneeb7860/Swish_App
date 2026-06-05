@@ -6,6 +6,8 @@ import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 

@@ -57,13 +57,15 @@ jobs:
             commit=$(echo "$commit" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')
 
             # Allow standard merge, revert, and release commits
-            if [[ "$commit" =~ ^([Mm]erge|[Rr]evert|release:).* ]]; then
+            allowed_pattern="^([Mm]erge|[Rr]evert|release:).*"
+            if [[ "$commit" =~ $allowed_pattern ]]; then
               echo "✅ Allowed: $commit"
               continue
             fi
 
             # Match conventional commit patterns (type(scope)!?: message)
-            if [[ "$commit" =~ ^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\([^)]+\))?(!)?:[[:space:]]?.+ ]]; then
+            conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security)(\([^)]+\))?(!)?:[[:space:]]?.+"
+            if [[ "$commit" =~ $conventional_pattern ]]; then
               echo "✅ Valid: $commit"
             else
               echo "❌ Invalid: $commit"
@@ -79,7 +81,8 @@ jobs:
             echo "  - fix(cart): resolve double taxation bug"
             echo "  - docs: update API Swagger spec"
             echo "  - test: implement integration test suite"
-            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf"
+            echo "  - security: fix SQL injection vulnerability"
+            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf, security"
             exit 1
           fi
           echo "✅ All commits pass Conventional Commits check."

@@ -1,8 +1,11 @@
 package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.*;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.core.service.WholesalerServiceImpl;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,12 +24,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class WholesalerServiceTest {
 
-    @Mock private WholesalerRepository wholesalerRepository;
-    @Mock private B2BRestockOrderRepository restockOrderRepository;
-    @Mock private InventoryRepository inventoryRepository;
+    @Mock private WholesalerPort wholesalerPort;
+    @Mock private B2BRestockOrderPort restockOrderPort;
     @Mock private LedgerUseCase ledgerService;
 
-    @InjectMocks private WholesalerService wholesalerService;
+    @InjectMocks private WholesalerServiceImpl wholesalerService;
 
     @Test
     public void testCreateRestockOrder_AcademyDiscount() {
@@ -37,8 +39,8 @@ public class WholesalerServiceTest {
         w.setBaseInvoiceAmount(new BigDecimal("1000.00"));
         w.setAcademyDiscountActive(true);
 
-        when(wholesalerRepository.findById("W-1")).thenReturn(Optional.of(w));
-        when(restockOrderRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(wholesalerPort.findById("W-1")).thenReturn(Optional.of(w));
+        when(restockOrderPort.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         B2BRestockOrder order = wholesalerService.createRestockOrder("STORE-1", "W-1", null);
 
@@ -58,7 +60,7 @@ public class WholesalerServiceTest {
         order.setWholesaler(w);
         order.setInvoiceAmount(new BigDecimal("900.00"));
 
-        when(restockOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(restockOrderPort.findById(1)).thenReturn(Optional.of(order));
 
         Map<String, Object> res = wholesalerService.fulfillRestock(1);
 

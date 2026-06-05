@@ -1,5 +1,6 @@
-package ch.swissqcommerce.backend.model;
+package ch.swissqcommerce.backend.domain.wholesaler.core.model;
 
+import ch.swissqcommerce.backend.model.DarkStore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;

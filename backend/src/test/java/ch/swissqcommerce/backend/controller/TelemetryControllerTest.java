@@ -1,8 +1,10 @@
 package ch.swissqcommerce.backend.controller;
 
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
-import ch.swissqcommerce.backend.service.TelemetryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,13 +32,13 @@ public class TelemetryControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private TelemetryService telemetryService;
+    private TelemetryUseCase telemetryService;
 
     @MockBean
     private InMemoryGeoStore geoStore;
 
     @MockBean
-    private ch.swissqcommerce.backend.repository.OrderTelemetryLogRepository telemetryLogRepository;
+    private OrderTelemetryLogRepository telemetryLogRepository;
 
     @MockBean
     private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;

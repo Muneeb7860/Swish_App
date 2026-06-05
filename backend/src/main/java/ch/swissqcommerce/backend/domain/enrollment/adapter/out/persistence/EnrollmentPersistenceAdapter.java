@@ -8,12 +8,12 @@ import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertif
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
 import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
-import ch.swissqcommerce.backend.service.TelemetryService;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +42,7 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
     private SecurityTrustLedgerRepository trustLedgerRepository;
 
     @Autowired
-    private TelemetryService telemetryService;
+    private TelemetryUseCase telemetryService;
 
     @Override
     public void saveOnboardingApplication(OnboardingApplication app) {

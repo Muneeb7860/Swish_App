@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.enrollment.port.in;
 
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 
 import java.math.BigDecimal;
 import java.util.List;

@@ -1,6 +1,6 @@
-package ch.swissqcommerce.backend.repository;
+package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;

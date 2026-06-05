@@ -1,7 +1,6 @@
-package ch.swissqcommerce.backend.model;
+package ch.swissqcommerce.backend.domain.telemetry.core.model;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
-
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -55,4 +54,3 @@ public class OrderTelemetryLog {
     @Builder.Default
     private Boolean alertTriggered = false;
 }
-
