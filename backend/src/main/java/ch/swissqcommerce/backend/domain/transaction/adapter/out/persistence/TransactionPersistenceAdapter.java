@@ -1,8 +1,7 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
-import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import ch.swissqcommerce.backend.model.*;
@@ -14,7 +13,7 @@ import java.util.Optional;
 
 @Component
 public class TransactionPersistenceAdapter implements 
-        CustomerPort, RiderPort, InventoryPort, DarkStorePort, SystemConfigPort, OutboxEventPort, PaymentPort {
+        CustomerPort, RiderPort, InventoryPort, DarkStorePort, SystemConfigPort, OutboxEventPort, OrderPort, HitlQueuePort {
 
     private final CustomerRepository customerRepository;
     private final RiderRepository riderRepository;
@@ -22,7 +21,8 @@ public class TransactionPersistenceAdapter implements
     private final DarkStoreRepository darkStoreRepository;
     private final SystemConfigurationRepository systemConfigurationRepository;
     private final OutboxEventRepository outboxEventRepository;
-    private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
+    private final HitlQueueRepository hitlQueueRepository;
     private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
 
     public TransactionPersistenceAdapter(CustomerRepository customerRepository,
@@ -31,7 +31,8 @@ public class TransactionPersistenceAdapter implements
                                          DarkStoreRepository darkStoreRepository,
                                          SystemConfigurationRepository systemConfigurationRepository,
                                          OutboxEventRepository outboxEventRepository,
-                                         PaymentRepository paymentRepository,
+                                         OrderRepository orderRepository,
+                                         HitlQueueRepository hitlQueueRepository,
                                          org.springframework.context.ApplicationEventPublisher applicationEventPublisher) {
         this.customerRepository = customerRepository;
         this.riderRepository = riderRepository;
@@ -39,7 +40,8 @@ public class TransactionPersistenceAdapter implements
         this.darkStoreRepository = darkStoreRepository;
         this.systemConfigurationRepository = systemConfigurationRepository;
         this.outboxEventRepository = outboxEventRepository;
-        this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
+        this.hitlQueueRepository = hitlQueueRepository;
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
@@ -87,23 +89,34 @@ public class TransactionPersistenceAdapter implements
         return savedEvent;
     }
 
+
     @Override
-    public Optional<Payment> findById(Integer paymentId) {
-        return paymentRepository.findById(paymentId);
+    public Optional<Order> findById(Integer id) {
+        return orderRepository.findById(id);
     }
 
     @Override
-    public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
-        return paymentRepository.findByIdempotencyKey(idempotencyKey);
+    public Optional<Order> findByIdempotencyKey(String idempotencyKey) {
+        return orderRepository.findByIdempotencyKey(idempotencyKey);
     }
 
     @Override
-    public List<Payment> findByCustomerIdOrderByCreatedAtDesc(String customerId) {
-        return paymentRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+    public Order save(Order order) {
+        return orderRepository.save(order);
     }
 
     @Override
-    public Payment save(Payment payment) {
-        return paymentRepository.save(payment);
+    public void flush() {
+        orderRepository.flush();
+    }
+
+    @Override
+    public List<Order> findByCustomerIdOrderByCreatedAtDesc(String customerId) {
+        return orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId);
+    }
+
+    @Override
+    public HitlQueue save(HitlQueue queue) {
+        return hitlQueueRepository.save(queue);
     }
 }

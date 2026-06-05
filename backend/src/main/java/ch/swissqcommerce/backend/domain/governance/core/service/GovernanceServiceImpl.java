@@ -2,7 +2,7 @@ package ch.swissqcommerce.backend.domain.governance.core.service;
 
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
+import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
@@ -30,17 +30,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GovernanceServiceImpl.class);
 
-    private final ProcurementApprovalRepository approvalsRepository;
+    private final ProcurementApprovalPort approvalsPort;
     private final B2BRestockOrderPort restockOrderPort;
     private final TelemetryPort telemetryPort;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public GovernanceServiceImpl(ProcurementApprovalRepository approvalsRepository,
+    public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
                                  B2BRestockOrderPort restockOrderPort,
                                  TelemetryPort telemetryPort) {
-        this.approvalsRepository = approvalsRepository;
+        this.approvalsPort = approvalsPort;
         this.restockOrderPort = restockOrderPort;
         this.telemetryPort = telemetryPort;
     }
@@ -106,14 +106,14 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 .amount(amount)
                 .status("PENDING")
                 .build();
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
         log.info("GovernanceServiceImpl: Created pending override request for restock order id={}, amount={}", 
                 restockOrderId, amount);
     }
 
     @Override
     public void approveOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsRepository.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -123,7 +123,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setStatus("APPROVED");
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
@@ -137,7 +137,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void rejectOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsRepository.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -147,7 +147,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setStatus("REJECTED");
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
-        approvalsRepository.save(approval);
+        approvalsPort.save(approval);
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {

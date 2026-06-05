@@ -7,8 +7,6 @@ import ch.swissqcommerce.backend.domain.transaction.core.service.OrderServiceImp
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +18,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.model.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +29,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceTest {
 
-    @Mock private OrderRepository orderRepository;
+    @Mock private OrderPort orderPort;
     @Mock private CustomerPort customerPort;
     @Mock private DarkStorePort darkStorePort;
     @Mock private RiderPort riderPort;
@@ -40,7 +38,7 @@ public class OrderServiceTest {
     @Mock private LedgerUseCase ledgerUseCase;
     @Mock private OutboxEventPort outboxEventPort;
     @Mock private ApplicationEventPublisher eventPublisher;
-    @Mock private HitlQueueRepository hitlQueueRepository;
+    @Mock private HitlQueuePort hitlQueuePort;
 
     @InjectMocks private OrderServiceImpl orderService;
 
@@ -72,7 +70,7 @@ public class OrderServiceTest {
         when(systemConfigPort.getSystemConfig("current_weather", "Sunny")).thenReturn("Sunny");
         when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
         
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+        when(orderPort.save(any(Order.class))).thenAnswer(invocation -> {
             Order o = invocation.getArgument(0);
             o.setOrderId(1);
             return o;
@@ -122,7 +120,7 @@ public class OrderServiceTest {
         when(systemConfigPort.getSystemConfig("current_weather", "Sunny")).thenReturn("Sunny");
         when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
         
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+        when(orderPort.save(any(Order.class))).thenAnswer(invocation -> {
             Order o = invocation.getArgument(0);
             o.setOrderId(2);
             return o;
@@ -148,7 +146,7 @@ public class OrderServiceTest {
         order.setTotalAmount(new BigDecimal("15.50"));
         order.setSlaCountdownSec(0);
 
-        when(orderRepository.findById(100)).thenReturn(Optional.of(order));
+        when(orderPort.findById(100)).thenReturn(Optional.of(order));
 
         Map<String, Object> result = orderService.requestRefund(100, "The delivery was very late, SLA expired", null, null);
 
@@ -157,7 +155,7 @@ public class OrderServiceTest {
         assertTrue(result.get("message").toString().contains("AI-AUTOPILOT"));
         assertEquals(new BigDecimal("25.50"), customer.getWalletBalance());
         verify(ledgerUseCase, times(1)).recordTransaction(eq("REFUND-AUTO"), anyString(), anyList());
-        verify(hitlQueueRepository, times(1)).save(any(HitlQueue.class));
+        verify(hitlQueuePort, times(1)).save(any(HitlQueue.class));
     }
 
     @Test
@@ -173,13 +171,13 @@ public class OrderServiceTest {
         order.setTotalAmount(new BigDecimal("15.50"));
         order.setSlaCountdownSec(120);
 
-        when(orderRepository.findById(100)).thenReturn(Optional.of(order));
+        when(orderPort.findById(100)).thenReturn(Optional.of(order));
 
         Map<String, Object> result = orderService.requestRefund(100, "Late delivery", null, null);
 
         assertNotNull(result);
         assertEquals("pending_admin_approval", result.get("status"));
         assertEquals(new BigDecimal("10.00"), customer.getWalletBalance());
-        verify(hitlQueueRepository, times(1)).save(any(HitlQueue.class));
+        verify(hitlQueuePort, times(1)).save(any(HitlQueue.class));
     }
 }

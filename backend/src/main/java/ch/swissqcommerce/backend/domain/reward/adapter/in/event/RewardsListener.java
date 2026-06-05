@@ -3,7 +3,7 @@ package ch.swissqcommerce.backend.domain.reward.adapter.in.event;
 import ch.swissqcommerce.backend.domain.event.core.model.OrderFulfilledEvent;
 import ch.swissqcommerce.backend.domain.reward.core.service.RiderLeaderboardService;
 import ch.swissqcommerce.backend.domain.reward.port.in.RewardUseCase;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -17,14 +17,14 @@ public class RewardsListener {
 
     private final RewardUseCase rewardUseCase;
     private final RiderLeaderboardService leaderboardService;
-    private final OrderRepository orderRepository;
+    private final OrderPort orderPort;
 
     public RewardsListener(RewardUseCase rewardUseCase,
                            RiderLeaderboardService leaderboardService,
-                           OrderRepository orderRepository) {
+                           OrderPort orderPort) {
         this.rewardUseCase = rewardUseCase;
         this.leaderboardService = leaderboardService;
-        this.orderRepository = orderRepository;
+        this.orderPort = orderPort;
     }
 
     @Async
@@ -40,7 +40,7 @@ public class RewardsListener {
             // 2. Fetch the order to get the associated rider
             try {
                 int orderIdInt = Integer.parseInt(event.getOrderId());
-                orderRepository.findById(orderIdInt).ifPresent(order -> {
+                orderPort.findById(orderIdInt).ifPresent(order -> {
                     if (order.getRider() != null && order.getRider().getRiderId() != null) {
                         String riderId = order.getRider().getRiderId();
                         // Grant rider 10 points on the leaderboard for a successful delivery

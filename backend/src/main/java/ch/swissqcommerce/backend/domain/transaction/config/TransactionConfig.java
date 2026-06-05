@@ -31,7 +31,7 @@ public class TransactionConfig {
     }
 
     @Bean
-    public OrderUseCase orderUseCase(OrderRepository orderRepository,
+    public OrderUseCase orderUseCase(OrderPort orderPort,
                                      CustomerPort customerPort,
                                      DarkStorePort darkStorePort,
                                      RiderPort riderPort,
@@ -40,9 +40,9 @@ public class TransactionConfig {
                                      LedgerUseCase ledgerUseCase,
                                      OutboxEventPort outboxEventPort,
                                      ApplicationEventPublisher eventPublisher,
-                                     HitlQueueRepository hitlQueueRepository) {
+                                     HitlQueuePort hitlQueuePort) {
         return new OrderServiceImpl(
-                orderRepository,
+                orderPort,
                 customerPort,
                 darkStorePort,
                 riderPort,
@@ -51,7 +51,7 @@ public class TransactionConfig {
                 ledgerUseCase,
                 outboxEventPort,
                 eventPublisher,
-                hitlQueueRepository
+                hitlQueuePort
         );
     }
 }

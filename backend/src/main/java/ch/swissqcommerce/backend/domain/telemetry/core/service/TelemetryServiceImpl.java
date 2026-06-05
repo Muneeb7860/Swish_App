@@ -5,9 +5,6 @@ import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.repository.OrderRepository;
-import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,15 +25,6 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     private TelemetryPort telemetryPort;
 
     @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private RiderRepository riderRepository;
-
-    @Autowired
-    private SecurityTrustLedgerRepository trustLedgerRepository;
-
-    @Autowired
     private LedgerUseCase ledgerUseCase;
 
     @Override
@@ -44,7 +32,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
                                              BigDecimal temp, boolean dryIceInjected) {
         
-        Order order = orderRepository.findById(orderId)
+        Order order = telemetryPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
         boolean alert = temp.compareTo(new BigDecimal("8.0")) > 0;
@@ -64,7 +52,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         // Check thermal spoilage threshold F21
         if (temp.compareTo(new BigDecimal("12.0")) >= 0 && !"spoiled".equalsIgnoreCase(order.getStatus())) {
             order.setStatus("spoiled");
-            orderRepository.save(order);
+            telemetryPort.saveOrder(order);
 
             // Deduct Rider trust score by -30
             Rider rider = order.getRider();
@@ -72,7 +60,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
                 int oldTrust = rider.getTrustScore();
                 int newTrust = Math.max(0, oldTrust - 30);
                 rider.setTrustScore(newTrust);
-                riderRepository.save(rider);
+                telemetryPort.saveRider(rider);
 
                 // Audit trust delta
                 SecurityTrustLedger audit = SecurityTrustLedger.builder()
@@ -82,7 +70,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
                         .delta(-30)
                         .currentValue(newTrust)
                         .build();
-                trustLedgerRepository.save(audit);
+                telemetryPort.saveTrustLedger(audit);
             }
 
             // Log cargo write-off debit system ledger
@@ -117,7 +105,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     public void injectDryIce(Integer orderId) {
         activeBreaches.remove(orderId);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = telemetryPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
         if (!"shipping".equalsIgnoreCase(order.getStatus())) {

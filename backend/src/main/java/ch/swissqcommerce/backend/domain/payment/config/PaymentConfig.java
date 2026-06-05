@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.payment.port.in.PaymentUseCase;
 import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OutboxEventPort;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,14 +16,14 @@ public class PaymentConfig {
 
     @Bean
     public PaymentUseCase paymentUseCase(PaymentPort paymentPort,
-                                       OrderRepository orderRepository,
+                                       OrderPort orderPort,
                                        LedgerUseCase ledgerUseCase,
                                        OutboxEventPort outboxEventPort,
                                        ApplicationEventPublisher eventPublisher,
                                        StringRedisTemplate redisTemplate) {
         return new PaymentServiceImpl(
                 paymentPort,
-                orderRepository,
+                orderPort,
                 ledgerUseCase,
                 outboxEventPort,
                 eventPublisher,
