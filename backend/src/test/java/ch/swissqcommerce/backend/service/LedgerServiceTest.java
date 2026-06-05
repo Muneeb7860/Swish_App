@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.JournalEntry;
 import ch.swissqcommerce.backend.domain.transaction.core.service.LedgerServiceImpl;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +31,7 @@ public class LedgerServiceTest {
     @Mock
     private RiderRepository riderRepository;
     @Mock
-    private WholesalerRepository wholesalerRepository;
+    private WholesalerPort wholesalerPort;
     @Mock
     private LedgerLineRepository ledgerLineRepository;
 

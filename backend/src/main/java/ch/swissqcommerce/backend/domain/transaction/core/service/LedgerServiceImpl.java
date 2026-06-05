@@ -7,7 +7,7 @@ import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 
@@ -21,18 +21,18 @@ public class LedgerServiceImpl implements LedgerUseCase {
     private final JournalEntryRepository journalEntryRepository;
     private final CustomerRepository customerRepository;
     private final RiderRepository riderRepository;
-    private final WholesalerRepository wholesalerRepository;
+    private final WholesalerPort wholesalerPort;
     private final LedgerLineRepository ledgerLineRepository;
 
     public LedgerServiceImpl(JournalEntryRepository journalEntryRepository,
                              CustomerRepository customerRepository,
                              RiderRepository riderRepository,
-                             WholesalerRepository wholesalerRepository,
+                             WholesalerPort wholesalerPort,
                              LedgerLineRepository ledgerLineRepository) {
         this.journalEntryRepository = journalEntryRepository;
         this.customerRepository = customerRepository;
         this.riderRepository = riderRepository;
-        this.wholesalerRepository = wholesalerRepository;
+        this.wholesalerPort = wholesalerPort;
         this.ledgerLineRepository = ledgerLineRepository;
     }
 
@@ -128,7 +128,7 @@ public class LedgerServiceImpl implements LedgerUseCase {
                 break;
 
             case "wholesaler":
-                Wholesaler wholesaler = wholesalerRepository.findById(actorId)
+                Wholesaler wholesaler = wholesalerPort.findById(actorId)
                         .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + actorId));
                 // B2B wholesalers are credited on invoices
                 break;

@@ -2,7 +2,7 @@ package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
 import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public class TelemetryController {
     private InMemoryGeoStore geoStore;
 
     @Autowired
-    private OrderTelemetryLogRepository telemetryLogRepository;
+    private TelemetryPort telemetryPort;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -58,7 +58,7 @@ public class TelemetryController {
                             .dryIceInjected(request.isDryIceInjected())
                             .alertTriggered(false)
                             .build();
-                    telemetryLogRepository.save(log);
+                    telemetryPort.save(log);
                 });
             } catch (Exception e) {
                 tickBuffer.add(request); // Re-queue on failure

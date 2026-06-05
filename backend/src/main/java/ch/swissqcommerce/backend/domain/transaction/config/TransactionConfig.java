@@ -6,7 +6,7 @@ import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
 import ch.swissqcommerce.backend.repository.*;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -19,13 +19,13 @@ public class TransactionConfig {
     public LedgerUseCase ledgerUseCase(JournalEntryRepository journalEntryRepository,
                                        CustomerRepository customerRepository,
                                        RiderRepository riderRepository,
-                                       WholesalerRepository wholesalerRepository,
+                                       WholesalerPort wholesalerPort,
                                        LedgerLineRepository ledgerLineRepository) {
         return new LedgerServiceImpl(
                 journalEntryRepository,
                 customerRepository,
                 riderRepository,
-                wholesalerRepository,
+                wholesalerPort,
                 ledgerLineRepository
         );
     }

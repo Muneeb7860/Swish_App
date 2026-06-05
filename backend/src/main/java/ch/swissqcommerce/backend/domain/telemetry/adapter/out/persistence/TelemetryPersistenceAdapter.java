@@ -15,4 +15,9 @@ public class TelemetryPersistenceAdapter implements TelemetryPort {
     public OrderTelemetryLog save(OrderTelemetryLog log) {
         return telemetryLogRepository.save(log);
     }
+
+    @Override
+    public java.util.List<OrderTelemetryLog> findByOrderId(Integer orderId) {
+        return telemetryLogRepository.findByOrderOrderIdOrderByDeviceTimestampDesc(orderId);
+    }
 }
