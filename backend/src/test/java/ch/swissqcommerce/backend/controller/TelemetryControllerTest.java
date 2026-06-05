@@ -36,6 +36,12 @@ public class TelemetryControllerTest {
     @MockBean
     private InMemoryGeoStore geoStore;
 
+    @MockBean
+    private ch.swissqcommerce.backend.repository.OrderTelemetryLogRepository telemetryLogRepository;
+
+    @MockBean
+    private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 

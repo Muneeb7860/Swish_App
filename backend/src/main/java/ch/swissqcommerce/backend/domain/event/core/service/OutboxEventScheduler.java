@@ -76,10 +76,10 @@ public class OutboxEventScheduler {
     private static final String DEFAULT_TOPIC = "order.events";
 
     private final OutboxEventRepository outboxEventRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     public OutboxEventScheduler(OutboxEventRepository outboxEventRepository,
-                                KafkaTemplate<String, Object> kafkaTemplate) {
+                                KafkaTemplate<String, String> kafkaTemplate) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
     }

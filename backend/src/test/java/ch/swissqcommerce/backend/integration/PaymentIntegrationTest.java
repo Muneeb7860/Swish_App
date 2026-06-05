@@ -57,7 +57,7 @@ public class PaymentIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
-    @Autowired
+    @org.springframework.boot.test.mock.mockito.MockBean
     private StringRedisTemplate redisTemplate;
 
     private Customer customer;
@@ -115,8 +115,10 @@ public class PaymentIntegrationTest {
             entityManager.flush();
         });
 
-        // Seed Redis cache
-        redisTemplate.opsForValue().set("wallet:balance:CUST-200", "1000.00");
+        // Stub Redis cache operations
+        org.springframework.data.redis.core.ValueOperations<String, String> valueOps = org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
+        org.mockito.Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        org.mockito.Mockito.when(valueOps.get("wallet:balance:CUST-200")).thenReturn("1000.00");
     }
 
     @Test
