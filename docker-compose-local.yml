@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
     networks:
       - hybrid-net
     deploy:
@@ -82,7 +83,7 @@ services:
     container_name: keycloak
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-gis:5432/b2b_qcomm
+      KC_DB_URL: jdbc:postgresql://postgres-gis:5432/keycloak_db
       KC_DB_USERNAME: admin
       KC_DB_PASSWORD: adminpassword
       KEYCLOAK_ADMIN: admin

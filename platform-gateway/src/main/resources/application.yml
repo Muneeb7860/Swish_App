@@ -8,16 +8,24 @@ spring:
     gateway:
       routes:
         - id: core-business-engine
-          uri: http://localhost:8081
+          uri: ${CORE_BUSINESS_URL:http://localhost:8081}
           predicates:
             - Path=/api/checkout/**, /api/inventory/**
           filters:
             - name: IdempotencyFilter
+        - id: notification-websocket
+          uri: ${NOTIFICATION_WS_URL:ws://localhost:8082}
+          predicates:
+            - Path=/ws/notifications/**
         - id: shared-async-services
-          uri: http://localhost:8082
+          uri: ${NOTIFICATION_ENGINE_URL:http://localhost:8082}
           predicates:
             - Path=/api/rewards/**, /api/ledger/**
+        - id: backend-core
+          uri: ${BACKEND_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/**
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
