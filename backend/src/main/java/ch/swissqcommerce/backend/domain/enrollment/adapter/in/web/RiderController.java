@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.enrollment.adapter.in.web;
 
-import ch.swissqcommerce.backend.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

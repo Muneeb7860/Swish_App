@@ -3,6 +3,7 @@ package ch.swissqcommerce.backend.domain.enrollment.port.out;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
 import ch.swissqcommerce.backend.domain.enrollment.core.model.*;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.*;
 
 import java.math.BigDecimal;

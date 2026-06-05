@@ -1,69 +1,58 @@
-package ch.swissqcommerce.backend.service;
+package ch.swissqcommerce.backend.domain.wholesaler.core.service;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.port.in.WholesalerUseCase;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.*;
+import ch.swissqcommerce.backend.model.DarkStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
 
-/**
- * B2B wholesaler domain service managing restock order lifecycle,
- * invoice calculations with academy discount and fallback supplier logic,
- * and order fulfillment processing.
- */
 @Service
-public class WholesalerService {
+public class WholesalerServiceImpl implements WholesalerUseCase {
 
     @Autowired
-    private WholesalerRepository wholesalerRepository;
+    private WholesalerPort wholesalerPort;
 
     @Autowired
-    private B2BRestockOrderRepository restockOrderRepository;
-
-    @Autowired
-    private InventoryRepository inventoryRepository;
+    private B2BRestockOrderPort restockOrderPort;
 
     @Autowired
     private LedgerUseCase ledgerService;
 
-    /**
-     * Returns all restock orders assigned to a given wholesaler.
-     */
+    @Override
     public List<B2BRestockOrder> getAssignedRestocks(String wholesalerId) {
-        wholesalerRepository.findById(wholesalerId)
+        wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
-        return restockOrderRepository.findByWholesalerWholesalerIdOrderByCreatedAtDesc(wholesalerId);
+        return restockOrderPort.findByWholesalerId(wholesalerId);
     }
 
-    /**
-     * Creates a new B2B restock order.
-     * Implements F13 primary/fallback wholesaler selection and F14 academy discount pricing.
-     */
+    @Override
     @Transactional
     public B2BRestockOrder createRestockOrder(String storeId, String preferredWholesalerId, String idempotencyKey) {
         // Idempotency guard
         if (idempotencyKey != null) {
-            Optional<B2BRestockOrder> existing = restockOrderRepository.findByIdempotencyKey(idempotencyKey);
+            Optional<B2BRestockOrder> existing = restockOrderPort.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
                 return existing.get();
             }
         }
 
-        // F13: Select primary wholesaler, fallback if primary is inactive or low trust
+        // Select primary wholesaler, fallback if primary is inactive or low trust
         Wholesaler selected;
         boolean isFallback = false;
 
         if (preferredWholesalerId != null) {
-            selected = wholesalerRepository.findById(preferredWholesalerId)
+            selected = wholesalerPort.findById(preferredWholesalerId)
                     .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + preferredWholesalerId));
         } else {
-            selected = wholesalerRepository.findByIsPrimary(true)
+            selected = wholesalerPort.findByIsPrimary(true)
                     .orElseThrow(() -> new NoSuchElementException("No primary wholesaler configured."));
         }
 
@@ -71,7 +60,7 @@ public class WholesalerService {
         // Check if primary wholesaler is eligible (trust >= 60 and active)
         if (!selected.getIsActive() || selected.getTrustScore() < 60) {
             // Switch to fallback wholesaler
-            selected = wholesalerRepository.findAll().stream()
+            selected = wholesalerPort.findAll().stream()
                     .filter(w -> !w.getWholesalerId().equals(currentSelectedId))
                     .filter(Wholesaler::getIsActive)
                     .filter(w -> w.getTrustScore() >= 60)
@@ -80,7 +69,7 @@ public class WholesalerService {
             isFallback = true;
         }
 
-        // Calculate invoice amount with F14 academy discount
+        // Calculate invoice amount with academy discount
         BigDecimal invoiceAmount = isFallback ? selected.getFallbackInvoiceAmount() : selected.getBaseInvoiceAmount();
         if (selected.getAcademyDiscountActive()) {
             invoiceAmount = invoiceAmount.multiply(new BigDecimal("0.90")); // 10% discount
@@ -94,15 +83,13 @@ public class WholesalerService {
                 .idempotencyKey(idempotencyKey)
                 .build();
 
-        return restockOrderRepository.save(restockOrder);
+        return restockOrderPort.save(restockOrder);
     }
 
-    /**
-     * Fulfills a restock order, updates its status, and records the B2B payment in the ledger.
-     */
+    @Override
     @Transactional
     public Map<String, Object> fulfillRestock(Integer restockOrderId) {
-        B2BRestockOrder restock = restockOrderRepository.findById(restockOrderId)
+        B2BRestockOrder restock = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new NoSuchElementException("Restock order not found: " + restockOrderId));
 
         if (!"pending".equalsIgnoreCase(restock.getStatus())) {
@@ -110,7 +97,7 @@ public class WholesalerService {
         }
 
         restock.setStatus("fulfilled");
-        restockOrderRepository.save(restock);
+        restockOrderPort.save(restock);
 
         // Record B2B payment in double-entry ledger
         List<LedgerUseCase.LedgerLeg> legs = List.of(
@@ -130,15 +117,12 @@ public class WholesalerService {
         return result;
     }
 
-    /**
-     * Returns invoice summary for a wholesaler's fulfilled orders.
-     */
+    @Override
     public Map<String, Object> getInvoiceSummary(String wholesalerId) {
-        Wholesaler wholesaler = wholesalerRepository.findById(wholesalerId)
+        Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
 
-        List<B2BRestockOrder> allOrders = restockOrderRepository
-                .findByWholesalerWholesalerIdOrderByCreatedAtDesc(wholesalerId);
+        List<B2BRestockOrder> allOrders = restockOrderPort.findByWholesalerId(wholesalerId);
 
         BigDecimal totalInvoiced = allOrders.stream()
                 .filter(o -> "fulfilled".equalsIgnoreCase(o.getStatus()))

@@ -11,6 +11,12 @@ import ch.swissqcommerce.backend.domain.reward.core.service.RiderLeaderboardServ
 import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyRepository;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.agent.adapter.in.web.AgentController;
 import org.springframework.http.ResponseEntity;

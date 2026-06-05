@@ -1,14 +1,17 @@
-package ch.swissqcommerce.backend.service;
+package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
-
-import ch.swissqcommerce.backend.model.*;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.repository.*;
+import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -17,12 +20,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
-public class TelemetryService {
+public class TelemetryServiceImpl implements TelemetryUseCase {
 
-    final java.util.concurrent.ConcurrentHashMap<Integer, java.time.OffsetDateTime> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Integer, java.time.OffsetDateTime> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Autowired
-    private OrderTelemetryLogRepository telemetryLogRepository;
+    private TelemetryPort telemetryPort;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -34,12 +37,9 @@ public class TelemetryService {
     private SecurityTrustLedgerRepository trustLedgerRepository;
 
     @Autowired
-    private ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase;
+    private LedgerUseCase ledgerUseCase;
 
-    /**
-     * Records a sensor tick from the courier's IoT device.
-     * Triggers spoilage write-offs and trust penalties if thermal breach limits are hit.
-     */
+    @Override
     @Transactional
     public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
                                              BigDecimal temp, boolean dryIceInjected) {
@@ -59,7 +59,7 @@ public class TelemetryService {
                 .alertTriggered(alert)
                 .build();
 
-        OrderTelemetryLog savedLog = telemetryLogRepository.save(log);
+        OrderTelemetryLog savedLog = telemetryPort.save(log);
 
         // Check thermal spoilage threshold F21
         if (temp.compareTo(new BigDecimal("12.0")) >= 0 && !"spoiled".equalsIgnoreCase(order.getStatus())) {
@@ -86,9 +86,9 @@ public class TelemetryService {
             }
 
             // Log cargo write-off debit system ledger
-            List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = List.of(
-                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, order.getTotalAmount(), BigDecimal.ZERO),
-                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, order.getTotalAmount()) // double entry internal writeoff
+            List<LedgerUseCase.LedgerLeg> legs = List.of(
+                new LedgerUseCase.LedgerLeg("system", null, order.getTotalAmount(), BigDecimal.ZERO),
+                new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, order.getTotalAmount())
             );
             ledgerUseCase.recordTransaction("COLD-BREACH", " Ruined cargo perishable spoilage write-off", legs);
         }
@@ -96,13 +96,10 @@ public class TelemetryService {
         return savedLog;
     }
 
-    /**
-     * Checks if a thermal breach warning has been continuously active for more than 3 minutes (180 seconds).
-     */
+    @Override
     public boolean isThermalBreachActive(Integer orderId, BigDecimal currentTemp) {
         if (currentTemp == null) return false;
         
-        // Match 8.0°C alert threshold in recordTelemetry
         boolean thresholdBreached = currentTemp.compareTo(new BigDecimal("8.0")) > 0;
         
         if (thresholdBreached) {
@@ -115,10 +112,7 @@ public class TelemetryService {
         }
     }
 
-    /**
-     * Injects dry ice coolant to reset temperature back to 4.0°C.
-     * Charges merchant $2.00 and logs ledger transaction.
-     */
+    @Override
     @Transactional
     public void injectDryIce(Integer orderId) {
         activeBreaches.remove(orderId);
@@ -131,9 +125,9 @@ public class TelemetryService {
         }
 
         // Charge merchant $2.00
-        List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = List.of(
-            new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, new BigDecimal("2.00"), BigDecimal.ZERO),
-            new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("2.00")) // balanced transit charge
+        List<LedgerUseCase.LedgerLeg> legs = List.of(
+            new LedgerUseCase.LedgerLeg("system", null, new BigDecimal("2.00"), BigDecimal.ZERO),
+            new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("2.00"))
         );
         ledgerUseCase.recordTransaction("DRY-ICE-DEBIT", "Dry ice cargo cooling mitigation fee", legs);
 

@@ -1,8 +1,9 @@
 package ch.swissqcommerce.backend.controller;
 
-import ch.swissqcommerce.backend.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.in.web.WholesalerController;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.model.DarkStore;
-import ch.swissqcommerce.backend.service.WholesalerService;
+import ch.swissqcommerce.backend.domain.wholesaler.port.in.WholesalerUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ public class WholesalerControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private WholesalerService wholesalerService;
+    private WholesalerUseCase wholesalerService;
 
     @Autowired
     private ObjectMapper objectMapper;
