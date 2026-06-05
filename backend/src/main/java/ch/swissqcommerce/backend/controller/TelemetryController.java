@@ -3,6 +3,8 @@ package ch.swissqcommerce.backend.controller;
 import ch.swissqcommerce.backend.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
 import ch.swissqcommerce.backend.service.TelemetryService;
+import ch.swissqcommerce.backend.repository.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,43 @@ public class TelemetryController {
 
     @Autowired
     private InMemoryGeoStore geoStore;
+
+    @Autowired
+    private OrderTelemetryLogRepository telemetryLogRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTickRequest> tickBuffer = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000)
+    public void flushTickBuffer() {
+        if (tickBuffer.isEmpty()) return;
+        java.util.List<TelemetryTickRequest> ticksToFlush = new java.util.ArrayList<>();
+        TelemetryTickRequest tick;
+        while ((tick = tickBuffer.poll()) != null) {
+            ticksToFlush.add(tick);
+        }
+        if (ticksToFlush.isEmpty()) return;
+        for (TelemetryTickRequest request : ticksToFlush) {
+            try {
+                orderRepository.findById(request.getOrderId()).ifPresent(order -> {
+                    OrderTelemetryLog log = OrderTelemetryLog.builder()
+                            .order(order)
+                            .deviceTimestamp(OffsetDateTime.now())
+                            .latitude(request.getLatitude())
+                            .longitude(request.getLongitude())
+                            .temperature(request.getTemperature())
+                            .dryIceInjected(request.isDryIceInjected())
+                            .alertTriggered(false)
+                            .build();
+                    telemetryLogRepository.save(log);
+                });
+            } catch (Exception e) {
+                tickBuffer.add(request); // Re-queue on failure
+            }
+        }
+    }
 
     // Thread-safe map of orderId to active client SSE streams
     private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -81,7 +120,7 @@ public class TelemetryController {
         boolean dryIceInjected = request.isDryIceInjected();
 
         OrderTelemetryLog savedDbLog = null;
-        // 2. Database Decoupling: Only write to the OLTP database during thermal spikes or injection actions
+        // 2. Database Decoupling: Direct critical alerts immediately, queue normal telemetry ticks to avoid write-amplification
         if (thresholdBreached || dryIceInjected) {
             savedDbLog = telemetryService.recordTelemetry(
                     request.getOrderId(),
@@ -90,7 +129,11 @@ public class TelemetryController {
                     request.getTemperature(),
                     request.isDryIceInjected()
             );
+        } else {
+            tickBuffer.add(request);
         }
+
+        boolean thermalBreachActive = telemetryService.isThermalBreachActive(request.getOrderId(), request.getTemperature());
 
         // 3. Construct the payload
         Map<String, Object> payload = new HashMap<>();
@@ -101,7 +144,9 @@ public class TelemetryController {
         payload.put("dryIceInjected", request.isDryIceInjected());
         payload.put("timestamp", OffsetDateTime.now().toString());
         payload.put("alertTriggered", thresholdBreached);
-        payload.put("persisted", savedDbLog != null);
+        payload.put("thermalBreachActive", thermalBreachActive);
+        payload.put("persisted", savedDbLog != null || !thresholdBreached);
+        payload.put("queued", savedDbLog == null && !thresholdBreached);
 
         // 4. Push updates to all active SSE streaming clients
         pushToSubscribers(request.getOrderId(), payload);
@@ -128,12 +173,14 @@ public class TelemetryController {
         InMemoryGeoStore.RiderLocation currentLoc = geoStore.getLatestLocation(orderId);
         if (currentLoc != null) {
             try {
+                boolean thermalBreachActive = telemetryService.isThermalBreachActive(orderId, currentLoc.getTemperature());
                 Map<String, Object> payload = new HashMap<>();
                 payload.put("orderId", orderId);
                 payload.put("latitude", currentLoc.getLatitude());
                 payload.put("longitude", currentLoc.getLongitude());
                 payload.put("temperature", currentLoc.getTemperature());
                 payload.put("timestamp", currentLoc.getTimestamp().toString());
+                payload.put("thermalBreachActive", thermalBreachActive);
                 payload.put("initial", true);
                 emitter.send(SseEmitter.event().name("telemetry-update").data(payload));
             } catch (IOException ignored) {}
@@ -163,6 +210,7 @@ public class TelemetryController {
         payload.put("longitude", lng);
         payload.put("temperature", new BigDecimal("4.0"));
         payload.put("dryIceInjected", true);
+        payload.put("thermalBreachActive", false);
         payload.put("timestamp", OffsetDateTime.now().toString());
         payload.put("message", "Dry ice cargo cooling completed.");
         

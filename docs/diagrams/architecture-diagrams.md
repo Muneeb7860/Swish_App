@@ -1,7 +1,6 @@
 # Architecture Diagrams — Swish Payment Ecosystem (Microservices)
 
-This document contains the formal C4 architecture artifacts for the Swish Quick Commerce platform,
-reflecting the **database-per-service microservices architecture** that replaces the previous monolithic deployment.
+This document contains the formal C4 architecture artifacts for the Swish Quick Commerce platform, reflecting the updated **database-per-service microservices architecture** and newer services (`platform-gateway`, `core-business-engine`, `notification-engine`, `shared-async-services`) added in recent sprints.
 
 > **Migration Strategy**: Strangler Fig pattern with blue/green deployment and API versioning (`Accept-Version: v1, v2`).
 
@@ -9,15 +8,14 @@ reflecting the **database-per-service microservices architecture** that replaces
 
 ## C4 Context Diagram
 
-Shows all external personas, the DMZ boundary, API Gateway, 7 backend microservices,
-and shared infrastructure components.
+Shows all external personas, the DMZ boundary, API Gateways, new and legacy microservices, and shared infrastructure components.
 
 ```mermaid
 flowchart TB
   subgraph Personas
     Customer["Customer (Mobile/Web)"]
     Rider["Rider (Mobile)"]
-    DSWorker["Dark Store Worker"]
+    DSWorker["Dark Store Worker / Picker"]
     DSManager["Dark Store Manager"]
     Business["Business / Wholesaler"]
     Admin["Platform Admin"]
@@ -29,34 +27,30 @@ flowchart TB
   end
 
   subgraph API_Gateway["API Gateway Layer"]
-    BFF["BFF Gateway (Spring Cloud Gateway)"]
+    PlatformGateway["platform-gateway (Spring Cloud Gateway, Port 8080)"]
+    LegacyBFF["Legacy BFF Gateway (Spring Cloud Gateway, Port 8081)"]
   end
 
-  subgraph Microservices["Backend Microservices"]
-    UserSvc["User Service"]
-    PaymentSvc["Payment Service"]
-    AccountSvc["Account Service"]
-    TransactionSvc["Transaction Service"]
-    FraudSvc["Fraud Detection Service"]
-    NotifSvc["Notification Service"]
-    SecuritySvc["Security Engine"]
+  subgraph Microservices["Backend Microservices Suite"]
+    BackendCore["backend (Hexagonal Core, Port 8080)"]
+    CoreBusinessEngine["core-business-engine (Checkout/Inv/B2B, Port 8081)"]
+    NotificationEngine["notification-engine (Kafka Consumer/WS, Port 8082)"]
+    SharedAsyncServices["shared-async-services (AI Orchestrator/Ledger)"]
+    SecurityEngine["security-engine (Guardrails / mTLS)"]
+    RewardsEngine["rewards-engine (Gamification / Loyalty)"]
+    EventsEngine["events-engine (Outbox Relay)"]
+    GovernanceEngine["governance-engine (Compliance / Onboarding)"]
   end
 
-  subgraph ShardedDatabases["Sharded Databases (PostgreSQL)"]
-    UserDB["user_db"]
-    PaymentDB["payment_db"]
-    AccountDB["account_db"]
-    TransactionDB["transaction_db"]
-    FraudDB["fraud_db"]
-    NotifDB["notification_db"]
-    SecurityDB["security_db"]
-  end
-
-  subgraph SharedInfra["Shared Infrastructure"]
-    Kafka["Apache Kafka (9 topics + 9 DLQs)"]
-    Redis["Redis (DB0-DB3 logical isolation)"]
+  subgraph Datastores["Datastores & Caching"]
+    PostgresDB["PostgreSQL (b2b_qcomm DB)"]
+    RedisCache["Redis (logical DB0-DB3 isolation, Rate Limiting)"]
     Mongo["MongoDB (Immutable Audit Archive)"]
     Vault["HashiCorp Vault (Secrets)"]
+  end
+
+  subgraph SharedInfra["Shared Event Pipeline"]
+    Kafka["Apache Kafka (9 topics + 9 DLQs)"]
   end
 
   subgraph Observability
@@ -66,7 +60,7 @@ flowchart TB
   end
 
   subgraph ExternalGateways["External Payment Gateways"]
-    Stripe["Stripe"]
+    Stripe["Stripe (Mocked)"]
     Swipe["Swipe"]
     PayPal["PayPal"]
     COD["Cash on Delivery"]
@@ -80,53 +74,54 @@ flowchart TB
   Admin -->|"HTTPS"| Edge
 
   Edge --> RateLimiter
-  RateLimiter -->|"TLS termination + JWT filter"| BFF
+  RateLimiter -->|"TLS termination + JWT filter"| PlatformGateway
+  RateLimiter -.->|"Legacy route"| LegacyBFF
 
-  BFF -->|"route"| UserSvc
-  BFF -->|"route"| PaymentSvc
-  BFF -->|"route"| AccountSvc
-  BFF -->|"route"| TransactionSvc
-  BFF -->|"route"| FraudSvc
-  BFF -->|"route"| NotifSvc
-  BFF -->|"route"| SecuritySvc
+  PlatformGateway -->|"/api/checkout/**, /api/inventory/**"| CoreBusinessEngine
+  PlatformGateway -->|"/api/rewards/**, /api/ledger/**"| SharedAsyncServices
+  PlatformGateway -->|"/ws/notifications/**"| NotificationEngine
+  PlatformGateway -->|"/api/v1/auth/**, /api/transaction/**"| BackendCore
 
-  UserSvc --> UserDB
-  PaymentSvc --> PaymentDB
-  AccountSvc --> AccountDB
-  TransactionSvc --> TransactionDB
-  FraudSvc --> FraudDB
-  NotifSvc --> NotifDB
-  SecuritySvc --> SecurityDB
+  CoreBusinessEngine --> PostgresDB
+  BackendCore --> PostgresDB
+  NotificationEngine --> PostgresDB
+  SharedAsyncServices --> PostgresDB
 
-  PaymentSvc -->|"Strategy Pattern"| Stripe
-  PaymentSvc -->|"Strategy Pattern"| Swipe
-  PaymentSvc -->|"Strategy Pattern"| PayPal
-  PaymentSvc -->|"Strategy Pattern"| COD
+  BackendCore --> SecurityEngine
+  BackendCore --> EventsEngine
+  SharedAsyncServices --> RewardsEngine
+  CoreBusinessEngine --> GovernanceEngine
 
-  UserSvc -.->|"publish/consume"| Kafka
-  PaymentSvc -.->|"publish/consume"| Kafka
-  AccountSvc -.->|"publish/consume"| Kafka
-  TransactionSvc -.->|"consume"| Kafka
-  FraudSvc -.->|"publish/consume"| Kafka
-  NotifSvc -.->|"consume"| Kafka
-  SecuritySvc -.->|"consume"| Kafka
+  SecurityEngine --> RedisCache
+  SecurityEngine -.->|"audit logs"| Mongo
+  RewardsEngine --> PostgresDB
+  RewardsEngine --> RedisCache
+  EventsEngine --> PostgresDB
+  EventsEngine -.->|"publish"| Kafka
+  GovernanceEngine --> PostgresDB
 
-  UserSvc -.-> Redis
-  PaymentSvc -.-> Redis
-  AccountSvc -.-> Redis
-  FraudSvc -.-> Redis
+  CoreBusinessEngine -->|"Strategy Pattern"| Stripe
+  CoreBusinessEngine -->|"Strategy Pattern"| Swipe
+  CoreBusinessEngine -->|"Strategy Pattern"| PayPal
+  CoreBusinessEngine -->|"Strategy Pattern"| COD
 
-  SecuritySvc -.-> Mongo
-  SecuritySvc -.-> Vault
+  BackendCore -.->|"publish/consume"| Kafka
+  CoreBusinessEngine -.->|"publish/consume"| Kafka
+  NotificationEngine -.->|"consume"| Kafka
+  SharedAsyncServices -.->|"publish/consume"| Kafka
 
-  UserSvc -.-> Prometheus
-  PaymentSvc -.-> Prometheus
-  AccountSvc -.-> Prometheus
-  TransactionSvc -.-> Prometheus
-  FraudSvc -.-> Prometheus
-  NotifSvc -.-> Prometheus
-  SecuritySvc -.-> Prometheus
-  BFF -.-> Prometheus
+  BackendCore -.-> RedisCache
+  CoreBusinessEngine -.-> RedisCache
+  NotificationEngine -.-> RedisCache
+  PlatformGateway -.-> RedisCache
+
+  BackendCore -.-> Mongo
+  BackendCore -.-> Vault
+
+  BackendCore -.-> Prometheus
+  CoreBusinessEngine -.-> Prometheus
+  NotificationEngine -.-> Prometheus
+  PlatformGateway -.-> Prometheus
   Prometheus --> Grafana
 ```
 
@@ -134,127 +129,116 @@ flowchart TB
 
 ## C4 Container Diagram
 
-Database-per-service layout with all 7 PostgreSQL instances, Kafka topic topology,
-shared Redis with logical DB isolation, MongoDB audit archive, and HashiCorp Vault.
+Database-per-service layout mapping the container boundaries, ports, and databases (PostgreSQL databases, Redis logical caching, Kafka topics) for the updated service suite.
 
 ```mermaid
 flowchart TB
   subgraph Clients
-    WebApp["Web Application"]
-    MobileApp["Mobile Application"]
-    AdminPortal["Admin Portal"]
+    WebApp["Web Application (frontend-host Shell)"]
+    CustomerApp["Customer App (frontend-customer)"]
+    RiderApp["Rider App (frontend-rider)"]
+    B2bDashboard["B2B Wholesale Dashboard (frontend-b2b)"]
+    AdminPortal["Admin Portal (frontend-admin)"]
   end
 
-  subgraph Gateway
-    BFF["BFF Gateway (Spring Cloud Gateway)"]
+  subgraph Gateway["Gateway Tier"]
+    PlatformGW["platform-gateway (Spring Cloud Gateway, Port 8080)"]
+    IdempFilter["IdempotencyFilterFactory"]
+    RateLimiterFilter["Redis Rate Limiter"]
+    SecurityConf["SecurityConfig"]
   end
 
-  subgraph UserServiceContainer["User Service"]
-    UserApp["user-service (Spring Boot)"]
-    UserPG["user_db (PostgreSQL)"]
+  subgraph CoreServices["Core Service Tier"]
+    subgraph BackendModule["backend Service (Hexagonal Core, Port 8080)"]
+      HexCore["Hexagonal Domains (Transaction, Payment, Inventory)"]
+      SecurityEngine["Security Engine (Guardrails)"]
+      EventsEngine["Events Engine (Outbox Relay)"]
+    end
+    
+    subgraph CoreBusiness["core-business-engine (Port 8081)"]
+      CheckoutSvc["Checkout & Stripe-Mock"]
+      B2bOrderSvc["B2bOrderService"]
+      AiSweeper["AI Evaluation Timeout Sweeper"]
+      GovernanceEngine["Governance Engine (Compliance)"]
+    end
+
+    subgraph NotificationSvc["notification-engine (Port 8082)"]
+      KafkaCons["NotificationKafkaConsumer"]
+      RedisPubSub["Redis Pub/Sub & WebSockets"]
+      Channels["Dispatcher & Channels (Email/Push/WS)"]
+    end
+
+    subgraph SharedAsync["shared-async-services"]
+      AiOrch["AI Model Orchestration Port"]
+      FinLedger["Financial Ledger Entry"]
+      RewardsEngine["Rewards Engine (Gamification)"]
+    end
   end
 
-  subgraph PaymentServiceContainer["Payment Service"]
-    PayApp["payment-service (Spring Boot)"]
-    PayPG["payment_db (PostgreSQL)"]
+  subgraph Storage["Datastore Backplane"]
+    Postgres["PostgreSQL (b2b_qcomm DB)"]
+    Redis["Redis (DB0: Sessions, DB1: Rate Limits, DB2: Pub/Sub, DB3: Leaderboards)"]
+    MongoDB["MongoDB (Audit Logs Archive)"]
+    Vault["HashiCorp Vault"]
   end
 
-  subgraph AccountServiceContainer["Account Service"]
-    AccApp["account-service (Spring Boot)"]
-    AccPG["account_db (PostgreSQL)"]
-  end
-
-  subgraph TransactionServiceContainer["Transaction Service"]
-    TxApp["transaction-service (Spring Boot)"]
-    TxPG["transaction_db (PostgreSQL)"]
-  end
-
-  subgraph FraudServiceContainer["Fraud Detection Service"]
-    FraudApp["fraud-service (Spring Boot)"]
-    FraudPG["fraud_db (PostgreSQL)"]
-  end
-
-  subgraph NotificationServiceContainer["Notification Service"]
-    NotifApp["notification-service (Spring Boot)"]
-    NotifPG["notification_db (PostgreSQL)"]
-  end
-
-  subgraph SecurityServiceContainer["Security Engine"]
-    SecApp["security-engine (Spring Boot)"]
-    SecPG["security_db (PostgreSQL)"]
-  end
-
-  subgraph KafkaCluster["Apache Kafka"]
+  subgraph MessageBroker["Message Broker"]
     direction LR
-    T1["payment.initiated"]
-    T2["payment.balance-check"]
-    T3["payment.fraud-screen"]
-    T4["payment.authorized"]
-    T5["payment.captured"]
-    T6["payment.failed"]
-    T7["payment.refunded"]
-    T8["payment.notification"]
-    T9["security.audit"]
-    DLQ["9 DLQ companion topics"]
+    T1["b2b.checkout.events"]
+    T2["b2b.wholesale.order.placed"]
+    T3["b2b.wholesale.order.evaluated"]
+    T4["security.audit"]
+    DLQ["DLQ Companion Topics"]
   end
 
-  subgraph RedisCluster["Redis (Logical DB Isolation)"]
-    RDB0["DB0: Sessions"]
-    RDB1["DB1: Balance Cache"]
-    RDB2["DB2: Velocity / Fraud Counters"]
-    RDB3["DB3: Leaderboards"]
-  end
+  WebApp --> PlatformGW
+  CustomerApp --> PlatformGW
+  RiderApp --> PlatformGW
+  B2bDashboard --> PlatformGW
+  AdminPortal --> PlatformGW
 
-  subgraph AuditStore["Audit Infrastructure"]
-    MongoDB["MongoDB (Immutable Archive)"]
-    HCVault["HashiCorp Vault (Secrets)"]
-  end
+  PlatformGW --> IdempFilter
+  PlatformGW --> RateLimiterFilter
+  PlatformGW --> SecurityConf
 
-  WebApp --> BFF
-  MobileApp --> BFF
-  AdminPortal --> BFF
+  PlatformGW -->|"/api/checkout/**"| CoreBusiness
+  PlatformGW -->|"/ws/notifications/**"| NotificationSvc
+  PlatformGW -->|"/api/ledger/**"| SharedAsync
+  PlatformGW -->|"/api/transaction/**"| BackendModule
 
-  BFF --> UserApp
-  BFF --> PayApp
-  BFF --> AccApp
-  BFF --> TxApp
-  BFF --> FraudApp
-  BFF --> NotifApp
-  BFF --> SecApp
+  BackendModule --> Postgres
+  CoreBusiness --> Postgres
+  NotificationSvc --> Postgres
 
-  UserApp --> UserPG
-  PayApp --> PayPG
-  AccApp --> AccPG
-  TxApp --> TxPG
-  FraudApp --> FraudPG
-  NotifApp --> NotifPG
-  SecApp --> SecPG
+  SecurityEngine --> Redis
+  SecurityEngine -.-> Vault
+  SecurityEngine -.->|"publish"| T4
+  RewardsEngine --> Postgres
+  RewardsEngine -.-> Redis
+  EventsEngine --> Postgres
+  EventsEngine -.->|"publish"| T1
+  EventsEngine -.->|"publish"| T2
+  GovernanceEngine --> Postgres
 
-  UserApp -.-> RDB0
-  AccApp -.-> RDB1
-  FraudApp -.-> RDB2
-  PayApp -.-> RDB3
+  BackendModule -.-> Redis
+  CoreBusiness -.-> Redis
+  NotificationSvc -.-> Redis
+  PlatformGW -.-> Redis
 
-  PayApp -.->|"outbox publish"| T1
-  AccApp -.->|"consume"| T2
-  FraudApp -.->|"consume"| T3
-  PayApp -.->|"consume"| T4
-  TxApp -.->|"consume"| T5
-  PayApp -.->|"publish"| T6
-  PayApp -.->|"publish"| T7
-  NotifApp -.->|"consume"| T8
-  SecApp -.->|"consume"| T9
+  CoreBusiness -.->|"publish"| T1
+  CoreBusiness -.->|"publish"| T2
+  NotificationSvc -.->|"consume"| T3
+  BackendModule -.->|"publish"| T4
 
-  SecApp -.-> MongoDB
-  SecApp -.-> HCVault
+  BackendModule -.-> MongoDB
+  BackendModule -.-> Vault
 ```
 
 ---
 
 ## C4 Component Diagram — Payment Service Internals
 
-Deep dive into the Payment Service showing the Saga Orchestrator, State Machine,
-Circuit Breaker, Outbox Publisher, Idempotency Filter, and Gateway Strategy.
+Deep dive into the Payment Service showing the Saga Orchestrator, State Machine, Circuit Breaker, Outbox Publisher, Idempotency Filter, and Gateway Strategy.
 
 ```mermaid
 flowchart TB
@@ -336,26 +320,26 @@ stateDiagram-v2
 
 ## Kafka Topic Topology
 
-| # | Topic Name              | Publisher          | Consumer(s)                   | DLQ Companion                   |
-|---|-------------------------|--------------------|-------------------------------|----------------------------------|
-| 1 | `payment.initiated`     | Payment Service    | Account Service               | `payment.initiated.dlq`         |
-| 2 | `payment.balance-check` | Account Service    | Payment Service               | `payment.balance-check.dlq`     |
-| 3 | `payment.fraud-screen`  | Payment Service    | Fraud Detection Service       | `payment.fraud-screen.dlq`      |
-| 4 | `payment.authorized`    | Payment Service    | Transaction Service           | `payment.authorized.dlq`        |
-| 5 | `payment.captured`      | Payment Service    | Transaction, Notification     | `payment.captured.dlq`          |
-| 6 | `payment.failed`        | Payment Service    | Notification Service          | `payment.failed.dlq`            |
-| 7 | `payment.refunded`      | Payment Service    | Account, Transaction, Notif.  | `payment.refunded.dlq`          |
-| 8 | `payment.notification`  | Payment Service    | Notification Service          | `payment.notification.dlq`      |
-| 9 | `security.audit`        | All Services       | Security Engine               | `security.audit.dlq`            |
+| # | Topic Name                       | Publisher            | Consumer(s)                      | DLQ Companion                           |
+|---|----------------------------------|----------------------|----------------------------------|-----------------------------------------|
+| 1 | `b2b.checkout.events`            | Core Business Engine | Platform Gateway                 | `b2b.checkout.events.dlq`               |
+| 2 | `b2b.wholesale.order.placed`     | Core Business Engine | B2B Procurement Agent            | `b2b.wholesale.order.placed.dlq`        |
+| 3 | `b2b.wholesale.order.evaluated`  | Core Business Engine | Notification Engine              | `b2b.wholesale.order.evaluated.DLQ`     |
+| 4 | `payment.initiated`              | Backend Core         | Account Service                  | `payment.initiated.dlq`                 |
+| 5 | `payment.authorized`             | Backend Core         | Transaction Service              | `payment.authorized.dlq`                |
+| 6 | `payment.captured`               | Backend Core         | Transaction, Notification        | `payment.captured.dlq`                  |
+| 7 | `payment.failed`                 | Backend Core         | Notification Service             | `payment.failed.dlq`                    |
+| 8 | `payment.refunded`               | Backend Core         | Account, Transaction, Notif.     | `payment.refunded.dlq`                  |
+| 9 | `security.audit`                 | All Services         | Security Engine                  | `security.audit.dlq`                    |
 
 ## Redis Logical Database Allocation
 
-| DB  | Purpose             | Service(s)              | Data Pattern            |
-|-----|---------------------|-------------------------|-------------------------|
-| DB0 | Session Store       | User Service            | JWT session tokens      |
-| DB1 | Balance Cache       | Account Service         | Cache-aside wallet      |
-| DB2 | Velocity / Fraud    | Fraud Detection Service | Sliding window counters |
-| DB3 | Leaderboards        | Payment / Gamification  | Sorted sets             |
+| DB  | Purpose              | Service(s)                | Data Pattern             |
+|-----|----------------------|---------------------------|--------------------------|
+| DB0 | Session Store        | User Service / Backend    | JWT session tokens       |
+| DB1 | Rate Limiting Cache  | Platform Gateway          | Sliding window counters  |
+| DB2 | WebSocket Pub/Sub    | Notification Engine       | Redis Channels           |
+| DB3 | Product Catalog Cache| Catalog Service / Engine  | Cache-aside products    |
 
 ---
 
@@ -364,17 +348,17 @@ stateDiagram-v2
 | Pattern                        | Implementation                                      |
 |--------------------------------|-----------------------------------------------------|
 | Outbox Pattern                 | `payment_outbox` table + `OutboxPublisher` CDC       |
-| Idempotency                    | `processed_events` table + `IdempotencyFilter`       |
-| Circuit Breaker                | Resilience4j wrapping gateway calls                  |
+| Idempotency                    | Redis-based `IdempotencyFilter` in gateway          |
+| Circuit Breaker                | Resilience4j wrapping client gateway calls          |
 | Retry with Exponential Backoff | `RetryHandler` with jitter on transient failures     |
-| Dead Letter Queue              | 9 DLQ companion topics for poison pill isolation     |
+| Dead Letter Queue              | DLQ companion topics for poison pill isolation      |
 | Choreography Saga              | Kafka-driven event chain across services             |
 | Correlation ID                 | MDC filter + Kafka header propagation                |
 | Strategy Pattern               | `PaymentGatewayStrategy` for Stripe/Swipe/PayPal/COD |
-| Strangler Fig                  | Blue/green deployment + `Accept-Version` header      |
+| Strangler Fig                  | Gateway-driven routing to new vs legacy backend     |
 
 > **Notes:**
-> - Each microservice owns its PostgreSQL database exclusively — no cross-service joins.
+> - Each microservice owns its PostgreSQL database schema exclusively — no cross-service joins.
 > - Async communication uses Kafka; synchronous fallback is only for health checks.
 > - The Security Engine consumes audit events from all services and archives to MongoDB.
 > - HashiCorp Vault manages all secrets; services fetch credentials at startup via Vault Agent sidecar.

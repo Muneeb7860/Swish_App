@@ -23,6 +23,7 @@ public class TransactionPersistenceAdapter implements
     private final SystemConfigurationRepository systemConfigurationRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final PaymentRepository paymentRepository;
+    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
 
     public TransactionPersistenceAdapter(CustomerRepository customerRepository,
                                          RiderRepository riderRepository,
@@ -30,7 +31,8 @@ public class TransactionPersistenceAdapter implements
                                          DarkStoreRepository darkStoreRepository,
                                          SystemConfigurationRepository systemConfigurationRepository,
                                          OutboxEventRepository outboxEventRepository,
-                                         PaymentRepository paymentRepository) {
+                                         PaymentRepository paymentRepository,
+                                         org.springframework.context.ApplicationEventPublisher applicationEventPublisher) {
         this.customerRepository = customerRepository;
         this.riderRepository = riderRepository;
         this.inventoryRepository = inventoryRepository;
@@ -38,6 +40,7 @@ public class TransactionPersistenceAdapter implements
         this.systemConfigurationRepository = systemConfigurationRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.paymentRepository = paymentRepository;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Override
@@ -79,7 +82,9 @@ public class TransactionPersistenceAdapter implements
 
     @Override
     public OutboxEvent save(OutboxEvent event) {
-        return outboxEventRepository.save(event);
+        OutboxEvent savedEvent = outboxEventRepository.save(event);
+        applicationEventPublisher.publishEvent(new ch.swissqcommerce.backend.domain.event.core.model.OutboxEventSavedEvent(savedEvent));
+        return savedEvent;
     }
 
     @Override

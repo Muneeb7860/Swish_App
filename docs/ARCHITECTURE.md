@@ -8,21 +8,35 @@ Swish OS is a high-availability, B2B SaaS micro-fulfillment and agentic procurem
 
 ```mermaid
 graph TD
-    Client[Enterprise AI / Operator Console] --> Edge[Nginx Edge Proxy (DMZ)]
+    Client[Enterprise Web/Mobile Clients] --> Edge[Nginx Edge Proxy (DMZ)]
     
-    subgraph frontend-tier [Edge API & Cockpit Tier]
-        Edge --> Cockpit[Exception Feed: frontend-host]
-        Edge --> BFF[Agentic BFF Gateway]
+    subgraph frontend-tier [MFE Frontends & Host Cockpit]
+        Edge --> Host[frontend-host Cockpit]
+        Edge --> MFEs[MFE Frontends: customer, rider, b2b, admin]
     end
 
-    subgraph backend-tier [Core Agentic Network]
-        BFF --> Backend[Spring Boot Core Backend]
+    subgraph gateway-tier [API Routing & Security]
+        Edge --> GW[platform-gateway (Port 8080)]
+    end
+
+    subgraph backend-tier [Core Microservice Suite]
+        GW --> Backend[backend Core Service (Port 8080)]
+        GW --> BusinessEngine[core-business-engine (Port 8081)]
+        GW --> NotifEngine[notification-engine (Port 8082)]
+        GW --> SharedAsync[shared-async-services]
+
+        Backend --> SecurityEngine[Security Engine]
+        Backend --> EventsEngine[Events Engine]
+        SharedAsync --> RewardsEngine[Rewards Engine]
+        BusinessEngine --> GovernanceEngine[Governance Engine]
         
-        Backend --> Cache[(Redis Cache / Ingestion Buffer)]
-        Backend --> DB_Tx[(PostgreSQL: Transaction & Ledgers)]
+        Backend & BusinessEngine & NotifEngine & SharedAsync & RewardsEngine & EventsEngine & GovernanceEngine --> DB_Tx[(PostgreSQL: transactional schema)]
+        Backend & BusinessEngine & NotifEngine & GW & SecurityEngine & RewardsEngine --> Cache[(Redis Cache / Rate Limiting)]
         
-        Cache -.-> DB_Time[(PostgreSQL: TimescaleDB Telemetry)]
-        DB_Tx -.->|Transactional Outbox| Kafka[(Apache Kafka Cluster)]
+        BusinessEngine -.->|Kafka Events| Kafka[(Apache Kafka Cluster)]
+        EventsEngine -.->|Kafka Events| Kafka
+        SecurityEngine -.->|Kafka Events| Kafka
+        Kafka -.->|Notification Consuming| NotifEngine
         Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Archive)]
     end
 ```
@@ -35,7 +49,7 @@ graph TD
 | :--- | :--- | :--- |
 | **Frontend** | React 18, Vite, TypeScript | Interactive UI & runtime bundling |
 | **State Management** | Zustand (Sliced Stores) | Decentralized global MFE state sharing |
-| **API Gateway** | Spring Cloud Gateway (BFF) | Headless OpenAPI gateway, rate limiting, JWT verification |
+| **API Gateway** | Spring Cloud Gateway | Unified platform gateway, rate limiting, JWT verification |
 | **Backend Core** | Spring Boot 3.2, Java 17 | Core B2B procurement and guardrails business logic |
 | **Database (Transactions)** | PostgreSQL 15 | Persistent transactional ledger storage (ACID) |
 | **Database (Telemetry)** | PostgreSQL + TimescaleDB | High-frequency time-series telemetry and SLA metrics storage |
@@ -55,8 +69,8 @@ graph TD
 *   **`frontend-rider` (Port 3002)**: Rider portal driving geo-coordinate simulators, accept/reject logs, and wallet earnings.
 *   **`frontend-admin` (Port 3003)**: Admin dashboard detailing business metrics, catalog modifiers, and system engine simulation triggers.
 
-### 2. Edge Gateway BFF
-*   **BFF Gateway (Port 8081)**: Resolves requests. Bypasses security for Swagger documentation and coordinates OAuth2 JWT verification, Resilience4j circuit breakers, and rate limiters.
+### 2. Platform Gateway
+*   **Platform Gateway (Port 8080)**: Consolidates all routing, websocket forwarding, and security configurations (such as JWT token verification, CORS, and rate limiting).
 
 ### 3. Backend Core Service (Port 8080)
 *   Implements core business logic under a structured **Hexagonal (Ports & Adapters) Architecture**.

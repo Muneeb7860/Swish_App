@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
     networks:
       - hybrid-net
     deploy:

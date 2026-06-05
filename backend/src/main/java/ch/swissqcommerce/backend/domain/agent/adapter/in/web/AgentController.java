@@ -6,8 +6,15 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.Wholesaler;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.repository.WholesalerRepository;
+import ch.swissqcommerce.backend.repository.DarkStoreRepository;
+import ch.swissqcommerce.backend.repository.B2BRestockOrderRepository;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +40,18 @@ public class AgentController {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @Autowired
+    private WholesalerRepository wholesalerRepository;
+
+    @Autowired
+    private DarkStoreRepository darkStoreRepository;
+
+    @Autowired
+    private B2BRestockOrderRepository restockOrderRepository;
+
+    @Autowired
+    private GovernanceUseCase governanceUseCase;
+
     @PostMapping("/chat")
     public ResponseEntity<AgentResponse> chat(@RequestBody AgentRequest request) {
         AgentResponse response = agentUseCase.processMessage(request);
@@ -46,42 +65,69 @@ public class AgentController {
 
     @PostMapping("/negotiate")
     public ResponseEntity<NegotiationResponse> negotiate(@RequestBody NegotiationRequest request) {
-        var analysis = b2BProcurementAgent.negotiateRestock(
-                request.getItemId(), request.getItemName(), request.getBasePrice(), request.getWholesalerName());
-        
+        java.util.List<Wholesaler> activeWholesalers = wholesalerRepository.findAll().stream()
+                .filter(w -> Boolean.TRUE.equals(w.getIsActive()))
+                .toList();
+
+        if (activeWholesalers.isEmpty()) {
+            return ResponseEntity.ok(new NegotiationResponse(
+                    false,
+                    "No active wholesalers found.",
+                    0.0, 0.0, "N/A", "REJECTED", 0.0
+            ));
+        }
+
+        ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis bestAnalysis = null;
+        Wholesaler bestWholesaler = null;
+
+        for (Wholesaler wholesaler : activeWholesalers) {
+            var analysis = b2BProcurementAgent.negotiateRestock(
+                    request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
+            
+            if (bestAnalysis == null || analysis.proposedPrice < bestAnalysis.proposedPrice) {
+                bestAnalysis = analysis;
+                bestWholesaler = wholesaler;
+            } else if (analysis.proposedPrice == bestAnalysis.proposedPrice) {
+                if (bestWholesaler != null && wholesaler.getTrustScore() > bestWholesaler.getTrustScore()) {
+                    bestAnalysis = analysis;
+                    bestWholesaler = wholesaler;
+                }
+            }
+        }
+
         var guardrailResult = procurementGuardrailsEngine.validate(
-                analysis.proposedPrice, request.getBasePrice(), request.getQuantity());
+                bestAnalysis.proposedPrice, request.getBasePrice(), request.getQuantity());
 
         if (!guardrailResult.isApproved()) {
-            Customer customer = null;
-            if (request.getCustomerId() != null && !request.getCustomerId().trim().isEmpty()) {
-                customer = customerRepository.findById(request.getCustomerId()).orElse(null);
-            }
-            String ticketId = "HITL-" + UUID.randomUUID().toString();
-            String description = "Guardrail violation: " + guardrailResult.getMessage()
-                    + ", Item ID: " + request.getItemId()
-                    + ", Wholesaler: " + request.getWholesalerName();
+            DarkStore store = darkStoreRepository.findAll().stream().findFirst()
+                    .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
 
-            HitlQueue ticket = HitlQueue.builder()
-                    .ticketId(ticketId)
-                    .type("restock_audit")
+            BigDecimal orderAmount = BigDecimal.valueOf(bestAnalysis.proposedPrice * request.getQuantity());
+
+            B2BRestockOrder restockOrder = B2BRestockOrder.builder()
+                    .store(store)
+                    .wholesaler(bestWholesaler)
+                    .invoiceAmount(orderAmount)
                     .status("pending")
-                    .description(description)
-                    .amount(BigDecimal.valueOf(analysis.proposedPrice * request.getQuantity()))
-                    .customer(customer)
+                    .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
                     .build();
 
-            hitlQueueRepository.save(ticket);
+            restockOrder = restockOrderRepository.save(restockOrder);
+
+            String wholesalerId = bestWholesaler != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
+            governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);
         }
+
+        String winningMessage = "RFQ AUCTION WINNER: " + bestWholesaler.getName() + " (Bid: " + bestAnalysis.proposedPrice + " CHF). " + guardrailResult.getMessage();
 
         NegotiationResponse response = new NegotiationResponse(
                 guardrailResult.isApproved(),
-                guardrailResult.getMessage(),
-                analysis.proposedPrice,
-                analysis.confidence,
-                analysis.rationale,
-                analysis.wholesalerResponse,
-                analysis.cost
+                winningMessage,
+                bestAnalysis.proposedPrice,
+                bestAnalysis.confidence,
+                bestAnalysis.rationale,
+                bestAnalysis.wholesalerResponse,
+                bestAnalysis.cost
         );
         return ResponseEntity.ok(response);
     }

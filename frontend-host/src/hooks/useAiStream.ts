@@ -7,9 +7,9 @@ import { useState, useCallback } from 'react';
 export const useAiStream = () => {
   const [streamData, setStreamData] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const startStream = useCallback(async (endpoint, prompt) => {
+  const startStream = useCallback(async (endpoint: string, prompt: string) => {
     setIsStreaming(true);
     setStreamData('');
     setError(null);
@@ -30,6 +30,9 @@ export const useAiStream = () => {
       }
 
       // Read the SSE stream chunks
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
 
@@ -51,7 +54,8 @@ export const useAiStream = () => {
       }
     } catch (err) {
       console.error("AI Stream Error:", err);
-      setError(err.message);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
     } finally {
       setIsStreaming(false);
     }

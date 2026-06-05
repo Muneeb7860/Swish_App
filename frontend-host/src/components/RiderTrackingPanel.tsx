@@ -10,10 +10,17 @@ import * as Lucide from 'lucide-react';
  * 
  * Visible only when activeOrder.status === 'transit'.
  */
-export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
+export default function RiderTrackingPanel({ activeOrder, riderCoords, onInjectDryIce }: any) {
   const [tickFlash, setTickFlash] = useState(false);
-  const [prevCoords, setPrevCoords] = useState(null);
-  const [tempHistory, setTempHistory] = useState([]);
+  const [prevCoords, setPrevCoords] = useState<any>(null);
+  const [tempHistory, setTempHistory] = useState<{ temp: number; time: number }[]>([]);
+  const [injecting, setInjecting] = useState(false);
+
+  const handleActionClick = async () => {
+    setInjecting(true);
+    await onInjectDryIce(activeOrder.id);
+    setInjecting(false);
+  };
 
   // Reset history on new order transit boot
   useEffect(() => {
@@ -132,6 +139,65 @@ export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
           </span>
         </div>
       </div>
+
+      {/* Thermal Breach Warning Banner */}
+      {riderCoords?.thermalBreachActive && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
+          borderRadius: '12px',
+          padding: '0.8rem 1rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          animation: 'pulseGlow 2s infinite',
+          zIndex: 2,
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Lucide.AlertTriangle size={18} style={{ color: '#ef4444' }} />
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ef4444' }}>
+                THERMAL BREACH WARNING
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#fca5a5', fontWeight: 500 }}>
+                Temperature has exceeded limit for &gt;3 minutes. Cargo at risk!
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleActionClick}
+            disabled={injecting}
+            style={{
+              background: '#ef4444',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.4rem 0.8rem',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              cursor: injecting ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              transition: 'background 0.2s',
+              boxShadow: '0 0 10px rgba(239,68,68,0.4)',
+              opacity: injecting ? 0.7 : 1
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#dc2626')}
+            onMouseOut={(e) => (e.currentTarget.style.background = '#ef4444')}
+          >
+            {injecting ? (
+              <Lucide.Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Lucide.Thermometer size={12} />
+            )}
+            Inject Coolant ($2.00)
+          </button>
+        </div>
+      )}
 
       {/* Main grid: Map + Coords + Temp */}
       <div style={{
@@ -352,6 +418,14 @@ export default function RiderTrackingPanel({ activeOrder, riderCoords }) {
         @keyframes pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+          50% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

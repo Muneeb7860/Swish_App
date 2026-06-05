@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, useCallback } from 'react';
 import * as Lucide from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useStore } from './store';
@@ -9,10 +9,9 @@ import SupportBot from './components/SupportBot';
 import RiderTrackingPanel from './components/RiderTrackingPanel';
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
-const MFE_WHITELIST = [
-  'localhost',
-  '127.0.0.1'
-];
+const MFE_WHITELIST = (import.meta.env.VITE_MFE_WHITELIST || 'localhost,127.0.0.1')
+  .split(',')
+  .map((host: string) => host.trim());
 
 
 const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
@@ -618,20 +617,21 @@ export default function App() {
         logKafka('system', 'sse.connected', `EventSource connected to rider telemetry stream for Order #${targetOrderId}`);
       };
 
-      es.onmessage = (event) => {
+      es.addEventListener('telemetry-update', (event: any) => {
         try {
           const tick = JSON.parse(event.data);
           setRiderCoords({
             lat: tick.latitude,
             lng: tick.longitude,
             temperature: tick.temperature,
-            timestamp: tick.timestamp || new Date().toISOString()
+            timestamp: tick.timestamp || new Date().toISOString(),
+            thermalBreachActive: tick.thermalBreachActive || false
           });
-          logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C`);
+          logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C (Breach: ${tick.thermalBreachActive})`);
         } catch (parseErr) {
           console.warn('[SSE] Could not parse telemetry tick:', event.data);
         }
-      };
+      });
 
       es.onerror = () => {
         closeSseStream();
@@ -655,8 +655,11 @@ export default function App() {
         if (!prev) return null;
         if (prev.progress >= 100) {
           clearInterval(riderTimerRef.current as any);
-          handleOrderDeliveryComplete(prev);
-          return null;
+          return {
+            ...prev,
+            status: 'arrived',
+            progress: 100
+          };
         }
 
         const nextProgress = prev.progress + 10;
@@ -706,7 +709,7 @@ export default function App() {
     }, 1000);
   };
 
-  const handleOrderDeliveryComplete = (order) => {
+  const handleOrderDeliveryComplete = (order, podHash = '') => {
     // Close SSE stream — order lifecycle complete
     closeSseStream();
     setRiderCoords(null);
@@ -724,12 +727,12 @@ export default function App() {
     updateCustomerTrust(5, 'Order completed without issue');
 
     setOrderHistory(prev => [
-      { id: order.id, date: 'Today', items: order.items, total: order.total, status: 'delivered', paymentMethod: 'Wallet' },
+      { id: order.id, date: 'Today', items: order.items, total: order.total, status: 'delivered', paymentMethod: 'Wallet', podHash: podHash },
       ...prev
     ]);
 
-    logKafka('rider', 'order.delivered', `Order #${order.id} delivered to customer flat.`);
-    triggerToast(`Order #${order.id} delivered!`, 'customer');
+    logKafka('rider', 'order.delivered', `Order #${order.id} delivered. PoD Handshake Hash: ${podHash || 'N/A'}`);
+    triggerToast(`Order #${order.id} delivered! PoD Hash: ${podHash ? podHash.substring(0, 10) + '...' : 'N/A'}`, 'customer');
     setActiveOrder(null);
     setTipAmount(0);
   };
@@ -747,13 +750,14 @@ export default function App() {
     setTipAmount(0);
   };
 
-  const handleInjectDryIce = () => {
-    if (!activeOrder) return;
+  const handleInjectDryIce = (orderId?: number) => {
+    const id = orderId || activeOrder?.id;
+    if (!id) return;
     setMerchantWallet(w => w - 2.00);
     logLedger('system', 'DRY-ICE-DEBIT', 'Rider manual coolant mitigation applied', 2.00, 0);
     
     // Trigger Real BFF Telemetry Coolant Integration
-    fetch(`/api/telemetry/${activeOrder.id}/dry-ice`, {
+    fetch(`/api/telemetry/${id}/dry-ice`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`
@@ -768,7 +772,10 @@ export default function App() {
     })
     .catch(err => console.log('BFF Telemetry link offline:', err.message));
 
-    setActiveOrder(prev => ({ ...prev, temperature: 4.0 }));
+    setActiveOrder(prev => {
+      if (!prev) return null;
+      return { ...prev, temperature: 4.0 };
+    });
     logKafka('rider', 'telemetry.mitigation_applied', 'Coolant injected: Perishable temperature reset to 4.0°C.');
     triggerToast('Dry ice coolant injected successfully!', 'rider');
   };
@@ -823,15 +830,15 @@ export default function App() {
   };
 
   const handleGdprPurge = () => {
-    if (window.confirm("CRITICAL WARNING: This action will permanently erase your order transaction logs under GDPR Article 17 (Right to Erasure). Financial ledger metrics will be anonymized. Continue?")) {
+    if (window.confirm("CRITICAL WARNING: This action will permanently erase your personal order history and user profile data under GDPR Article 17 (Right to Erasure). Double-entry financial ledgers will remain intact for regulatory accounting compliance. Continue?")) {
       setOrderHistory([]);
       setCustomerOrderCount(0);
       setCustomerRefundCount(0);
-      setLedger(prev => prev.map(l => l.type === 'customer' ? { ...l, ref: 'ANONYMIZED-GDPR-CUST', desc: 'Anonymized Transaction Details (GDPR Article 17 Purge)' } : l));
+      // We DO NOT modify or anonymize the ledger, preserving double-entry accounting compliance.
       setGdprTokenProbation(true);
       updateCustomerTrust(-customerTrustScore + 75, 'GDPR Purge Probationary Score Applied (Token Anonymization)');
-      logKafka('customer', 'gdpr.data_purge', 'GDPR ARTICLE 17 PURGE: Erased past customer order logs. Anonymized double-entry transaction ledgers.');
-      triggerToast('GDPR Data Purge complete: Purchase history wiped.', 'admin');
+      logKafka('customer', 'gdpr.data_purge', 'GDPR ARTICLE 17 PURGE: Erased customer order history and profile details. Immutable financial ledgers retained intact.');
+      triggerToast('GDPR Data Purge complete: Personal history wiped.', 'admin');
     }
   };
 
@@ -860,26 +867,157 @@ export default function App() {
     triggerToast(`MANUAL SCALE: ${store} capacity expanded! (Charged $${fee})`, 'inventory');
   };
 
+  const fetchHitlQueues = useCallback(() => {
+    const headers = {
+      'Authorization': authToken ? `Bearer ${authToken}` : ''
+    };
+
+    const fetchB2b = fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl`, { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return [];
+        return data.map(item => ({
+          id: `b2b-${item.id}`,
+          originalId: item.id,
+          type: 'b2b_funds',
+          desc: `Restock Order #${item.restockOrderId} override request for wholesaler ${item.wholesalerId}`,
+          amount: item.amount,
+          actionData: { restockOrderId: item.restockOrderId, wholesalerId: item.wholesalerId }
+        }));
+      })
+      .catch(() => []);
+
+    const fetchGeneral = fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue`, { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return [];
+        return data.map(item => ({
+          id: item.ticketId,
+          originalId: item.ticketId,
+          type: item.type,
+          desc: item.description,
+          amount: item.amount,
+          actionData: { customerId: item.customer?.customerId, orderId: item.order?.orderId }
+        }));
+      })
+      .catch(() => []);
+
+    Promise.all([fetchB2b, fetchGeneral])
+      .then(([b2bList, generalList]) => {
+        const merged = [...b2bList, ...generalList];
+        setHitlQueue(merged);
+      })
+      .catch(() => {});
+  }, [authToken, setHitlQueue]);
+
+  useEffect(() => {
+    fetchHitlQueues();
+    if (activeRole === 'admin') {
+      const timer = setInterval(fetchHitlQueues, 10000);
+      return () => clearInterval(timer);
+    }
+  }, [activeRole, fetchHitlQueues]);
+
   const handleReleaseHitl = (ticket) => {
-    setHitlQueue(prev => prev.filter(t => t.id !== ticket.id));
-    if (ticket.type === 'b2b_funds') {
-      setMerchantWallet(w => w - ticket.amount);
-      logLedger('system', 'RESTOCK-FUND-RELEASE', `Restocked inventory: approved release to wholesaler`, ticket.amount, 0);
-      logKafka('system', 'hitl.authorized', `Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`);
+    if (ticket.id && ticket.id.toString().startsWith('b2b-')) {
+      const realId = ticket.originalId;
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          operator: 'swissadmin',
+          reason: 'B2B Restock approved via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('B2B Restock order approved and released!', 'admin');
+          setMerchantWallet(w => w - ticket.amount);
+          logLedger('system', 'RESTOCK-FUND-RELEASE', `Restocked inventory: approved release to wholesaler`, ticket.amount, 0);
+          logKafka('system', 'hitl.authorized', `Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to approve B2B restock override.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to approve B2B restock override (network error).', 'admin'));
     } else {
-      setCustomerWallet(w => w + ticket.amount);
-      setMerchantWallet(w => w - ticket.amount);
-      logLedger('system', 'CUSTOMER-REFUND', 'Approved support bot customer refund request', ticket.amount, 0);
-      logKafka('system', 'hitl.authorized', `Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`);
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          decision: 'approve',
+          reason: 'Approved via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('HITL ticket approved successfully.', 'admin');
+          setCustomerWallet(w => w + ticket.amount);
+          setMerchantWallet(w => w - ticket.amount);
+          logLedger('system', 'CUSTOMER-REFUND', 'Approved support bot customer refund request', ticket.amount, 0);
+          logKafka('system', 'hitl.authorized', `Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to approve HITL ticket.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to approve HITL ticket (network error).', 'admin'));
     }
   };
 
   const handleVoidHitl = (ticket) => {
-    setHitlQueue(prev => prev.filter(t => t.id !== ticket.id));
-    if (ticket.type === 'b2b_funds') {
-      logKafka('admin', 'hitl.voided', `Admin VOIDED B2B procurement request for ${ticket.actionData.itemName}`);
+    if (ticket.id && ticket.id.toString().startsWith('b2b-')) {
+      const realId = ticket.originalId;
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          operator: 'swissadmin',
+          reason: 'B2B Restock rejected via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('B2B Restock order rejected and canceled.', 'admin');
+          logKafka('admin', 'hitl.voided', `Admin VOIDED B2B procurement request for restock order.`);
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to reject B2B restock override.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to reject B2B restock override (network error).', 'admin'));
     } else {
-      logKafka('admin', 'hitl.voided', 'Admin VOIDED AI Bot customer refund request.');
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify({
+          decision: 'reject',
+          reason: 'Rejected via Admin console'
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          triggerToast('HITL ticket rejected successfully.', 'admin');
+          logKafka('admin', 'hitl.voided', 'Admin VOIDED AI Bot customer refund request.');
+          fetchHitlQueues();
+        } else {
+          triggerToast('Failed to reject HITL ticket.', 'admin');
+        }
+      })
+      .catch(() => triggerToast('Failed to reject HITL ticket (network error).', 'admin'));
     }
   };
 
@@ -984,16 +1122,7 @@ export default function App() {
           logKafka('system', 'agent.hitl_escalated', `HITL Ticket generated: ${data.ticketId}. Reason: Confidence score low.`);
           
           // Re-fetch administrative queue to refresh the Admin view
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl`, {
-            headers: { 'Authorization': authToken ? `Bearer ${authToken}` : '' }
-          })
-          .then(r => r.json())
-          .then(hitlData => {
-            if (Array.isArray(hitlData)) {
-              setHitlQueue(hitlData);
-            }
-          })
-          .catch(() => {});
+          fetchHitlQueues();
         }
         setBotMessages(prev => [...prev, { sender: 'bot', text: reply }]);
         // useQuery handles metrics automatically now
@@ -1284,7 +1413,7 @@ export default function App() {
         
         <section className="workspace-main-panel">
           {/* ── Live Rider Tracking Panel (Global — visible on all tabs during transit) ── */}
-          <RiderTrackingPanel activeOrder={activeOrder} riderCoords={riderCoords} />
+          <RiderTrackingPanel activeOrder={activeOrder} riderCoords={riderCoords} onInjectDryIce={handleInjectDryIce} />
 
           <Suspense fallback={<div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}><Lucide.Loader2 size={28} className="spin" /><p style={{ color: 'var(--text-secondary)', marginTop: '0.8rem' }}>Loading Federated Micro-Frontend...</p></div>}>
             {activeRole === 'customer' && (hasRoleAccess('customer') ? (
@@ -1333,6 +1462,7 @@ export default function App() {
                   coldChainBreakdownActive={coldChainBreakdownActive}
                   handleInjectDryIce={handleInjectDryIce}
                   handleApplyOnboard={handleApplyOnboard}
+                  handleCompleteDelivery={handleOrderDeliveryComplete}
                   logKafka={logKafka}
                 />
               </LocalErrorBoundary>

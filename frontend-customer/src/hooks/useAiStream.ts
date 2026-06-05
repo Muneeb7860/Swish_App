@@ -29,6 +29,10 @@ export const useAiStream = () => {
         throw new Error(`Failed to initiate stream: ${response.statusText}`);
       }
 
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
       // Read the SSE stream chunks
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
@@ -49,9 +53,9 @@ export const useAiStream = () => {
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI Stream Error:", err);
-      setError(err.message);
+      setError(err?.message || 'Unknown error');
     } finally {
       setIsStreaming(false);
     }

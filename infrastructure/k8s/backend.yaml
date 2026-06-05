@@ -19,7 +19,7 @@ spec:
         image: swiss-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8080
+        - containerPort: 8083
         env:
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/swiss_db"
@@ -63,13 +63,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health
-            port: 8080
+            port: 8083
           initialDelaySeconds: 45
           periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /actuator/health
-            port: 8080
+            port: 8083
           initialDelaySeconds: 30
           periodSeconds: 10
 ---
@@ -80,5 +80,6 @@ metadata:
 spec:
   ports:
   - port: 8080
+    targetPort: 8083
   selector:
     app: backend

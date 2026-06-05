@@ -71,7 +71,7 @@ services:
     env_file:
       - ../.env
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/actuator/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -82,23 +82,127 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-
-  bff:
+  core-business-engine:
     build:
-      context: ../bff
+      context: ../core-business-engine
+    container_name: swiss_core_business
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JAVA_OPTS=-Xmx256m -Xms256m
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - backend-tier
+
+  notification-engine:
+    build:
+      context: ../notification-engine
+    container_name: swiss_notification_engine
+    ports:
+      - "8082:8082"
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JAVA_OPTS=-Xmx256m -Xms256m
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - backend-tier
+
+  shared-async-services:
+    build:
+      context: ../shared-async-services
+    container_name: swiss_shared_async
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/swiss_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JAVA_OPTS=-Xmx256m -Xms256m
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - backend-tier
+
+  platform-gateway:
+    build:
+      context: ../platform-gateway
       dockerfile: Dockerfile
-    container_name: swiss_bff
+    container_name: swiss_platform_gateway
     depends_on:
       backend:
         condition: service_healthy
+      core-business-engine:
+        condition: service_healthy
+      notification-engine:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
     environment:
-      - BACKEND_URL=http://backend:8080
+      - BACKEND_URL=http://backend:8083
+      - CORE_BUSINESS_URL=http://core-business-engine:8081
+      - NOTIFICATION_ENGINE_URL=http://notification-engine:8082
+      - NOTIFICATION_WS_URL=ws://notification-engine:8082
       - JWT_SECRET=${JWT_SECRET}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
       - JAVA_OPTS=-Xmx128m -Xms128m
     env_file:
       - ../.env
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

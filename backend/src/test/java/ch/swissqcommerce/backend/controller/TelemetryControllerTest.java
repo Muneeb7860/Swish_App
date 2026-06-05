@@ -36,6 +36,12 @@ public class TelemetryControllerTest {
     @MockBean
     private InMemoryGeoStore geoStore;
 
+    @MockBean
+    private ch.swissqcommerce.backend.repository.OrderTelemetryLogRepository telemetryLogRepository;
+
+    @MockBean
+    private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -52,6 +58,7 @@ public class TelemetryControllerTest {
         log.setLogId(10);
 
         when(telemetryService.recordTelemetry(eq(1), any(), any(), any(), eq(false))).thenReturn(log);
+        when(telemetryService.isThermalBreachActive(eq(1), any())).thenReturn(true);
 
         mockMvc.perform(post("/api/telemetry/tick")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -59,7 +66,8 @@ public class TelemetryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(1))
                 .andExpect(jsonPath("$.persisted").value(true))
-                .andExpect(jsonPath("$.alertTriggered").value(true));
+                .andExpect(jsonPath("$.alertTriggered").value(true))
+                .andExpect(jsonPath("$.thermalBreachActive").value(true));
     }
 
     @Test

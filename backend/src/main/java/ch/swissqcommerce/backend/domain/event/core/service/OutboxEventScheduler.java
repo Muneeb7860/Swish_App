@@ -108,6 +108,16 @@ public class OutboxEventScheduler {
         }
     }
 
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void dispatchEventImmediately(OutboxEvent event) {
+        if (event == null || event.getId() == null) return;
+        outboxEventRepository.findById(event.getId()).ifPresent(freshEvent -> {
+            if ("PENDING".equalsIgnoreCase(freshEvent.getStatus())) {
+                dispatchEvent(freshEvent);
+            }
+        });
+    }
+
     private void dispatchEvent(OutboxEvent event) {
         String targetTopic = resolveTopicForEvent(event.getEventType());
         String correlationId = UUID.randomUUID().toString();

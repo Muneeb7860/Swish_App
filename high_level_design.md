@@ -56,7 +56,7 @@ The Swish OS v2.0.0 network model enforces a strict Zero Trust Architecture, pro
             │
             ▼ (mTLS via Envoy Sidecar)
 ┌──────────────────────────────┐
-│  Spring Cloud Gateway BFF    │ (Port 8081 - Headless OpenAPI, JWT Parsing)
+│       platform-gateway       │ (Port 8080 - Unified Gateway, JWT Parsing)
 └───────────┬──────────────────┘
             │
             ▼ (Kube-DNS Resolution)
@@ -72,8 +72,8 @@ The Swish OS v2.0.0 network model enforces a strict Zero Trust Architecture, pro
 
 1.  **NGINX Ingress Controller**: Serves as the primary public entry point (DMZ boundary). Handles external SSL/TLS termination, rejects DDoS traffic using IP-based rate limiting, and filters preflight `OPTIONS` calls for CORS policies.
 2.  **Envoy mTLS Sidecar Proxies**: Injected into every pod in the Kubernetes cluster. Direct service-to-service communication is blocked unless encrypted via Mutual TLS (mTLS) and verified against SPIFFE/SPIRE identity documents.
-3.  **Spring Cloud Gateway BFF**: Exposes machine-readable OpenAPI specs (`/v3/api-docs`) via [application.yml](file:///C:/Users/DELL%209420/Documents/swiss_App/bff/src/main/resources/application.yml) on port 8081. Intercepts security headers, performs OAuth2 JSON Web Token (JWT) verification, and applies local rate-limits before passing requests inward.
-4.  **Kube-DNS**: The internal cluster DNS resolver that resolves requests from the gateway BFF to the correct backend cluster IP (e.g. `http://backend-core-service.production.svc.cluster.local:8080`).
+3.  **platform-gateway**: Exposes unified OpenAPI specifications, intercepts security headers, performs OAuth2 JSON Web Token (JWT) verification, and applies local rate-limits before passing requests inward.
+4.  **Kube-DNS**: The internal cluster DNS resolver that resolves requests from the gateway to the correct backend cluster IP (e.g. `http://backend-core-service.production.svc.cluster.local:8080`).
 5.  **Backend Core Services**: Implements hexagonal architecture patterns to isolate business use cases from external interfaces. Receives requests inside its secure network segment.
 
 ---
@@ -257,41 +257,62 @@ graph TB
   Ingress[NGINX Ingress Controller<br>DMZ / TLS Termination]:::edge
   
   subgraph k8s-service-mesh [Kubernetes Pod Mesh]
-    BFF[BFF Gateway Component<br>Spring Cloud Gateway Port 8081]:::gateway
+    GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
     
     subgraph core-services [Core Services (Envoy mTLS Sidecars)]
-      CatSrv[Catalog Service]:::container
-      OrdSrv[Order Processor]:::container
-      ProcSrv[B2B Procurement Agent]:::container
-      PaySrv[Payment Engine]:::container
-      DispSrv[Dispatch Coordinator]:::container
+      Backend[backend Service<br>Hexagonal Core Port 8080]:::container
+      BusinessEngine[core-business-engine<br>Checkout/Inv/B2B Port 8081]:::container
+      NotifEngine[notification-engine<br>Kafka Consumer/WS Port 8082]:::container
+      SharedAsync[shared-async-services<br>AI & Ledger]:::container
+      SecurityEngine[Security Engine<br>Guardrails / mTLS]:::container
+      RewardsEngine[Rewards Engine<br>Gamification / Loyalty]:::container
+      EventsEngine[Events Engine<br>Outbox Relay]:::container
+      GovernanceEngine[Governance Engine<br>Compliance / Onboarding]:::container
     end
     
     subgraph databases [Data & Storage Tier]
-      Redis[(Redis Session Cache)]:::store
-      Postgres[(PostgreSQL OLTP DB)]:::store
-      Timescale[(PostgreSQL TimescaleDB)]:::store
-      MongoDB[(MongoDB OLAP Archive)]:::store
+      Redis[(Redis Cache & Rate Limiting)]:::store
+      Postgres[(PostgreSQL OLTP Database)]:::store
+      MongoDB[(MongoDB Analytical Archive)]:::store
     end
 
     Kafka[Kafka Event Broker]:::queue
   end
 
-  Ingress -->|mTLS Traffic Route| BFF
-  BFF -->|Lookup Catalog| CatSrv
-  BFF -->|Submit Order| OrdSrv
-  BFF -->|Procurement Exception Check| ProcSrv
-  BFF -->|Verify Settlement Ledger| PaySrv
-  BFF -->|Process IoT & Track GPS| DispSrv
-
-  CatSrv -->|Read Autocomplete| Redis
-  CatSrv -->|DB Lookup fallback| Postgres
-  OrdSrv -->|Transactional Outbox write| Postgres
-  PaySrv -->|Commit Cryptographic Ledger| Postgres
-  DispSrv -->|Ingest Buffer Coordinates| Redis
-  Redis -.->|Flush Telemetry Logs| Timescale
+  Ingress -->|mTLS Traffic Route| GW
   
-  Postgres -.->|CDC Outbox Poller| Kafka
+  GW -->|Route| Backend
+  GW -->|Route| BusinessEngine
+  GW -->|Route| NotifEngine
+  GW -->|Route| SharedAsync
+
+  Backend --> Postgres
+  BusinessEngine --> Postgres
+  NotifEngine --> Postgres
+  SharedAsync --> Postgres
+
+  Backend --> SecurityEngine
+  Backend --> EventsEngine
+  SharedAsync --> RewardsEngine
+  BusinessEngine --> GovernanceEngine
+
+  SecurityEngine -.-> Redis
+  SecurityEngine -.->|"publish"| Kafka
+  RewardsEngine --> Postgres
+  RewardsEngine -.-> Redis
+  EventsEngine --> Postgres
+  EventsEngine -.->|"publish"| Kafka
+  GovernanceEngine --> Postgres
+
+  Backend -.-> Redis
+  BusinessEngine -.-> Redis
+  NotifEngine -.-> Redis
+  GW -.-> Redis
+
+  BusinessEngine -.->|"publish"| Kafka
+  Kafka -.->|"consume"| NotifEngine
+  Kafka -.->|"consume"| SharedAsync
+  Postgres -.->|"Outbox publish"| Kafka
   Kafka -.->|OlapEventSinkListener| MongoDB
 ```
 

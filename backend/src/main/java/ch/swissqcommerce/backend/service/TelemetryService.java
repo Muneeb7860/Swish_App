@@ -19,6 +19,8 @@ import java.util.NoSuchElementException;
 @Service
 public class TelemetryService {
 
+    final java.util.concurrent.ConcurrentHashMap<Integer, java.time.OffsetDateTime> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Autowired
     private OrderTelemetryLogRepository telemetryLogRepository;
 
@@ -38,7 +40,7 @@ public class TelemetryService {
      * Records a sensor tick from the courier's IoT device.
      * Triggers spoilage write-offs and trust penalties if thermal breach limits are hit.
      */
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
                                              BigDecimal temp, boolean dryIceInjected) {
         
@@ -95,11 +97,32 @@ public class TelemetryService {
     }
 
     /**
+     * Checks if a thermal breach warning has been continuously active for more than 3 minutes (180 seconds).
+     */
+    public boolean isThermalBreachActive(Integer orderId, BigDecimal currentTemp) {
+        if (currentTemp == null) return false;
+        
+        // Match 8.0°C alert threshold in recordTelemetry
+        boolean thresholdBreached = currentTemp.compareTo(new BigDecimal("8.0")) > 0;
+        
+        if (thresholdBreached) {
+            java.time.OffsetDateTime start = activeBreaches.computeIfAbsent(orderId, k -> java.time.OffsetDateTime.now());
+            long secondsPassed = java.time.Duration.between(start, java.time.OffsetDateTime.now()).toSeconds();
+            return secondsPassed >= 180;
+        } else {
+            activeBreaches.remove(orderId);
+            return false;
+        }
+    }
+
+    /**
      * Injects dry ice coolant to reset temperature back to 4.0°C.
      * Charges merchant $2.00 and logs ledger transaction.
      */
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public void injectDryIce(Integer orderId) {
+        activeBreaches.remove(orderId);
+        
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 

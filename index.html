@@ -114,7 +114,9 @@
       const [envProfiles, setEnvProfiles] = useState(ENV_PROFILES);
       const [activeProfileKey, setActiveProfileKey] = useState('development');
       const activeProfile = envProfiles[activeProfileKey];
-      const [activeRole, setActiveRole] = useState('customer'); // customer, rider, inventory, darkstore_manager, business, admin
+      const [activeRole, setActiveRole] = useState('customer'); // customer, rider, inventory, darkstore_manager, business, admin, architecture
+      const [selectedNode, setSelectedNode] = useState(null);
+      const [simulateFlow, setSimulateFlow] = useState(true);
       const [products, setProducts] = useState(INITIAL_PRODUCTS);
       const [cart, setCart] = useState([]);
       const [activeOrder, setActiveOrder] = useState(null);
@@ -2508,6 +2510,16 @@
                 <Lucide.Sliders size={15} />
                 <span>Owner / Admin</span>
               </button>
+
+              <button 
+                id="tab-architecture"
+                className={`role-tab ${activeRole === 'architecture' ? 'active' : ''}`}
+                data-role="architecture"
+                onClick={() => setActiveRole('architecture')}
+              >
+                <Lucide.Network size={15} />
+                <span>Architecture Map</span>
+              </button>
             </nav>
           </header>
 
@@ -4848,6 +4860,371 @@
                 </div>
               ) : <RbacBlocker targetRole="admin" />)}
 
+              {activeRole === 'architecture' && (
+                <div className="architecture-dashboard">
+                  <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div className="topology-grid-controls">
+                      <div>
+                        <h3 style={{ fontWeight: 800 }}>Swiss Q-Commerce System Topology Map</h3>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Interactive microservices architecture mapping updated after latest code release.
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className={`topology-control-btn ${simulateFlow ? 'active' : ''}`}
+                          onClick={() => setSimulateFlow(!simulateFlow)}
+                          style={{ pointerEvents: 'auto' }}
+                        >
+                          <Lucide.Activity size={12} />
+                          <span>{simulateFlow ? 'Message Flow On' : 'Message Flow Off'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="topology-wrapper" style={{ height: '600px' }}>
+                      {/* SVG Connection Lines */}
+                      <svg className="topology-svg">
+                        <defs>
+                          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 2 L 8 5 L 0 8 z" fill="rgba(255,255,255,0.15)" />
+                          </marker>
+                          <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 2 L 8 5 L 0 8 z" fill="var(--color-engine)" />
+                          </marker>
+                          <marker id="arrow-alarm" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 2 L 8 5 L 0 8 z" fill="var(--color-admin)" />
+                          </marker>
+                        </defs>
+                        {(() => {
+                          const nodesPositions = [
+                            { id: 'customer-app', x: 20, y: 30 },
+                            { id: 'rider-app', x: 140, y: 30 },
+                            { id: 'b2b-dashboard', x: 260, y: 30 },
+                            { id: 'manager-app', x: 380, y: 30 },
+                            { id: 'admin-cockpit', x: 500, y: 30 },
+                            
+                            { id: 'platform-gateway', x: 140, y: 135 },
+                            { id: 'legacy-bff', x: 380, y: 135 },
+                            
+                            { id: 'backend', x: 20, y: 240 },
+                            { id: 'core-business-engine', x: 170, y: 240 },
+                            { id: 'notification-engine', x: 320, y: 240 },
+                            { id: 'shared-async-services', x: 470, y: 240 },
+                            
+                            { id: 'security-engine', x: 20, y: 345 },
+                            { id: 'rewards-engine', x: 170, y: 345 },
+                            { id: 'events-engine', x: 320, y: 345 },
+                            { id: 'governance-engine', x: 470, y: 345 },
+
+                            { id: 'postgres-db', x: 30, y: 460 },
+                            { id: 'redis-cache', x: 180, y: 460 },
+                            { id: 'kafka-broker', x: 330, y: 460 },
+                            { id: 'mongodb', x: 480, y: 460 }
+                          ];
+                          
+                          const topologyLinks = [
+                            { from: 'customer-app', to: 'platform-gateway' },
+                            { from: 'rider-app', to: 'platform-gateway' },
+                            { from: 'b2b-dashboard', to: 'platform-gateway' },
+                            { from: 'manager-app', to: 'legacy-bff' },
+                            { from: 'admin-cockpit', to: 'legacy-bff' },
+                            
+                            { from: 'platform-gateway', to: 'backend' },
+                            { from: 'platform-gateway', to: 'core-business-engine' },
+                            { from: 'platform-gateway', to: 'notification-engine' },
+                            { from: 'platform-gateway', to: 'shared-async-services' },
+                            { from: 'legacy-bff', to: 'backend' },
+                            
+                            { from: 'backend', to: 'security-engine' },
+                            { from: 'backend', to: 'events-engine' },
+                            { from: 'shared-async-services', to: 'rewards-engine' },
+                            { from: 'core-business-engine', to: 'governance-engine' },
+                            
+                            { from: 'security-engine', to: 'redis-cache' },
+                            { from: 'security-engine', to: 'kafka-broker' },
+                            { from: 'rewards-engine', to: 'postgres-db' },
+                            { from: 'rewards-engine', to: 'redis-cache' },
+                            { from: 'events-engine', to: 'postgres-db' },
+                            { from: 'events-engine', to: 'kafka-broker' },
+                            { from: 'governance-engine', to: 'postgres-db' },
+                            
+                            { from: 'notification-engine', to: 'kafka-broker' },
+                            { from: 'notification-engine', to: 'redis-cache' },
+                            { from: 'platform-gateway', to: 'redis-cache' },
+                            { from: 'backend', to: 'mongodb' }
+                          ];
+                          
+                          const isNodeAlarmLocal = (nodeId) => {
+                            if (nodeId === 'postgres-db' && dbLatencyActive) return true;
+                            if (nodeId === 'redis-cache' && redisCrashActive) return true;
+                            if (nodeId === 'core-business-engine' && paymentOutageActive) return true;
+                            if (nodeId === 'backend' && paymentOutageActive) return true;
+                            if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
+                            if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
+                            if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                            if (nodeId === 'events-engine' && redisCrashActive) return true;
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
+                            return false;
+                          };
+
+                          return topologyLinks.map((link, idx) => {
+                            const fromNode = nodesPositions.find(n => n.id === link.from);
+                            const toNode = nodesPositions.find(n => n.id === link.to);
+                            if (!fromNode || !toNode) return null;
+                            const x1 = fromNode.x + 60;
+                            const y1 = fromNode.y + 35;
+                            const x2 = toNode.x + 60;
+                            const y2 = toNode.y + 5;
+                            
+                            const dy = y2 - y1;
+                            const cy1 = y1 + dy * 0.45;
+                            const cy2 = y2 - dy * 0.45;
+                            const pathData = `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`;
+                            
+                            const isAlarm = isNodeAlarmLocal(link.from) || isNodeAlarmLocal(link.to);
+                            let linkClass = "topology-link";
+                            if (simulateFlow) {
+                              linkClass += isAlarm ? " link-flow-alarm" : " link-flow-active";
+                            }
+                            
+                            return (
+                              <path
+                                key={idx}
+                                d={pathData}
+                                className={linkClass}
+                                markerEnd={simulateFlow ? (isAlarm ? "url(#arrow-alarm)" : "url(#arrow-active)") : "url(#arrow)"}
+                              />
+                            );
+                          });
+                        })()}
+                      </svg>
+
+                      {/* HTML Nodes */}
+                      <div className="topology-nodes-layer">
+                        {(() => {
+                          const getIcon = (iconName) => {
+                            const IconComponent = Lucide[iconName] || Lucide.Cpu;
+                            return <IconComponent size={15} />;
+                          };
+                          
+                          const isNodeAlarmLocal = (nodeId) => {
+                            if (nodeId === 'postgres-db' && dbLatencyActive) return true;
+                            if (nodeId === 'redis-cache' && redisCrashActive) return true;
+                            if (nodeId === 'core-business-engine' && paymentOutageActive) return true;
+                            if (nodeId === 'backend' && paymentOutageActive) return true;
+                            if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
+                            if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
+                            if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                            if (nodeId === 'events-engine' && redisCrashActive) return true;
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
+                            return false;
+                          };
+
+                          const getNodeAlarmText = (nodeId) => {
+                            if (nodeId === 'postgres-db' && dbLatencyActive) return 'DB LATENCY';
+                            if (nodeId === 'redis-cache' && redisCrashActive) return 'FLUSHED';
+                            if (nodeId === 'core-business-engine' && paymentOutageActive) return 'CB TRIPPED';
+                            if (nodeId === 'backend' && paymentOutageActive) return 'GW DOWN';
+                            if (nodeId === 'rider-app' && coldChainBreakdownActive) return 'COLD BREACH';
+                            if (nodeId === 'rider-app' && riderTrafficActive) return 'TRAFFIC JAM';
+                            if (nodeId === 'notification-engine' && coldChainBreakdownActive) return 'ALARM ACTIVE';
+                            if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return 'ERP FALLBACK';
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return 'FRAUD DETECTED';
+                            if (nodeId === 'events-engine' && redisCrashActive) return 'OUTBOX STALLED';
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return 'PROBATION';
+                            return null;
+                          };
+
+                          const nodes = [
+                            { id: 'customer-app', x: 20, y: 30, name: 'Customer App', cat: 'client', icon: 'Smartphone', sub: 'MFE (5173)' },
+                            { id: 'rider-app', x: 140, y: 30, name: 'Rider App', cat: 'client', icon: 'Bike', sub: 'MFE (5174)' },
+                            { id: 'b2b-dashboard', x: 260, y: 30, name: 'B2B Dashboard', cat: 'client', icon: 'BarChart3', sub: 'MFE (5176)' },
+                            { id: 'manager-app', x: 380, y: 30, name: 'Store Manager', cat: 'client', icon: 'ClipboardList', sub: 'MFE (5175)' },
+                            { id: 'admin-cockpit', x: 500, y: 30, name: 'Admin Cockpit', cat: 'client', icon: 'Sliders', sub: 'MFE (Host)' },
+                            
+                            { id: 'platform-gateway', x: 140, y: 135, name: 'platform-gateway', cat: 'gateway', icon: 'ShieldCheck', sub: 'Port 8080' },
+                            { id: 'legacy-bff', x: 380, y: 135, name: 'Legacy BFF', cat: 'gateway', icon: 'Shuffle', sub: 'Port 8081' },
+                            
+                            { id: 'backend', x: 20, y: 240, name: 'backend', cat: 'service', icon: 'Cpu', sub: 'Port 8080' },
+                            { id: 'core-business-engine', x: 170, y: 240, name: 'core-business', cat: 'service', icon: 'Activity', sub: 'Port 8081' },
+                            { id: 'notification-engine', x: 320, y: 240, name: 'notification-svc', cat: 'service', icon: 'BellRing', sub: 'Port 8082' },
+                            { id: 'shared-async-services', x: 470, y: 240, name: 'shared-async', cat: 'service', icon: 'Brain', sub: 'Library' },
+                            
+                            { id: 'security-engine', x: 20, y: 345, name: 'Security Engine', cat: 'service', icon: 'ShieldAlert', sub: 'Guardrails' },
+                            { id: 'rewards-engine', x: 170, y: 345, name: 'Rewards Engine', cat: 'service', icon: 'Award', sub: 'Gamification' },
+                            { id: 'events-engine', x: 320, y: 345, name: 'Events Engine', cat: 'service', icon: 'Repeat', sub: 'Outbox Relay' },
+                            { id: 'governance-engine', x: 470, y: 345, name: 'Governance Engine', cat: 'service', icon: 'UserCheck', sub: 'Compliance' },
+
+                            { id: 'postgres-db', x: 30, y: 460, name: 'PostgreSQL DB', cat: 'storage', icon: 'Database', sub: 'Port 5432' },
+                            { id: 'redis-cache', x: 180, y: 460, name: 'Redis Stack', cat: 'storage', icon: 'HardDrive', sub: 'Port 6379' },
+                            { id: 'kafka-broker', x: 330, y: 460, name: 'Apache Kafka', cat: 'storage', icon: 'GitFork', sub: 'Port 9092' },
+                            { id: 'mongodb', x: 480, y: 460, name: 'MongoDB OLAP', cat: 'storage', icon: 'Cloud', sub: 'Port 27017' }
+                          ];
+
+                          return nodes.map(node => {
+                            const isAlarm = isNodeAlarmLocal(node.id);
+                            const alarmText = getNodeAlarmText(node.id);
+                            const isSelected = selectedNode === node.id;
+                            
+                            let nodeClass = `topology-node-item node-category-${node.cat}`;
+                            if (isAlarm) nodeClass += " node-alarm-pulsing";
+                            if (isSelected) nodeClass += " node-selected-border";
+                            
+                            return (
+                              <div
+                                key={node.id}
+                                className={nodeClass}
+                                style={{ left: `${node.x}px`, top: `${node.y}px` }}
+                                onClick={() => setSelectedNode(node.id)}
+                              >
+                                <div className="node-icon-wrapper">
+                                  {getIcon(node.icon)}
+                                </div>
+                                <span className="node-label">{node.name}</span>
+                                <span className="node-subtext">{node.sub}</span>
+                                {isAlarm && (
+                                  <span className="node-badge-alarm">
+                                    {alarmText}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="topology-node-legend">
+                      <div className="legend-item">
+                        <span className="legend-dot legend-client" />
+                        <span>Clients</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-dot legend-gateway" />
+                        <span>Gateways</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-dot legend-service" />
+                        <span>Services</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-dot legend-storage" />
+                        <span>Storage & Events</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-dot legend-alarm" style={{ animation: 'pulse-red 1s infinite' }} />
+                        <span>Outages</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detail Panel */}
+                  <div className="glass-card detail-drawer-card" style={{ height: '600px' }}>
+                    {(() => {
+                      if (!selectedNode) {
+                        return (
+                          <div className="detail-drawer-empty">
+                            <Lucide.Network size={36} className="event-system" />
+                            <div>
+                              <h4 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Select System Node</h4>
+                              <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                                Click on any element in the topology map to inspect its real-time microservices configuration, active ports, technology stack, and API endpoints.
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const nodesDetails = {
+                        'customer-app': { name: 'Customer Super App', cat: 'client', desc: 'React customer-facing frontend. Supports catalog indexing, checkout submission, saved cards, custom addresses, and refund ticket filing.', tech: 'React 18, Zustand, Module Federation, Vite', port: '5173', routes: ['/'] },
+                        'rider-app': { name: 'Rider Light App', cat: 'client', desc: 'Rider dashboard tracking dispatch GPS coordinates, active order payouts, accept/reject logs, and IoT cold-chain sensor ticks.', tech: 'React 18, MapBox Simulator, Vite', port: '5174', routes: ['/'] },
+                        'b2b-dashboard': { name: 'B2B Wholesale Dashboard', cat: 'client', desc: 'Wholesaler portal coordinate stock levels. Connects to primary and secondary wholesaler ERP APIs and demonstrates autonomous AI-assisted restocking negotiations.', tech: 'React 18, Module Federation, Zustand', port: '5176', routes: ['/'] },
+                        'manager-app': { name: 'Store Manager Ops App', cat: 'client', desc: 'Internal operator panel for Dark Store Managers. Oversees shift assignments, picker performance metrics, and inventory shelf limits.', tech: 'React 18, Tailwind, Vite', port: '5175', routes: ['/'] },
+                        'admin-cockpit': { name: 'Admin Cockpit', cat: 'client', desc: 'Host application shell and cockpit dashboard. Manages 3-level onboarding approvals, double-entry ledgers, and live chaos engineering triggers.', tech: 'React 18 standalone, Babel standalone', port: '5000 (Host)', routes: ['/'] },
+                        
+                        'platform-gateway': { name: 'platform-gateway', cat: 'gateway', desc: 'Main API Gateway for the Swish platform. Intercepts all traffic, validates JWT tokens, manages Redis-based rate limiting, and runs idempotency deduplication filters.', tech: 'Spring Cloud Gateway, WebFlux, Redis, Resilience4j', port: '8080', routes: ['/api/checkout/**', '/api/inventory/**', '/ws/notifications/**', '/api/ledger/**'] },
+                        'legacy-bff': { name: 'Legacy BFF Gateway', cat: 'gateway', desc: 'Headless legacy Backend-For-Frontend gateway. Kept in the Strangler Fig pattern for routing legacy user registration and transaction history REST calls.', tech: 'Spring Cloud Gateway, WebFlux', port: '8081', routes: ['/api/v1/auth/**', '/api/transaction/**'] },
+                        
+                        'backend': { name: 'backend core service', cat: 'service', desc: 'Original backend monolith now refactored into a Hexagonal Ports & Adapters core. Manages user registration profiles, transaction records, and outbox event streams.', tech: 'Spring Boot 3.2, Java 17, Spring Data JPA, Hibernate', port: '8080', routes: ['/api/transaction/**', '/api/auth/login', '/api/enrollment/**'] },
+                        'core-business-engine': { name: 'core-business-engine', cat: 'service', desc: 'Standalone business core microservice. Manages Stripe checkout processing, B2B wholesale order evaluation logic, and active auto-replenishment loops.', tech: 'Spring Boot 3.2, Project Loom Virtual Threads, JPA', port: '8081', routes: ['/api/checkout/**', '/api/inventory/**', '/api/v1/checkout/**'] },
+                        'notification-engine': { name: 'notification-engine', cat: 'service', desc: 'Event-driven notification microservice. Consumes B2B wholesale order evaluated events from Kafka, publishes to Redis pub/sub channels, and pushes instant notifications to WebSockets.', tech: 'Spring Boot, Spring Kafka Streams, Redis Pub/Sub, WebSockets', port: '8082', routes: ['/ws/notifications/**'] },
+                        'shared-async-services': { name: 'shared-async-services', cat: 'service', desc: 'Shared async utility and engine. Interfaces with Spring AI model orchestration and runs double-entry financial ledger validation scripts.', tech: 'Spring Boot, Spring AI (OpenAI/Ollama/Groq)', port: 'N/A (Library / Async)', routes: ['Internal Ledger Operations'] },
+                        
+                        'security-engine': { name: 'Security Engine', cat: 'service', desc: 'Enforces platform guardrails: JWT authentication verification, rotating backend credentials dynamically via HashiCorp Vault, and securing service-to-service calls using Envoy sidecars with SPIFFE/SPIRE mutual TLS.', tech: 'Spring Security, HashiCorp Vault, Envoy mTLS sidecars', port: 'N/A', routes: ['Vault secrets sync', 'mTLS service boundaries'] },
+                        'rewards-engine': { name: 'Rewards & Gamification Engine', cat: 'service', desc: 'Manages user points balances, referral discount vouchers, and rider achievement records. Streams real-time leaderboard stats asynchronously using Redis sorted sets.', tech: 'Spring Boot, Redis Sorted Sets (DB3), Zustand store', port: 'N/A (Core Domain)', routes: ['/api/rewards/**', 'Redis DB3 leaderboards'] },
+                        'events-engine': { name: 'Outbox Events Engine', cat: 'service', desc: 'Reliably handles event-driven synchronization. Implements transactional outbox tables inside SQL transactions and relays them asynchronously to Apache Kafka topics.', tech: 'Spring Stream, PostgreSQL Outbox table, Kafka Binders', port: 'N/A (Relay Poller)', routes: ['Outbox CDC Poller: 4s loop', 'Kafka topics bindings'] },
+                        'governance-engine': { name: 'Governance & Compliance Engine', cat: 'service', desc: 'Platform oversight node. Controls L1/L2/L3 onboarding applicant desks, compliance reviews for HITL payment approvals, and logs audit entries to the immutable ledger.', tech: 'JPA compliance models, GDPR Article 17 Purger', port: 'N/A (Governance Core)', routes: ['/api/admin/onboard/queue/**', '/api/customer/profile/purge'] },
+
+                        'postgres-db': { name: 'PostgreSQL Database', cat: 'storage', desc: 'Primary relational transactional datastore. Segments tables between core backend and core business engine, committing outbox messages inside local ACID transaction blocks.', tech: 'PostgreSQL 15, PostGIS, Flyway Migrations (V1, V2, V3)', port: '5432', routes: ['b2b_qcomm DB schema', 'outbox table (Transactional Outbox)', 'payments ledger'] },
+                        'redis-cache': { name: 'Redis Stack', cat: 'storage', desc: 'Logical memory cache and message routing hub. Isolates DB0 (User sessions), DB1 (API rate limits), DB2 (WebSocket Pub/Sub channels), and DB3 (Product catalog caching).', tech: 'Redis 7.2, RedisJSON, Streams', port: '6379', routes: ['Logical Partition DB0 - DB3'] },
+                        'kafka-broker': { name: 'Apache Kafka Event Broker', cat: 'storage', desc: 'Message backbone for async microservices choreography. Declares checkout events, wholesale order placements, and security audits topic pipelines with DLQ routing.', tech: 'Confluent CP-Kafka 7.4.0 (KRaft)', port: '9092', routes: ['b2b.checkout.events', 'b2b.wholesale.order.placed', 'b2b.wholesale.order.evaluated', 'security.audit'] },
+                        'mongodb': { name: 'MongoDB OLAP Archive', cat: 'storage', desc: 'Decoupled telemetry cold storage. Captures high-frequency, non-GDP logs (rider GPS markers, telemetry feeds, and raw audit streams) to prevent SQL write locks.', tech: 'MongoDB 6.x, MongoDB Atlas', port: '27017', routes: ['analytics DB collection', 'OlapEventSinkListener sink'] }
+                      };
+
+                      const node = nodesDetails[selectedNode];
+                      if (!node) return null;
+
+                      const isNodeAlarmLocal = (nodeId) => {
+                        if (nodeId === 'postgres-db' && dbLatencyActive) return true;
+                        if (nodeId === 'redis-cache' && redisCrashActive) return true;
+                        if (nodeId === 'core-business-engine' && paymentOutageActive) return true;
+                        if (nodeId === 'backend' && paymentOutageActive) return true;
+                        if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
+                        if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
+                        if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                        if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                        if (nodeId === 'events-engine' && redisCrashActive) return true;
+                        if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
+                        return false;
+                      };
+
+                      const isAlarm = isNodeAlarmLocal(selectedNode);
+
+                      return (
+                        <>
+                          <div className="detail-header-row">
+                            <span className={`detail-category-badge badge-${node.cat}`}>
+                              {node.cat}
+                            </span>
+                            <div>
+                              <h4 style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{node.name}</h4>
+                              <span style={{ fontSize: '0.65rem', color: isAlarm ? 'var(--color-admin)' : 'var(--color-customer)', fontWeight: 'bold' }}>
+                                {isAlarm ? '● STATUS: CRITICAL OUTAGE' : '● STATUS: ACTIVE / RUNNING'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="detail-description">
+                            {node.desc}
+                          </p>
+
+                          <div className="detail-field-list">
+                            <div className="detail-field-item">
+                              <span className="detail-field-label">Technology Stack</span>
+                              <span className="detail-field-value">{node.tech}</span>
+                            </div>
+                            <div className="detail-field-item">
+                              <span className="detail-field-label">Active Port</span>
+                              <span className="detail-field-value" style={{ fontFamily: 'var(--font-mono)' }}>{node.port}</span>
+                            </div>
+                            <div className="detail-field-item">
+                              <span className="detail-field-label">Active Routes / Channels</span>
+                              <div className="detail-routes-list">
+                                {node.routes.map((route, rIdx) => (
+                                  <span key={rIdx} className="detail-route-tag">{route}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="system-engine-sidebar">

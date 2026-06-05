@@ -56,7 +56,6 @@ public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<Idemp
             }
 
             String redisKey = "idempotency:" + idempotencyKey;
-
             return redisTemplate.opsForValue().get(redisKey)
                     .flatMap(state -> {
                         if ("PROCESSING".equals(state)) {
