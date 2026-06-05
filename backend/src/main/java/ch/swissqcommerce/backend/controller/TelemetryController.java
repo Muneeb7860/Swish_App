@@ -134,6 +134,8 @@ public class TelemetryController {
             tickBuffer.add(request);
         }
 
+        boolean thermalBreachActive = telemetryService.isThermalBreachActive(request.getOrderId(), request.getTemperature());
+
         // 3. Construct the payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", request.getOrderId());
@@ -143,6 +145,7 @@ public class TelemetryController {
         payload.put("dryIceInjected", request.isDryIceInjected());
         payload.put("timestamp", OffsetDateTime.now().toString());
         payload.put("alertTriggered", thresholdBreached);
+        payload.put("thermalBreachActive", thermalBreachActive);
         payload.put("persisted", savedDbLog != null || !thresholdBreached);
         payload.put("queued", savedDbLog == null && !thresholdBreached);
 
@@ -171,12 +174,14 @@ public class TelemetryController {
         InMemoryGeoStore.RiderLocation currentLoc = geoStore.getLatestLocation(orderId);
         if (currentLoc != null) {
             try {
+                boolean thermalBreachActive = telemetryService.isThermalBreachActive(orderId, currentLoc.getTemperature());
                 Map<String, Object> payload = new HashMap<>();
                 payload.put("orderId", orderId);
                 payload.put("latitude", currentLoc.getLatitude());
                 payload.put("longitude", currentLoc.getLongitude());
                 payload.put("temperature", currentLoc.getTemperature());
                 payload.put("timestamp", currentLoc.getTimestamp().toString());
+                payload.put("thermalBreachActive", thermalBreachActive);
                 payload.put("initial", true);
                 emitter.send(SseEmitter.event().name("telemetry-update").data(payload));
             } catch (IOException ignored) {}
@@ -206,6 +211,7 @@ public class TelemetryController {
         payload.put("longitude", lng);
         payload.put("temperature", new BigDecimal("4.0"));
         payload.put("dryIceInjected", true);
+        payload.put("thermalBreachActive", false);
         payload.put("timestamp", OffsetDateTime.now().toString());
         payload.put("message", "Dry ice cargo cooling completed.");
         

@@ -618,20 +618,21 @@ export default function App() {
         logKafka('system', 'sse.connected', `EventSource connected to rider telemetry stream for Order #${targetOrderId}`);
       };
 
-      es.onmessage = (event) => {
+      es.addEventListener('telemetry-update', (event: any) => {
         try {
           const tick = JSON.parse(event.data);
           setRiderCoords({
             lat: tick.latitude,
             lng: tick.longitude,
             temperature: tick.temperature,
-            timestamp: tick.timestamp || new Date().toISOString()
+            timestamp: tick.timestamp || new Date().toISOString(),
+            thermalBreachActive: tick.thermalBreachActive || false
           });
-          logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C`);
+          logKafka('rider', 'sse.tick_received', `Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C (Breach: ${tick.thermalBreachActive})`);
         } catch (parseErr) {
           console.warn('[SSE] Could not parse telemetry tick:', event.data);
         }
-      };
+      });
 
       es.onerror = () => {
         closeSseStream();
@@ -747,13 +748,14 @@ export default function App() {
     setTipAmount(0);
   };
 
-  const handleInjectDryIce = () => {
-    if (!activeOrder) return;
+  const handleInjectDryIce = (orderId?: number) => {
+    const id = orderId || activeOrder?.id;
+    if (!id) return;
     setMerchantWallet(w => w - 2.00);
     logLedger('system', 'DRY-ICE-DEBIT', 'Rider manual coolant mitigation applied', 2.00, 0);
     
     // Trigger Real BFF Telemetry Coolant Integration
-    fetch(`/api/telemetry/${activeOrder.id}/dry-ice`, {
+    fetch(`/api/telemetry/${id}/dry-ice`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`
@@ -768,7 +770,10 @@ export default function App() {
     })
     .catch(err => console.log('BFF Telemetry link offline:', err.message));
 
-    setActiveOrder(prev => ({ ...prev, temperature: 4.0 }));
+    setActiveOrder(prev => {
+      if (!prev) return null;
+      return { ...prev, temperature: 4.0 };
+    });
     logKafka('rider', 'telemetry.mitigation_applied', 'Coolant injected: Perishable temperature reset to 4.0°C.');
     triggerToast('Dry ice coolant injected successfully!', 'rider');
   };
@@ -1406,7 +1411,7 @@ export default function App() {
         
         <section className="workspace-main-panel">
           {/* ── Live Rider Tracking Panel (Global — visible on all tabs during transit) ── */}
-          <RiderTrackingPanel activeOrder={activeOrder} riderCoords={riderCoords} />
+          <RiderTrackingPanel activeOrder={activeOrder} riderCoords={riderCoords} onInjectDryIce={handleInjectDryIce} />
 
           <Suspense fallback={<div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}><Lucide.Loader2 size={28} className="spin" /><p style={{ color: 'var(--text-secondary)', marginTop: '0.8rem' }}>Loading Federated Micro-Frontend...</p></div>}>
             {activeRole === 'customer' && (hasRoleAccess('customer') ? (
