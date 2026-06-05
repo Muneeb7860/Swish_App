@@ -265,6 +265,10 @@ graph TB
       BusinessEngine[core-business-engine<br>Checkout/Inv/B2B Port 8081]:::container
       NotifEngine[notification-engine<br>Kafka Consumer/WS Port 8082]:::container
       SharedAsync[shared-async-services<br>AI & Ledger]:::container
+      SecurityEngine[Security Engine<br>Guardrails / mTLS]:::container
+      RewardsEngine[Rewards Engine<br>Gamification / Loyalty]:::container
+      EventsEngine[Events Engine<br>Outbox Relay]:::container
+      GovernanceEngine[Governance Engine<br>Compliance / Onboarding]:::container
     end
     
     subgraph databases [Data & Storage Tier]
@@ -288,6 +292,19 @@ graph TB
   BusinessEngine --> Postgres
   NotifEngine --> Postgres
   SharedAsync --> Postgres
+
+  Backend --> SecurityEngine
+  Backend --> EventsEngine
+  SharedAsync --> RewardsEngine
+  BusinessEngine --> GovernanceEngine
+
+  SecurityEngine -.-> Redis
+  SecurityEngine -.->|"publish"| Kafka
+  RewardsEngine --> Postgres
+  RewardsEngine -.-> Redis
+  EventsEngine --> Postgres
+  EventsEngine -.->|"publish"| Kafka
+  GovernanceEngine --> Postgres
 
   Backend -.-> Redis
   BusinessEngine -.-> Redis

@@ -25,11 +25,18 @@ graph TD
         GW --> BusinessEngine[core-business-engine (Port 8081)]
         GW --> NotifEngine[notification-engine (Port 8082)]
         GW --> SharedAsync[shared-async-services]
+
+        Backend --> SecurityEngine[Security Engine]
+        Backend --> EventsEngine[Events Engine]
+        SharedAsync --> RewardsEngine[Rewards Engine]
+        BusinessEngine --> GovernanceEngine[Governance Engine]
         
-        Backend & BusinessEngine & NotifEngine & SharedAsync --> DB_Tx[(PostgreSQL: transactional schema)]
-        Backend & BusinessEngine & NotifEngine & GW --> Cache[(Redis Cache / Rate Limiting)]
+        Backend & BusinessEngine & NotifEngine & SharedAsync & RewardsEngine & EventsEngine & GovernanceEngine --> DB_Tx[(PostgreSQL: transactional schema)]
+        Backend & BusinessEngine & NotifEngine & GW & SecurityEngine & RewardsEngine --> Cache[(Redis Cache / Rate Limiting)]
         
         BusinessEngine -.->|Kafka Events| Kafka[(Apache Kafka Cluster)]
+        EventsEngine -.->|Kafka Events| Kafka
+        SecurityEngine -.->|Kafka Events| Kafka
         Kafka -.->|Notification Consuming| NotifEngine
         Kafka -.->|OlapEventSinkListener| Mongo[(MongoDB: Analytical Archive)]
     end

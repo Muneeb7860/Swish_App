@@ -4882,7 +4882,7 @@
                       </div>
                     </div>
 
-                    <div className="topology-wrapper">
+                    <div className="topology-wrapper" style={{ height: '600px' }}>
                       {/* SVG Connection Lines */}
                       <svg className="topology-svg">
                         <defs>
@@ -4903,36 +4903,56 @@
                             { id: 'b2b-dashboard', x: 260, y: 30 },
                             { id: 'manager-app', x: 380, y: 30 },
                             { id: 'admin-cockpit', x: 500, y: 30 },
-                            { id: 'platform-gateway', x: 140, y: 150 },
-                            { id: 'legacy-bff', x: 380, y: 150 },
-                            { id: 'backend', x: 20, y: 270 },
-                            { id: 'core-business-engine', x: 170, y: 270 },
-                            { id: 'notification-engine', x: 320, y: 270 },
-                            { id: 'shared-async-services', x: 470, y: 270 },
-                            { id: 'postgres-db', x: 30, y: 390 },
-                            { id: 'redis-cache', x: 180, y: 390 },
-                            { id: 'kafka-broker', x: 330, y: 390 },
-                            { id: 'mongodb', x: 480, y: 390 }
+                            
+                            { id: 'platform-gateway', x: 140, y: 135 },
+                            { id: 'legacy-bff', x: 380, y: 135 },
+                            
+                            { id: 'backend', x: 20, y: 240 },
+                            { id: 'core-business-engine', x: 170, y: 240 },
+                            { id: 'notification-engine', x: 320, y: 240 },
+                            { id: 'shared-async-services', x: 470, y: 240 },
+                            
+                            { id: 'security-engine', x: 20, y: 345 },
+                            { id: 'rewards-engine', x: 170, y: 345 },
+                            { id: 'events-engine', x: 320, y: 345 },
+                            { id: 'governance-engine', x: 470, y: 345 },
+
+                            { id: 'postgres-db', x: 30, y: 460 },
+                            { id: 'redis-cache', x: 180, y: 460 },
+                            { id: 'kafka-broker', x: 330, y: 460 },
+                            { id: 'mongodb', x: 480, y: 460 }
                           ];
+                          
                           const topologyLinks = [
                             { from: 'customer-app', to: 'platform-gateway' },
                             { from: 'rider-app', to: 'platform-gateway' },
                             { from: 'b2b-dashboard', to: 'platform-gateway' },
                             { from: 'manager-app', to: 'legacy-bff' },
                             { from: 'admin-cockpit', to: 'legacy-bff' },
+                            
                             { from: 'platform-gateway', to: 'backend' },
                             { from: 'platform-gateway', to: 'core-business-engine' },
                             { from: 'platform-gateway', to: 'notification-engine' },
                             { from: 'platform-gateway', to: 'shared-async-services' },
                             { from: 'legacy-bff', to: 'backend' },
-                            { from: 'backend', to: 'postgres-db' },
-                            { from: 'backend', to: 'mongodb' },
-                            { from: 'core-business-engine', to: 'postgres-db' },
-                            { from: 'core-business-engine', to: 'kafka-broker' },
+                            
+                            { from: 'backend', to: 'security-engine' },
+                            { from: 'backend', to: 'events-engine' },
+                            { from: 'shared-async-services', to: 'rewards-engine' },
+                            { from: 'core-business-engine', to: 'governance-engine' },
+                            
+                            { from: 'security-engine', to: 'redis-cache' },
+                            { from: 'security-engine', to: 'kafka-broker' },
+                            { from: 'rewards-engine', to: 'postgres-db' },
+                            { from: 'rewards-engine', to: 'redis-cache' },
+                            { from: 'events-engine', to: 'postgres-db' },
+                            { from: 'events-engine', to: 'kafka-broker' },
+                            { from: 'governance-engine', to: 'postgres-db' },
+                            
                             { from: 'notification-engine', to: 'kafka-broker' },
                             { from: 'notification-engine', to: 'redis-cache' },
                             { from: 'platform-gateway', to: 'redis-cache' },
-                            { from: 'shared-async-services', to: 'kafka-broker' }
+                            { from: 'backend', to: 'mongodb' }
                           ];
                           
                           const isNodeAlarmLocal = (nodeId) => {
@@ -4943,6 +4963,9 @@
                             if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
                             if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
                             if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                            if (nodeId === 'events-engine' && redisCrashActive) return true;
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
                             return false;
                           };
 
@@ -4994,6 +5017,9 @@
                             if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
                             if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
                             if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                            if (nodeId === 'events-engine' && redisCrashActive) return true;
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
                             return false;
                           };
 
@@ -5006,6 +5032,9 @@
                             if (nodeId === 'rider-app' && riderTrafficActive) return 'TRAFFIC JAM';
                             if (nodeId === 'notification-engine' && coldChainBreakdownActive) return 'ALARM ACTIVE';
                             if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return 'ERP FALLBACK';
+                            if (nodeId === 'security-engine' && simulateTelemetryFraud) return 'FRAUD DETECTED';
+                            if (nodeId === 'events-engine' && redisCrashActive) return 'OUTBOX STALLED';
+                            if (nodeId === 'governance-engine' && gdprTokenProbation) return 'PROBATION';
                             return null;
                           };
 
@@ -5016,18 +5045,23 @@
                             { id: 'manager-app', x: 380, y: 30, name: 'Store Manager', cat: 'client', icon: 'ClipboardList', sub: 'MFE (5175)' },
                             { id: 'admin-cockpit', x: 500, y: 30, name: 'Admin Cockpit', cat: 'client', icon: 'Sliders', sub: 'MFE (Host)' },
                             
-                            { id: 'platform-gateway', x: 140, y: 150, name: 'platform-gateway', cat: 'gateway', icon: 'ShieldCheck', sub: 'Port 8080' },
-                            { id: 'legacy-bff', x: 380, y: 150, name: 'Legacy BFF', cat: 'gateway', icon: 'Shuffle', sub: 'Port 8081' },
+                            { id: 'platform-gateway', x: 140, y: 135, name: 'platform-gateway', cat: 'gateway', icon: 'ShieldCheck', sub: 'Port 8080' },
+                            { id: 'legacy-bff', x: 380, y: 135, name: 'Legacy BFF', cat: 'gateway', icon: 'Shuffle', sub: 'Port 8081' },
                             
-                            { id: 'backend', x: 20, y: 270, name: 'backend', cat: 'service', icon: 'Cpu', sub: 'Port 8080' },
-                            { id: 'core-business-engine', x: 170, y: 270, name: 'core-business', cat: 'service', icon: 'Activity', sub: 'Port 8081' },
-                            { id: 'notification-engine', x: 320, y: 270, name: 'notification-svc', cat: 'service', icon: 'BellRing', sub: 'Port 8082' },
-                            { id: 'shared-async-services', x: 470, y: 270, name: 'shared-async', cat: 'service', icon: 'Brain', sub: 'Library' },
+                            { id: 'backend', x: 20, y: 240, name: 'backend', cat: 'service', icon: 'Cpu', sub: 'Port 8080' },
+                            { id: 'core-business-engine', x: 170, y: 240, name: 'core-business', cat: 'service', icon: 'Activity', sub: 'Port 8081' },
+                            { id: 'notification-engine', x: 320, y: 240, name: 'notification-svc', cat: 'service', icon: 'BellRing', sub: 'Port 8082' },
+                            { id: 'shared-async-services', x: 470, y: 240, name: 'shared-async', cat: 'service', icon: 'Brain', sub: 'Library' },
                             
-                            { id: 'postgres-db', x: 30, y: 390, name: 'PostgreSQL DB', cat: 'storage', icon: 'Database', sub: 'Port 5432' },
-                            { id: 'redis-cache', x: 180, y: 390, name: 'Redis Stack', cat: 'storage', icon: 'HardDrive', sub: 'Port 6379' },
-                            { id: 'kafka-broker', x: 330, y: 390, name: 'Apache Kafka', cat: 'storage', icon: 'GitFork', sub: 'Port 9092' },
-                            { id: 'mongodb', x: 480, y: 390, name: 'MongoDB OLAP', cat: 'storage', icon: 'Cloud', sub: 'Port 27017' }
+                            { id: 'security-engine', x: 20, y: 345, name: 'Security Engine', cat: 'service', icon: 'ShieldAlert', sub: 'Guardrails' },
+                            { id: 'rewards-engine', x: 170, y: 345, name: 'Rewards Engine', cat: 'service', icon: 'Award', sub: 'Gamification' },
+                            { id: 'events-engine', x: 320, y: 345, name: 'Events Engine', cat: 'service', icon: 'Repeat', sub: 'Outbox Relay' },
+                            { id: 'governance-engine', x: 470, y: 345, name: 'Governance Engine', cat: 'service', icon: 'UserCheck', sub: 'Compliance' },
+
+                            { id: 'postgres-db', x: 30, y: 460, name: 'PostgreSQL DB', cat: 'storage', icon: 'Database', sub: 'Port 5432' },
+                            { id: 'redis-cache', x: 180, y: 460, name: 'Redis Stack', cat: 'storage', icon: 'HardDrive', sub: 'Port 6379' },
+                            { id: 'kafka-broker', x: 330, y: 460, name: 'Apache Kafka', cat: 'storage', icon: 'GitFork', sub: 'Port 9092' },
+                            { id: 'mongodb', x: 480, y: 460, name: 'MongoDB OLAP', cat: 'storage', icon: 'Cloud', sub: 'Port 27017' }
                           ];
 
                           return nodes.map(node => {
@@ -5088,7 +5122,7 @@
                   </div>
 
                   {/* Detail Panel */}
-                  <div className="glass-card detail-drawer-card">
+                  <div className="glass-card detail-drawer-card" style={{ height: '600px' }}>
                     {(() => {
                       if (!selectedNode) {
                         return (
@@ -5119,6 +5153,11 @@
                         'notification-engine': { name: 'notification-engine', cat: 'service', desc: 'Event-driven notification microservice. Consumes B2B wholesale order evaluated events from Kafka, publishes to Redis pub/sub channels, and pushes instant notifications to WebSockets.', tech: 'Spring Boot, Spring Kafka Streams, Redis Pub/Sub, WebSockets', port: '8082', routes: ['/ws/notifications/**'] },
                         'shared-async-services': { name: 'shared-async-services', cat: 'service', desc: 'Shared async utility and engine. Interfaces with Spring AI model orchestration and runs double-entry financial ledger validation scripts.', tech: 'Spring Boot, Spring AI (OpenAI/Ollama/Groq)', port: 'N/A (Library / Async)', routes: ['Internal Ledger Operations'] },
                         
+                        'security-engine': { name: 'Security Engine', cat: 'service', desc: 'Enforces platform guardrails: JWT authentication verification, rotating backend credentials dynamically via HashiCorp Vault, and securing service-to-service calls using Envoy sidecars with SPIFFE/SPIRE mutual TLS.', tech: 'Spring Security, HashiCorp Vault, Envoy mTLS sidecars', port: 'N/A', routes: ['Vault secrets sync', 'mTLS service boundaries'] },
+                        'rewards-engine': { name: 'Rewards & Gamification Engine', cat: 'service', desc: 'Manages user points balances, referral discount vouchers, and rider achievement records. Streams real-time leaderboard stats asynchronously using Redis sorted sets.', tech: 'Spring Boot, Redis Sorted Sets (DB3), Zustand store', port: 'N/A (Core Domain)', routes: ['/api/rewards/**', 'Redis DB3 leaderboards'] },
+                        'events-engine': { name: 'Outbox Events Engine', cat: 'service', desc: 'Reliably handles event-driven synchronization. Implements transactional outbox tables inside SQL transactions and relays them asynchronously to Apache Kafka topics.', tech: 'Spring Stream, PostgreSQL Outbox table, Kafka Binders', port: 'N/A (Relay Poller)', routes: ['Outbox CDC Poller: 4s loop', 'Kafka topics bindings'] },
+                        'governance-engine': { name: 'Governance & Compliance Engine', cat: 'service', desc: 'Platform oversight node. Controls L1/L2/L3 onboarding applicant desks, compliance reviews for HITL payment approvals, and logs audit entries to the immutable ledger.', tech: 'JPA compliance models, GDPR Article 17 Purger', port: 'N/A (Governance Core)', routes: ['/api/admin/onboard/queue/**', '/api/customer/profile/purge'] },
+
                         'postgres-db': { name: 'PostgreSQL Database', cat: 'storage', desc: 'Primary relational transactional datastore. Segments tables between core backend and core business engine, committing outbox messages inside local ACID transaction blocks.', tech: 'PostgreSQL 15, PostGIS, Flyway Migrations (V1, V2, V3)', port: '5432', routes: ['b2b_qcomm DB schema', 'outbox table (Transactional Outbox)', 'payments ledger'] },
                         'redis-cache': { name: 'Redis Stack', cat: 'storage', desc: 'Logical memory cache and message routing hub. Isolates DB0 (User sessions), DB1 (API rate limits), DB2 (WebSocket Pub/Sub channels), and DB3 (Product catalog caching).', tech: 'Redis 7.2, RedisJSON, Streams', port: '6379', routes: ['Logical Partition DB0 - DB3'] },
                         'kafka-broker': { name: 'Apache Kafka Event Broker', cat: 'storage', desc: 'Message backbone for async microservices choreography. Declares checkout events, wholesale order placements, and security audits topic pipelines with DLQ routing.', tech: 'Confluent CP-Kafka 7.4.0 (KRaft)', port: '9092', routes: ['b2b.checkout.events', 'b2b.wholesale.order.placed', 'b2b.wholesale.order.evaluated', 'security.audit'] },
@@ -5136,6 +5175,9 @@
                         if (nodeId === 'rider-app' && (riderTrafficActive || coldChainBreakdownActive)) return true;
                         if (nodeId === 'notification-engine' && (coldChainBreakdownActive || riderTrafficActive)) return true;
                         if (nodeId === 'b2b-dashboard' && wholesalerOutageActive) return true;
+                        if (nodeId === 'security-engine' && simulateTelemetryFraud) return true;
+                        if (nodeId === 'events-engine' && redisCrashActive) return true;
+                        if (nodeId === 'governance-engine' && gdprTokenProbation) return true;
                         return false;
                       };
 

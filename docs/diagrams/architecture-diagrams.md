@@ -36,6 +36,10 @@ flowchart TB
     CoreBusinessEngine["core-business-engine (Checkout/Inv/B2B, Port 8081)"]
     NotificationEngine["notification-engine (Kafka Consumer/WS, Port 8082)"]
     SharedAsyncServices["shared-async-services (AI Orchestrator/Ledger)"]
+    SecurityEngine["security-engine (Guardrails / mTLS)"]
+    RewardsEngine["rewards-engine (Gamification / Loyalty)"]
+    EventsEngine["events-engine (Outbox Relay)"]
+    GovernanceEngine["governance-engine (Compliance / Onboarding)"]
   end
 
   subgraph Datastores["Datastores & Caching"]
@@ -82,6 +86,19 @@ flowchart TB
   BackendCore --> PostgresDB
   NotificationEngine --> PostgresDB
   SharedAsyncServices --> PostgresDB
+
+  BackendCore --> SecurityEngine
+  BackendCore --> EventsEngine
+  SharedAsyncServices --> RewardsEngine
+  CoreBusinessEngine --> GovernanceEngine
+
+  SecurityEngine --> RedisCache
+  SecurityEngine -.->|"audit logs"| Mongo
+  RewardsEngine --> PostgresDB
+  RewardsEngine --> RedisCache
+  EventsEngine --> PostgresDB
+  EventsEngine -.->|"publish"| Kafka
+  GovernanceEngine --> PostgresDB
 
   CoreBusinessEngine -->|"Strategy Pattern"| Stripe
   CoreBusinessEngine -->|"Strategy Pattern"| Swipe
@@ -134,12 +151,15 @@ flowchart TB
   subgraph CoreServices["Core Service Tier"]
     subgraph BackendModule["backend Service (Hexagonal Core, Port 8080)"]
       HexCore["Hexagonal Domains (Transaction, Payment, Inventory)"]
+      SecurityEngine["Security Engine (Guardrails)"]
+      EventsEngine["Events Engine (Outbox Relay)"]
     end
     
     subgraph CoreBusiness["core-business-engine (Port 8081)"]
       CheckoutSvc["Checkout & Stripe-Mock"]
       B2bOrderSvc["B2bOrderService"]
       AiSweeper["AI Evaluation Timeout Sweeper"]
+      GovernanceEngine["Governance Engine (Compliance)"]
     end
 
     subgraph NotificationSvc["notification-engine (Port 8082)"]
@@ -151,12 +171,13 @@ flowchart TB
     subgraph SharedAsync["shared-async-services"]
       AiOrch["AI Model Orchestration Port"]
       FinLedger["Financial Ledger Entry"]
+      RewardsEngine["Rewards Engine (Gamification)"]
     end
   end
 
   subgraph Storage["Datastore Backplane"]
     Postgres["PostgreSQL (b2b_qcomm DB)"]
-    Redis["Redis (DB0: Sessions, DB1: Rate Limits, DB2: Pub/Sub)"]
+    Redis["Redis (DB0: Sessions, DB1: Rate Limits, DB2: Pub/Sub, DB3: Leaderboards)"]
     MongoDB["MongoDB (Audit Logs Archive)"]
     Vault["HashiCorp Vault"]
   end
@@ -188,6 +209,16 @@ flowchart TB
   BackendModule --> Postgres
   CoreBusiness --> Postgres
   NotificationSvc --> Postgres
+
+  SecurityEngine --> Redis
+  SecurityEngine -.-> Vault
+  SecurityEngine -.->|"publish"| T4
+  RewardsEngine --> Postgres
+  RewardsEngine -.-> Redis
+  EventsEngine --> Postgres
+  EventsEngine -.->|"publish"| T1
+  EventsEngine -.->|"publish"| T2
+  GovernanceEngine --> Postgres
 
   BackendModule -.-> Redis
   CoreBusiness -.-> Redis
