@@ -13,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class RewardServiceImpl implements RewardUseCase {
 
     private final RewardOutPort rewardOutPort;
+    private final RewardFactory rewardFactory;
 
-    public RewardServiceImpl(RewardOutPort rewardOutPort) {
+    public RewardServiceImpl(RewardOutPort rewardOutPort, RewardFactory rewardFactory) {
         this.rewardOutPort = rewardOutPort;
+        this.rewardFactory = rewardFactory;
     }
 
     @Override
@@ -23,14 +25,8 @@ public class RewardServiceImpl implements RewardUseCase {
         if (amount <= 0) {
             throw new RuleViolationException("Amount must be positive");
         }
-        RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId)
-            .orElseGet(() -> RewardPoints.builder()
-                .customerId(customerId)
-                .loyaltyPoints(0)
-                .build());
-        
-        points.setLoyaltyPoints(points.getLoyaltyPoints() + amount);
-        rewardOutPort.saveRewardPoints(points);
+        rewardFactory.getProcessor(ch.swissqcommerce.backend.domain.reward.core.model.RewardType.POINTS)
+                .process(customerId, amount, "Points added via UseCase");
     }
 
     @Override
@@ -47,13 +43,5 @@ public class RewardServiceImpl implements RewardUseCase {
         
         points.setLoyaltyPoints(points.getLoyaltyPoints() - amount);
         rewardOutPort.saveRewardPoints(points);
-    }
-
-    @org.springframework.scheduling.annotation.Async
-    @org.springframework.context.event.EventListener
-    public void onOrderFulfilled(ch.swissqcommerce.backend.domain.event.core.model.OrderFulfilledEvent event) {
-        if (event.getCustomerId() != null) {
-            addPoints(event.getCustomerId(), event.getRewardPoints());
-        }
     }
 }
