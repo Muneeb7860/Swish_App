@@ -17,7 +17,6 @@ graph TD
 
     subgraph gateway-tier [API Routing & Security]
         Edge --> GW[platform-gateway (Port 8080)]
-        Edge -.-> LegacyBFF[Legacy BFF Gateway (Port 8081)]
     end
 
     subgraph backend-tier [Core Microservice Suite]
@@ -50,7 +49,7 @@ graph TD
 | :--- | :--- | :--- |
 | **Frontend** | React 18, Vite, TypeScript | Interactive UI & runtime bundling |
 | **State Management** | Zustand (Sliced Stores) | Decentralized global MFE state sharing |
-| **API Gateway** | Spring Cloud Gateway (BFF) | Headless OpenAPI gateway, rate limiting, JWT verification |
+| **API Gateway** | Spring Cloud Gateway | Unified platform gateway, rate limiting, JWT verification |
 | **Backend Core** | Spring Boot 3.2, Java 17 | Core B2B procurement and guardrails business logic |
 | **Database (Transactions)** | PostgreSQL 15 | Persistent transactional ledger storage (ACID) |
 | **Database (Telemetry)** | PostgreSQL + TimescaleDB | High-frequency time-series telemetry and SLA metrics storage |
@@ -70,8 +69,8 @@ graph TD
 *   **`frontend-rider` (Port 3002)**: Rider portal driving geo-coordinate simulators, accept/reject logs, and wallet earnings.
 *   **`frontend-admin` (Port 3003)**: Admin dashboard detailing business metrics, catalog modifiers, and system engine simulation triggers.
 
-### 2. Edge Gateway BFF
-*   **BFF Gateway (Port 8081)**: Resolves requests. Bypasses security for Swagger documentation and coordinates OAuth2 JWT verification, Resilience4j circuit breakers, and rate limiters.
+### 2. Platform Gateway
+*   **Platform Gateway (Port 8080)**: Consolidates all routing, websocket forwarding, and security configurations (such as JWT token verification, CORS, and rate limiting).
 
 ### 3. Backend Core Service (Port 8080)
 *   Implements core business logic under a structured **Hexagonal (Ports & Adapters) Architecture**.

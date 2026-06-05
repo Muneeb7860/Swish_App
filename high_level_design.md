@@ -56,7 +56,7 @@ The Swish OS v2.0.0 network model enforces a strict Zero Trust Architecture, pro
             │
             ▼ (mTLS via Envoy Sidecar)
 ┌──────────────────────────────┐
-│  Spring Cloud Gateway BFF    │ (Port 8081 - Headless OpenAPI, JWT Parsing)
+│       platform-gateway       │ (Port 8080 - Unified Gateway, JWT Parsing)
 └───────────┬──────────────────┘
             │
             ▼ (Kube-DNS Resolution)
@@ -72,8 +72,8 @@ The Swish OS v2.0.0 network model enforces a strict Zero Trust Architecture, pro
 
 1.  **NGINX Ingress Controller**: Serves as the primary public entry point (DMZ boundary). Handles external SSL/TLS termination, rejects DDoS traffic using IP-based rate limiting, and filters preflight `OPTIONS` calls for CORS policies.
 2.  **Envoy mTLS Sidecar Proxies**: Injected into every pod in the Kubernetes cluster. Direct service-to-service communication is blocked unless encrypted via Mutual TLS (mTLS) and verified against SPIFFE/SPIRE identity documents.
-3.  **Spring Cloud Gateway BFF**: Exposes machine-readable OpenAPI specs (`/v3/api-docs`) via [application.yml](file:///C:/Users/DELL%209420/Documents/swiss_App/bff/src/main/resources/application.yml) on port 8081. Intercepts security headers, performs OAuth2 JSON Web Token (JWT) verification, and applies local rate-limits before passing requests inward.
-4.  **Kube-DNS**: The internal cluster DNS resolver that resolves requests from the gateway BFF to the correct backend cluster IP (e.g. `http://backend-core-service.production.svc.cluster.local:8080`).
+3.  **platform-gateway**: Exposes unified OpenAPI specifications, intercepts security headers, performs OAuth2 JSON Web Token (JWT) verification, and applies local rate-limits before passing requests inward.
+4.  **Kube-DNS**: The internal cluster DNS resolver that resolves requests from the gateway to the correct backend cluster IP (e.g. `http://backend-core-service.production.svc.cluster.local:8080`).
 5.  **Backend Core Services**: Implements hexagonal architecture patterns to isolate business use cases from external interfaces. Receives requests inside its secure network segment.
 
 ---
@@ -258,7 +258,6 @@ graph TB
   
   subgraph k8s-service-mesh [Kubernetes Pod Mesh]
     GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
-    LegacyBFF[Legacy BFF Gateway<br>Spring Cloud Gateway Port 8081]:::gateway
     
     subgraph core-services [Core Services (Envoy mTLS Sidecars)]
       Backend[backend Service<br>Hexagonal Core Port 8080]:::container
@@ -281,7 +280,6 @@ graph TB
   end
 
   Ingress -->|mTLS Traffic Route| GW
-  Ingress -.->|Legacy Route| LegacyBFF
   
   GW -->|Route| Backend
   GW -->|Route| BusinessEngine
