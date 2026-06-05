@@ -1862,3 +1862,115 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Dynamic Persona Themes & Visual Differentiation System */
+:root {
+  --role-accent: var(--color-customer);
+  --role-glow: var(--color-customer-glow);
+  --role-card-border: rgba(16, 185, 129, 0.2);
+  --role-button-hover: rgba(16, 185, 129, 0.4);
+}
+
+.app-container {
+  transition: background-image 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+}
+
+.app-container[data-active-role="customer"] {
+  --role-accent: var(--color-customer);
+  --role-glow: var(--color-customer-glow);
+  --role-card-border: rgba(16, 185, 129, 0.25);
+  --role-button-hover: rgba(16, 185, 129, 0.4);
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(16, 185, 129, 0.15) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(6, 182, 212, 0.05) 0px, transparent 45%);
+}
+
+.app-container[data-active-role="rider"] {
+  --role-accent: var(--color-rider);
+  --role-glow: var(--color-rider-glow);
+  --role-card-border: rgba(245, 158, 11, 0.25);
+  --role-button-hover: rgba(245, 158, 11, 0.4);
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(245, 158, 11, 0.15) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(239, 68, 68, 0.05) 0px, transparent 45%);
+}
+
+.app-container[data-active-role="inventory"] {
+  --role-accent: var(--color-inventory);
+  --role-glow: var(--color-inventory-glow);
+  --role-card-border: rgba(59, 130, 246, 0.25);
+  --role-button-hover: rgba(59, 130, 246, 0.4);
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(59, 130, 246, 0.15) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(139, 92, 246, 0.05) 0px, transparent 45%);
+}
+
+.app-container[data-active-role="business"] {
+  --role-accent: var(--color-business);
+  --role-glow: var(--color-business-glow);
+  --role-card-border: rgba(139, 92, 246, 0.25);
+  --role-button-hover: rgba(139, 92, 246, 0.4);
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(139, 92, 246, 0.15) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(6, 182, 212, 0.05) 0px, transparent 45%);
+}
+
+.app-container[data-active-role="admin"] {
+  --role-accent: var(--color-admin);
+  --role-glow: var(--color-admin-glow);
+  --role-card-border: rgba(239, 68, 68, 0.25);
+  --role-button-hover: rgba(239, 68, 68, 0.4);
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(239, 68, 68, 0.15) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(245, 158, 11, 0.05) 0px, transparent 45%);
+}
+
+/* Dynamically styled elements using active persona theme */
+.app-container .brand-logo {
+  background: linear-gradient(135deg, var(--role-accent), var(--color-engine)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  transition: background 0.5s ease;
+}
+
+.app-container .glass-card:hover {
+  border-color: var(--role-card-border) !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.02);
+}
+
+.app-container .ai-bot-toggle-btn {
+  background: var(--role-accent) !important;
+  box-shadow: 0 0 15px var(--role-glow) !important;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-container .ai-bot-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+.app-container .ai-bot-header {
+  border-bottom: 2px solid var(--role-accent) !important;
+  transition: border-bottom 0.5s ease;
+}
+
+.app-container .ai-bot-header-title {
+  color: var(--role-accent) !important;
+  transition: color 0.5s ease;
+}
+
+.app-container .ai-bot-input:focus {
+  border-color: var(--role-accent) !important;
+  box-shadow: 0 0 10px var(--role-glow) !important;
+}
+
+.app-container .btn-primary-glow {
+  background: var(--role-accent) !important;
+  color: #070a13 !important;
+  font-weight: 800;
+  transition: all 0.3s ease;
+}
+
+.app-container .btn-primary-glow:hover {
+  box-shadow: 0 0 15px var(--role-button-hover) !important;
+}
+
