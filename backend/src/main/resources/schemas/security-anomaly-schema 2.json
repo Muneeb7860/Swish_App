@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SecurityAnomalyRecord",
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string"
+    },
+    "method": {
+      "type": "string"
+    },
+    "operator": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["FAILED"]
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "error": {
+      "type": "string"
+    }
+  },
+  "required": ["action", "method", "operator", "timestamp", "status", "error"]
+}
