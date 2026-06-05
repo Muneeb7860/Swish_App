@@ -38,7 +38,7 @@ public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<Idemp
                         if (Boolean.TRUE.equals(isNew)) {
                             // First time seeing this key, proceed
                             return chain.filter(exchange).then(Mono.defer(() -> {
-                                HttpStatus statusCode = exchange.getResponse().getStatusCode();
+                                org.springframework.http.HttpStatusCode statusCode = exchange.getResponse().getStatusCode();
                                 if (statusCode != null && statusCode.is5xxServerError()) {
                                     // Backend failed, delete the key so client can retry
                                     return redisTemplate.delete(redisKey).then();

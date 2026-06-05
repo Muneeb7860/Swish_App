@@ -38,5 +38,10 @@ public class OutboxEntity {
     
     // Getters and Setters
     public UUID getId() { return id; }
+    public String getAggregateType() { return aggregateType; }
+    public String getAggregateId() { return aggregateId; }
+    public String getType() { return type; }
     public String getPayload() { return payload; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getProcessedAt() { return processedAt; }
 }

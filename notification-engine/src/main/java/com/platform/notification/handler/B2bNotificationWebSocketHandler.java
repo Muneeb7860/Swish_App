@@ -93,7 +93,7 @@ public class B2bNotificationWebSocketHandler implements WebSocketHandler {
         Disposable heartbeat = reactor.core.publisher.Flux.interval(Duration.ofSeconds(30))
                 .flatMap(tick -> session.send(
                         Mono.just(session.pingMessage(
-                                ByteBuffer.wrap("heartbeat".getBytes())
+                                factory -> factory.wrap(ByteBuffer.wrap("heartbeat".getBytes()))
                         ))
                 ).onErrorResume(e -> {
                     log.debug("Heartbeat failed for user {}, session will be cleaned up", userId);

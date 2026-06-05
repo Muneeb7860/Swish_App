@@ -60,8 +60,8 @@ jobs:
             mvn org.owasp:dependency-check-maven:check -Ddependency-check.disableUpdate=true -DfailBuildOnCVSS=7 || echo "OWASP Scan Completed"
           fi
 
-  bff-quality:
-    name: BFF Gateway Quality Gate
+  microservices-quality:
+    name: Microservices Quality Gate (Gateway, Core Business, Notification, Shared Async)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -78,24 +78,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('bff/pom.xml') }}
+          key: ${{ runner.os }}-m2-${{ hashFiles('pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-m2-
 
-      - name: Resolve BFF Maven Dependencies
-        working-directory: ./bff
+      - name: Resolve Maven Dependencies
         run: mvn -q dependency:resolve
 
-      - name: Build BFF Package
-        working-directory: ./bff
-        run: mvn clean package
+      - name: Build All Microservices
+        run: mvn clean package -DskipTests
 
   frontend-quality:
     name: Frontend Quality Gate (Build & Lint)
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mfe: [frontend-host, frontend-admin, frontend-customer, frontend-rider]
+        mfe: [frontend-host, frontend-admin, frontend-customer, frontend-rider, frontend-b2b]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

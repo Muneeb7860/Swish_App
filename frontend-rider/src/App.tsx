@@ -29,6 +29,7 @@ export default function App() {
         coldChainBreakdownActive={false}
         handleInjectDryIce={() => setActiveOrder(prev => ({ ...prev, temperature: 4.0 }))}
         handleApplyOnboard={() => alert('Mock onboard applied')}
+        handleCompleteDelivery={(order, hash) => alert(`Mock delivery complete for order #${order.id} with hash: ${hash}`)}
         logKafka={(src, evt, m) => console.log(`[MOCK LOG] ${src} | ${evt} | ${m}`)}
       />
     </div>
