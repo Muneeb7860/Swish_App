@@ -17,6 +17,13 @@ public class MockLlmAdapter implements LlmGatewayPort {
                     "  \"tool\": \"ORDER_STATUS\",\n" +
                     "  \"tool_argument\": \"1\"\n" +
                     "}";
+        } else if (prompt.contains("dynamic pricing agent") || prompt.contains("Surge multiplier")) {
+            json = "{\n" +
+                    "  \"surgeMultiplier\": 1.8,\n" +
+                    "  \"discountPercent\": 15.0,\n" +
+                    "  \"confidence\": 0.92,\n" +
+                    "  \"rationale\": \"High rain and low rider ratio justifies 1.8x surge. Near-expiry items discounted by 15% to clear shelf space.\"\n" +
+                    "}";
         } else if (prompt.contains("executed the tool")) {
             json = "{\n" +
                     "  \"reply\": \"Your order #1 has been processed successfully. It is currently in pending state.\",\n" +
