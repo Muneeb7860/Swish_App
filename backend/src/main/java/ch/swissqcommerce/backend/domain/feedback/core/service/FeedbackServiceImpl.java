@@ -17,10 +17,12 @@ public class FeedbackServiceImpl implements FeedbackUseCase {
     }
 
     @Override
-    public Feedback submitFeedback(Integer orderId, Integer rating, String comments) {
+    public Feedback submitFeedback(Integer orderId, Integer riderRating, Integer storeRating, Integer productRating, String comments) {
         Feedback feedback = Feedback.builder()
                 .orderId(orderId)
-                .rating(rating)
+                .riderRating(riderRating)
+                .storeRating(storeRating)
+                .productRating(productRating)
                 .comments(comments)
                 .createdAt(OffsetDateTime.now())
                 .build();

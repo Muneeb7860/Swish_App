@@ -19,7 +19,22 @@ public class FeedbackController {
 
     @PostMapping
     public ResponseEntity<Feedback> submitFeedback(@Valid @RequestBody FeedbackRequestDTO request) {
-        Feedback saved = feedbackUseCase.submitFeedback(request.getOrderId(), request.getRating(), request.getComments());
+        Integer rating = request.getRating();
+        Integer riderRating = request.getRiderRating() != null ? request.getRiderRating() : rating;
+        Integer storeRating = request.getStoreRating() != null ? request.getStoreRating() : rating;
+        Integer productRating = request.getProductRating() != null ? request.getProductRating() : rating;
+
+        if (riderRating == null || storeRating == null || productRating == null) {
+            throw new IllegalArgumentException("Feedback must provide either a global rating or individual ratings for rider, store, and product.");
+        }
+
+        Feedback saved = feedbackUseCase.submitFeedback(
+                request.getOrderId(),
+                riderRating,
+                storeRating,
+                productRating,
+                request.getComments()
+        );
         return ResponseEntity.ok(saved);
     }
 }

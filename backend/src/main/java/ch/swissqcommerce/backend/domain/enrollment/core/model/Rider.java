@@ -54,6 +54,22 @@ public class Rider {
     @Builder.Default
     private Integer trustScore = 100;
 
+    @Column(name = "cash_collected_limit", precision = 10, scale = 2, nullable = false)
+    @NotNull
+    @DecimalMin(value = "0.00")
+    @Builder.Default
+    private BigDecimal cashCollectedLimit = new BigDecimal("100.00");
+
+    @Column(name = "current_cash_in_hand", precision = 10, scale = 2, nullable = false)
+    @NotNull
+    @DecimalMin(value = "0.00")
+    @Builder.Default
+    private BigDecimal currentCashInHand = BigDecimal.ZERO;
+
+    @Column(name = "active_shift_id", length = 50)
+    @Size(max = 50)
+    private String activeShiftId;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }

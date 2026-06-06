@@ -77,6 +77,30 @@ public class Order {
     @Size(max = 100)
     private String idempotencyKey;
 
+    @Column(name = "promised_by")
+    private OffsetDateTime promisedBy;
+
+    @Column(name = "contains_perishables", nullable = false)
+    @Builder.Default
+    private Boolean containsPerishables = false;
+
+    @Column(name = "min_cart_value_met", nullable = false)
+    @Builder.Default
+    private Boolean minCartValueMet = true;
+
+    @Column(name = "store_fault_waiver_applied", nullable = false)
+    @Builder.Default
+    private Boolean storeFaultWaiverApplied = false;
+
+    @Column(name = "perishable_maintenance_fee", precision = 10, scale = 2, nullable = false)
+    @NotNull
+    @DecimalMin(value = "0.00")
+    @Builder.Default
+    private BigDecimal perishableMaintenanceFee = BigDecimal.ZERO;
+
+    @Column(name = "price_locked_at")
+    private OffsetDateTime priceLockedAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 

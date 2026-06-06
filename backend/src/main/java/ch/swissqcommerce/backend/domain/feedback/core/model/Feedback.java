@@ -19,8 +19,14 @@ public class Feedback {
     @Column(name = "order_id", nullable = false)
     private Integer orderId;
 
-    @Column(name = "rating", nullable = false)
-    private Integer rating;
+    @Column(name = "rider_rating", nullable = false)
+    private Integer riderRating;
+
+    @Column(name = "store_rating", nullable = false)
+    private Integer storeRating;
+
+    @Column(name = "product_rating", nullable = false)
+    private Integer productRating;
 
     @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
