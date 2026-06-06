@@ -14,6 +14,7 @@ import RiderTrackingPanel from "./components/RiderTrackingPanel";
 import SupportBot from "./components/SupportBot";
 import { useEnvProfiles } from "./hooks/useEnvProfiles";
 import { useStore } from "./store";
+import { syncProductsFromFirebase } from "./firebaseSync";
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = (
@@ -426,6 +427,31 @@ export default function App() {
 		activeProfile,
 	} = useEnvProfiles();
 	// customer, rider, business, inventory, admin
+
+	useEffect(() => {
+		// Start real-time Firebase syncing
+		syncProductsFromFirebase().catch(err => console.error("Firebase sync error:", err));
+	}, []);
+
+	const ROLES = ["customer", "rider", "inventory", "business", "admin"];
+	const handleRoleChange = (newRole: string) => {
+		if (newRole === activeRole) return;
+		if (!(document as any).startViewTransition) {
+			setActiveRole(newRole);
+			return;
+		}
+
+		const oldIndex = ROLES.indexOf(activeRole);
+		const newIndex = ROLES.indexOf(newRole);
+		const direction = newIndex > oldIndex ? "forward" : "backward";
+
+		(document as any).startViewTransition({
+			update: () => {
+				setActiveRole(newRole);
+			},
+			types: [direction]
+		});
+	};
 
 	// Sunny, Heavy Rain, Thunderstorm
 
@@ -2056,7 +2082,7 @@ export default function App() {
 						id="tab-customer"
 						data-role="customer"
 						className={`role-tab ${activeRole === "customer" ? "active" : ""}`}
-						onClick={() => setActiveRole("customer")}
+						onClick={() => handleRoleChange("customer")}
 					>
 						<Lucide.ShoppingBag size={15} />
 						<span>Customer Super App</span>
@@ -2066,7 +2092,7 @@ export default function App() {
 						id="tab-rider"
 						data-role="rider"
 						className={`role-tab ${activeRole === "rider" ? "active" : ""}`}
-						onClick={() => setActiveRole("rider")}
+						onClick={() => handleRoleChange("rider")}
 					>
 						<Lucide.Bike size={15} />
 						<span>Rider Light</span>
@@ -2076,7 +2102,7 @@ export default function App() {
 						id="tab-inventory"
 						data-role="inventory"
 						className={`role-tab ${activeRole === "inventory" ? "active" : ""}`}
-						onClick={() => setActiveRole("inventory")}
+						onClick={() => handleRoleChange("inventory")}
 					>
 						<Lucide.Package size={15} />
 						<span>Dark Store Inventory</span>
@@ -2086,7 +2112,7 @@ export default function App() {
 						id="tab-business"
 						data-role="business"
 						className={`role-tab ${activeRole === "business" ? "active" : ""}`}
-						onClick={() => setActiveRole("business")}
+						onClick={() => handleRoleChange("business")}
 					>
 						<Lucide.BarChart3 size={15} />
 						<span>Business Console</span>
@@ -2096,7 +2122,7 @@ export default function App() {
 						id="tab-admin"
 						data-role="admin"
 						className={`role-tab ${activeRole === "admin" ? "active" : ""}`}
-						onClick={() => setActiveRole("admin")}
+						onClick={() => handleRoleChange("admin")}
 					>
 						<Lucide.ShieldCheck size={15} />
 						<span>System Admin</span>

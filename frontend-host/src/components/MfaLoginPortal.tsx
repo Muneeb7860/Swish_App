@@ -73,6 +73,7 @@ export default function MfaLoginPortal({
 							</label>
 							<select
 								id="mfa-select-role"
+								aria-label="Select Authentication Profile"
 								value={mfaRole}
 								onChange={(e) => setMfaRole(e.target.value)}
 								style={{

@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().roles.contains(role);
+    }
+
+    // 1. Users Collection
+    match /Users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || hasRole('ADMIN');
+    }
+
+    // 2. Stores Collection
+    match /Stores/{storeId} {
+      allow read: if isAuthenticated();
+      // Only validated Merchants or Admins can modify store settings/operating status
+      allow write: if hasRole('ADMIN') || (hasRole('MERCHANT') && request.resource.data.merchantId == request.auth.uid);
+      
+      // Store Inventory subcollection
+      match /inventory/{productId} {
+        allow read: if isAuthenticated();
+        allow write: if hasRole('ADMIN') || (hasRole('MERCHANT') && get(/databases/$(database)/documents/Stores/$(storeId)).data.merchantId == request.auth.uid);
+      }
+    }
+
+    // 3. Products Collection (Global Catalog)
+    match /Products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('ADMIN'); // Only system admins can alter global SKUs
+    }
+
+    // 4. Orders Collection
+    match /Orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.customerId || 
+        hasRole('ADMIN') || 
+        hasRole('RIDER') ||
+        (hasRole('MERCHANT') && get(/databases/$(database)/documents/Stores/$(resource.data.storeId)).data.merchantId == request.auth.uid)
+      );
+
+      allow create: if isAuthenticated() && 
+        request.resource.data.customerId == request.auth.uid &&
+        // Verify Perishable Fee Constraint
+        (
+          (request.resource.data.constraints.containsPerishables == true && 
+           request.resource.data.financials.itemsTotal < 5.0) ? 
+           request.resource.data.financials.perishableMaintenanceFee == 1.50 : 
+           request.resource.data.financials.perishableMaintenanceFee == 0.0
+        );
+
+      allow update: if isAuthenticated() && (
+        // Pickers can update order status during WMS pick (confirming quantities)
+        (hasRole('MERCHANT') && get(/databases/$(database)/documents/Stores/$(resource.data.storeId)).data.merchantId == request.auth.uid) ||
+        hasRole('ADMIN') ||
+        // Riders can update order status during transit handoff
+        hasRole('RIDER')
+      );
+    }
+
+    // 5. Deliveries Collection (Anti-Self Match & Dispatch Protection)
+    match /Deliveries/{deliveryId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('ADMIN'); // Matching engine initiates deliveries
+      
+      allow update: if isAuthenticated() && (
+        hasRole('ADMIN') ||
+        (
+          hasRole('RIDER') && 
+          request.auth.uid == request.resource.data.riderId &&
+          // ANTI-SELF MATCH RULE: Riders cannot deliver their own orders
+          request.resource.data.riderId != get(/databases/$(database)/documents/Orders/$(request.resource.data.orderId)).data.customerId &&
+          // Rider cash limit constraint
+          getUserData().riderProfile.currentCashInHand < getUserData().riderProfile.cashCollectedLimit
+        )
+      );
+    }
+
+    // 6. Transit Incidents Collection
+    match /TransitIncidents/{incidentId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('RIDER') && request.resource.data.riderId == request.auth.uid;
+      allow update: if hasRole('ADMIN');
+    }
+
+    // 7. Wastage Logs Collection
+    match /Wastage/{wasteId} {
+      allow read: if hasRole('ADMIN') || hasRole('MERCHANT');
+      allow write: if hasRole('ADMIN') || hasRole('MERCHANT');
+    }
+
+    // 8. Rider Shifts Collection
+    match /RiderShifts/{shiftId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('ADMIN') || (hasRole('RIDER') && request.resource.data.riderId == request.auth.uid);
+    }
+  }
+}

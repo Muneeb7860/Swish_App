@@ -30,7 +30,7 @@
 	--font-sans: "Outfit", "Inter", system-ui, -apple-system, sans-serif;
 	--font-mono: "Fira Code", monospace;
 	--transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	--shadow-glow: 0 0 20px rgba(0, 0, 0, 0.5);
+	--shadow-glow: 0 0 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.3);
 }
 
 /* Global Reset & Base Styling */
@@ -47,12 +47,99 @@ body {
 	color: var(--text-primary);
 	font-family: var(--font-sans);
 	overflow-x: hidden;
-	background-image:
-		radial-gradient(at 10% 20%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-		radial-gradient(at 90% 80%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
-	background-attachment: fixed;
 	min-height: 100vh;
 }
+
+/* Ambient Dynamic background glows */
+.app-container {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	background-color: var(--bg-body);
+	transition: background-color 0.5s ease;
+}
+
+.app-container::before,
+.app-container::after {
+	content: "";
+	position: fixed;
+	width: 45vw;
+	height: 45vw;
+	border-radius: 50%;
+	filter: blur(140px);
+	opacity: 0.12;
+	pointer-events: none;
+	z-index: 0;
+	transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-container::before {
+	top: -10vw;
+	left: -10vw;
+}
+
+.app-container::after {
+	bottom: -10vw;
+	right: -10vw;
+}
+
+/* Ambient glow animations for floating effect */
+@keyframes ambient-float-left {
+	0% { transform: translate(0, 0) scale(1); }
+	50% { transform: translate(4vw, 3vw) scale(1.1); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ambient-float-right {
+	0% { transform: translate(0, 0) scale(1); }
+	50% { transform: translate(-3vw, -4vw) scale(0.95); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+
+.app-container::before {
+	animation: ambient-float-left 15s ease-in-out infinite;
+}
+.app-container::after {
+	animation: ambient-float-right 18s ease-in-out infinite;
+}
+
+/* Role-Specific Background Glow Colors */
+.app-container[data-active-role="customer"]::before {
+	background: radial-gradient(circle, var(--color-customer) 0%, transparent 70%);
+}
+.app-container[data-active-role="customer"]::after {
+	background: radial-gradient(circle, var(--color-engine) 0%, transparent 70%);
+}
+
+.app-container[data-active-role="rider"]::before {
+	background: radial-gradient(circle, var(--color-rider) 0%, transparent 70%);
+}
+.app-container[data-active-role="rider"]::after {
+	background: radial-gradient(circle, #f97316 0%, transparent 70%);
+}
+
+.app-container[data-active-role="inventory"]::before {
+	background: radial-gradient(circle, var(--color-inventory) 0%, transparent 70%);
+}
+.app-container[data-active-role="inventory"]::after {
+	background: radial-gradient(circle, var(--color-engine) 0%, transparent 70%);
+}
+
+.app-container[data-active-role="business"]::before {
+	background: radial-gradient(circle, var(--color-business) 0%, transparent 70%);
+}
+.app-container[data-active-role="business"]::after {
+	background: radial-gradient(circle, #6366f1 0%, transparent 70%);
+}
+
+.app-container[data-active-role="admin"]::before {
+	background: radial-gradient(circle, var(--color-admin) 0%, transparent 70%);
+}
+.app-container[data-active-role="admin"]::after {
+	background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+}
+
 
 /* Header & Layout Setup */
 .app-header {
@@ -128,7 +215,8 @@ body {
 
 .role-tab:hover {
 	color: var(--text-primary);
-	background: rgba(255, 255, 255, 0.05);
+	background: color-mix(in oklab, rgba(255, 255, 255, 0.05) 80%, white);
+	transform: scale(0.98);
 }
 
 .role-tab.active[data-role="customer"] {
@@ -380,7 +468,14 @@ body {
 	line-height: 1.4;
 	border-left: 2px solid #334155;
 	padding-left: 0.5rem;
-	animation: slide-in-console 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@supports ((animation-timeline: view()) and (animation-range: entry)) {
+	.kafka-log-item {
+		animation: slide-in-console auto cubic-bezier(0.16, 1, 0.3, 1) both;
+		animation-timeline: view(block);
+		animation-range: entry 10% cover 30%;
+	}
 }
 
 .kafka-log-time {
@@ -420,19 +515,39 @@ body {
 
 /* Glassmorphic Base Cards */
 .glass-card {
-	background: var(--bg-card);
-	backdrop-filter: blur(20px);
-	-webkit-backdrop-filter: blur(20px);
-	border: 1px solid var(--border-color);
+	background: linear-gradient(135deg, rgba(17, 24, 39, 0.6) 0%, rgba(7, 10, 19, 0.8) 100%);
+	backdrop-filter: blur(30px) saturate(160%);
+	-webkit-backdrop-filter: blur(30px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, 0.05);
 	border-radius: 16px;
 	padding: 1.25rem;
-	box-shadow: var(--shadow-glow);
+	box-shadow: 
+		0 10px 15px -3px rgba(0, 0, 0, 0.3),
+		0 4px 6px -2px rgba(0, 0, 0, 0.2),
+		var(--shadow-glow);
 	transition: var(--transition-smooth);
+	position: relative;
+	overflow: hidden;
+}
+
+.glass-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+	z-index: 1;
 }
 
 .glass-card:hover {
-	background: var(--bg-card-hover);
-	border-color: rgba(255, 255, 255, 0.12);
+	background: rgba(31, 41, 55, 0.45);
+	border-color: rgba(255, 255, 255, 0.15);
+	box-shadow: 
+		0 20px 25px -5px rgba(0, 0, 0, 0.4),
+		0 10px 10px -5px rgba(0, 0, 0, 0.3);
+	transform: translateY(-2px);
 }
 
 /* Customer Super App Styles */
@@ -566,6 +681,14 @@ body {
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+}
+
+@supports ((animation-timeline: view()) and (animation-range: entry)) {
+	.product-card {
+		animation: scale-in-up auto cubic-bezier(0.4, 0, 0.2, 1) both;
+		animation-timeline: view(block);
+		animation-range: entry 5% cover 25%;
+	}
 }
 
 .product-image-container {
@@ -711,13 +834,19 @@ body {
 
 /* VIP Card Styling */
 .vip-card-glow {
-	background: linear-gradient(135deg, #1e1e2f 0%, #0d0d16 100%);
-	border: 1px solid rgba(245, 158, 11, 0.3);
-	box-shadow: 0 0 25px var(--color-vip-glow);
+	background: linear-gradient(135deg, rgba(30, 30, 47, 0.8) 0%, rgba(13, 13, 22, 0.9) 100%);
+	backdrop-filter: blur(20px);
+	border: 1px solid rgba(245, 158, 11, 0.4);
+	box-shadow: 0 0 35px var(--color-vip-glow), inset 0 0 15px rgba(245, 158, 11, 0.1);
 	position: relative;
 	overflow: hidden;
 	border-radius: 16px;
 	padding: 1.25rem;
+	transition: var(--transition-smooth);
+}
+.vip-card-glow:hover {
+	transform: scale(1.02);
+	box-shadow: 0 0 50px var(--color-vip-glow), inset 0 0 20px rgba(245, 158, 11, 0.2);
 }
 
 .vip-card-glow::before {
@@ -2042,5 +2171,50 @@ body {
 }
 
 .app-container .btn-primary-glow:hover {
+	background: color-mix(in oklab, var(--role-accent) 80%, white) !important;
 	box-shadow: 0 0 15px var(--role-button-hover) !important;
+	transform: scale(0.98);
+}
+
+/* --- View Transitions --- */
+@keyframes scale-in-up {
+	from { transform: translateY(20px) scale(0.95); opacity: 0; }
+	to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes slide-to-left {
+  to { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes slide-from-right {
+  from { transform: translateX(100%); opacity: 0; }
+}
+@keyframes slide-to-right {
+  to { transform: translateX(100%); opacity: 0; }
+}
+@keyframes slide-from-left {
+  from { transform: translateX(-100%); opacity: 0; }
+}
+
+::view-transition-group(root) {
+  animation: 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+html:active-view-transition-type(forward)::view-transition-old(root) {
+  animation-name: slide-to-left;
+}
+html:active-view-transition-type(forward)::view-transition-new(root) {
+  animation-name: slide-from-right;
+}
+
+html:active-view-transition-type(backward)::view-transition-old(root) {
+  animation-name: slide-to-right;
+}
+html:active-view-transition-type(backward)::view-transition-new(root) {
+  animation-name: slide-from-left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root) {
+    animation: none !important;
+  }
 }
