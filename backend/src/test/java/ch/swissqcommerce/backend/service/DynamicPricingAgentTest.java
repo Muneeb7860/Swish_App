@@ -5,12 +5,17 @@ import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,8 +33,28 @@ public class DynamicPricingAgentTest {
     @Spy
     private PricingGuardrailsEngine pricingGuardrailsEngine = new PricingGuardrailsEngine();
 
-    @InjectMocks
+    private ExecutorService executorService;
     private DynamicPricingAgent dynamicPricingAgent;
+
+    @BeforeEach
+    public void setUp() {
+        executorService = Executors.newSingleThreadExecutor();
+        dynamicPricingAgent = new DynamicPricingAgent(
+                geminiFreeAdapter,
+                mockLlmAdapter,
+                pricingGuardrailsEngine,
+                executorService
+        );
+        // Inject a default SLA timeout value of 1000ms via reflection to match Spring @Value mapping in tests
+        ReflectionTestUtils.setField(dynamicPricingAgent, "slaTimeoutMs", 1000L);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (executorService != null) {
+            executorService.shutdownNow();
+        }
+    }
 
     @Test
     public void testRecommendPricing_NormalFlow() {

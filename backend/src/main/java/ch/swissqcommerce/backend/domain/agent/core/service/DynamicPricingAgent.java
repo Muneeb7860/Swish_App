@@ -5,15 +5,15 @@ import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.concurrent.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class DynamicPricingAgent {
 
@@ -21,10 +21,21 @@ public class DynamicPricingAgent {
     private final MockLlmAdapter mockLlmAdapter;
     private final PricingGuardrailsEngine pricingGuardrailsEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    // SLA Timeout limit: 1000 milliseconds for prompt execution
-    private static final long SLA_TIMEOUT_MS = 1000;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    private final Executor executor;
+
+    @Value("${pricing.agent.sla-timeout-ms:1000}")
+    private long slaTimeoutMs;
+
+    public DynamicPricingAgent(
+            GeminiFreeAdapter geminiFreeAdapter,
+            MockLlmAdapter mockLlmAdapter,
+            PricingGuardrailsEngine pricingGuardrailsEngine,
+            @Qualifier("engineTaskExecutor") Executor executor) {
+        this.geminiFreeAdapter = geminiFreeAdapter;
+        this.mockLlmAdapter = mockLlmAdapter;
+        this.pricingGuardrailsEngine = pricingGuardrailsEngine;
+        this.executor = executor;
+    }
 
     private LlmGatewayPort getLlmGateway() {
         if (geminiFreeAdapter.isConfigured()) {
@@ -53,14 +64,14 @@ public class DynamicPricingAgent {
                 "  \"rationale\": \"explanation\"\n" +
                 "}";
 
-        Future<LlmResponse> future = executorService.submit(() -> getLlmGateway().callLlm(prompt));
+        CompletableFuture<LlmResponse> future = CompletableFuture.supplyAsync(() -> getLlmGateway().callLlm(prompt), executor);
 
         LlmResponse response = null;
         try {
-            response = future.get(SLA_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            response = future.get(slaTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             future.cancel(true);
-            log.warn("Pricing agent SLA breached (timed out after {}ms). Switching to in-house rules.", SLA_TIMEOUT_MS);
+            log.warn("Pricing agent SLA breached (timed out after {}ms). Switching to in-house rules.", slaTimeoutMs);
             return getInHouseFallback(isRaining, riderToOrderRatio, daysToExpiry, "SLA Breached - Timed Out");
         } catch (Exception e) {
             log.error("Pricing agent execution failed. Switching to in-house rules.", e);
@@ -85,13 +96,22 @@ public class DynamicPricingAgent {
             json = json.trim();
 
             Map<?, ?> map = objectMapper.readValue(json, Map.class);
-            Number surgeNum = (Number) map.get("surgeMultiplier");
-            double surgeMultiplier = surgeNum != null ? surgeNum.doubleValue() : 1.0;
-            Number discountNum = (Number) map.get("discountPercent");
-            double discountPercent = discountNum != null ? discountNum.doubleValue() : 0.0;
-            Number confidenceNum = (Number) map.get("confidence");
-            double confidence = confidenceNum != null ? confidenceNum.doubleValue() : 0.5;
-            String rationale = (String) map.get("rationale");
+            
+            double surgeMultiplier = map.get("surgeMultiplier") != null 
+                    ? Double.parseDouble(map.get("surgeMultiplier").toString()) 
+                    : 1.0;
+            
+            double discountPercent = map.get("discountPercent") != null 
+                    ? Double.parseDouble(map.get("discountPercent").toString()) 
+                    : 0.0;
+            
+            double confidence = map.get("confidence") != null 
+                    ? Double.parseDouble(map.get("confidence").toString()) 
+                    : 0.5;
+                    
+            String rationale = map.get("rationale") != null 
+                    ? map.get("rationale").toString() 
+                    : "";
 
             // Check if agent is low confidence (< 0.70)
             if (confidence < 0.70) {
