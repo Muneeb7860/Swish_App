@@ -1,27 +1,27 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import federation from '@originjs/vite-plugin-federation';
+import federation from "@originjs/vite-plugin-federation";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    federation({
-      name: 'customer',
-      filename: 'remoteEntry.js',
-      exposes: {
-        './CustomerApp': './src/components/CustomerApp.jsx'
-      },
-      shared: ['react', 'react-dom']
-    })
-  ],
-  build: {
-    modulePreload: false,
-    target: 'esnext',
-    minify: false,
-    cssCodeSplit: false
-  },
-  server: {
-    port: 3001,
-    cors: true
-  }
+	plugins: [
+		react(),
+		federation({
+			name: "customer",
+			filename: "remoteEntry.js",
+			exposes: {
+				"./CustomerApp": "./src/components/CustomerApp.tsx",
+			},
+			shared: ["react", "react-dom"],
+		}),
+	],
+	build: {
+		modulePreload: false,
+		target: "esnext",
+		minify: false,
+		cssCodeSplit: false,
+	},
+	server: {
+		port: 3001,
+		cors: true,
+	},
 });

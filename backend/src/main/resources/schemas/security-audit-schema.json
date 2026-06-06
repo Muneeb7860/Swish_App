@@ -1,32 +1,32 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "SecurityAuditRecord",
-  "type": "object",
-  "properties": {
-    "action": {
-      "type": "string"
-    },
-    "method": {
-      "type": "string"
-    },
-    "operator": {
-      "type": "string"
-    },
-    "timestamp": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "status": {
-      "type": "string",
-      "enum": ["SUCCESS", "FAILED"]
-    },
-    "parameters": {
-      "type": "object"
-    },
-    "error": {
-      "type": "string"
-    }
-  },
-  "additionalProperties": false,
-  "required": ["action", "method", "operator", "timestamp", "status"]
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "SecurityAuditRecord",
+	"type": "object",
+	"properties": {
+		"action": {
+			"type": "string"
+		},
+		"method": {
+			"type": "string"
+		},
+		"operator": {
+			"type": "string"
+		},
+		"timestamp": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"status": {
+			"type": "string",
+			"enum": ["SUCCESS", "FAILED"]
+		},
+		"parameters": {
+			"type": "object"
+		},
+		"error": {
+			"type": "string"
+		}
+	},
+	"additionalProperties": false,
+	"required": ["action", "method", "operator", "timestamp", "status"]
 }

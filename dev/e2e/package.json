@@ -1,10 +1,10 @@
 {
-  "name": "swiss-app-e2e",
-  "version": "1.0.0",
-  "description": "E2E testing for swiss_app",
-  "main": "e2e_runner.js",
-  "type": "module",
-  "dependencies": {
-    "playwright": "^1.49.0"
-  }
+	"name": "swiss-app-e2e",
+	"version": "1.0.0",
+	"description": "E2E testing for swiss_app",
+	"main": "e2e_runner.js",
+	"type": "module",
+	"dependencies": {
+		"playwright": "^1.49.0"
+	}
 }
