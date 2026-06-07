@@ -1,7 +1,9 @@
 package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import org.springframework.beans.factory.annotation.Autowired;

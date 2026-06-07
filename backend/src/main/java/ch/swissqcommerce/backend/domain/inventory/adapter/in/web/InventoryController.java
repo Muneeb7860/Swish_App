@@ -1,38 +1,20 @@
 package ch.swissqcommerce.backend.domain.inventory.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.inventory.core.service.InventoryService;
+import ch.swissqcommerce.backend.domain.inventory.core.model.InventoryItem;
+import ch.swissqcommerce.backend.domain.inventory.port.in.InventoryUseCase;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/inventory")
+@RequiredArgsConstructor
 public class InventoryController {
+    private final InventoryUseCase inventoryUseCase;
 
-    private final InventoryService inventoryService;
-
-    public InventoryController(InventoryService inventoryService) {
-        this.inventoryService = inventoryService;
-    }
-
-    @GetMapping("/inventory/picker/queue")
-    public List<String> getPickerQueue() {
-        return inventoryService.getPickerQueue();
-    }
-
-    @PostMapping("/inventory/picker/handover")
-    public String handoverPicker(@RequestBody Map<String, String> payload) {
-        return inventoryService.handoverPicker(payload.get("orderId"));
-    }
-
-    @PostMapping("/inventory/rebalance")
-    public String rebalanceInventory() {
-        return inventoryService.rebalanceInventory();
-    }
-
-    @GetMapping("/customer/catalog")
-    public List<String> getCatalog() {
-        return inventoryService.getCatalog();
+    @PostMapping("/{sku}/reserve")
+    public ResponseEntity<Void> reserveStock(@PathVariable String sku, @RequestParam int amount) {
+        inventoryUseCase.reserveStock(sku, amount);
+        return ResponseEntity.ok().build();
     }
 }

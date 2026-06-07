@@ -3,12 +3,16 @@ package ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
 import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationEntity;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertificate;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderAcademyCertificateEntity;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
@@ -90,7 +94,7 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
     }
 
     @Override
-    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLogEntity recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
         return telemetryService.recordTelemetry(orderId, lat, lng, temp, false);
     }
 }

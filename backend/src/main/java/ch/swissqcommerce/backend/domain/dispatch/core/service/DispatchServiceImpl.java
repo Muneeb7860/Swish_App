@@ -72,8 +72,8 @@ public class DispatchServiceImpl implements DispatchUseCase {
             BigDecimal lastLng = shipment.getLastLng();
 
             if (lastLat != null && lastLng != null) {
-                // Coords match -> Rider is stationary
-                if (lastLat.compareTo(lat) == 0 && lastLng.compareTo(lng) == 0) {
+                double distance = calculateHaversineDistance(lastLat, lastLng, lat, lng);
+                if (distance < 10.0) {
                     if (shipment.getStationarySince() == null) {
                         shipment.setStationarySince(now);
                     }
@@ -104,23 +104,30 @@ public class DispatchServiceImpl implements DispatchUseCase {
         List<Integer> reallocatedOrders = new ArrayList<>();
         OffsetDateTime now = OffsetDateTime.now();
 
-        for (ActiveShipment shipment : activeShipments) {
-            if (shipment.getStationarySince() != null) {
-                // If stationary since is > 10 minutes ago
-                if (shipment.getStationarySince().isBefore(now.minusMinutes(10))) {
-                    shipment.setStatus("REALLOCATED");
-                    shipment.setUpdatedAt(now);
-                    dispatchPort.saveActiveShipment(shipment);
+        List<ActiveShipment> shipmentsToReallocate = new ArrayList<>();
+        List<Integer> orderIdsToFetch = new ArrayList<>();
 
-                    Order order = orderRepository.findById(shipment.getOrderId()).orElse(null);
-                    if (order != null) {
-                        order.setStatus("pending");
-                        order.setRider(null);
-                        orderRepository.save(order);
-                        reallocatedOrders.add(order.getOrderId());
-                    }
-                }
+        for (ActiveShipment shipment : activeShipments) {
+            if (shipment.getStationarySince() != null && shipment.getStationarySince().isBefore(now.minusMinutes(10))) {
+                shipment.setStatus("REALLOCATED");
+                shipment.setUpdatedAt(now);
+                shipmentsToReallocate.add(shipment);
+                orderIdsToFetch.add(shipment.getOrderId());
             }
+        }
+
+        if (!shipmentsToReallocate.isEmpty()) {
+            for (ActiveShipment shipment : shipmentsToReallocate) {
+                dispatchPort.saveActiveShipment(shipment);
+            }
+
+            List<Order> orders = orderRepository.findAllById(orderIdsToFetch);
+            for (Order order : orders) {
+                order.setStatus("pending");
+                order.setRider(null);
+                reallocatedOrders.add(order.getOrderId());
+            }
+            orderRepository.saveAll(orders);
         }
 
         return reallocatedOrders;
@@ -129,17 +136,29 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment assignOrder(Integer orderId, String riderId, BigDecimal weightKg) {
-        // Enforce anti-fraud, gear verification, and weight capacity checks via PostgreSQL Stored Procedure
-        boolean eligible = dispatchPort.isRiderEligible(riderId, orderId, weightKg);
-        if (!eligible) {
-            throw new IllegalStateException("Rider is not eligible for order assignment due to gear verification, vehicle weight limits, or self-matching restrictions.");
-        }
-
         Rider rider = riderRepository.findById(riderId)
                 .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        String customerId = order.getCustomer() != null ? order.getCustomer().getCustomerId() : null;
+        String customerName = order.getCustomer() != null ? order.getCustomer().getFullName() : null;
+
+        DispatchPort.EligibilityCriteria criteria = new DispatchPort.EligibilityCriteria(
+                riderId,
+                rider.getVehicleType(),
+                rider.getOnboardingStatus(),
+                rider.getFullName(),
+                customerId,
+                customerName,
+                weightKg
+        );
+
+        boolean eligible = dispatchPort.isRiderEligible(criteria);
+        if (!eligible) {
+            throw new IllegalStateException("Rider is not eligible for order assignment due to gear verification, vehicle weight limits, or self-matching restrictions.");
+        }
 
         // Assign order to rider
         order.setRider(rider);
@@ -170,5 +189,20 @@ public class DispatchServiceImpl implements DispatchUseCase {
         shipment.setStatus(status);
         shipment.setUpdatedAt(OffsetDateTime.now());
         return dispatchPort.saveActiveShipment(shipment);
+    }
+
+    private double calculateHaversineDistance(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
+        double R = 6371e3; // metres
+        double phi1 = lat1.doubleValue() * Math.PI / 180;
+        double phi2 = lat2.doubleValue() * Math.PI / 180;
+        double deltaPhi = (lat2.doubleValue() - lat1.doubleValue()) * Math.PI / 180;
+        double deltaLambda = (lon2.doubleValue() - lon1.doubleValue()) * Math.PI / 180;
+
+        double a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                   Math.cos(phi1) * Math.cos(phi2) *
+                   Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
     }
 }

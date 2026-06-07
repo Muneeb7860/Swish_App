@@ -1,23 +1,46 @@
 package ch.swissqcommerce.backend.domain.notification.core.service;
 
 import ch.swissqcommerce.backend.domain.notification.core.model.Notification;
-import ch.swissqcommerce.backend.domain.notification.core.model.NotificationType;
 import ch.swissqcommerce.backend.domain.notification.port.in.NotificationUseCase;
-import ch.swissqcommerce.backend.domain.notification.port.out.NotificationProviderPort;
+import ch.swissqcommerce.backend.domain.notification.port.out.NotificationPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 @Service
+@RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationUseCase {
+    private final NotificationPort notificationPort;
 
-    private final NotificationProviderPort notificationProviderPort;
-
-    public NotificationServiceImpl(NotificationProviderPort notificationProviderPort) {
-        this.notificationProviderPort = notificationProviderPort;
+    @Override
+    public Notification scheduleNotification(String recipientId, String channel, String subject, String body) {
+        Notification notification = Notification.builder()
+                .notificationId(UUID.randomUUID().toString())
+                .recipientId(recipientId)
+                .channel(channel)
+                .subject(subject)
+                .body(body)
+                .status("PENDING")
+                .scheduledAt(OffsetDateTime.now())
+                .build();
+        return notificationPort.save(notification);
     }
 
     @Override
-    public void sendNotification(String userId, String message, NotificationType type) {
-        Notification notification = new Notification(userId, message, type);
-        notificationProviderPort.send(notification);
+    public void sendPendingNotifications() {
+        List<Notification> pending = notificationPort.findPending();
+        for (Notification n : pending) {
+            try {
+                notificationPort.dispatch(n);
+                n.setStatus("SENT");
+                n.setSentAt(OffsetDateTime.now());
+            } catch (Exception e) {
+                n.setStatus("FAILED");
+            }
+            notificationPort.save(n);
+        }
     }
 }

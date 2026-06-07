@@ -1,5 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.core.model;
 
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+
 import ch.swissqcommerce.backend.model.*;
 
 import jakarta.persistence.*;
@@ -17,6 +23,10 @@ import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Order {
 
     @Id

@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.feedback.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.feedback.core.model.Feedback;
+import ch.swissqcommerce.backend.domain.feedback.adapter.out.persistence.FeedbackEntity;
 import ch.swissqcommerce.backend.domain.feedback.port.out.FeedbackOutPort;
 import org.springframework.stereotype.Component;
 

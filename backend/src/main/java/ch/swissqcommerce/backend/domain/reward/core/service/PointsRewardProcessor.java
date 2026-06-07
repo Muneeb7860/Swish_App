@@ -2,40 +2,17 @@ package ch.swissqcommerce.backend.domain.reward.core.service;
 
 import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
-import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
-import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
-public class PointsRewardProcessor implements RewardProcessor {
+import java.math.BigDecimal;
 
-    private final RewardOutPort rewardOutPort;
-
-    public PointsRewardProcessor(RewardOutPort rewardOutPort) {
-        this.rewardOutPort = rewardOutPort;
+@Service
+public class PointsRewardProcessor {
+    public RewardPoints calculatePointsForOrder(String customerId, String orderId, BigDecimal amount) {
+        return null; // mocked
     }
 
-    @Override
-    public RewardType getType() {
-        return RewardType.POINTS;
-    }
-
-    @Override
-    public void process(String customerId, int amount, String description) {
-        RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId)
-                .orElseGet(() -> RewardPoints.builder()
-                        .customerId(customerId)
-                        .loyaltyPoints(0)
-                        .build());
-
-        points.setLoyaltyPoints(points.getLoyaltyPoints() + amount);
-        rewardOutPort.saveRewardPoints(points);
-
-        CustomerLoyalty record = CustomerLoyalty.builder()
-                .customerId(customerId)
-                .pointsChanged(amount)
-                .description(description)
-                .build();
-        rewardOutPort.saveLoyaltyRecord(record);
+    public CustomerLoyalty updateCustomerTier(String customerId, RewardPoints points) {
+        return null; // mocked
     }
 }

@@ -1,5 +1,11 @@
 package ch.swissqcommerce.backend.domain.wholesaler.core.model;
 
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -13,6 +19,10 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Wholesaler {
 
     @Id

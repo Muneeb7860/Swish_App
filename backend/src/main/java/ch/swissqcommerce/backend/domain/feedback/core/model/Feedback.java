@@ -1,5 +1,11 @@
 package ch.swissqcommerce.backend.domain.feedback.core.model;
 
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
@@ -11,6 +17,10 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Feedback {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

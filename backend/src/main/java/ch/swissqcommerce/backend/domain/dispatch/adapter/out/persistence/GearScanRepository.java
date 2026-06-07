@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface GearScanRepository extends JpaRepository<GearScan, String> {
+public interface GearScanRepository extends JpaRepository<GearScanEntity, String> {
     List<GearScan> findByRiderIdOrderByScanTimeDesc(String riderId);
 }

@@ -4,6 +4,7 @@ import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;

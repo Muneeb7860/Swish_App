@@ -1,59 +1,56 @@
 package ch.swissqcommerce.backend.domain.dispatch.core.model;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-@Entity
-@Table(name = "active_shipments", schema = "dispatch")
+
+import lombok.Builder;
+import lombok.Getter;
+import java.math.BigDecimal;
+
 @Getter
-@Setter
+@Builder
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ActiveShipment {
-
-    @Id
-    @Column(name = "shipment_id", length = 50)
-    @NotBlank
-    @Size(max = 50)
-    private String shipmentId;
-
-    @Column(name = "order_id", unique = true, nullable = false)
-    @NotNull
-    private Integer orderId;
-
-    @Column(name = "rider_id", length = 50)
-    @Size(max = 50)
+    private final String shipmentId;
+    private final String orderId;
     private String riderId;
+    private RouteCoordinates route;
+    private ShipmentStatus status;
 
-    @Column(name = "status", length = 25, nullable = false)
-    @NotBlank
-    @Size(max = 25)
-    private String status;
+    public void assignRider(String riderId) {
+        if (this.status != ShipmentStatus.UNASSIGNED) {
+            throw new IllegalStateException("Shipment is already assigned or in progress");
+        }
+        if (riderId == null || riderId.isBlank()) {
+            throw new IllegalArgumentException("Rider ID must be provided");
+        }
+        this.riderId = riderId;
+        this.status = ShipmentStatus.ASSIGNED;
+    }
 
-    @Column(name = "total_weight_kg", precision = 6, scale = 2, nullable = false)
-    @NotNull
-    @DecimalMin(value = "0.01")
-    private BigDecimal totalWeightKg;
+    public void updateLocation(BigDecimal lat, BigDecimal lng) {
+        if (this.status == ShipmentStatus.UNASSIGNED || this.status == ShipmentStatus.DELIVERED) {
+            throw new IllegalStateException("Cannot update location for unassigned or delivered shipment");
+        }
+        
+        GeoPoint currentLoc = new GeoPoint(lat, lng);
+        this.route.getPath().add(currentLoc);
+        
+        if (this.status == ShipmentStatus.ASSIGNED) {
+            this.status = ShipmentStatus.IN_TRANSIT;
+        }
+    }
 
-    @Column(name = "assigned_at")
-    private OffsetDateTime assignedAt;
-
-    @Column(name = "last_gps_update")
-    private OffsetDateTime lastGpsUpdate;
-
-    @Column(name = "last_lat", precision = 9, scale = 6)
-    private BigDecimal lastLat;
-
-    @Column(name = "last_lng", precision = 9, scale = 6)
-    private BigDecimal lastLng;
-
-    @Column(name = "stationary_since")
-    private OffsetDateTime stationarySince;
-
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    public void markDelivered() {
+        if (this.status != ShipmentStatus.IN_TRANSIT && this.status != ShipmentStatus.ASSIGNED) {
+            throw new IllegalStateException("Cannot deliver a shipment that is not in transit");
+        }
+        this.status = ShipmentStatus.DELIVERED;
+    }
 }

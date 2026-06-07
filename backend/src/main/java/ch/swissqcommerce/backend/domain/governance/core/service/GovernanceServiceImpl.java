@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.domain.governance.core.service;
 
-import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
+import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalEntityPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
@@ -30,14 +30,14 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GovernanceServiceImpl.class);
 
-    private final ProcurementApprovalPort approvalsPort;
+    private final ProcurementApprovalEntityPort approvalsPort;
     private final B2BRestockOrderPort restockOrderPort;
     private final TelemetryPort telemetryPort;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
+    public GovernanceServiceImpl(ProcurementApprovalEntityPort approvalsPort,
                                  B2BRestockOrderPort restockOrderPort,
                                  TelemetryPort telemetryPort) {
         this.approvalsPort = approvalsPort;
@@ -100,7 +100,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         B2BRestockOrder restockOrder = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
 
-        ProcurementApproval approval = ProcurementApproval.builder()
+        ProcurementApprovalEntity approval = ProcurementApprovalEntity.builder()
                 .restockOrderId(restockOrderId)
                 .wholesalerId(wholesalerId)
                 .amount(amount)
@@ -113,7 +113,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void approveOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsPort.findById(approvalId)
+        ProcurementApprovalEntity approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -137,7 +137,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void rejectOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApproval approval = approvalsPort.findById(approvalId)
+        ProcurementApprovalEntity approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -164,7 +164,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         log.info("GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}", orderId, podHash);
         try {
             int orderIdInt = Integer.parseInt(orderId);
-            List<OrderTelemetryLog> logs = telemetryPort.findByOrderId(orderIdInt);
+            List<OrderTelemetryLogEntity> logs = telemetryPort.findByOrderId(orderIdInt);
             if (logs.isEmpty()) {
                 throw new ResourceNotFoundException("No telemetry logs found for order " + orderId);
             }
@@ -173,7 +173,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             BigDecimal maxTemp = BigDecimal.valueOf(-999.0);
             BigDecimal sumTemp = BigDecimal.ZERO;
 
-            for (OrderTelemetryLog tLog : logs) {
+            for (OrderTelemetryLogEntity tLog : logs) {
                 BigDecimal temp = tLog.getTemperature();
                 if (temp.compareTo(minTemp) < 0) minTemp = temp;
                 if (temp.compareTo(maxTemp) > 0) maxTemp = temp;

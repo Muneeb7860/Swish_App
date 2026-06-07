@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface B2BRestockOrderRepository extends JpaRepository<B2BRestockOrder, Integer> {
+public interface B2BRestockOrderRepository extends JpaRepository<B2BRestockOrderEntity, Integer> {
     List<B2BRestockOrder> findByWholesalerWholesalerIdOrderByCreatedAtDesc(String wholesalerId);
     Optional<B2BRestockOrder> findByIdempotencyKey(String idempotencyKey);
 }

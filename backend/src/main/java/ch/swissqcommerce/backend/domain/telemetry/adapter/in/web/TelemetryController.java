@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.service.InMemoryGeoStore;
@@ -49,7 +49,7 @@ public class TelemetryController {
         for (TelemetryTickRequest request : ticksToFlush) {
             try {
                 orderRepository.findById(request.getOrderId()).ifPresent(order -> {
-                    OrderTelemetryLog log = OrderTelemetryLog.builder()
+                    OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
                             .order(order)
                             .deviceTimestamp(OffsetDateTime.now())
                             .latitude(request.getLatitude())
@@ -106,7 +106,7 @@ public class TelemetryController {
         boolean thresholdBreached = request.getTemperature().compareTo(new BigDecimal("8.0")) > 0;
         boolean dryIceInjected = request.isDryIceInjected();
 
-        OrderTelemetryLog savedDbLog = null;
+        OrderTelemetryLogEntity savedDbLog = null;
         if (thresholdBreached || dryIceInjected) {
             savedDbLog = telemetryService.recordTelemetry(
                     request.getOrderId(),

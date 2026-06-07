@@ -1,7 +1,9 @@
 package ch.swissqcommerce.backend.domain.reward.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
+import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyEntity;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
+import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.RewardPointsEntity;
 import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
 import org.springframework.stereotype.Component;
 import java.util.Optional;

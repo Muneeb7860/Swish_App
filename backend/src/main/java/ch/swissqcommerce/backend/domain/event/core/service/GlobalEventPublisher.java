@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.event.core.service;
 
-import ch.swissqcommerce.backend.domain.event.core.model.BaseDomainEvent;
+import ch.swissqcommerce.backend.domain.event.core.model.BaseDomainEventEntity;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ public class GlobalEventPublisher {
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
-    public void publishEvent(BaseDomainEvent event) {
+    public void publishEvent(BaseDomainEventEntity event) {
         applicationEventPublisher.publishEvent(event);
     }
 }

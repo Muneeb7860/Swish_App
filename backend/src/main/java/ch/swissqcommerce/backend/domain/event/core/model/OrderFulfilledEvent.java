@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.event.core.model;
 
-public class OrderFulfilledEvent extends BaseDomainEvent {
+public class OrderFulfilledEvent extends BaseDomainEventEntity {
     
     private final String customerId;
     private final String orderId;

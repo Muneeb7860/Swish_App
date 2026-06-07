@@ -3,7 +3,7 @@ package ch.swissqcommerce.backend.domain.enrollment.port.out;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
 import ch.swissqcommerce.backend.domain.enrollment.core.model.*;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.model.*;
 
 import java.math.BigDecimal;
@@ -19,6 +19,6 @@ public interface EnrollmentOutPort {
     Optional<Order> findOrderById(Integer orderId);
     Optional<Rider> findRiderById(String riderId);
     void injectDryIce(Integer orderId);
-    OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
+    OrderTelemetryLogEntity recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
 }
 

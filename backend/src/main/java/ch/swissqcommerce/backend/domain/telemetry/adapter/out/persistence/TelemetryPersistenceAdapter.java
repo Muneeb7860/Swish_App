@@ -1,57 +1,49 @@
 package ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import org.springframework.beans.factory.annotation.Autowired;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
 
 @Component
 public class TelemetryPersistenceAdapter implements TelemetryPort {
 
-    @Autowired
-    private OrderTelemetryLogRepository telemetryLogRepository;
-
-    @Autowired
-    private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;
-
-    @Autowired
-    private ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository riderRepository;
-
-    @Autowired
-    private ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository trustLedgerRepository;
-
     @Override
-    public OrderTelemetryLog save(OrderTelemetryLog log) {
-        return telemetryLogRepository.save(log);
+    public OrderTelemetryLogEntity save(OrderTelemetryLogEntity log) {
+        return log;
     }
 
     @Override
-    public java.util.List<OrderTelemetryLog> findByOrderId(Integer orderId) {
-        return telemetryLogRepository.findByOrderOrderIdOrderByDeviceTimestampDesc(orderId);
+    public List<OrderTelemetryLogEntity> findByOrderId(Integer orderId) {
+        return List.of();
     }
 
     @Override
-    public java.util.Optional<ch.swissqcommerce.backend.domain.transaction.core.model.Order> findOrderById(Integer orderId) {
-        return orderRepository.findById(orderId);
+    public Optional<Order> findOrderById(Integer orderId) {
+        return Optional.empty();
     }
 
     @Override
-    public ch.swissqcommerce.backend.domain.transaction.core.model.Order saveOrder(ch.swissqcommerce.backend.domain.transaction.core.model.Order order) {
-        return orderRepository.save(order);
+    public Order saveOrder(Order order) {
+        return order;
     }
 
     @Override
-    public java.util.Optional<ch.swissqcommerce.backend.domain.enrollment.core.model.Rider> findRiderById(String riderId) {
-        return riderRepository.findById(riderId);
+    public Optional<Rider> findRiderById(String riderId) {
+        return Optional.empty();
     }
 
     @Override
-    public ch.swissqcommerce.backend.domain.enrollment.core.model.Rider saveRider(ch.swissqcommerce.backend.domain.enrollment.core.model.Rider rider) {
-        return riderRepository.save(rider);
+    public Rider saveRider(Rider rider) {
+        return rider;
     }
 
     @Override
-    public ch.swissqcommerce.backend.model.SecurityTrustLedger saveTrustLedger(ch.swissqcommerce.backend.model.SecurityTrustLedger ledger) {
-        return trustLedgerRepository.save(ledger);
+    public SecurityTrustLedger saveTrustLedger(SecurityTrustLedger ledger) {
+        return ledger;
     }
 }

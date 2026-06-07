@@ -1,5 +1,11 @@
 package ch.swissqcommerce.backend.domain.reward.core.model;
 
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -11,6 +17,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RewardPoints {
 
     @Id

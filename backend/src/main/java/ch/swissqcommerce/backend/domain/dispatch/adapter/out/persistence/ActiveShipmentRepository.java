@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ActiveShipmentRepository extends JpaRepository<ActiveShipment, String> {
+public interface ActiveShipmentRepository extends JpaRepository<ActiveShipmentEntity, String> {
     Optional<ActiveShipment> findByOrderId(Integer orderId);
     List<ActiveShipment> findByRiderIdAndStatus(String riderId, String status);
     List<ActiveShipment> findByStatusIn(List<String> statuses);

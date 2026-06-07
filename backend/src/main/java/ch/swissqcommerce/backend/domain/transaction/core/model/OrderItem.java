@@ -1,5 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.core.model;
 
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+
 import ch.swissqcommerce.backend.model.*;
 
 import jakarta.persistence.*;
@@ -16,6 +22,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderItem {
 
     @Id

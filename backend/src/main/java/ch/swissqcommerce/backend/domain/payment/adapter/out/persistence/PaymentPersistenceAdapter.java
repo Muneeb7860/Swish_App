@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
+import ch.swissqcommerce.backend.domain.payment.adapter.out.persistence.PaymentEntity;
 import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
 import ch.swissqcommerce.backend.repository.PaymentRepository;
 import org.springframework.stereotype.Component;

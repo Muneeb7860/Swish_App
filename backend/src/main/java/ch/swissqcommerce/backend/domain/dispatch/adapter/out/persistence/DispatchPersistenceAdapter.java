@@ -1,14 +1,13 @@
 package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.dispatch.core.model.ActiveShipment;
+import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.ActiveShipmentEntity;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.GearScan;
+import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.GearScanEntity;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.VehicleConfig;
+import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.VehicleConfigEntity;
 import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort.EligibilityCriteria;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,8 +25,6 @@ public class DispatchPersistenceAdapter implements DispatchPort {
     private final VehicleConfigRepository vehicleConfigRepository;
     private final GearScanRepository gearScanRepository;
     private final ActiveShipmentRepository activeShipmentRepository;
-    private final RiderRepository riderRepository;
-    private final OrderRepository orderRepository;
 
     @Override
     public VehicleConfig saveVehicleConfig(VehicleConfig config) {
@@ -70,29 +67,27 @@ public class DispatchPersistenceAdapter implements DispatchPort {
     }
 
     @Override
-    public boolean isRiderEligible(String riderId, Integer orderId, BigDecimal weightKg) {
-        // 1. Fetch Rider profile
-        Rider rider = riderRepository.findById(riderId).orElse(null);
-        if (rider == null || !"active".equalsIgnoreCase(rider.getOnboardingStatus())) {
-            log.warn("Rider {} is not active or not found.", riderId);
+    public boolean isRiderEligible(EligibilityCriteria criteria) {
+        if (!"active".equalsIgnoreCase(criteria.onboardingStatus())) {
+            log.warn("Rider {} is not active.", criteria.riderId());
             return false;
         }
 
         // 2. Fetch Vehicle Config
-        VehicleConfig vehicleConfig = vehicleConfigRepository.findById(rider.getVehicleType()).orElse(null);
+        VehicleConfig vehicleConfig = vehicleConfigRepository.findById(criteria.vehicleType()).orElse(null);
         if (vehicleConfig == null) {
-            log.warn("Vehicle configuration not found for type {}.", rider.getVehicleType());
+            log.warn("Vehicle configuration not found for type {}.", criteria.vehicleType());
             return false;
         }
 
-        if (weightKg.compareTo(vehicleConfig.getMaxWeightKg()) > 0) {
-            log.warn("Order weight {} exceeds vehicle max weight limit {}.", weightKg, vehicleConfig.getMaxWeightKg());
+        if (criteria.weightKg().compareTo(vehicleConfig.getMaxWeightKg()) > 0) {
+            log.warn("Order weight {} exceeds vehicle max weight limit {}.", criteria.weightKg(), vehicleConfig.getMaxWeightKg());
             return false;
         }
 
         // 3. Verify gear scan check (must have passed scan for THERMAL_BAG within last 24h)
         OffsetDateTime oneDayAgo = OffsetDateTime.now().minusDays(1);
-        List<GearScan> scans = gearScanRepository.findByRiderIdOrderByScanTimeDesc(riderId);
+        List<GearScan> scans = gearScanRepository.findByRiderIdOrderByScanTimeDesc(criteria.riderId());
         boolean hasValidGear = scans.stream()
                 .filter(s -> "THERMAL_BAG".equals(s.getGearType()))
                 .filter(s -> "PASSED".equals(s.getVerificationStatus()))
@@ -103,22 +98,20 @@ public class DispatchPersistenceAdapter implements DispatchPort {
                 });
 
         if (!hasValidGear) {
-            log.warn("Rider {} has no valid passed thermal bag gear scan in the last 24 hours.", riderId);
+            log.warn("Rider {} has no valid passed thermal bag gear scan in the last 24 hours.", criteria.riderId());
             return false;
         }
 
         // 4. Anti-Self-Matching / Fraud check
-        Order order = orderRepository.findById(orderId).orElse(null);
-        if (order == null || order.getCustomer() == null) {
-            log.warn("Order {} or customer profile not found.", orderId);
+        if (criteria.customerId() == null) {
+            log.warn("Customer profile not found in criteria.");
             return false;
         }
 
-        Customer customer = order.getCustomer();
-        if (customer.getCustomerId().equals(riderId) || 
-            customer.getFullName().equalsIgnoreCase(rider.getFullName())) {
+        if (criteria.customerId().equals(criteria.riderId()) || 
+            (criteria.customerFullName() != null && criteria.customerFullName().equalsIgnoreCase(criteria.riderFullName()))) {
             log.warn("Self-matching detected. Customer ID or name matches Rider profile: customer={}, rider={}", 
-                    customer.getCustomerId(), riderId);
+                    criteria.customerId(), criteria.riderId());
             return false;
         }
 
