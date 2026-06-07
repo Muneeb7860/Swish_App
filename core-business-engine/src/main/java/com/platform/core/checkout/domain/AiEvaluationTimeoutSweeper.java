@@ -39,11 +39,17 @@ public class AiEvaluationTimeoutSweeper {
                   AND placed_at < CURRENT_TIMESTAMP - INTERVAL '45 seconds'
                 """;
 
-        int rowsUpdated = jdbcTemplate.update(sql);
+        try {
+            int rowsUpdated = jdbcTemplate.update(sql);
 
-        if (rowsUpdated > 0) {
-            log.error("CRITICAL SAGA TIMEOUT: Forced {} stalled B2B orders into HUMAN_TRIAGE.", rowsUpdated);
-            // In a full implementation, you would also trigger an alert to the Ops team via the Notification Engine here.
+            if (rowsUpdated > 0) {
+                log.error("CRITICAL SAGA TIMEOUT: Forced {} stalled B2B orders into HUMAN_TRIAGE.", rowsUpdated);
+                // In a full implementation, you would also trigger an alert to the Ops team via the Notification Engine here.
+            }
+        } catch (org.springframework.jdbc.BadSqlGrammarException e) {
+            log.debug("wholesale_orders table not found or not initialized yet. Skipping timeout sweep. Error: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to sweep stalled AI evaluations. Error: {}", e.getMessage(), e);
         }
     }
 }
