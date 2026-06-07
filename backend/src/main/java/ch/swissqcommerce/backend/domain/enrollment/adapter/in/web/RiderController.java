@@ -62,6 +62,18 @@ public class RiderController {
     }
 
     /**
+     * POST /api/rider/onboard/{applicationId}/approve - Approve a specific gate for rider onboarding application.
+     */
+    @PostMapping("/onboard/{applicationId}/approve")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> approveOnboarding(
+            @PathVariable String applicationId,
+            @RequestParam String gate) {
+        Map<String, Object> result = riderUseCase.approveOnboarding(applicationId, gate);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * POST /api/rider/orders/{id}/coolant - Inject dry ice coolant.
      */
     @PostMapping("/orders/{id}/coolant")

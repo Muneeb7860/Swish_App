@@ -43,9 +43,15 @@ public class RewardsListener {
                 orderPort.findById(orderIdInt).ifPresent(order -> {
                     if (order.getRider() != null && order.getRider().getRiderId() != null) {
                         String riderId = order.getRider().getRiderId();
-                        // Grant rider 10 points on the leaderboard for a successful delivery
-                        leaderboardService.updateRiderScore(riderId, 10.0);
-                        log.info("RewardsListener: Credited rider id={} with 10.0 leaderboard points.", riderId);
+                        String vehicle = order.getRider().getVehicleType();
+                        double scoreDelta = 10.0;
+                        boolean isGreen = vehicle != null && ("ebike".equalsIgnoreCase(vehicle) || "bicycle".equalsIgnoreCase(vehicle) || "bike".equalsIgnoreCase(vehicle));
+                        if (isGreen) {
+                            scoreDelta += 5.0;
+                        }
+                        leaderboardService.updateRiderScore(riderId, scoreDelta);
+                        log.info("RewardsListener: Credited rider id={} with {} leaderboard points (Green Rider Bonus: {}).", 
+                                riderId, scoreDelta, isGreen);
                     }
                 });
             } catch (NumberFormatException nfe) {

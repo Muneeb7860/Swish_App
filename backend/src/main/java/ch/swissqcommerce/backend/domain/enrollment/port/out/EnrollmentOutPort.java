@@ -18,6 +18,8 @@ public interface EnrollmentOutPort {
     void saveTrustLedger(SecurityTrustLedger ledger);
     Optional<Order> findOrderById(Integer orderId);
     Optional<Rider> findRiderById(String riderId);
+    Optional<OnboardingApplication> findOnboardingApplicationById(String applicationId);
+    Optional<Rider> findRiderByFullName(String fullName);
     void injectDryIce(Integer orderId);
     OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
 }

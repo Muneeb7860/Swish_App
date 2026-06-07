@@ -68,4 +68,14 @@ public class RiderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("course_completed"));
     }
+
+    @Test
+    public void testApproveOnboarding() throws Exception {
+        when(riderService.approveOnboarding("APP1", "ops"))
+                .thenReturn(Map.of("status", "gate_approved"));
+
+        mockMvc.perform(post("/api/rider/onboard/APP1/approve?gate=ops"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("gate_approved"));
+    }
 }
