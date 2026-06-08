@@ -24,4 +24,19 @@ public class OrderFulfilledEvent extends BaseDomainEvent {
     public int getRewardPoints() {
         return rewardPoints;
     }
+
+    @Override
+    public String getEventType() {
+        return "OrderFulfilled";
+    }
+
+    @Override
+    public String getAggregateId() {
+        return orderId;
+    }
+
+    @Override
+    public String getPayload() {
+        return customerId;
+    }
 }

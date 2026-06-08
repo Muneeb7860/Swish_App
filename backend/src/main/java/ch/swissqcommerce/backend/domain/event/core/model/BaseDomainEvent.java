@@ -13,4 +13,16 @@ public abstract class BaseDomainEvent {
     public OffsetDateTime getOccurredAt() {
         return occurredAt;
     }
+
+    public String getEventType() {
+        return this.getClass().getSimpleName();
+    }
+
+    public String getAggregateId() {
+        return "";
+    }
+
+    public String getPayload() {
+        return "";
+    }
 }

@@ -11,6 +11,7 @@ import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.Rider
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import ch.swissqcommerce.backend.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,9 @@ public class DispatchIntegrationTest {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderPort orderPort;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -65,13 +69,13 @@ public class DispatchIntegrationTest {
         customerRepository.deleteAll();
 
         // Seed Vehicle Configs
-        vehicleConfigRepository.save(ch.swissqcommerce.backend.domain.dispatch.core.model.VehicleConfig.builder()
+        vehicleConfigRepository.save(ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.VehicleConfigEntity.builder()
                 .vehicleType("E-Bike")
                 .maxWeightKg(new BigDecimal("10.00"))
                 .averageSpeedKmh(new BigDecimal("20.00"))
                 .build());
 
-        vehicleConfigRepository.save(ch.swissqcommerce.backend.domain.dispatch.core.model.VehicleConfig.builder()
+        vehicleConfigRepository.save(ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.VehicleConfigEntity.builder()
                 .vehicleType("Scooter")
                 .maxWeightKg(new BigDecimal("25.00"))
                 .averageSpeedKmh(new BigDecimal("40.00"))
@@ -96,10 +100,10 @@ public class DispatchIntegrationTest {
                 .status("pending")
                 .idempotencyKey("ORDER-KEY-DISP-1")
                 .build();
-        order = orderRepository.save(order);
+        order = orderPort.save(order);
 
         // 3. Seed Normal Rider (E-Bike, Max Weight 10.0kg)
-        normalRider = Rider.builder()
+        ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity normalRiderEntity = ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
                 .riderId("RIDER-EBike-1")
                 .fullName("Bob Miller")
                 .vehicleType("E-Bike")
@@ -107,10 +111,11 @@ public class DispatchIntegrationTest {
                 .walletBalance(BigDecimal.ZERO)
                 .trustScore(100)
                 .build();
-        riderRepository.save(normalRider);
+        riderRepository.save(normalRiderEntity);
+        normalRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder().riderId("RIDER-EBike-1").build();
 
         // 4. Seed Self-Matching Rider (Name matches Customer)
-        selfMatchingRider = Rider.builder()
+        ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity selfMatchingRiderEntity = ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
                 .riderId("RIDER-SelfMatch-1")
                 .fullName("Alice Smith") // Exact match with customer name
                 .vehicleType("Scooter")
@@ -118,7 +123,8 @@ public class DispatchIntegrationTest {
                 .walletBalance(BigDecimal.ZERO)
                 .trustScore(100)
                 .build();
-        riderRepository.save(selfMatchingRider);
+        riderRepository.save(selfMatchingRiderEntity);
+        selfMatchingRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder().riderId("RIDER-SelfMatch-1").build();
     }
 
     @Test
@@ -163,10 +169,10 @@ public class DispatchIntegrationTest {
 
         // Then
         assertNotNull(shipment);
-        assertEquals("ASSIGNED", shipment.getStatus());
+        assertEquals("ASSIGNED", shipment.getStatus().name());
         assertEquals(normalRider.getRiderId(), shipment.getRiderId());
         
-        Order updatedOrder = orderRepository.findById(order.getOrderId()).orElseThrow();
+        Order updatedOrder = orderPort.findById(order.getOrderId()).orElseThrow();
         assertEquals(normalRider.getRiderId(), updatedOrder.getRider().getRiderId());
     }
 
@@ -186,8 +192,9 @@ public class DispatchIntegrationTest {
         assertNotNull(shipment.getStationarySince());
 
         // Manually adjust the stationarySince timestamp back in database by 11 minutes (simulating time elapsed)
-        shipment.setStationarySince(OffsetDateTime.now().minusMinutes(11));
-        activeShipmentRepository.saveAndFlush(shipment);
+        ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.ActiveShipmentEntity shipmentEntity = activeShipmentRepository.findById(shipment.getShipmentId()).orElseThrow();
+        shipmentEntity.setStationarySince(OffsetDateTime.now().minusMinutes(11));
+        activeShipmentRepository.saveAndFlush(shipmentEntity);
 
         // Act - Run reallocation audit
         List<Integer> reallocated = dispatchUseCase.runReallocationAudit();
@@ -196,10 +203,10 @@ public class DispatchIntegrationTest {
         assertEquals(1, reallocated.size());
         assertEquals(order.getOrderId(), reallocated.get(0));
 
-        ActiveShipment updatedShipment = activeShipmentRepository.findById(shipment.getShipmentId()).orElseThrow();
+        ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.ActiveShipmentEntity updatedShipment = activeShipmentRepository.findById(shipment.getShipmentId()).orElseThrow();
         assertEquals("REALLOCATED", updatedShipment.getStatus());
 
-        Order resetOrder = orderRepository.findById(order.getOrderId()).orElseThrow();
+        Order resetOrder = orderPort.findById(order.getOrderId()).orElseThrow();
         assertEquals("pending", resetOrder.getStatus());
         assertNull(resetOrder.getRider());
     }

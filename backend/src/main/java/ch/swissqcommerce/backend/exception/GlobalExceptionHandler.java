@@ -2,8 +2,10 @@ package ch.swissqcommerce.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -88,6 +90,29 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorBody(HttpStatus.BAD_REQUEST, "Malformed JSON request."));
+    }
+
+    /**
+     * Handles Spring Security authorization failures — returns 403 instead of falling
+     * through to the 500 catch-all.  Must be declared here because
+     * AccessDeniedException is NOT a RuntimeException so the catch-all wouldn't
+     * normally intercept it, but having an explicit handler is clearer and ensures
+     * the standardised error envelope is returned.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(buildErrorBody(HttpStatus.FORBIDDEN, "Access denied."));
+    }
+
+    /**
+     * Handles missing required query/path parameters.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorBody(HttpStatus.BAD_REQUEST,
+                        "Required parameter '" + ex.getParameterName() + "' is missing."));
     }
 
     @ExceptionHandler(NullPointerException.class)

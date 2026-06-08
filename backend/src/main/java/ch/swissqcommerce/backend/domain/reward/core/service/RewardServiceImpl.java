@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
+import ch.swissqcommerce.backend.model.Customer;
+
 
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
 import ch.swissqcommerce.backend.domain.reward.port.in.RewardUseCase;

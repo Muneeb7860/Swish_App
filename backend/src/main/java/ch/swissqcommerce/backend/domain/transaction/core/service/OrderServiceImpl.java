@@ -1,4 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.core.service;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.UUID;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.model.Inventory;
+
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
@@ -65,6 +72,21 @@ public class OrderServiceImpl implements OrderUseCase {
         }
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("Cart items cannot be null or empty");
+        }
+
+        // Validate individual cart items: reject zero/negative quantities and duplicate SKUs
+        Set<String> seenItemIds = new java.util.HashSet<>();
+        for (CartItem cartItem : items) {
+            if (cartItem.quantity() <= 0) {
+                throw new IllegalArgumentException(
+                        "Cart item quantity must be greater than zero, got: " + cartItem.quantity()
+                                + " for item: " + cartItem.itemId());
+            }
+            if (!seenItemIds.add(cartItem.itemId())) {
+                throw new IllegalArgumentException(
+                        "Duplicate item in cart: " + cartItem.itemId()
+                                + ". Consolidate quantities into a single line item.");
+            }
         }
 
         // 1. Initial quick idempotency check
@@ -311,7 +333,7 @@ public class OrderServiceImpl implements OrderUseCase {
                     .ticketId(ticketId)
                     .type("refund_customer")
                     .customer(customer)
-                    .order(order)
+                    .orderId(order.getOrderId())
                     .description("AI-AUTOPILOT: Refund request auto-approved due to verified SLA breach for order " + orderId + ". Override By: ai-autopilot. Reason: Verified SLA countdown breach (countdown <= 0)")
                     .amount(order.getTotalAmount())
                     .status("approved")
@@ -342,7 +364,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .ticketId(ticketId)
                 .type("refund_customer")
                 .customer(customer)
-                .order(order)
+                .orderId(order.getOrderId())
                 .description("Refund request for order " + orderId + ". Reason: " + claimReason)
                 .amount(order.getTotalAmount())
                 .status("pending")

@@ -1,58 +1,64 @@
 package ch.swissqcommerce.backend.domain.auth.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.auth.core.model.LoginResponse;
-import ch.swissqcommerce.backend.domain.auth.port.in.AuthService;
+import ch.swissqcommerce.backend.domain.auth.adapter.in.web.dto.LoginRequest;
+import ch.swissqcommerce.backend.domain.auth.adapter.in.web.dto.LoginResponse;
+import ch.swissqcommerce.backend.domain.auth.adapter.in.web.dto.RegisterRequest;
+import ch.swissqcommerce.backend.domain.auth.adapter.in.web.dto.RegisterResponse;
+import ch.swissqcommerce.backend.domain.auth.core.model.Session;
+import ch.swissqcommerce.backend.domain.auth.core.model.UserAccount;
+import ch.swissqcommerce.backend.domain.auth.port.in.AuthenticationUseCase;
+import ch.swissqcommerce.backend.domain.auth.port.in.EnrollmentUseCase;
+import ch.swissqcommerce.backend.domain.auth.port.out.TokenServicePort;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthenticationUseCase authenticationUseCase;
+    private final EnrollmentUseCase enrollmentUseCase;
+    private final TokenServicePort tokenServicePort;
 
-    @Data
-    public static class LoginRequest {
-        @NotBlank(message = "Username is required")
-        private String username;
-
-        @NotBlank(message = "Password is required")
-        private String password;
-    }
-
-    @Data
-    public static class VerifyMfaRequest {
-        @NotBlank(message = "Session token is required")
-        private String sessionToken;
-
-        @NotBlank(message = "MFA code is required")
-        private String code;
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest req) {
+        UserAccount user = enrollmentUseCase.register(req.getEmail(), req.getPassword());
+        RegisterResponse body = RegisterResponse.builder()
+                .userId(user.getId())
+                .email(user.getEmailAddress().getValue())
+                .status(user.getStatus().name())
+                .build();
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            LoginResponse response = authService.login(request.getUsername(), request.getPassword());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
-        }
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req,
+                                               HttpServletRequest httpReq) {
+        Session session = authenticationUseCase.login(
+                req.getEmail(),
+                req.getPassword(),
+                req.getDeviceFingerprint(),
+                httpReq.getRemoteAddr()
+        );
+        String token = tokenServicePort.generateToken(session.getId(), session.getUserId());
+        LoginResponse body = LoginResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .sessionId(session.getId())
+                .expiresAt(session.getExpiresAt())
+                .build();
+        return ResponseEntity.ok(body);
     }
 
-    @PostMapping("/mfa/verify")
-    public ResponseEntity<?> verifyMfa(@Valid @RequestBody VerifyMfaRequest request) {
-        try {
-            String token = authService.verifyMfa(request.getSessionToken(), request.getCode());
-            return ResponseEntity.ok(Map.of("token", token));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader(value = "X-Session-Id", required = false) String sessionId) {
+        if (sessionId != null && !sessionId.isBlank()) {
+            authenticationUseCase.logout(sessionId);
         }
+        return ResponseEntity.noContent().build();
     }
 }

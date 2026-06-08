@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.in.web.dto;
+import ch.swissqcommerce.backend.model.Customer;
+
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

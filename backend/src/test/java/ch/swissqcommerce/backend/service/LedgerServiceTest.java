@@ -47,7 +47,7 @@ public class LedgerServiceTest {
         when(customerRepository.findById("C1")).thenReturn(Optional.of(cust));
         when(journalEntryRepository.findFirstByOrderByEntryIdDesc()).thenReturn(Optional.empty());
         
-        when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(i -> i.getArgument(0));
+        when(journalEntryRepository.save(any(ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.JournalEntryEntity.class))).thenAnswer(i -> i.getArgument(0));
 
         List<LedgerUseCase.LedgerLeg> legs = List.of(
             new LedgerUseCase.LedgerLeg("customer", "C1", new BigDecimal("10.00"), BigDecimal.ZERO),

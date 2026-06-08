@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty, Integer> {
-    List<CustomerLoyalty> findByCustomerId(String customerId);
+public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyaltyEntity, Integer> {
+    List<CustomerLoyaltyEntity> findByCustomerId(String customerId);
 }

@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface WholesalerRepository extends JpaRepository<Wholesaler, String> {
-    Optional<Wholesaler> findByIsPrimary(Boolean isPrimary);
+public interface WholesalerRepository extends JpaRepository<WholesalerEntity, String> {
+    Optional<WholesalerEntity> findByIsPrimary(Boolean isPrimary);
 }

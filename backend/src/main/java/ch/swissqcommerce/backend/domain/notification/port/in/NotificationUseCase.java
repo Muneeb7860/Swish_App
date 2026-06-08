@@ -1,7 +1,8 @@
 package ch.swissqcommerce.backend.domain.notification.port.in;
 
-import ch.swissqcommerce.backend.domain.notification.core.model.NotificationType;
+import ch.swissqcommerce.backend.domain.notification.core.model.Notification;
 
 public interface NotificationUseCase {
-    void sendNotification(String userId, String message, NotificationType type);
+    Notification scheduleNotification(String recipientId, String channel, String subject, String body);
+    void sendPendingNotifications();
 }

@@ -1,9 +1,10 @@
 package ch.swissqcommerce.backend.domain.governance.core.service;
 
-import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
