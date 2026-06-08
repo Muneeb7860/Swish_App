@@ -1,7 +1,8 @@
 package ch.swissqcommerce.backend.controller;
 
+import ch.swissqcommerce.backend.domain.customer.adapter.in.web.CustomerController;
+import ch.swissqcommerce.backend.domain.customer.port.in.CustomerUseCase;
 import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
 import ch.swissqcommerce.backend.repository.OrderRepository;
@@ -38,7 +39,7 @@ public class CustomerControllerTest {
 
     @MockBean private InventoryRepository inventoryRepository;
     @MockBean private OrderRepository orderRepository;
-    @MockBean private CustomerRepository customerRepository;
+    @MockBean private CustomerUseCase customerUseCase;
     @MockBean private HitlQueueRepository hitlQueueRepository;
 
     private SecurityContext originalContext;
@@ -89,7 +90,7 @@ public class CustomerControllerTest {
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
 
-        when(customerRepository.findById("cust123")).thenReturn(Optional.empty());
+        when(customerUseCase.purgeProfile("cust123")).thenThrow(new java.util.NoSuchElementException("Customer not found."));
 
         mockMvc.perform(post("/api/customer/profile/purge")
                 .param("customerId", "cust123"))
@@ -106,15 +107,10 @@ public class CustomerControllerTest {
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
 
-        Customer customer = new Customer();
-        customer.setCustomerId("cust123");
-        customer.setFullName("John Doe");
-        customer.setEmail("john@example.com");
-        customer.setAddresses(new ArrayList<>());
-        customer.setPaymentCards(new ArrayList<>());
-
-        when(customerRepository.findById("cust123")).thenReturn(Optional.of(customer));
-        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(customerUseCase.purgeProfile("cust123")).thenReturn(java.util.Map.of(
+                "status", "purged",
+                "probationary_trust_score", 75
+        ));
 
         mockMvc.perform(post("/api/customer/profile/purge")
                 .param("customerId", "cust123"))
@@ -135,24 +131,14 @@ public class CustomerControllerTest {
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
 
-        Customer customer = new Customer();
-        customer.setCustomerId("cust123");
-        customer.setFullName("John Doe");
-        customer.setEmail("john@example.com");
-        customer.setAddresses(new ArrayList<>());
-        customer.setPaymentCards(new ArrayList<>());
-
-        when(customerRepository.findById("cust123")).thenReturn(Optional.of(customer));
-        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(customerUseCase.purgeProfile("cust123")).thenReturn(java.util.Map.of(
+                "status", "purged",
+                "probationary_trust_score", 75
+        ));
 
         mockMvc.perform(post("/api/customer/profile/purge")
                 .param("customerId", "cust123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("purged"));
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T any(Class<T> type) {
-        return Mockito.any(type);
     }
 }

@@ -35,8 +35,8 @@ public class SecurityAnomalyAnalyzer {
     @Scheduled(fixedDelay = 8000)
     @Transactional
     public void analyzeSecurityAnomalies() {
-        List<OutboxEvent> anomalies = outboxEventRepository.findAll().stream()
-                .filter(e -> "security.anomaly".equalsIgnoreCase(e.getEventType()) && "PENDING".equalsIgnoreCase(e.getStatus()))
+        List<OutboxEvent> anomalies = outboxEventRepository.findByStatusOrderByCreatedAtAsc("PENDING").stream()
+                .filter(e -> "security.anomaly".equalsIgnoreCase(e.getEventType()))
                 .toList();
 
         if (anomalies.isEmpty()) {

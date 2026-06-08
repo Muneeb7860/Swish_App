@@ -53,6 +53,9 @@ public class AdminService {
     @Autowired
     private SecurityTrustLedgerRepository trustLedgerRepository;
 
+    @Autowired
+    private ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase riderUseCase;
+
     /**
      * Injects a chaos fault into the system for resilience testing.
      * Supports fault types: LATENCY_SPIKE, STORE_OFFLINE, PAYMENT_GATEWAY_DOWN.
@@ -105,53 +108,16 @@ public class AdminService {
      */
     @Transactional
     public Map<String, Object> approveOnboarding(String applicationId, String gate) {
-        OnboardingApplication app = onboardingRepository.findById(applicationId)
-                .orElseThrow(() -> new NoSuchElementException("Application not found: " + applicationId));
-
-        switch (gate.toLowerCase()) {
-            case "ops":
-                app.setApprovalOps(true);
-                break;
-            case "compliance":
-                if (!app.getApprovalOps()) {
-                    throw new IllegalStateException("Ops approval must precede compliance approval.");
-                }
-                app.setApprovalCompliance(true);
-                break;
-            case "admin":
-                if (!app.getApprovalOps() || !app.getApprovalCompliance()) {
-                    throw new IllegalStateException("Both ops and compliance approvals required before admin gate.");
-                }
-                app.setApprovalAdmin(true);
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid gate. Must be: ops, compliance, or admin.");
-        }
-
-        onboardingRepository.save(app);
-
-        // If all 3 gates passed, activate the rider
-        boolean fullyApproved = app.getApprovalOps() && app.getApprovalCompliance() && app.getApprovalAdmin();
-        if (fullyApproved && "rider".equalsIgnoreCase(app.getApplicantType())) {
-            // Find the rider by matching name and pending status
-            riderRepository.findAll().stream()
-                    .filter(r -> r.getFullName().equalsIgnoreCase(app.getName()))
-                    .filter(r -> "pending_review".equalsIgnoreCase(r.getOnboardingStatus()))
-                    .findFirst()
-                    .ifPresent(rider -> {
-                        rider.setOnboardingStatus("active");
-                        riderRepository.save(rider);
-                    });
-        }
+        Map<String, Object> riderResult = riderUseCase.approveOnboarding(applicationId, gate);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applicationId", applicationId);
         result.put("gate", gate);
         result.put("approved", true);
-        result.put("fullyApproved", fullyApproved);
-        result.put("opsApproval", app.getApprovalOps());
-        result.put("complianceApproval", app.getApprovalCompliance());
-        result.put("adminApproval", app.getApprovalAdmin());
+        result.put("fullyApproved", riderResult.get("fullyApproved"));
+        result.put("opsApproval", riderResult.get("opsApproved"));
+        result.put("complianceApproval", riderResult.get("complianceApproved"));
+        result.put("adminApproval", riderResult.get("adminApproved"));
         return result;
     }
 

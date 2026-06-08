@@ -172,9 +172,15 @@ public class RiderServiceImpl implements RiderUseCase {
                 application.setApprovalOps(true);
                 break;
             case "compliance":
+                if (!application.getApprovalOps()) {
+                    throw new IllegalStateException("Ops approval must precede compliance approval.");
+                }
                 application.setApprovalCompliance(true);
                 break;
             case "admin":
+                if (!application.getApprovalOps() || !application.getApprovalCompliance()) {
+                    throw new IllegalStateException("Both ops and compliance approvals required before admin gate.");
+                }
                 application.setApprovalAdmin(true);
                 break;
             default:
