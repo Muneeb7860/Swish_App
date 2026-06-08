@@ -1,7 +1,6 @@
 package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
@@ -26,7 +25,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetryServiceImpl.class);
 
-    private final java.util.concurrent.ConcurrentHashMap<Integer, java.time.OffsetDateTime> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Integer, ThermalBreachTracker> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTick> tickBuffer = new java.util.concurrent.ConcurrentLinkedQueue<>();
     private final ConcurrentHashMap<Integer, LocationTimestamp> lastLocations = new ConcurrentHashMap<>();
 
@@ -77,9 +76,37 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         public long getTimestampMs() { return timestampMs; }
     }
 
+    private static class ThermalBreachTracker {
+        private java.time.OffsetDateTime lastPingTime;
+        private long cumulativeSeconds;
+
+        public ThermalBreachTracker() {
+            this.lastPingTime = java.time.OffsetDateTime.now();
+            this.cumulativeSeconds = 0;
+        }
+
+        public void update(boolean isBreach) {
+            java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+            long secondsSinceLastPing = java.time.Duration.between(lastPingTime, now).toSeconds();
+            this.lastPingTime = now;
+
+            if (isBreach) {
+                // Add time to breach counter (cap single jump at 30s to prevent huge jumps)
+                cumulativeSeconds += Math.min(secondsSinceLastPing, 30);
+            } else {
+                // Cooldown: deduct time slowly, ensuring single pings don't reset everything instantly
+                cumulativeSeconds = Math.max(0, cumulativeSeconds - (secondsSinceLastPing / 2));
+            }
+        }
+
+        public long getCumulativeSeconds() {
+            return cumulativeSeconds;
+        }
+    }
+
     @Override
     @Transactional
-    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
+    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng,
                                              BigDecimal temp, boolean dryIceInjected) {
         
         Order order = telemetryPort.findOrderById(orderId)
@@ -131,7 +158,17 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             ledgerUseCase.recordTransaction("COLD-BREACH", " Perishable cargo spoilage write-off", legs);
         }
 
-        return savedLog;
+        return OrderTelemetryLog.builder()
+                .logId(savedLog.getLogId())
+                .orderId(savedLog.getOrderId())
+                .deviceTimestamp(savedLog.getDeviceTimestamp())
+                .serverTimestamp(savedLog.getServerTimestamp())
+                .latitude(savedLog.getLatitude())
+                .longitude(savedLog.getLongitude())
+                .temperature(savedLog.getTemperature())
+                .dryIceInjected(savedLog.getDryIceInjected())
+                .alertTriggered(savedLog.getAlertTriggered())
+                .build();
     }
 
     @Override
@@ -140,14 +177,17 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         
         boolean thresholdBreached = currentTemp.compareTo(new BigDecimal("8.0")) > 0;
         
-        if (thresholdBreached) {
-            java.time.OffsetDateTime start = activeBreaches.computeIfAbsent(orderId, k -> java.time.OffsetDateTime.now());
-            long secondsPassed = java.time.Duration.between(start, java.time.OffsetDateTime.now()).toSeconds();
-            return secondsPassed >= 180;
-        } else {
+        ThermalBreachTracker tracker = activeBreaches.computeIfAbsent(orderId, k -> new ThermalBreachTracker());
+        tracker.update(thresholdBreached);
+        
+        if (tracker.getCumulativeSeconds() >= 180) {
+            return true;
+        } else if (tracker.getCumulativeSeconds() == 0 && !thresholdBreached) {
+            // Memory cleanup if fully cooled down
             activeBreaches.remove(orderId);
             return false;
         }
+        return false;
     }
 
     @Override
@@ -227,21 +267,26 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         if (ticksToFlush.isEmpty()) return;
         for (TelemetryTick request : ticksToFlush) {
             try {
-                telemetryPort.findOrderById(request.getOrderId()).ifPresent(order -> {
-                    OrderTelemetryLog log = OrderTelemetryLog.builder()
-                            .orderId(order.getOrderId())
-                            .deviceTimestamp(OffsetDateTime.now())
-                            .latitude(request.getLatitude())
-                            .longitude(request.getLongitude())
-                            .temperature(request.getTemperature())
-                            .dryIceInjected(request.isDryIceInjected())
-                            .alertTriggered(false)
-                            .build();
-                    telemetryPort.save(log);
-                });
+                OrderTelemetryLog log = OrderTelemetryLog.builder()
+                        .orderId(request.getOrderId())
+                        .deviceTimestamp(OffsetDateTime.now())
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .temperature(request.getTemperature())
+                        .dryIceInjected(request.isDryIceInjected())
+                        .alertTriggered(false)
+                        .build();
+                telemetryPort.save(log);
             } catch (Exception e) {
                 tickBuffer.add(request); // Re-queue on failure
             }
         }
+    }
+
+    @Override
+    public void cleanupOrder(Integer orderId) {
+        lastLocations.remove(orderId);
+        activeBreaches.remove(orderId);
+        log.info("TelemetryServiceImpl: Cleaned up tracking for order {}", orderId);
     }
 }

@@ -41,6 +41,8 @@ public class CustomerControllerTest {
     @MockBean private OrderRepository orderRepository;
     @MockBean private CustomerUseCase customerUseCase;
     @MockBean private HitlQueueRepository hitlQueueRepository;
+    @MockBean private ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase orderUseCase;
+    @MockBean private ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase;
 
     private SecurityContext originalContext;
 

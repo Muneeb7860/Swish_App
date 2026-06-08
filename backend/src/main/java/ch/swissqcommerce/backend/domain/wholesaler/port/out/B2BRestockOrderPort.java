@@ -8,5 +8,6 @@ public interface B2BRestockOrderPort {
     Optional<B2BRestockOrder> findById(Integer restockOrderId);
     Optional<B2BRestockOrder> findByIdempotencyKey(String idempotencyKey);
     List<B2BRestockOrder> findByWholesalerId(String wholesalerId);
+    java.util.Map<String, Object> getInvoiceSummaryAggregation(String wholesalerId);
     B2BRestockOrder save(B2BRestockOrder restockOrder);
 }

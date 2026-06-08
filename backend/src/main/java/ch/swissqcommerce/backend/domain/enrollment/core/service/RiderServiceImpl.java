@@ -71,7 +71,7 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public Map<String, Object> confirmDelivery(Integer orderId) {
+    public Map<String, Object> confirmDelivery(Integer orderId, String pin, String photoUrl) {
         Order order = outPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
@@ -79,8 +79,18 @@ public class RiderServiceImpl implements RiderUseCase {
             throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
         }
 
+        if (order.getDeliveryPin() != null && order.getDeliveryPin().equals(pin)) {
+            // PIN matched
+        } else if (photoUrl != null && !photoUrl.isBlank()) {
+            // PIN mismatched or absent, but proof of delivery photo provided
+            order.setProofOfDeliveryPhotoUrl(photoUrl);
+        } else {
+            throw new IllegalArgumentException("Invalid Handover: Must provide correct delivery PIN or a Proof of Delivery Photo.");
+        }
+
         order.setStatus("delivered");
         outPort.saveOrder(order);
+        outPort.cleanupOrderTelemetry(orderId);
 
         // Boost rider trust
         Rider rider = order.getRider();
@@ -119,6 +129,39 @@ public class RiderServiceImpl implements RiderUseCase {
         result.put("status", "delivered");
         result.put("orderId", orderId);
         result.put("message", "Delivery confirmed. Trust scores updated.");
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> rejectDelivery(Integer orderId, String reason, String rejectionPhotoUrl) {
+        Order order = outPort.findOrderById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        if (!"shipping".equalsIgnoreCase(order.getStatus())) {
+            throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
+        }
+
+        if (reason == null || reason.isBlank() || rejectionPhotoUrl == null || rejectionPhotoUrl.isBlank()) {
+            throw new IllegalArgumentException("Invalid Rejection: Must provide a valid reason and rejection photo.");
+        }
+
+        order.setStatus("rejected_at_door");
+        order.setRejectionReason(reason);
+        order.setRejectionPhotoUrl(rejectionPhotoUrl);
+        outPort.saveOrder(order);
+        outPort.cleanupOrderTelemetry(orderId);
+
+        // Instant Wallet Refund
+        Customer customer = order.getCustomer();
+        if (customer != null) {
+            customer.setWalletBalance(customer.getWalletBalance().add(order.getTotalAmount()));
+            outPort.saveCustomer(customer);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "rejected_at_door");
+        result.put("orderId", orderId);
+        result.put("message", "Delivery rejected at the door. Instant refund issued to customer wallet.");
         return result;
     }
 

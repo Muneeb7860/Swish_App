@@ -107,6 +107,8 @@ public class OrderServiceImpl implements OrderUseCase {
         BigDecimal cartSubtotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
         
+        String generatedPin = String.format("%04d", new java.util.Random().nextInt(10000));
+        
         Order order = Order.builder()
                 .customer(customer)
                 .store(store)
@@ -114,6 +116,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .bagsReturned(bagsReturned)
                 .idempotencyKey(idempotencyKey)
                 .tipAmount(tip)
+                .deliveryPin(generatedPin)
                 .build();
 
         boolean containsPerishable = false;

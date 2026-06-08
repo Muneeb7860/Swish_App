@@ -10,4 +10,7 @@ import java.util.Optional;
 public interface B2BRestockOrderRepository extends JpaRepository<B2BRestockOrderEntity, Integer> {
     List<B2BRestockOrderEntity> findByWholesalerWholesalerIdOrderByCreatedAtDesc(String wholesalerId);
     Optional<B2BRestockOrderEntity> findByIdempotencyKey(String idempotencyKey);
+
+    @org.springframework.data.jpa.repository.Query("SELECT new map(SUM(CASE WHEN o.status = 'fulfilled' THEN o.invoiceAmount ELSE 0 END) as totalInvoiced, COUNT(CASE WHEN o.status = 'pending' THEN 1 END) as pendingCount, COUNT(o) as totalCount) FROM B2BRestockOrderEntity o WHERE o.wholesaler.wholesalerId = :wholesalerId")
+    java.util.Map<String, Object> getInvoiceSummaryAggregation(@org.springframework.data.repository.query.Param("wholesalerId") String wholesalerId);
 }

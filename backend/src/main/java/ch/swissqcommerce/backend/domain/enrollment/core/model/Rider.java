@@ -40,4 +40,7 @@ public class Rider {
     private String activeShiftId;
 
     private OffsetDateTime createdAt;
+
+    @Builder.Default
+    private boolean gearExempt = false;
 }

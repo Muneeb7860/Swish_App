@@ -3,7 +3,7 @@ package ch.swissqcommerce.backend.integration;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.in.web.WholesalerController;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WastageLogRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WastageLogEntityRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog;
@@ -31,7 +31,7 @@ public class WholesalerIntegrationTest {
     private PurchaseOrderRepository purchaseOrderRepository;
 
     @Autowired
-    private WastageLogRepository wastageLogRepository;
+    private WastageLogEntityRepository wastageLogRepository;
 
     @Autowired
     private B2BRestockOrderRepository b2BRestockOrderRepository;

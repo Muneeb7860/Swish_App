@@ -96,13 +96,42 @@ public class RiderController {
         return ResponseEntity.status(201).body(log);
     }
 
+    @Data
+    public static class ConfirmDeliveryRequest {
+        private String pin;
+        private String photoUrl;
+    }
+
+    @Data
+    public static class RejectDeliveryRequest {
+        @NotBlank(message = "Rejection reason is required")
+        private String reason;
+        
+        @NotBlank(message = "Rejection photo URL is required")
+        private String photoUrl;
+    }
+
     /**
-     * POST /api/rider/orders/{id}/deliver - Confirm delivery.
+     * POST /api/rider/orders/{id}/deliver - Confirm delivery with PIN or Photo.
      */
     @PostMapping("/orders/{id}/deliver")
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public ResponseEntity<Map<String, Object>> confirmDelivery(@PathVariable Integer id) {
-        Map<String, Object> result = riderUseCase.confirmDelivery(id);
+    public ResponseEntity<Map<String, Object>> confirmDelivery(
+            @PathVariable Integer id,
+            @Valid @RequestBody ConfirmDeliveryRequest request) {
+        Map<String, Object> result = riderUseCase.confirmDelivery(id, request.getPin(), request.getPhotoUrl());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * POST /api/rider/orders/{id}/reject - Reject delivery at the door.
+     */
+    @PostMapping("/orders/{id}/reject")
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public ResponseEntity<Map<String, Object>> rejectDelivery(
+            @PathVariable Integer id,
+            @Valid @RequestBody RejectDeliveryRequest request) {
+        Map<String, Object> result = riderUseCase.rejectDelivery(id, request.getReason(), request.getPhotoUrl());
         return ResponseEntity.ok(result);
     }
 
