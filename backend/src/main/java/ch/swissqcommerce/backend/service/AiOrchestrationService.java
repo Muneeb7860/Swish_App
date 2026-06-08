@@ -20,12 +20,26 @@ public class AiOrchestrationService {
         this.localChatModel = localChatModel;
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiOrchestrationService.class);
+
     /**
      * Uses the Cloud Orchestrator (e.g., Gemini) for heavy reasoning tasks.
      * Streams the response back token-by-token.
      */
     public Flux<String> orchestrateComplexTask(String promptText) {
-        return cloudChatModel.stream(promptText);
+        try {
+            if (cloudChatModel == null) {
+                return Flux.just("Error: Cloud AI reasoning model is not configured.");
+            }
+            return cloudChatModel.stream(promptText)
+                    .onErrorResume(ex -> {
+                        log.error("AiOrchestrationService: Cloud AI stream error: {}", ex.getMessage());
+                        return Flux.just("Error: Cloud AI reasoning service connection failed.");
+                    });
+        } catch (Exception e) {
+            log.error("AiOrchestrationService: Failed to initiate cloud task: {}", e.getMessage());
+            return Flux.just("Error: Cloud AI reasoning service initialization failed.");
+        }
     }
 
     /**
@@ -33,6 +47,18 @@ public class AiOrchestrationService {
      * Streams the response back token-by-token.
      */
     public Flux<String> executeLocalTask(String promptText) {
-        return localChatModel.stream(promptText);
+        try {
+            if (localChatModel == null) {
+                return Flux.just("Error: Local AI reasoning model is not configured.");
+            }
+            return localChatModel.stream(promptText)
+                    .onErrorResume(ex -> {
+                        log.error("AiOrchestrationService: Local AI stream error: {}", ex.getMessage());
+                        return Flux.just("Error: Local AI reasoning service connection failed.");
+                    });
+        } catch (Exception e) {
+            log.error("AiOrchestrationService: Failed to initiate local task: {}", e.getMessage());
+            return Flux.just("Error: Local AI reasoning service initialization failed.");
+        }
     }
 }

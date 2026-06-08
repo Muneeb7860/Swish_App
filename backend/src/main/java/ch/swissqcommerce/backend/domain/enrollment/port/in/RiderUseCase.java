@@ -13,4 +13,5 @@ public interface RiderUseCase {
     Map<String, Object> confirmDelivery(Integer orderId);
     List<Map<String, String>> getAcademyCourses();
     Map<String, Object> completeAcademyCourse(String riderId, String courseId);
+    Map<String, Object> approveOnboarding(String applicationId, String gateName);
 }

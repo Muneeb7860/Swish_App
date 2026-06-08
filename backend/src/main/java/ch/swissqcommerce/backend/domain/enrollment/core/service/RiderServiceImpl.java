@@ -162,5 +162,66 @@ public class RiderServiceImpl implements RiderUseCase {
         result.put("new_trust_score", newTrust);
         return result;
     }
+
+    @Override
+    public Map<String, Object> approveOnboarding(String applicationId, String gateName) {
+        OnboardingApplication application = outPort.findOnboardingApplicationById(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Onboarding application not found: " + applicationId));
+
+        if (gateName == null) {
+            throw new IllegalArgumentException("Gate name is required");
+        }
+
+        switch (gateName.toLowerCase()) {
+            case "ops":
+                application.setApprovalOps(true);
+                break;
+            case "compliance":
+                if (!application.getApprovalOps()) {
+                    throw new IllegalStateException("Ops approval must precede compliance approval.");
+                }
+                application.setApprovalCompliance(true);
+                break;
+            case "admin":
+                if (!application.getApprovalOps() || !application.getApprovalCompliance()) {
+                    throw new IllegalStateException("Both ops and compliance approvals required before admin gate.");
+                }
+                application.setApprovalAdmin(true);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid gate name: " + gateName + ". Must be 'ops', 'compliance', or 'admin'.");
+        }
+
+        outPort.saveOnboardingApplication(application);
+
+        boolean fullyApproved = application.getApprovalOps() && application.getApprovalCompliance() && application.getApprovalAdmin();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "gate_approved");
+        result.put("applicationId", applicationId);
+        result.put("gate", gateName.toLowerCase());
+        result.put("opsApproved", application.getApprovalOps());
+        result.put("complianceApproved", application.getApprovalCompliance());
+        result.put("adminApproved", application.getApprovalAdmin());
+        result.put("fullyApproved", fullyApproved);
+
+        if (fullyApproved) {
+            Optional<Rider> riderOpt = outPort.findRiderByFullName(application.getName());
+            if (riderOpt.isPresent()) {
+                Rider rider = riderOpt.get();
+                rider.setOnboardingStatus("approved");
+                outPort.saveRider(rider);
+                result.put("status", "fully_approved");
+                result.put("riderId", rider.getRiderId());
+                result.put("message", "Rider onboarding fully approved and active.");
+            } else {
+                result.put("message", "All gates approved, but associated rider profile was not found by name.");
+            }
+        } else {
+            result.put("message", "Gate approved. Awaiting remaining approvals.");
+        }
+
+        return result;
+    }
 }
 

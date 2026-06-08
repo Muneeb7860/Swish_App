@@ -430,7 +430,7 @@ export default function AdminPanel({
 											marginTop: "0.4rem",
 										}}
 									>
-										<button
+										<button type="button"
 											className="btn-primary-glow"
 											style={{
 												flex: 1,
@@ -444,7 +444,7 @@ export default function AdminPanel({
 										>
 											Approve Release
 										</button>
-										<button
+										<button type="button"
 											className="btn-secondary-glow"
 											style={{
 												flex: 1,

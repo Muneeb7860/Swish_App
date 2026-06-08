@@ -198,4 +198,11 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             throw new RuntimeException("Cryptographic signing failed", e);
         }
     }
+
+    @Override
+    public List<ProcurementApproval> getPendingApprovals() {
+        return approvalsPort.findAll().stream()
+                .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
+                .toList();
+    }
 }

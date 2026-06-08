@@ -43,6 +43,12 @@ public class DarkStore {
     @Column(name = "chiller_temp_celsius", precision = 4, scale = 1)
     private BigDecimal chillerTempCelsius;
 
+    @Column(name = "storage_capacity_limit", nullable = false)
+    @NotNull
+    @Min(0)
+    @Builder.Default
+    private Integer storageCapacityLimit = 5000;
+
     @Column(name = "last_iot_heartbeat")
     private OffsetDateTime lastIotHeartbeat;
 

@@ -174,6 +174,16 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
     }
 
     @Override
+    public Optional<OnboardingApplication> findOnboardingApplicationById(String applicationId) {
+        return onboardingRepository.findById(applicationId);
+    }
+
+    @Override
+    public Optional<Rider> findRiderByFullName(String fullName) {
+        return riderRepository.findByFullName(fullName);
+    }
+
+    @Override
     public void injectDryIce(Integer orderId) {
         telemetryService.injectDryIce(orderId);
     }

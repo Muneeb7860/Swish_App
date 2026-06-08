@@ -93,9 +93,7 @@ public class OutboxEventScheduler {
     @Scheduled(fixedDelay = 4000)
     @Transactional
     public void processOutbox() {
-        List<OutboxEvent> pendingEvents = outboxEventRepository.findAll().stream()
-                .filter(e -> "PENDING".equalsIgnoreCase(e.getStatus()))
-                .toList();
+        List<OutboxEvent> pendingEvents = outboxEventRepository.findByStatusOrderByCreatedAtAsc("PENDING");
 
         if (pendingEvents.isEmpty()) {
             return;

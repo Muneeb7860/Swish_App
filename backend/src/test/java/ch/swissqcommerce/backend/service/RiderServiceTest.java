@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertificate;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
 import ch.swissqcommerce.backend.domain.enrollment.core.service.RiderServiceImpl;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
@@ -72,5 +73,62 @@ public class RiderServiceTest {
         assertEquals(60, result.get("new_trust_score"));
         verify(outPort, times(1)).saveRiderAcademyCertificate(any(RiderAcademyCertificate.class));
         verify(outPort, times(1)).saveTrustLedger(any(SecurityTrustLedger.class));
+    }
+
+    @Test
+    public void testApproveOnboarding_Success() {
+        OnboardingApplication app = OnboardingApplication.builder()
+                .applicationId("APP1")
+                .name("Rider One")
+                .applicantType("rider")
+                .approvalOps(false)
+                .approvalCompliance(false)
+                .approvalAdmin(false)
+                .build();
+
+        when(outPort.findOnboardingApplicationById("APP1")).thenReturn(Optional.of(app));
+
+        Map<String, Object> result = riderService.approveOnboarding("APP1", "ops");
+
+        assertEquals("gate_approved", result.get("status"));
+        assertTrue(app.getApprovalOps());
+        assertFalse(app.getApprovalCompliance());
+        assertFalse(app.getApprovalAdmin());
+        assertFalse((Boolean) result.get("fullyApproved"));
+
+        verify(outPort, times(1)).saveOnboardingApplication(app);
+    }
+
+    @Test
+    public void testApproveOnboarding_FullyApproved() {
+        OnboardingApplication app = OnboardingApplication.builder()
+                .applicationId("APP1")
+                .name("Rider One")
+                .applicantType("rider")
+                .approvalOps(true)
+                .approvalCompliance(true)
+                .approvalAdmin(false)
+                .build();
+
+        Rider rider = Rider.builder()
+                .riderId("R1")
+                .fullName("Rider One")
+                .onboardingStatus("pending_review")
+                .build();
+
+        when(outPort.findOnboardingApplicationById("APP1")).thenReturn(Optional.of(app));
+        when(outPort.findRiderByFullName("Rider One")).thenReturn(Optional.of(rider));
+
+        Map<String, Object> result = riderService.approveOnboarding("APP1", "admin");
+
+        assertEquals("fully_approved", result.get("status"));
+        assertTrue(app.getApprovalOps());
+        assertTrue(app.getApprovalCompliance());
+        assertTrue(app.getApprovalAdmin());
+        assertTrue((Boolean) result.get("fullyApproved"));
+        assertEquals("approved", rider.getOnboardingStatus());
+
+        verify(outPort, times(1)).saveOnboardingApplication(app);
+        verify(outPort, times(1)).saveRider(rider);
     }
 }

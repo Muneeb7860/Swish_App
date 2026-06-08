@@ -1,8 +1,7 @@
-package ch.swissqcommerce.backend.controller;
+package ch.swissqcommerce.backend.domain.governance.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,19 +14,14 @@ import java.util.Map;
 public class HitlQueueController {
 
     private final GovernanceUseCase governanceUseCase;
-    private final ProcurementApprovalPort approvalsPort;
 
-    public HitlQueueController(GovernanceUseCase governanceUseCase,
-                               ProcurementApprovalPort approvalsPort) {
+    public HitlQueueController(GovernanceUseCase governanceUseCase) {
         this.governanceUseCase = governanceUseCase;
-        this.approvalsPort = approvalsPort;
     }
 
     @GetMapping
     public ResponseEntity<List<ProcurementApproval>> getPendingApprovals() {
-        List<ProcurementApproval> approvals = approvalsPort.findAll().stream()
-                .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
-                .toList();
+        List<ProcurementApproval> approvals = governanceUseCase.getPendingApprovals();
         return ResponseEntity.ok(approvals);
     }
 
