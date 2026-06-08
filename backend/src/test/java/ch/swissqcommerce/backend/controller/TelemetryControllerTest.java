@@ -48,6 +48,7 @@ public class TelemetryControllerTest {
         OrderTelemetryLog log = new OrderTelemetryLog();
         log.setLogId(10);
 
+        when(telemetryService.updateLocation(eq(1), any(), any(), any())).thenReturn(true);
         when(telemetryService.recordTelemetry(eq(1), any(), any(), any(), eq(false))).thenReturn(log);
         when(telemetryService.isThermalBreachActive(eq(1), any())).thenReturn(true);
 
@@ -59,6 +60,27 @@ public class TelemetryControllerTest {
                 .andExpect(jsonPath("$.persisted").value(true))
                 .andExpect(jsonPath("$.alertTriggered").value(true))
                 .andExpect(jsonPath("$.thermalBreachActive").value(true));
+    }
+
+    @Test
+    public void testIngestTick_Outlier() throws Exception {
+        TelemetryController.TelemetryTickRequest req = new TelemetryController.TelemetryTickRequest();
+        req.setOrderId(1);
+        req.setLatitude(new BigDecimal("47.3769"));
+        req.setLongitude(new BigDecimal("8.5417"));
+        req.setTemperature(new BigDecimal("9.0"));
+        req.setDryIceInjected(false);
+
+        when(telemetryService.updateLocation(eq(1), any(), any(), any())).thenReturn(false);
+
+        mockMvc.perform(post("/api/telemetry/tick")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").value(1))
+                .andExpect(jsonPath("$.message").value("Discarded telemetry update (GPS outlier detected)."))
+                .andExpect(jsonPath("$.persisted").value(false))
+                .andExpect(jsonPath("$.queued").value(false));
     }
 
     @Test

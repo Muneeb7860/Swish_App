@@ -10,7 +10,7 @@ public interface TelemetryUseCase {
     boolean isThermalBreachActive(Integer orderId, BigDecimal currentTemp);
     void injectDryIce(Integer orderId);
 
-    void updateLocation(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
+    boolean updateLocation(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
     GeoLocationPort.RiderLocation getLatestLocation(Integer orderId);
     void queueTick(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, boolean dryIceInjected);
     void flushTickBuffer();

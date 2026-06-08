@@ -59,7 +59,16 @@ public class TelemetryController {
 
     @PostMapping("/tick")
     public ResponseEntity<Map<String, Object>> ingestTick(@jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
-        telemetryService.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
+        boolean valid = telemetryService.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
+
+        if (!valid) {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("orderId", request.getOrderId());
+            payload.put("message", "Discarded telemetry update (GPS outlier detected).");
+            payload.put("persisted", false);
+            payload.put("queued", false);
+            return ResponseEntity.ok(payload);
+        }
 
         boolean thresholdBreached = request.getTemperature().compareTo(new BigDecimal("8.0")) > 0;
         boolean dryIceInjected = request.isDryIceInjected();

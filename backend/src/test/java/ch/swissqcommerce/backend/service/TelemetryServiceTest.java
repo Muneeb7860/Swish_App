@@ -45,9 +45,29 @@ public class TelemetryServiceTest {
     }
 
     @Test
-    public void testUpdateLocation() {
-        telemetryService.updateLocation(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+    public void testUpdateLocation_Success() {
+        boolean result = telemetryService.updateLocation(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+        assertTrue(result);
         verify(geoLocationPort).updateLocation(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+    }
+
+    @Test
+    public void testUpdateLocation_OutlierGPSDiscarded() throws InterruptedException {
+        // First location update is successful
+        boolean firstResult = telemetryService.updateLocation(2, new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0"));
+        assertTrue(firstResult);
+        verify(geoLocationPort).updateLocation(2, new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0"));
+
+        // Wait to trigger distance/speed filter
+        Thread.sleep(600);
+
+        // Send coordinate 1 degree away (approx 130 km) -> impossible speed for 600ms
+        boolean secondResult = telemetryService.updateLocation(2, new BigDecimal("48.3769"), new BigDecimal("9.5417"), new BigDecimal("5.0"));
+        
+        // Assert that the outlier was detected and discarded (returned false)
+        assertFalse(secondResult);
+        // Verify thatgeoLocationPort was NEVER called with the second coordinate
+        verify(geoLocationPort, never()).updateLocation(2, new BigDecimal("48.3769"), new BigDecimal("9.5417"), new BigDecimal("5.0"));
     }
 
     @Test
