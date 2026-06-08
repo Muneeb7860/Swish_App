@@ -9,7 +9,11 @@ import java.util.Map;
 public interface RiderUseCase {
     Map<String, Object> submitOnboarding(String name, String vehicleType, String details);
     Map<String, Object> injectCoolant(Integer orderId);
-    OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
+    /**
+     * @param callerRiderId the authenticated rider's ID extracted from the JWT principal —
+     *                      must match the rider assigned to the order or the call is rejected.
+     */
+    OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, String callerRiderId);
     Map<String, Object> confirmDelivery(Integer orderId, String pin, String photoUrl);
     Map<String, Object> rejectDelivery(Integer orderId, String reason, String rejectionPhotoUrl);
     List<Map<String, String>> getAcademyCourses();

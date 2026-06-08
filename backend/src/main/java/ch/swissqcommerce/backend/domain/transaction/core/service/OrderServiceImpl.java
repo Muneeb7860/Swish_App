@@ -387,4 +387,10 @@ public class OrderServiceImpl implements OrderUseCase {
         return orderPort.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
+    @Override
+    public Order getOrderById(Integer orderId) {
+        return orderPort.findById(orderId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Order not found: " + orderId));
+    }
+
 }

@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +69,19 @@ public class CustomerController {
         @NotNull  private BigDecimal customerLongitude;
     }
 
+    /** Asserts the authenticated principal owns the given customerId, or is an admin. */
+    private void assertOwnership(String customerId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new AccessDeniedException("Unauthorized.");
+        }
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !customerId.equalsIgnoreCase(auth.getName())) {
+            throw new AccessDeniedException("Access denied: you may only access your own data.");
+        }
+    }
+
     @Operation(summary = "Place a new order (checkout)",
                description = "Idempotency-Key header prevents duplicate orders on retry.")
     @PostMapping("/orders")
@@ -75,6 +89,7 @@ public class CustomerController {
     public ResponseEntity<?> placeOrder(
             @Valid @RequestBody CheckoutRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        assertOwnership(req.getCustomerId());
         try {
             Order order = orderUseCase.checkout(
                     req.getCustomerId(),
@@ -84,6 +99,8 @@ public class CustomerController {
                     req.getBagsReturned() != null ? req.getBagsReturned() : 0,
                     idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
             return ResponseEntity.status(201).body(order);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -91,23 +108,30 @@ public class CustomerController {
 
     @Operation(summary = "List orders for a customer")
     @GetMapping("/orders")
-    public ResponseEntity<List<Order>> getOrders(
+    public ResponseEntity<?> getOrders(
             @Parameter(description = "Customer ID") @RequestParam String customerId) {
+        assertOwnership(customerId);
         return ResponseEntity.ok(orderUseCase.getCustomerOrders(customerId));
     }
 
     @Operation(summary = "Request a refund for an order",
-               description = "Validates customer location against delivery address before approving.")
+               description = "Validates customer location against delivery address before approving. " +
+                             "The authenticated caller must own the order.")
     @PostMapping("/orders/{id}/refund")
     @Transactional
     public ResponseEntity<?> requestRefund(
             @PathVariable Integer id,
             @Valid @RequestBody RefundRequest req) {
+        // Resolve the order first so we can assert ownership before mutating state.
         try {
+            Order order = orderUseCase.getOrderById(id);
+            assertOwnership(order.getCustomer().getCustomerId());
             Map<String, Object> result = orderUseCase.requestRefund(id, req.getClaimReason(),
                     req.getCustomerLatitude(), req.getCustomerLongitude());
             Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
             return ResponseEntity.status(statusCode).body(result);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         }
@@ -118,8 +142,9 @@ public class CustomerController {
     @Operation(summary = "Get customer double-entry ledger",
                description = "Returns all ledger lines (wallet credits/debits, reward cashback, refunds) for the customer.")
     @GetMapping("/ledger")
-    public ResponseEntity<List<LedgerLine>> getLedger(
+    public ResponseEntity<?> getLedger(
             @RequestParam String customerId) {
+        assertOwnership(customerId);
         return ResponseEntity.ok(ledgerUseCase.getCustomerLedger(customerId));
     }
 

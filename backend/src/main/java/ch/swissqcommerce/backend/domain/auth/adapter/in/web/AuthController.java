@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,11 +78,11 @@ public class AuthController {
                              "Call this only when login returned mfa_required=true.")
     @PostMapping("/mfa/verify")
     public ResponseEntity<Map<String, Object>> verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
-        // Delegate to auth use-case when MFA is fully implemented
-        return ResponseEntity.ok(Map.of(
-                "token", "mock-jwt-token-after-mfa",
-                "expires_in", 86400
-        ));
+        // MFA verification is not yet implemented. Returning 501 to prevent clients
+        // from treating any response as a successful authentication. Do NOT return a
+        // token (even a mock) here — doing so bypasses MFA entirely.
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("error", "MFA verification is not yet implemented."));
     }
 
     @Operation(summary = "Logout and invalidate session")

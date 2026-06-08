@@ -93,15 +93,25 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
     }
 
     private AuthorizationDecision evaluateFallbackRules(String uri, List<String> roles) {
-        if (uri.startsWith("/api/admin/")) {
+        // Admin-only paths
+        if (uri.startsWith("/api/admin/") || uri.startsWith("/api/security/")) {
             return new AuthorizationDecision(roles.contains("ROLE_ADMIN"));
         }
-        if (uri.startsWith("/api/orders/")) {
+        // Customer + admin paths
+        if (uri.startsWith("/api/orders/") || uri.startsWith("/api/customer/")
+                || uri.startsWith("/api/payments/")) {
             return new AuthorizationDecision(roles.contains("ROLE_CUSTOMER") || roles.contains("ROLE_ADMIN"));
         }
+        // Rider + admin paths
         if (uri.startsWith("/api/rider/")) {
             return new AuthorizationDecision(roles.contains("ROLE_RIDER") || roles.contains("ROLE_ADMIN"));
         }
-        return new AuthorizationDecision(true);
+        // Picker/inventory paths — ROLE_PICKER or ROLE_ADMIN only
+        if (uri.startsWith("/api/inventory/")) {
+            return new AuthorizationDecision(roles.contains("ROLE_PICKER") || roles.contains("ROLE_ADMIN"));
+        }
+        // Deny everything not explicitly listed above (deny-by-default)
+        log.warn("OPA Fallback [DENY - unmatched path]: uri={}, roles={}", uri, roles);
+        return new AuthorizationDecision(false);
     }
 }

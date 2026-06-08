@@ -14,6 +14,9 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -28,6 +31,19 @@ public class PaymentController {
 
     private final PaymentProcessingUseCase paymentProcessingUseCase;
     private final PaymentUseCase paymentUseCase;
+
+    /** Asserts the authenticated principal owns the given customerId, or is ADMIN. */
+    private void assertPaymentOwnership(String paymentCustomerId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new AccessDeniedException("Unauthorized.");
+        }
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !paymentCustomerId.equalsIgnoreCase(auth.getName())) {
+            throw new AccessDeniedException("Access denied: payment does not belong to you.");
+        }
+    }
 
     @Data
     public static class ChargeRequest {
@@ -99,7 +115,11 @@ public class PaymentController {
     @PostMapping("/{id}/capture")
     public ResponseEntity<?> capture(@PathVariable Integer id) {
         try {
+            Payment payment = paymentUseCase.getPayment(id);
+            assertPaymentOwnership(payment.getCustomerId());
             return ResponseEntity.ok(paymentUseCase.capturePayment(id));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -115,10 +135,14 @@ public class PaymentController {
             @PathVariable Integer id,
             @RequestBody(required = false) Map<String, String> body) {
         try {
+            Payment payment = paymentUseCase.getPayment(id);
+            assertPaymentOwnership(payment.getCustomerId());
             // Compensation delegates to refund logic; a dedicated compensate use-case
             // should be wired once the SAGA coordinator is implemented.
             TransactionRecord tx = paymentProcessingUseCase.processRefund(String.valueOf(id));
             return ResponseEntity.ok(tx);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -146,7 +170,19 @@ public class PaymentController {
     @PostMapping("/{transactionId}/refund")
     public ResponseEntity<?> refund(@PathVariable String transactionId) {
         try {
+            // Resolve the payment to check ownership before processing the refund.
+            // transactionId may be numeric (paymentId) or an external reference.
+            try {
+                Integer paymentId = Integer.valueOf(transactionId);
+                Payment payment = paymentUseCase.getPayment(paymentId);
+                assertPaymentOwnership(payment.getCustomerId());
+            } catch (NumberFormatException ignored) {
+                // Non-numeric transaction IDs (external references) — ownership check
+                // must be enforced downstream when the full transaction store is wired.
+            }
             return ResponseEntity.ok(paymentProcessingUseCase.processRefund(transactionId));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

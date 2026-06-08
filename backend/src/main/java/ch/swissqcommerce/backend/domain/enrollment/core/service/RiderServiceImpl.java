@@ -66,7 +66,17 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, String callerRiderId) {
+        // Security: verify the authenticated rider is the one assigned to this order.
+        // Prevents a malicious rider from submitting temperature data for a competitor's
+        // delivery and having it marked as spoiled.
+        Order order = outPort.findOrderById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Rider assignedRider = order.getRider();
+        if (assignedRider == null || !callerRiderId.equals(assignedRider.getRiderId())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Rider " + callerRiderId + " is not assigned to order " + orderId);
+        }
         return outPort.recordTelemetry(orderId, lat, lng, temp);
     }
 
