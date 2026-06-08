@@ -1,0 +1,259 @@
+{
+  "uid": "swish-overview",
+  "title": "Swish Platform — Mission Control",
+  "description": "Live observability for all Swish microservices: backend, gateway, core-business-engine, notification-engine",
+  "tags": ["swish", "spring-boot", "production"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "pluginId": "prometheus",
+        "label": "Data Source",
+        "current": { "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+        "query": "label_values(up, job)",
+        "label": "Service",
+        "current": { "text": "backend", "value": "backend" },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "hide": 0,
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+
+    { "type": "row", "id": 1, "title": "🟢 Service Health", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 2, "type": "stat", "title": "Backend",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] } } },
+      "targets": [{ "expr": "up{job=\"backend\"}", "legendFormat": "backend", "refId": "A" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Platform Gateway",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] } } },
+      "targets": [{ "expr": "up{job=\"platform-gateway\"}", "legendFormat": "gateway", "refId": "A" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Core Business Engine",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] } } },
+      "targets": [{ "expr": "up{job=\"core-business-engine\"}", "legendFormat": "core-engine", "refId": "A" }]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Notification Engine",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] } } },
+      "targets": [{ "expr": "up{job=\"notification-engine\"}", "legendFormat": "notification", "refId": "A" }]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Uptime (Backend)",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] } } },
+      "targets": [{ "expr": "process_uptime_seconds{job=\"backend\"}", "legendFormat": "uptime", "refId": "A" }]
+    },
+    {
+      "id": 7, "type": "stat", "title": "Active JVM Threads",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 200 }] } } },
+      "targets": [{ "expr": "jvm_threads_live_threads{job=\"backend\"}", "legendFormat": "threads", "refId": "A" }]
+    },
+
+    { "type": "row", "id": 10, "title": "📈 HTTP Traffic (Backend)", "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 11, "type": "timeseries", "title": "Request Rate (req/s)",
+      "gridPos": { "x": 0, "y": 6, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\"}[1m]))", "legendFormat": "total req/s", "refId": "A" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",status=~\"2..\"}[1m]))", "legendFormat": "2xx req/s", "refId": "B" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",status=~\"4..\"}[1m]))", "legendFormat": "4xx req/s", "refId": "C" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",status=~\"5..\"}[1m]))", "legendFormat": "5xx req/s", "refId": "D" }
+      ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Response Latency P50 / P95 / P99",
+      "gridPos": { "x": 8, "y": 6, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 5 } } },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"backend\"}[2m])) by (le))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"backend\"}[2m])) by (le))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"backend\"}[2m])) by (le))", "legendFormat": "p99", "refId": "C" }
+      ]
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Error Rate by Status",
+      "gridPos": { "x": 16, "y": 6, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 15 } }, "overrides": [{ "matcher": { "id": "byName", "options": "5xx/s" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }] },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",status=~\"4..\"}[1m])) by (status)", "legendFormat": "{{status}}", "refId": "A" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",status=~\"5..\"}[1m])) by (status)", "legendFormat": "{{status}}", "refId": "B" }
+      ]
+    },
+
+    { "type": "row", "id": 20, "title": "☕ JVM Performance", "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 21, "type": "timeseries", "title": "JVM Heap Memory",
+      "gridPos": { "x": 0, "y": 15, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 20 } } },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "expr": "jvm_memory_used_bytes{job=\"backend\",area=\"heap\"}", "legendFormat": "heap used", "refId": "A" },
+        { "expr": "jvm_memory_committed_bytes{job=\"backend\",area=\"heap\"}", "legendFormat": "heap committed", "refId": "B" },
+        { "expr": "jvm_memory_max_bytes{job=\"backend\",area=\"heap\"}", "legendFormat": "heap max", "refId": "C" }
+      ]
+    },
+    {
+      "id": 22, "type": "timeseries", "title": "CPU Usage (%)",
+      "gridPos": { "x": 8, "y": 15, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "lineWidth": 2, "fillOpacity": 15 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 0.6 }, { "color": "red", "value": 0.85 }] } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "process_cpu_usage{job=\"backend\"}", "legendFormat": "backend CPU", "refId": "A" },
+        { "expr": "process_cpu_usage{job=\"platform-gateway\"}", "legendFormat": "gateway CPU", "refId": "B" },
+        { "expr": "process_cpu_usage{job=\"core-business-engine\"}", "legendFormat": "core-engine CPU", "refId": "C" }
+      ]
+    },
+    {
+      "id": 23, "type": "timeseries", "title": "GC Pause Duration",
+      "gridPos": { "x": 16, "y": 15, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_sum{job=\"backend\"}[1m])", "legendFormat": "{{action}} {{cause}}", "refId": "A" }
+      ]
+    },
+
+    { "type": "row", "id": 30, "title": "🗄️ Database & Cache", "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 31, "type": "timeseries", "title": "HikariCP Connection Pool",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] } },
+      "targets": [
+        { "expr": "hikaricp_connections_active{job=\"backend\"}", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_idle{job=\"backend\"}", "legendFormat": "idle", "refId": "B" },
+        { "expr": "hikaricp_connections_pending{job=\"backend\"}", "legendFormat": "pending (⚠)", "refId": "C" },
+        { "expr": "hikaricp_connections{job=\"backend\"}", "legendFormat": "total", "refId": "D" }
+      ]
+    },
+    {
+      "id": 32, "type": "gauge", "title": "DB Pool Usage %",
+      "gridPos": { "x": 8, "y": 24, "w": 4, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 0.6 }, { "color": "red", "value": 0.85 }] } } },
+      "targets": [{ "expr": "hikaricp_connections_active{job=\"backend\"} / hikaricp_connections{job=\"backend\"}", "legendFormat": "pool used", "refId": "A" }]
+    },
+    {
+      "id": 33, "type": "timeseries", "title": "DB Acquire / Usage Time",
+      "gridPos": { "x": 12, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"backend\"}[1m]) / rate(hikaricp_connections_acquire_seconds_count{job=\"backend\"}[1m])", "legendFormat": "avg acquire time", "refId": "A" },
+        { "expr": "rate(hikaricp_connections_usage_seconds_sum{job=\"backend\"}[1m]) / rate(hikaricp_connections_usage_seconds_count{job=\"backend\"}[1m])", "legendFormat": "avg usage time", "refId": "B" }
+      ]
+    },
+    {
+      "id": 34, "type": "stat", "title": "Cache Hit Rate",
+      "gridPos": { "x": 20, "y": 24, "w": 4, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "yellow", "value": 0.5 }, { "color": "green", "value": 0.8 }] } } },
+      "targets": [{ "expr": "sum(rate(cache_gets_total{job=\"backend\",result=\"hit\"}[5m])) / sum(rate(cache_gets_total{job=\"backend\"}[5m]))", "legendFormat": "hit rate", "refId": "A" }]
+    },
+
+    { "type": "row", "id": 40, "title": "📬 Business Events & Orders", "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 41, "type": "timeseries", "title": "Order Endpoint Activity",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",uri=~\"/api/customer/orders.*\",method=\"POST\",status=~\"2..\"}[1m]))", "legendFormat": "orders placed/s", "refId": "A" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",uri=~\"/api/payments.*\",method=\"POST\",status=~\"2..\"}[1m]))", "legendFormat": "payments/s", "refId": "B" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",uri=~\"/api/rider/orders.*deliver.*\",status=~\"2..\"}[1m]))", "legendFormat": "deliveries confirmed/s", "refId": "C" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"backend\",uri=~\"/api/rider/orders.*reject.*\",status=~\"2..\"}[1m]))", "legendFormat": "rejections/s", "refId": "D" }
+      ]
+    },
+    {
+      "id": 42, "type": "timeseries", "title": "Outbox Event Throughput",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "sum(rate(spring_kafka_producer_record_send_total{job=\"backend\"}[1m]))", "legendFormat": "kafka records sent/s", "refId": "A" },
+        { "expr": "sum(rate(spring_kafka_producer_record_error_total{job=\"backend\"}[1m]))", "legendFormat": "kafka errors/s", "refId": "B" }
+      ]
+    },
+
+    { "type": "row", "id": 50, "title": "🔔 Notification Engine", "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 }, "collapsed": false },
+
+    {
+      "id": 51, "type": "timeseries", "title": "Kafka Consumer Lag",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 1000 }] } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "kafka_consumer_fetch_manager_records_lag{job=\"notification-engine\"}", "legendFormat": "{{topic}}/{{partition}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 52, "type": "timeseries", "title": "Notification Engine HTTP",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "swish-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"notification-engine\"}[1m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    }
+
+  ]
+}

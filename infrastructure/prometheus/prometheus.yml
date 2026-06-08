@@ -1,33 +1,62 @@
 global:
-  scrape_interval: 5s
-  evaluation_interval: 5s
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'local'
+    project: 'swish'
 
 rule_files:
   - 'alert.rules'
 
 alerting:
   alertmanagers:
-  - static_configs:
-    - targets:
-      - alertmanager:9093
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093   # uncomment when alertmanager is enabled
 
 scrape_configs:
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Spring Boot backend (hexagonal core — port 8083)
   - job_name: 'backend'
     metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
     static_configs:
       - targets: ['backend:8083']
+        labels:
+          service: 'backend'
+          layer: 'core'
 
+  # Platform Gateway (Spring Cloud Gateway — port 8080)
   - job_name: 'platform-gateway'
     metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
     static_configs:
       - targets: ['platform-gateway:8080']
+        labels:
+          service: 'platform-gateway'
+          layer: 'edge'
 
+  # Core Business Engine (checkout / B2B — port 8081)
   - job_name: 'core-business-engine'
     metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
     static_configs:
       - targets: ['core-business-engine:8081']
+        labels:
+          service: 'core-business-engine'
+          layer: 'core'
 
+  # Notification Engine (Kafka → WebSocket — port 8082)
   - job_name: 'notification-engine'
     metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
     static_configs:
       - targets: ['notification-engine:8082']
+        labels:
+          service: 'notification-engine'
+          layer: 'async'
