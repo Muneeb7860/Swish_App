@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.in.web.dto;
+import ch.swissqcommerce.backend.model.Customer;
+
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import jakarta.validation.constraints.NotBlank;

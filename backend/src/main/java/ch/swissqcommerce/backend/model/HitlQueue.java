@@ -31,9 +31,8 @@ public class HitlQueue {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
-    private Order order;
+    @Column(name = "order_id")
+    private Integer orderId;
 
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     @NotBlank

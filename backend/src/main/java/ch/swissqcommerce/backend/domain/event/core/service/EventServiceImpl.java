@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.event.core.service;
 
-import ch.swissqcommerce.backend.domain.event.core.model.DomainEvent;
+import ch.swissqcommerce.backend.domain.event.adapter.out.persistence.DomainEventEntity;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
 import ch.swissqcommerce.backend.domain.event.port.out.EventPort;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +15,10 @@ public class EventServiceImpl implements EventUseCase {
     private final EventPort eventPort;
 
     @Override
-    public DomainEvent publishEvent(String topic, String payload) {
-        DomainEvent event = DomainEvent.builder()
-                .topic(topic)
+    public DomainEventEntity publishEvent(String topic, String payload) {
+        DomainEventEntity event = DomainEventEntity.builder()
+                .eventId(java.util.UUID.randomUUID().toString())
+                .eventType(topic)
                 .payload(payload)
                 .status("PENDING")
                 .createdAt(OffsetDateTime.now())

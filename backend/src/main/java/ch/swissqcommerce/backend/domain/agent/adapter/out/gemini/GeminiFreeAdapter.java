@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.out.gemini;
+import java.util.List;
+
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;

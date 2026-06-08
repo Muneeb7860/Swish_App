@@ -17,5 +17,15 @@ public interface DispatchPort {
     Optional<ActiveShipment> findActiveShipmentByOrder(Integer orderId);
     List<ActiveShipment> findActiveShipmentsByRiderAndStatus(String riderId, String status);
     List<ActiveShipment> findActiveShipmentsByStatusIn(List<String> statuses);
-    boolean isRiderEligible(String riderId, Integer orderId, BigDecimal weightKg);
+    record EligibilityCriteria(
+            String riderId,
+            String vehicleType,
+            String onboardingStatus,
+            String riderFullName,
+            String customerId,
+            String customerFullName,
+            BigDecimal weightKg
+    ) {}
+
+    boolean isRiderEligible(EligibilityCriteria criteria);
 }

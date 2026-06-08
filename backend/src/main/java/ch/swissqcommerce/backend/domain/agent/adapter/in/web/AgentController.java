@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.in.web;
+import java.util.List;
+
 
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;

@@ -19,7 +19,7 @@ public class NotificationController {
     public ResponseEntity<Void> sendNotification(@RequestParam String userId, @RequestParam String message, @RequestParam String type) {
         try {
             NotificationType notificationType = NotificationType.valueOf(type.toUpperCase());
-            notificationUseCase.sendNotification(userId, message, notificationType);
+            notificationUseCase.scheduleNotification(userId, notificationType.name(), "Notification", message);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

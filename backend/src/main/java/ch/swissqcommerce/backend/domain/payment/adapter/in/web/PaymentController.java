@@ -1,88 +1,57 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.payment.adapter.in.web.dto.PaymentRequestDTO;
-import ch.swissqcommerce.backend.domain.payment.adapter.in.web.dto.PaymentResponseDTO;
-import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
-import ch.swissqcommerce.backend.domain.payment.port.in.PaymentUseCase;
-import org.springframework.beans.factory.annotation.Autowired;
+import ch.swissqcommerce.backend.domain.payment.core.model.Money;
+import ch.swissqcommerce.backend.domain.payment.core.model.TransactionRecord;
+import ch.swissqcommerce.backend.domain.payment.port.in.PaymentProcessingUseCase;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/payments")
+@RequiredArgsConstructor
 public class PaymentController {
 
-    @Autowired
-    private PaymentUseCase paymentUseCase;
+    private final PaymentProcessingUseCase paymentProcessingUseCase;
 
-    @PostMapping
-    public ResponseEntity<?> createPayment(
-            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-            @Valid @RequestBody PaymentRequestDTO request) {
+    @Data
+    public static class ChargeRequest {
+        @NotBlank(message = "Order ID is required")
+        private String orderId;
+
+        @NotNull(message = "Amount is required")
+        @Positive(message = "Amount must be positive")
+        private BigDecimal amount;
+        
+        @NotBlank(message = "Currency is required")
+        private String currency;
+    }
+
+    @PostMapping("/charge")
+    public ResponseEntity<?> charge(@Valid @RequestBody ChargeRequest request) {
         try {
-            Payment payment = paymentUseCase.authorizePayment(
-                    request.getOrderId(),
-                    request.getCustomerId(),
-                    request.getAmount(),
-                    request.getPaymentMethod(),
-                    idempotencyKey
-            );
-            return ResponseEntity.status(201).body(mapToDTO(payment));
+            Money money = new Money(request.getAmount(), request.getCurrency());
+            TransactionRecord tx = paymentProcessingUseCase.processCharge(request.getOrderId(), money);
+            return ResponseEntity.ok(tx);
         } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @PostMapping("/{paymentId}/capture")
-    public ResponseEntity<?> capturePayment(@PathVariable Integer paymentId) {
+    @PostMapping("/{transactionId}/refund")
+    public ResponseEntity<?> refund(@PathVariable String transactionId) {
         try {
-            Payment payment = paymentUseCase.capturePayment(paymentId);
-            return ResponseEntity.ok(mapToDTO(payment));
+            TransactionRecord tx = paymentProcessingUseCase.processRefund(transactionId);
+            return ResponseEntity.ok(tx);
         } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-    }
-
-    @GetMapping("/{paymentId}")
-    public ResponseEntity<?> getPaymentById(@PathVariable Integer paymentId) {
-        try {
-            Payment payment = paymentUseCase.getPayment(paymentId);
-            return ResponseEntity.ok(mapToDTO(payment));
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    @GetMapping
-    public ResponseEntity<?> listPayments(@RequestParam String customerId) {
-        try {
-            List<Payment> payments = paymentUseCase.getPaymentsByCustomer(customerId);
-            List<PaymentResponseDTO> response = payments.stream().map(this::mapToDTO).collect(Collectors.toList());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    private PaymentResponseDTO mapToDTO(Payment payment) {
-        return PaymentResponseDTO.builder()
-                .paymentId(payment.getPaymentId())
-                .orderId(payment.getOrderId())
-                .customerId(payment.getCustomerId())
-                .amount(payment.getAmount())
-                .currency(payment.getCurrency())
-                .paymentMethod(payment.getPaymentMethod())
-                .status(payment.getStatus())
-                .idempotencyKey(payment.getIdempotencyKey())
-                .externalReference(payment.getExternalReference())
-                .createdAt(payment.getCreatedAt())
-                .capturedAt(payment.getCapturedAt())
-                .refundedAt(payment.getRefundedAt())
-                .build();
     }
 }

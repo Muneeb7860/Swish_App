@@ -1,117 +1,93 @@
 package ch.swissqcommerce.backend.domain.auth.core.service;
 
-import ch.swissqcommerce.backend.domain.auth.core.model.LoginResponse;
-import ch.swissqcommerce.backend.domain.auth.core.model.MfaSession;
-import ch.swissqcommerce.backend.domain.auth.port.in.AuthService;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import ch.swissqcommerce.backend.domain.auth.core.model.*;
+import ch.swissqcommerce.backend.domain.auth.port.in.AuthenticationUseCase;
+import ch.swissqcommerce.backend.domain.auth.port.in.EnrollmentUseCase;
+import ch.swissqcommerce.backend.domain.auth.port.out.AuthEventPublisherPort;
+import ch.swissqcommerce.backend.domain.auth.port.out.SessionRepositoryPort;
+import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.util.Date;
-import java.util.Map;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class AuthServiceImpl implements AuthService {
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthenticationUseCase, EnrollmentUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+    private static final long SESSION_TTL_HOURS = 24;
 
-    @Autowired
-    private Environment env;
-
-    @Value("${jwt.secret}")
-    private String jwtSecret;
-
-    @Value("${jwt.expiration-ms}")
-    private long jwtExpirationMs;
-
-    @Value("${mfa.otp.expiration-sec}")
-    private long mfaOtpExpirationSec;
-
-    private final Map<String, MfaSession> mfaSessions = new ConcurrentHashMap<>();
-    private final SecureRandom random = new SecureRandom();
+    private final UserRepositoryPort userRepositoryPort;
+    private final SessionRepositoryPort sessionRepositoryPort;
+    private final AuthEventPublisherPort eventPublisherPort;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
-    public LoginResponse login(String username, String password) {
-        if (!"swissadmin".equalsIgnoreCase(username) && !"swissuser".equalsIgnoreCase(username)) {
-            throw new IllegalArgumentException("Invalid username or password.");
+    public Session login(String email, String password, String deviceFingerprint, String ipAddress) {
+        Optional<UserAccount> userOpt = userRepositoryPort.findByEmail(email);
+        // Always run an encoder.matches() even on lookup miss so timing doesn't
+        // leak whether the email exists.
+        if (userOpt.isEmpty()) {
+            passwordEncoder.matches(password, "$2a$12$0000000000000000000000000000000000000000000000000000a");
+            throw new IllegalArgumentException("Invalid credentials");
         }
 
-        // Secure password validation for MVP profiles
-        String expectedPassword = "swissadmin".equalsIgnoreCase(username) ? "adminpassword" : "userpassword";
-        if (password == null || !expectedPassword.equals(password)) {
-            throw new IllegalArgumentException("Invalid username or password.");
+        UserAccount user = userOpt.get();
+        if (!passwordEncoder.matches(password, user.getPasswordHash().getValue())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            throw new IllegalArgumentException("Account is locked");
         }
 
-        boolean mfaRequired = true;
-        
-        if (mfaRequired) {
-            String sessionToken = UUID.randomUUID().toString();
-            String otpCode = String.format("%06d", random.nextInt(1000000));
-            Instant expiry = Instant.now().plusSeconds(mfaOtpExpirationSec);
+        Session session = Session.builder()
+                .id(UUID.randomUUID().toString())
+                .userId(user.getId())
+                .deviceFingerprint(deviceFingerprint != null ? new DeviceFingerprint(deviceFingerprint) : null)
+                .ipAddress(ipAddress != null ? new IPAddress(ipAddress) : null)
+                .expiresAt(OffsetDateTime.now().plusHours(SESSION_TTL_HOURS))
+                .active(true)
+                .build();
 
-            mfaSessions.put(sessionToken, new MfaSession(username, otpCode, expiry));
-
-            boolean isProduction = java.util.Arrays.asList(env.getActiveProfiles()).contains("prod") 
-                                || java.util.Arrays.asList(env.getActiveProfiles()).contains("production");
-            if (!isProduction) {
-                System.out.println(String.format(
-                    "\n[MFA GATEWAY] SMS OTP Broadcast to user %s. PIN code: %s (Expires in %ds)\n",
-                    username, otpCode, mfaOtpExpirationSec
-                ));
-                System.out.flush();
-                log.info("[MFA GATEWAY] SMS OTP Broadcast to user {}. PIN code: {} (Expires in {}s)", username, otpCode, mfaOtpExpirationSec);
-            } else {
-                log.info("[MFA GATEWAY] SMS OTP Broadcast initiated for user {}.", username);
-            }
-
-            return new LoginResponse(true, sessionToken, null);
-        } else {
-            String token = generateJwtToken(username);
-            return new LoginResponse(false, null, token);
-        }
+        return sessionRepositoryPort.save(session);
     }
 
     @Override
-    public String verifyMfa(String sessionToken, String code) {
-        MfaSession session = mfaSessions.get(sessionToken);
-        if (session == null) {
-            throw new IllegalArgumentException("MFA session expired or invalid.");
-        }
-
-        if (Instant.now().isAfter(session.expiryTime())) {
-            mfaSessions.remove(sessionToken);
-            throw new IllegalArgumentException("MFA passcode expired.");
-        }
-
-        if (!session.code().equals(code)) {
-            throw new IllegalArgumentException("Invalid MFA passcode verification.");
-        }
-
-        mfaSessions.remove(sessionToken);
-        return generateJwtToken(session.username());
+    public void logout(String sessionId) {
+        sessionRepositoryPort.findById(sessionId).ifPresent(session -> {
+            session.invalidate();
+            sessionRepositoryPort.save(session);
+        });
     }
 
-    private String generateJwtToken(String username) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        String role = "swissadmin".equalsIgnoreCase(username) ? "ADMIN" : "CUSTOMER";
-        return Jwts.builder()
-                .subject(username)
-                .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(key)
-                .compact();
+    @Override
+    public boolean validateSession(String sessionId) {
+        return sessionRepositoryPort.findById(sessionId)
+                .map(Session::isValid)
+                .orElse(false);
+    }
+
+    @Override
+    public UserAccount register(String email, String password) {
+        if (userRepositoryPort.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+
+        String hashed = passwordEncoder.encode(password);
+
+        UserAccount newUser = UserAccount.builder()
+                .id(UUID.randomUUID().toString())
+                .emailAddress(new EmailAddress(email))
+                .passwordHash(new PasswordHash(hashed))
+                .status(AccountStatus.ACTIVE)
+                .build();
+
+        UserAccount savedUser = userRepositoryPort.save(newUser);
+        eventPublisherPort.publishUserRegisteredEvent(savedUser.getId(), savedUser.getEmailAddress().getValue());
+
+        return savedUser;
     }
 }

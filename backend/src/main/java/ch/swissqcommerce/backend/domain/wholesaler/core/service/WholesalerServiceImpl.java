@@ -24,6 +24,9 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     private B2BRestockOrderPort restockOrderPort;
 
     @Autowired
+    private ch.swissqcommerce.backend.domain.wholesaler.port.out.PurchaseOrderPort purchaseOrderPort;
+
+    @Autowired
     private LedgerUseCase ledgerService;
 
     @Override
@@ -142,5 +145,69 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         result.put("academyDiscountActive", wholesaler.getAcademyDiscountActive());
         result.put("trustScore", wholesaler.getTrustScore());
         return result;
+    }
+
+    @Override
+    @Transactional
+    public ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder generateReplenishmentOrders(String storeId, String vendorName, Map<String, Integer> requestedItems) {
+        ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder po = ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder.builder()
+                .poId(UUID.randomUUID().toString())
+                .storeId(storeId)
+                .vendorName(vendorName)
+                .status("DRAFT")
+                .createdAt(java.time.OffsetDateTime.now())
+                .build();
+                
+        List<ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem> items = requestedItems.entrySet().stream()
+                .map(e -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
+                        .itemId(java.util.UUID.randomUUID().toString())
+                        .productId(e.getKey())
+                        .requestedQty(e.getValue())
+                        .receivedQty(0)
+                        .purchaseOrder(po)
+                        .build())
+                .toList();
+        po.setItems(items);
+        return purchaseOrderPort.savePurchaseOrder(po);
+    }
+
+    @Override
+    @Transactional
+    public ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder receiveGoods(String poId, Map<String, Integer> itemReceipts, String grnFileUrl) {
+        ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder po = purchaseOrderPort.findPurchaseOrder(poId)
+                .orElseThrow(() -> new IllegalArgumentException("PO not found: " + poId));
+                
+        boolean allFullyReceived = true;
+        for (ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem item : po.getItems()) {
+            Integer recv = itemReceipts.get(item.getProductId());
+            if (recv != null) {
+                item.setReceivedQty(item.getReceivedQty() + recv);
+            }
+            if (item.getReceivedQty() < item.getRequestedQty()) {
+                allFullyReceived = false;
+            }
+        }
+        
+        po.setStatus(allFullyReceived ? "RECEIVED" : "PARTIALLY_RECEIVED");
+        po.setGrnVerificationFileUrl(grnFileUrl);
+        po.setInboundDate(java.time.OffsetDateTime.now());
+        po.setUpdatedAt(java.time.OffsetDateTime.now());
+        return purchaseOrderPort.savePurchaseOrder(po);
+    }
+
+    @Override
+    @Transactional
+    public ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog logWastage(String storeId, String productId, String batchId, Integer qty, String reason, String loggedBy) {
+        ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog log = ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog.builder()
+                .logId(java.util.UUID.randomUUID().toString())
+                .storeId(storeId)
+                .productId(productId)
+                .batchId(batchId)
+                .qtyWasted(qty)
+                .reason(reason)
+                .loggedBy(loggedBy)
+                .timestamp(java.time.OffsetDateTime.now())
+                .build();
+        return purchaseOrderPort.saveWastageLog(log);
     }
 }
