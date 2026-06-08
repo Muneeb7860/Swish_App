@@ -172,10 +172,23 @@ public class MasterOrchestratorService implements AgentUseCase {
                 .build();
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MasterOrchestratorService.class);
+
     @Override
     public NegotiationResponse negotiateProcurement(NegotiationRequest request) {
-        List<Wholesaler> activeWholesalers = wholesalerPort.findAll().stream()
-                .filter(w -> Boolean.TRUE.equals(w.getIsActive()))
+        List<Wholesaler> activeWholesalers;
+        try {
+            activeWholesalers = wholesalerPort.findAll();
+            if (activeWholesalers == null) {
+                activeWholesalers = java.util.Collections.emptyList();
+            }
+        } catch (Exception e) {
+            log.error("MasterOrchestratorService: Failed to retrieve active wholesalers from database", e);
+            activeWholesalers = java.util.Collections.emptyList();
+        }
+
+        activeWholesalers = activeWholesalers.stream()
+                .filter(w -> w != null && Boolean.TRUE.equals(w.getIsActive()))
                 .toList();
 
         if (activeWholesalers.isEmpty()) {
@@ -190,9 +203,25 @@ public class MasterOrchestratorService implements AgentUseCase {
         Wholesaler bestWholesaler = null;
 
         for (Wholesaler wholesaler : activeWholesalers) {
-            var analysis = b2BProcurementAgent.negotiateRestock(
-                    request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
-            
+            B2BProcurementAgent.NegotiationAnalysis analysis;
+            try {
+                analysis = b2BProcurementAgent.negotiateRestock(
+                        request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
+                if (analysis == null) {
+                    throw new NullPointerException("Negotiation analysis returned null");
+                }
+            } catch (Exception e) {
+                log.warn("MasterOrchestratorService: LLM restock negotiation failed for wholesaler {}. Using default fallback bid. Error: {}", wholesaler.getName(), e.getMessage());
+                // Rule-based fallback: 10% discount, 0.50 confidence, 0.0 token cost
+                analysis = new B2BProcurementAgent.NegotiationAnalysis(
+                        request.getBasePrice() * 0.90,
+                        0.50,
+                        "Rule-based fallback (LLM offline)",
+                        "COUNTER_OFFER",
+                        0.0
+                );
+            }
+
             if (bestAnalysis == null || analysis.proposedPrice < bestAnalysis.proposedPrice) {
                 bestAnalysis = analysis;
                 bestWholesaler = wholesaler;
@@ -202,6 +231,14 @@ public class MasterOrchestratorService implements AgentUseCase {
                     bestWholesaler = wholesaler;
                 }
             }
+        }
+
+        if (bestAnalysis == null || bestWholesaler == null) {
+            return new NegotiationResponse(
+                    false,
+                    "Failed to negotiate with any active wholesalers.",
+                    0.0, 0.0, "N/A", "REJECTED", 0.0
+            );
         }
 
         var guardrailResult = procurementGuardrailsEngine.validate(
@@ -223,7 +260,7 @@ public class MasterOrchestratorService implements AgentUseCase {
 
             restockOrder = restockOrderPort.save(restockOrder);
 
-            String wholesalerId = bestWholesaler != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
+            String wholesalerId = bestWholesaler.getWholesalerId() != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
             governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);
         }
 

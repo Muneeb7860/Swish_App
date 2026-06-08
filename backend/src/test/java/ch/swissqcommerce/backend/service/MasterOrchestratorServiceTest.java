@@ -194,4 +194,34 @@ public class MasterOrchestratorServiceTest {
         assertTrue(resp.getMessage().contains("RFQ AUCTION WINNER: Wholesaler A"));
         assertEquals(1.40, resp.getProposedPrice());
     }
+
+    @Test
+    public void testNegotiateProcurement_LlmNegotiationFailureFallback() {
+        AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
+        req.setItemId("item-1");
+        req.setItemName("Milk");
+        req.setBasePrice(10.00);
+        req.setQuantity(5);
+
+        Wholesaler wholesaler = Wholesaler.builder()
+                .wholesalerId("wh-1")
+                .name("Wholesaler A")
+                .isActive(true)
+                .trustScore(80)
+                .build();
+
+        when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any())).thenThrow(new RuntimeException("LLM offline"));
+
+        ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
+
+        AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
+
+        assertNotNull(resp);
+        assertTrue(resp.isApproved());
+        assertEquals(9.00, resp.getProposedPrice(), 0.01);
+        assertEquals(0.50, resp.getConfidence(), 0.01);
+        assertEquals("Rule-based fallback (LLM offline)", resp.getRationale());
+    }
 }
