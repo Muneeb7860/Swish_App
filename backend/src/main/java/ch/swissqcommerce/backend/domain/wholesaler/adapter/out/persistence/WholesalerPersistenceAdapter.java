@@ -98,8 +98,8 @@ public class WholesalerPersistenceAdapter implements WholesalerPort, B2BRestockO
             .store(o.getStore())
             .wholesaler(toEntity(o.getWholesaler()))
             .invoiceAmount(o.getInvoiceAmount())
-            .isFallback(o.getIsFallback())
-            .status(o.getStatus())
+            .isFallback(o.getIsFallback() != null ? o.getIsFallback() : false)
+            .status(o.getStatus() != null ? o.getStatus() : "pending")
             .idempotencyKey(o.getIdempotencyKey())
             .createdAt(o.getCreatedAt())
             .build();

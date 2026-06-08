@@ -157,7 +157,7 @@ public class RewardsAndGovernanceIntegrationTest {
                 .status("picked")
                 .idempotencyKey("KEY-ORDER-1")
                 .build();
-        orderPort.save(order);
+        order = orderPort.save(order);
 
         // Seed Telemetry logs for order
         OrderTelemetryLogEntity log1 = OrderTelemetryLogEntity.builder()

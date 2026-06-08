@@ -61,7 +61,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
         rider.setActiveLng(lng);
         enrollmentOutPort.saveRider(rider);
 
-        List<ActiveShipment> activeShipments = dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "ASSIGNED");
+        List<ActiveShipment> activeShipments = new java.util.ArrayList<>(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "ASSIGNED"));
         activeShipments.addAll(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "PICKING_UP"));
         activeShipments.addAll(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "DELIVERING"));
 

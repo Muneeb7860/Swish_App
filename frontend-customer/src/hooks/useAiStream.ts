@@ -1,15 +1,37 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Custom React hook for consuming Server-Sent Events (SSE) AI streams.
  * Allows Vite MFEs to receive token-by-token real-time generations.
+ *
+ * Hardening changes vs. original:
+ * - `error` is typed as `string | null` (was implicitly `null` then silently `any`)
+ * - `endpoint` and `prompt` parameters are explicitly typed as `string`
+ * - An AbortController ref cancels any in-flight stream when:
+ *   a) `startStream` is called again before the previous one finishes, or
+ *   b) the component that owns the hook unmounts
  */
 export const useAiStream = () => {
-	const [streamData, setStreamData] = useState("");
-	const [isStreaming, setIsStreaming] = useState(false);
-	const [error, setError] = useState(null);
+	const [streamData, setStreamData] = useState<string>("");
+	const [isStreaming, setIsStreaming] = useState<boolean>(false);
+	const [error, setError] = useState<string | null>(null);
 
-	const startStream = useCallback(async (endpoint, prompt) => {
+	// Holds a reference to the AbortController for the currently active stream.
+	const abortControllerRef = useRef<AbortController | null>(null);
+
+	// Cancel any active stream when the component unmounts.
+	useEffect(() => {
+		return () => {
+			abortControllerRef.current?.abort();
+		};
+	}, []);
+
+	const startStream = useCallback(async (endpoint: string, prompt: string) => {
+		// Abort any previous in-flight stream before starting a new one.
+		abortControllerRef.current?.abort();
+		const controller = new AbortController();
+		abortControllerRef.current = controller;
+
 		setIsStreaming(true);
 		setStreamData("");
 		setError(null);
@@ -23,6 +45,7 @@ export const useAiStream = () => {
 					Accept: "text/event-stream",
 				},
 				body: JSON.stringify({ prompt }),
+				signal: controller.signal,
 			});
 
 			if (!response.ok) {
@@ -53,9 +76,16 @@ export const useAiStream = () => {
 					}
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
+			// AbortError is expected when the stream is intentionally cancelled —
+			// don't surface it as a user-visible error.
+			if (err instanceof DOMException && err.name === "AbortError") {
+				return;
+			}
 			console.error("AI Stream Error:", err);
-			setError(err?.message || "Unknown error");
+			const message =
+				err instanceof Error ? err.message : "Unknown error occurred";
+			setError(message);
 		} finally {
 			setIsStreaming(false);
 		}

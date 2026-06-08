@@ -39,22 +39,27 @@ public class WholesalerEntity {
     @Column(name = "trust_score", nullable = false)
     @Min(0)
     @Max(100)
+    @Builder.Default
     private Integer trustScore = 100;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
 
     @Column(name = "academy_discount_active", nullable = false)
+    @Builder.Default
     private Boolean academyDiscountActive = false;
 
     @Column(name = "base_invoice_amount", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
+    @Builder.Default
     private BigDecimal baseInvoiceAmount = new BigDecimal("25.00");
 
     @Column(name = "fallback_invoice_amount", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
+    @Builder.Default
     private BigDecimal fallbackInvoiceAmount = new BigDecimal("35.00");
 
     @Column(name = "created_at", insertable = false, updatable = false)

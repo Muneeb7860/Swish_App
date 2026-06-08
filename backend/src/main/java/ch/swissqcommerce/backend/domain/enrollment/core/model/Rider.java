@@ -18,18 +18,23 @@ public class Rider {
 
     private String vehicleType;
 
+    @Builder.Default
     private String onboardingStatus = "unapplied";
 
+    @Builder.Default
     private BigDecimal walletBalance = BigDecimal.ZERO;
 
     private BigDecimal activeLat;
 
     private BigDecimal activeLng;
 
+    @Builder.Default
     private Integer trustScore = 100;
 
+    @Builder.Default
     private BigDecimal cashCollectedLimit = new BigDecimal("100.00");
 
+    @Builder.Default
     private BigDecimal currentCashInHand = BigDecimal.ZERO;
 
     private String activeShiftId;

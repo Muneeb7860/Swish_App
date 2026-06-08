@@ -34,7 +34,7 @@ You can launch the entire ecosystem (Micro-Frontends, Backend, Gateway, Postgres
 
 1. **Clone the Repo**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/Muneeb7860/Swish_App.git
    cd Swish_App
    ```
 2. **Boot the Cluster**

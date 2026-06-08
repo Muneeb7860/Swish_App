@@ -1,56 +1,32 @@
 package ch.swissqcommerce.backend.domain.customer.adapter.out.persistence;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "customer_profiles")
+@Table(name = "customer_profiles", schema = "oltp")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CustomerProfileEntity {
+
     @Id
+    @Column(name = "profile_id", length = 50)
     private String profileId;
+
+    @Column(name = "user_id", length = 50, nullable = false, unique = true)
     private String userId;
+
+    @Column(name = "marketing_opt_in", nullable = false)
     private boolean marketingOptIn;
+
+    @Column(name = "default_currency", length = 10, nullable = false)
     private String defaultCurrency;
-
-    public CustomerProfileEntity() {}
-
-    public CustomerProfileEntity(String profileId, String userId, boolean marketingOptIn, String defaultCurrency) {
-        this.profileId = profileId;
-        this.userId = userId;
-        this.marketingOptIn = marketingOptIn;
-        this.defaultCurrency = defaultCurrency;
-    }
-
-    public String getProfileId() { return profileId; }
-    public void setProfileId(String profileId) { this.profileId = profileId; }
-
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-
-    public boolean isMarketingOptIn() { return marketingOptIn; }
-    public void setMarketingOptIn(boolean marketingOptIn) { this.marketingOptIn = marketingOptIn; }
-
-    public String getDefaultCurrency() { return defaultCurrency; }
-    public void setDefaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private String profileId;
-        private String userId;
-        private boolean marketingOptIn;
-        private String defaultCurrency;
-
-        public Builder profileId(String profileId) { this.profileId = profileId; return this; }
-        public Builder userId(String userId) { this.userId = userId; return this; }
-        public Builder marketingOptIn(boolean marketingOptIn) { this.marketingOptIn = marketingOptIn; return this; }
-        public Builder defaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; return this; }
-
-        public CustomerProfileEntity build() {
-            return new CustomerProfileEntity(profileId, userId, marketingOptIn, defaultCurrency);
-        }
-    }
 }

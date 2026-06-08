@@ -160,6 +160,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
                 
         List<ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem> items = requestedItems.entrySet().stream()
                 .map(e -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
+                        .itemId(java.util.UUID.randomUUID().toString())
                         .productId(e.getKey())
                         .requestedQty(e.getValue())
                         .receivedQty(0)
@@ -187,7 +188,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
             }
         }
         
-        po.setStatus(allFullyReceived ? "FULLY_RECEIVED" : "PARTIALLY_RECEIVED");
+        po.setStatus(allFullyReceived ? "RECEIVED" : "PARTIALLY_RECEIVED");
         po.setGrnVerificationFileUrl(grnFileUrl);
         po.setInboundDate(java.time.OffsetDateTime.now());
         po.setUpdatedAt(java.time.OffsetDateTime.now());
@@ -198,6 +199,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     @Transactional
     public ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog logWastage(String storeId, String productId, String batchId, Integer qty, String reason, String loggedBy) {
         ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog log = ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog.builder()
+                .logId(java.util.UUID.randomUUID().toString())
                 .storeId(storeId)
                 .productId(productId)
                 .batchId(batchId)

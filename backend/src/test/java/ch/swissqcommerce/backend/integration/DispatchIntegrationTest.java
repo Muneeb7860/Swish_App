@@ -169,7 +169,7 @@ public class DispatchIntegrationTest {
 
         // Then
         assertNotNull(shipment);
-        assertEquals("ASSIGNED", shipment.getStatus());
+        assertEquals("ASSIGNED", shipment.getStatus().name());
         assertEquals(normalRider.getRiderId(), shipment.getRiderId());
         
         Order updatedOrder = orderPort.findById(order.getOrderId()).orElseThrow();

@@ -29,7 +29,7 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
     @Override
     public WastageLog saveWastageLog(WastageLog log) {
         WastageLogEntity entity = WastageLogEntity.builder()
-                .logId(log.getLogId())
+                .logId(log.getLogId() != null ? log.getLogId() : java.util.UUID.randomUUID().toString())
                 .storeId(log.getStoreId())
                 .productId(log.getProductId())
                 .batchId(log.getBatchId())
@@ -88,13 +88,13 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
                 .build();
                 
         if (domain.getItems() != null) {
-            entity.setItems(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
-                    .itemId(itemDomain.getItemId())
+            entity.setItems(new java.util.ArrayList<>(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
+                    .itemId(itemDomain.getItemId() != null ? itemDomain.getItemId() : java.util.UUID.randomUUID().toString())
                     .productId(itemDomain.getProductId())
                     .requestedQty(itemDomain.getRequestedQty())
                     .receivedQty(itemDomain.getReceivedQty())
                     .purchaseOrder(entity)
-                    .build()).toList());
+                    .build()).toList()));
         }
         return entity;
     }
