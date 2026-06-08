@@ -1,10 +1,13 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
 
-import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
+import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
 import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @Component
 public class PointsRewardProcessor implements RewardProcessor {
@@ -27,7 +30,7 @@ public class PointsRewardProcessor implements RewardProcessor {
                         .customerId(customerId)
                         .loyaltyPoints(0)
                         .build());
-
+        
         points.setLoyaltyPoints(points.getLoyaltyPoints() + amount);
         rewardOutPort.saveRewardPoints(points);
 
@@ -35,7 +38,16 @@ public class PointsRewardProcessor implements RewardProcessor {
                 .customerId(customerId)
                 .pointsChanged(amount)
                 .description(description)
+                .createdAt(OffsetDateTime.now())
                 .build();
         rewardOutPort.saveLoyaltyRecord(record);
+    }
+
+    public RewardPoints calculatePointsForOrder(String customerId, String orderId, BigDecimal amount) {
+        return null; // legacy/mocked
+    }
+
+    public CustomerLoyalty updateCustomerTier(String customerId, RewardPoints points) {
+        return null; // legacy/mocked
     }
 }

@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
@@ -87,7 +88,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         boolean alert = temp.compareTo(new BigDecimal("8.0")) > 0;
 
         OrderTelemetryLog log = OrderTelemetryLog.builder()
-                .order(order)
+                .orderId(order.getOrderId())
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(lat)
                 .longitude(lng)
@@ -228,7 +229,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             try {
                 telemetryPort.findOrderById(request.getOrderId()).ifPresent(order -> {
                     OrderTelemetryLog log = OrderTelemetryLog.builder()
-                            .order(order)
+                            .orderId(order.getOrderId())
                             .deviceTimestamp(OffsetDateTime.now())
                             .latitude(request.getLatitude())
                             .longitude(request.getLongitude())

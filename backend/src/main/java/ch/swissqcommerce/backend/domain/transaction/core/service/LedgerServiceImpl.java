@@ -1,4 +1,9 @@
 package ch.swissqcommerce.backend.domain.transaction.core.service;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.UUID;
+import ch.swissqcommerce.backend.model.Customer;
+
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
@@ -8,8 +13,10 @@ import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.JournalEntryEntity;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.LedgerLineEntity;
 import ch.swissqcommerce.backend.repository.*;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -20,18 +27,18 @@ import java.util.*;
 public class LedgerServiceImpl implements LedgerUseCase {
     private final JournalEntryRepository journalEntryRepository;
     private final CustomerRepository customerRepository;
-    private final RiderRepository riderRepository;
+    private final EnrollmentOutPort enrollmentOutPort;
     private final WholesalerPort wholesalerPort;
     private final LedgerLineRepository ledgerLineRepository;
 
     public LedgerServiceImpl(JournalEntryRepository journalEntryRepository,
                              CustomerRepository customerRepository,
-                             RiderRepository riderRepository,
+                             EnrollmentOutPort enrollmentOutPort,
                              WholesalerPort wholesalerPort,
                              LedgerLineRepository ledgerLineRepository) {
         this.journalEntryRepository = journalEntryRepository;
         this.customerRepository = customerRepository;
-        this.riderRepository = riderRepository;
+        this.enrollmentOutPort = enrollmentOutPort;
         this.wholesalerPort = wholesalerPort;
         this.ledgerLineRepository = ledgerLineRepository;
     }
@@ -59,15 +66,15 @@ public class LedgerServiceImpl implements LedgerUseCase {
         }
 
         // 2. Fetch the hash of the last entry for chaining
-        Optional<JournalEntry> lastEntryOpt = journalEntryRepository.findFirstByOrderByEntryIdDesc();
-        String prevHash = lastEntryOpt.map(JournalEntry::getEntryHash)
+        Optional<JournalEntryEntity> lastEntryOpt = journalEntryRepository.findFirstByOrderByEntryIdDesc();
+        String prevHash = lastEntryOpt.map(JournalEntryEntity::getEntryHash)
                 .orElse("0000000000000000000000000000000000000000000000000000000000000000");
 
         // 3. Create Journal Entry
         UUID uuid = UUID.randomUUID();
         String entryHash = computeSHA256Hash(uuid.toString(), reference, description, prevHash);
 
-        JournalEntry entry = JournalEntry.builder()
+        JournalEntryEntity entryEntity = JournalEntryEntity.builder()
                 .entryUuid(uuid)
                 .reference(reference)
                 .description(description)
@@ -75,26 +82,45 @@ public class LedgerServiceImpl implements LedgerUseCase {
                 .entryHash(entryHash)
                 .build();
 
-        JournalEntry savedEntry = journalEntryRepository.save(entry);
+        JournalEntryEntity savedEntry = journalEntryRepository.save(entryEntity);
 
         // 4. Create Ledger Lines and adjust Actor Wallet Balances
+        List<LedgerLineEntity> lineEntities = new ArrayList<>();
         List<LedgerLine> lines = new ArrayList<>();
         for (LedgerLeg leg : legs) {
-            LedgerLine line = LedgerLine.builder()
+            LedgerLineEntity lineEntity = LedgerLineEntity.builder()
                     .journalEntry(savedEntry)
                     .accountType(leg.accountType())
                     .actorId(leg.actorId())
                     .debit(leg.debit())
                     .credit(leg.credit())
                     .build();
-            lines.add(line);
+            lineEntities.add(lineEntity);
+
+            lines.add(LedgerLine.builder()
+                    .lineId(lineEntity.getLineId())
+                    .accountType(leg.accountType())
+                    .actorId(leg.actorId())
+                    .debit(leg.debit())
+                    .credit(leg.credit())
+                    .build());
 
             // Execute balance adjustments on actor profiles
             adjustActorWallet(leg.accountType(), leg.actorId(), leg.debit(), leg.credit());
         }
-        savedEntry.setLedgerLines(lines);
+        savedEntry.setLedgerLines(lineEntities);
+        savedEntry = journalEntryRepository.save(savedEntry);
 
-        return journalEntryRepository.save(savedEntry);
+        return JournalEntry.builder()
+                .entryId(savedEntry.getEntryId())
+                .entryUuid(savedEntry.getEntryUuid())
+                .timestamp(savedEntry.getTimestamp())
+                .reference(savedEntry.getReference())
+                .description(savedEntry.getDescription())
+                .previousEntryHash(savedEntry.getPreviousEntryHash())
+                .entryHash(savedEntry.getEntryHash())
+                .ledgerLines(lines)
+                .build();
     }
 
     private void adjustActorWallet(String accountType, String actorId, BigDecimal debit, BigDecimal credit) {
@@ -117,14 +143,14 @@ public class LedgerServiceImpl implements LedgerUseCase {
                 break;
 
             case "rider":
-                Rider rider = riderRepository.findById(actorId)
+                Rider rider = enrollmentOutPort.findRiderById(actorId)
                         .orElseThrow(() -> new NoSuchElementException("Rider not found: " + actorId));
                 BigDecimal newRiderBalance = rider.getWalletBalance().add(netChange);
                 if (newRiderBalance.compareTo(BigDecimal.ZERO) < 0) {
                     throw new IllegalStateException("Rider wallet balance cannot drop below $0.00: " + actorId);
                 }
                 rider.setWalletBalance(newRiderBalance);
-                riderRepository.save(rider);
+                enrollmentOutPort.saveRider(rider);
                 break;
 
             case "wholesaler":
@@ -155,6 +181,15 @@ public class LedgerServiceImpl implements LedgerUseCase {
     }
 
     public List<LedgerLine> getCustomerLedger(String customerId) {
-        return ledgerLineRepository.findByAccountTypeAndActorIdOrderByLineIdDesc("customer", customerId);
+        return ledgerLineRepository.findByAccountTypeAndActorIdOrderByLineIdDesc("customer", customerId)
+                .stream()
+                .map(entity -> LedgerLine.builder()
+                        .lineId(entity.getLineId())
+                        .accountType(entity.getAccountType())
+                        .actorId(entity.getActorId())
+                        .debit(entity.getDebit())
+                        .credit(entity.getCredit())
+                        .build())
+                .toList();
     }
 }

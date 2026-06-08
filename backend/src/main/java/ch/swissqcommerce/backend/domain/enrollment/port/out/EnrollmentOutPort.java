@@ -1,4 +1,7 @@
 package ch.swissqcommerce.backend.domain.enrollment.port.out;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 

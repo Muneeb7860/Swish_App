@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.event.port.in;
 
-import ch.swissqcommerce.backend.domain.event.core.model.DomainEvent;
+import ch.swissqcommerce.backend.domain.event.adapter.out.persistence.DomainEventEntity;
 
 public interface EventUseCase {
-    DomainEvent publishEvent(String topic, String payload);
+    DomainEventEntity publishEvent(String topic, String payload);
 }

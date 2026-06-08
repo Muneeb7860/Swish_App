@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface OnboardingApplicationRepository extends JpaRepository<OnboardingApplication, String> {
+public interface OnboardingApplicationRepository extends JpaRepository<OnboardingApplicationEntity, String> {
     List<OnboardingApplication> findByApplicantType(String applicantType);
     List<OnboardingApplication> findByApprovalAdminFalse();
 }

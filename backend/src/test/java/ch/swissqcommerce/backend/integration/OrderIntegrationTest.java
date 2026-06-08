@@ -3,6 +3,7 @@ package ch.swissqcommerce.backend.integration;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.model.*;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import ch.swissqcommerce.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ public class OrderIntegrationTest {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderPort orderPort;
 
     @Autowired
     private PaymentRepository paymentRepository;
@@ -142,7 +146,7 @@ public class OrderIntegrationTest {
         assertEquals(new BigDecimal("7.50"), order.getTotalAmount()); // 3 * 2.50 = 7.50
 
         // Then: Verify database persistence
-        Order persistedOrder = orderRepository.findById(order.getOrderId())
+        Order persistedOrder = orderPort.findById(order.getOrderId())
                 .orElseThrow(() -> new NoSuchElementException("Order not found in database"));
         assertEquals("pending", persistedOrder.getStatus());
         assertEquals(new BigDecimal("7.50"), persistedOrder.getTotalAmount());
@@ -177,10 +181,10 @@ public class OrderIntegrationTest {
 
         // When: transition state
         order.setStatus("confirmed");
-        orderRepository.save(order);
+        orderPort.save(order);
 
         // Then: Verify transition persisted
-        Order updatedOrder = orderRepository.findById(order.getOrderId()).orElseThrow();
+        Order updatedOrder = orderPort.findById(order.getOrderId()).orElseThrow();
         assertEquals("confirmed", updatedOrder.getStatus());
     }
 

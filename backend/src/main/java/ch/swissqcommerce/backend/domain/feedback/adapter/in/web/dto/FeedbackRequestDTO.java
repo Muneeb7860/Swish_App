@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.feedback.adapter.in.web.dto;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+
 
 import jakarta.validation.constraints.*;
 import lombok.*;

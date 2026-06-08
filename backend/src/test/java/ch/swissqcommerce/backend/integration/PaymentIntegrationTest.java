@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.integration;
 
 import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
+import ch.swissqcommerce.backend.domain.payment.adapter.out.persistence.PaymentEntity;
 import ch.swissqcommerce.backend.domain.payment.port.in.PaymentUseCase;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
@@ -156,7 +157,7 @@ public class PaymentIntegrationTest {
         assertEquals(order.getTotalAmount(), authorization.getAmount());
         assertEquals(paymentIdempotencyKey, authorization.getIdempotencyKey());
 
-        Payment persistedPayment = paymentRepository.findById(authorization.getPaymentId())
+        PaymentEntity persistedPayment = paymentRepository.findById(authorization.getPaymentId())
                 .orElseThrow(() -> new NoSuchElementException("Authorized payment not found"));
         assertEquals("AUTHORIZED", persistedPayment.getStatus());
 
@@ -168,7 +169,7 @@ public class PaymentIntegrationTest {
         assertEquals("CAPTURED", capturedPayment.getStatus());
         assertNotNull(capturedPayment.getCapturedAt());
 
-        Payment persistedCapturedPayment = paymentRepository.findById(capturedPayment.getPaymentId())
+        PaymentEntity persistedCapturedPayment = paymentRepository.findById(capturedPayment.getPaymentId())
                 .orElseThrow(() -> new NoSuchElementException("Captured payment not found"));
         assertEquals("CAPTURED", persistedCapturedPayment.getStatus());
         assertNotNull(persistedCapturedPayment.getCapturedAt());
