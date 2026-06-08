@@ -4,13 +4,17 @@ import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class TelemetryPersistenceAdapter implements TelemetryPort {
+
+    private final OrderTelemetryLogRepository telemetryLogRepository;
 
     @Override
     public OrderTelemetryLogEntity save(OrderTelemetryLogEntity log) {
@@ -19,7 +23,7 @@ public class TelemetryPersistenceAdapter implements TelemetryPort {
 
     @Override
     public List<OrderTelemetryLogEntity> findByOrderId(Integer orderId) {
-        return List.of();
+        return telemetryLogRepository.findByOrderIdOrderByDeviceTimestampDesc(orderId);
     }
 
     @Override

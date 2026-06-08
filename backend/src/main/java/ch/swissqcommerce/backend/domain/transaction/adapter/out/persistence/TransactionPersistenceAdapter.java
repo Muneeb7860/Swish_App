@@ -165,14 +165,14 @@ public class TransactionPersistenceAdapter implements
                 .build();
                 
         if (entity.getOrderItems() != null) {
-            order.setOrderItems(entity.getOrderItems().stream().map(itemEntity -> 
+            order.setOrderItems(new java.util.ArrayList<>(entity.getOrderItems().stream().map(itemEntity ->
                 ch.swissqcommerce.backend.domain.transaction.core.model.OrderItem.builder()
                         .order(order)
                         .item(itemEntity.getItem())
                         .quantity(itemEntity.getQuantity())
                         .price(itemEntity.getPrice())
                         .build()
-            ).toList());
+            ).toList()));
         }
         return order;
     }
@@ -202,14 +202,14 @@ public class TransactionPersistenceAdapter implements
                 .build();
 
         if (domain.getOrderItems() != null) {
-            entity.setOrderItems(domain.getOrderItems().stream().map(domainItem -> {
+            entity.setOrderItems(new java.util.ArrayList<>(domain.getOrderItems().stream().map(domainItem -> {
                 OrderItemEntity itemEntity = new OrderItemEntity();
                 itemEntity.setOrder(entity);
                 itemEntity.setItem(domainItem.getItem());
                 itemEntity.setQuantity(domainItem.getQuantity());
                 itemEntity.setPrice(domainItem.getPrice());
                 return itemEntity;
-            }).toList());
+            }).toList()));
         }
         return entity;
     }

@@ -97,6 +97,15 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
 
+        OutboxEvent fraudEvent = OutboxEvent.builder()
+                .aggregateType("Payment")
+                .aggregateId(saved.getPaymentId() != null ? saved.getPaymentId().toString() : null)
+                .eventType("payment.fraud_check")
+                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s, \"customerId\": \"%s\"}",
+                        saved.getPaymentId(), orderId, saved.getAmount(), customerId))
+                .build();
+        outboxEventPort.save(fraudEvent);
+
         return saved;
     }
 
@@ -123,6 +132,15 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
                 .build();
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
+
+        OutboxEvent notificationEvent = OutboxEvent.builder()
+                .aggregateType("Payment")
+                .aggregateId(saved.getPaymentId().toString())
+                .eventType("payment.notification")
+                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"status\": \"CAPTURED\"}",
+                        saved.getPaymentId(), saved.getOrderId()))
+                .build();
+        outboxEventPort.save(notificationEvent);
 
         return saved;
     }

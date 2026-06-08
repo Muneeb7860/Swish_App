@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
@@ -78,7 +79,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
     @Override
     @Transactional
-    public OrderTelemetryLogEntity recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
+    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng,
                                              BigDecimal temp, boolean dryIceInjected) {
         
         Order order = telemetryPort.findOrderById(orderId)
@@ -130,7 +131,17 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             ledgerUseCase.recordTransaction("COLD-BREACH", " Perishable cargo spoilage write-off", legs);
         }
 
-        return savedLog;
+        return OrderTelemetryLog.builder()
+                .logId(savedLog.getLogId())
+                .orderId(savedLog.getOrderId())
+                .deviceTimestamp(savedLog.getDeviceTimestamp())
+                .serverTimestamp(savedLog.getServerTimestamp())
+                .latitude(savedLog.getLatitude())
+                .longitude(savedLog.getLongitude())
+                .temperature(savedLog.getTemperature())
+                .dryIceInjected(savedLog.getDryIceInjected())
+                .alertTriggered(savedLog.getAlertTriggered())
+                .build();
     }
 
     @Override
@@ -227,8 +238,8 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         for (TelemetryTick request : ticksToFlush) {
             try {
                 telemetryPort.findOrderById(request.getOrderId()).ifPresent(order -> {
-                    OrderTelemetryLog log = OrderTelemetryLog.builder()
-                            .order(order)
+                    OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
+                            .orderId(order.getOrderId())
                             .deviceTimestamp(OffsetDateTime.now())
                             .latitude(request.getLatitude())
                             .longitude(request.getLongitude())

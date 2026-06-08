@@ -21,6 +21,7 @@ public class B2BRestockOrder {
 
     private BigDecimal invoiceAmount;
 
+    @Builder.Default
     private Boolean isFallback = false;
 
     private String status = "pending";

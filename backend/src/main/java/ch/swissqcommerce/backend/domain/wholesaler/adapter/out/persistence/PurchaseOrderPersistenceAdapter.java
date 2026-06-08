@@ -6,13 +6,14 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.PurchaseOrderPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
-    private final WastageLogRepository wastageLogRepository;
+    private final WastageLogEntityRepository wastageLogRepository;
 
     @Override
     public PurchaseOrder savePurchaseOrder(PurchaseOrder po) {
@@ -29,7 +30,7 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
     @Override
     public WastageLog saveWastageLog(WastageLog log) {
         WastageLogEntity entity = WastageLogEntity.builder()
-                .logId(log.getLogId())
+                .logId(log.getLogId() != null ? log.getLogId() : UUID.randomUUID().toString())
                 .storeId(log.getStoreId())
                 .productId(log.getProductId())
                 .batchId(log.getBatchId())
@@ -64,13 +65,13 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
                 .build();
                 
         if (entity.getItems() != null) {
-            domain.setItems(entity.getItems().stream().map(itemEntity -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
+            domain.setItems(new java.util.ArrayList<>(entity.getItems().stream().map(itemEntity -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
                     .itemId(itemEntity.getItemId())
                     .productId(itemEntity.getProductId())
                     .requestedQty(itemEntity.getRequestedQty())
                     .receivedQty(itemEntity.getReceivedQty())
                     .purchaseOrder(domain)
-                    .build()).toList());
+                    .build()).toList()));
         }
         return domain;
     }
@@ -88,13 +89,13 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
                 .build();
                 
         if (domain.getItems() != null) {
-            entity.setItems(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
+            entity.setItems(new java.util.ArrayList<>(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
                     .itemId(itemDomain.getItemId())
                     .productId(itemDomain.getProductId())
                     .requestedQty(itemDomain.getRequestedQty())
                     .receivedQty(itemDomain.getReceivedQty())
                     .purchaseOrder(entity)
-                    .build()).toList());
+                    .build()).toList()));
         }
         return entity;
     }

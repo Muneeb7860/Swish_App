@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.controller;
 
 import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ public class TelemetryControllerTest {
         req.setTemperature(new BigDecimal("9.0"));
         req.setDryIceInjected(false);
 
-        OrderTelemetryLogEntity log = new OrderTelemetryLogEntity();
+        OrderTelemetryLog log = new OrderTelemetryLog();
         log.setLogId(10);
 
         when(telemetryService.updateLocation(eq(1), any(), any(), any())).thenReturn(true);

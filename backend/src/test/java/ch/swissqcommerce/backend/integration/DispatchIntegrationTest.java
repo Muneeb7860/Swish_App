@@ -103,28 +103,32 @@ public class DispatchIntegrationTest {
         order = orderPort.save(order);
 
         // 3. Seed Normal Rider (E-Bike, Max Weight 10.0kg)
-        ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity normalRiderEntity = ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
+        riderRepository.save(ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
                 .riderId("RIDER-EBike-1")
                 .fullName("Bob Miller")
                 .vehicleType("E-Bike")
                 .onboardingStatus("active")
                 .walletBalance(BigDecimal.ZERO)
+                .cashCollectedLimit(java.math.BigDecimal.valueOf(500))
+                .currentCashInHand(BigDecimal.ZERO)
                 .trustScore(100)
-                .build();
-        riderRepository.save(normalRiderEntity);
-        normalRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder().riderId("RIDER-EBike-1").build();
+                .build());
+        normalRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder()
+                .riderId("RIDER-EBike-1").build();
 
         // 4. Seed Self-Matching Rider (Name matches Customer)
-        ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity selfMatchingRiderEntity = ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
+        riderRepository.save(ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
                 .riderId("RIDER-SelfMatch-1")
                 .fullName("Alice Smith") // Exact match with customer name
                 .vehicleType("Scooter")
                 .onboardingStatus("active")
                 .walletBalance(BigDecimal.ZERO)
+                .cashCollectedLimit(java.math.BigDecimal.valueOf(500))
+                .currentCashInHand(BigDecimal.ZERO)
                 .trustScore(100)
-                .build();
-        riderRepository.save(selfMatchingRiderEntity);
-        selfMatchingRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder().riderId("RIDER-SelfMatch-1").build();
+                .build());
+        selfMatchingRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder()
+                .riderId("RIDER-SelfMatch-1").build();
     }
 
     @Test
@@ -169,7 +173,7 @@ public class DispatchIntegrationTest {
 
         // Then
         assertNotNull(shipment);
-        assertEquals("ASSIGNED", shipment.getStatus());
+        assertEquals("ASSIGNED", shipment.getStatus().name());
         assertEquals(normalRider.getRiderId(), shipment.getRiderId());
         
         Order updatedOrder = orderPort.findById(order.getOrderId()).orElseThrow();

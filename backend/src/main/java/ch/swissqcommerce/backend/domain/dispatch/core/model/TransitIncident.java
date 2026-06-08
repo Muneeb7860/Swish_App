@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.dispatch.core.model;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -25,11 +25,11 @@ public class TransitIncident {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     @NotNull
-    private Order order;
+    private OrderEntity order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rider_id")
-    private Rider rider;
+    private RiderEntity rider;
 
     @Column(name = "incident_type", length = 20, nullable = false)
     @NotBlank
