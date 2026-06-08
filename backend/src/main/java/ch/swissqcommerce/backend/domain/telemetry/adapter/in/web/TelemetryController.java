@@ -2,9 +2,7 @@ package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import ch.swissqcommerce.backend.service.InMemoryGeoStore;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,46 +23,6 @@ public class TelemetryController {
 
     @Autowired
     private TelemetryUseCase telemetryService;
-
-    @Autowired
-    private InMemoryGeoStore geoStore;
-
-    @Autowired
-    private TelemetryPort telemetryPort;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTickRequest> tickBuffer = new java.util.concurrent.ConcurrentLinkedQueue<>();
-
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000)
-    public void flushTickBuffer() {
-        if (tickBuffer.isEmpty()) return;
-        java.util.List<TelemetryTickRequest> ticksToFlush = new java.util.ArrayList<>();
-        TelemetryTickRequest tick;
-        while ((tick = tickBuffer.poll()) != null) {
-            ticksToFlush.add(tick);
-        }
-        if (ticksToFlush.isEmpty()) return;
-        for (TelemetryTickRequest request : ticksToFlush) {
-            try {
-                orderRepository.findById(request.getOrderId()).ifPresent(order -> {
-                    OrderTelemetryLog log = OrderTelemetryLog.builder()
-                            .order(order)
-                            .deviceTimestamp(OffsetDateTime.now())
-                            .latitude(request.getLatitude())
-                            .longitude(request.getLongitude())
-                            .temperature(request.getTemperature())
-                            .dryIceInjected(request.isDryIceInjected())
-                            .alertTriggered(false)
-                            .build();
-                    telemetryPort.save(log);
-                });
-            } catch (Exception e) {
-                tickBuffer.add(request); // Re-queue on failure
-            }
-        }
-    }
 
     private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
@@ -101,7 +59,16 @@ public class TelemetryController {
 
     @PostMapping("/tick")
     public ResponseEntity<Map<String, Object>> ingestTick(@jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
-        geoStore.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
+        boolean valid = telemetryService.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
+
+        if (!valid) {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("orderId", request.getOrderId());
+            payload.put("message", "Discarded telemetry update (GPS outlier detected).");
+            payload.put("persisted", false);
+            payload.put("queued", false);
+            return ResponseEntity.ok(payload);
+        }
 
         boolean thresholdBreached = request.getTemperature().compareTo(new BigDecimal("8.0")) > 0;
         boolean dryIceInjected = request.isDryIceInjected();
@@ -116,7 +83,13 @@ public class TelemetryController {
                     request.isDryIceInjected()
             );
         } else {
-            tickBuffer.add(request);
+            telemetryService.queueTick(
+                    request.getOrderId(),
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getTemperature(),
+                    request.isDryIceInjected()
+            );
         }
 
         boolean thermalBreachActive = telemetryService.isThermalBreachActive(request.getOrderId(), request.getTemperature());
@@ -149,7 +122,7 @@ public class TelemetryController {
         emitter.onTimeout(() -> removeEmitter(orderId, emitter));
         emitter.onError((ex) -> removeEmitter(orderId, emitter));
 
-        InMemoryGeoStore.RiderLocation currentLoc = geoStore.getLatestLocation(orderId);
+        GeoLocationPort.RiderLocation currentLoc = telemetryService.getLatestLocation(orderId);
         if (currentLoc != null) {
             try {
                 boolean thermalBreachActive = telemetryService.isThermalBreachActive(orderId, currentLoc.getTemperature());
@@ -172,11 +145,11 @@ public class TelemetryController {
     public ResponseEntity<Map<String, Object>> injectDryIce(@PathVariable Integer orderId) {
         telemetryService.injectDryIce(orderId);
         
-        InMemoryGeoStore.RiderLocation currentLoc = geoStore.getLatestLocation(orderId);
+        GeoLocationPort.RiderLocation currentLoc = telemetryService.getLatestLocation(orderId);
         BigDecimal lat = currentLoc != null ? currentLoc.getLatitude() : new BigDecimal("47.3769");
         BigDecimal lng = currentLoc != null ? currentLoc.getLongitude() : new BigDecimal("8.5417");
         
-        geoStore.updateLocation(orderId, lat, lng, new BigDecimal("4.0"));
+        telemetryService.updateLocation(orderId, lat, lng, new BigDecimal("4.0"));
         
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", orderId);

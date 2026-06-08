@@ -2,14 +2,20 @@ package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
-import ch.swissqcommerce.backend.domain.agent.core.service.AgentToolExecutor;
-import ch.swissqcommerce.backend.domain.agent.core.service.CustomerSupportAgent;
-import ch.swissqcommerce.backend.domain.agent.core.service.MasterOrchestratorService;
+import ch.swissqcommerce.backend.domain.agent.core.service.*;
+import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
+import ch.swissqcommerce.backend.repository.DarkStoreRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.Collections;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,17 +36,17 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class MasterOrchestratorServiceTest {
 
-    @Mock
-    private CustomerSupportAgent customerSupportAgent;
+    @Mock private CustomerSupportAgent customerSupportAgent;
+    @Mock private AgentToolExecutor agentToolExecutor;
+    @Mock private AgentOutPort agentOutPort;
+    @Mock private EventUseCase eventUseCase;
 
-    @Mock
-    private AgentToolExecutor agentToolExecutor;
-
-    @Mock
-    private AgentOutPort agentOutPort;
-
-    @Mock
-    private EventUseCase eventUseCase;
+    @Mock private B2BProcurementAgent b2BProcurementAgent;
+    @Mock private ProcurementGuardrailsEngine procurementGuardrailsEngine;
+    @Mock private WholesalerPort wholesalerPort;
+    @Mock private DarkStoreRepository darkStoreRepository;
+    @Mock private B2BRestockOrderPort restockOrderPort;
+    @Mock private GovernanceUseCase governanceUseCase;
 
     @InjectMocks
     private MasterOrchestratorService masterOrchestratorService;
@@ -135,5 +143,85 @@ public class MasterOrchestratorServiceTest {
         assertEquals("agent_escalation", ticket.getType());
         assertEquals("pending", ticket.getStatus());
         assertTrue(ticket.getDescription().contains("Daily budget limit of $5 exceeded"));
+    }
+
+    @Test
+    public void testNegotiateProcurement_NoActiveWholesalers() {
+        AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
+        req.setItemId("item-1");
+        req.setItemName("Milk");
+        req.setBasePrice(1.50);
+        req.setQuantity(100);
+
+        when(wholesalerPort.findAll()).thenReturn(Collections.emptyList());
+
+        AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isApproved());
+        assertEquals("No active wholesalers found.", resp.getMessage());
+    }
+
+    @Test
+    public void testNegotiateProcurement_SuccessWithGuardrailsApproved() {
+        AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
+        req.setItemId("item-1");
+        req.setItemName("Milk");
+        req.setBasePrice(1.50);
+        req.setQuantity(100);
+
+        Wholesaler wholesaler = Wholesaler.builder()
+                .wholesalerId("wh-1")
+                .name("Wholesaler A")
+                .isActive(true)
+                .trustScore(80)
+                .build();
+
+        when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
+        
+        B2BProcurementAgent.NegotiationAnalysis analysis = new B2BProcurementAgent.NegotiationAnalysis(
+            1.40, 0.90, "Bulk discount", "Bid matches requirement", 0.02
+        );
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any())).thenReturn(analysis);
+
+        ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
+
+        AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
+
+        assertNotNull(resp);
+        assertTrue(resp.isApproved());
+        assertTrue(resp.getMessage().contains("RFQ AUCTION WINNER: Wholesaler A"));
+        assertEquals(1.40, resp.getProposedPrice());
+    }
+
+    @Test
+    public void testNegotiateProcurement_LlmNegotiationFailureFallback() {
+        AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
+        req.setItemId("item-1");
+        req.setItemName("Milk");
+        req.setBasePrice(10.00);
+        req.setQuantity(5);
+
+        Wholesaler wholesaler = Wholesaler.builder()
+                .wholesalerId("wh-1")
+                .name("Wholesaler A")
+                .isActive(true)
+                .trustScore(80)
+                .build();
+
+        when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any())).thenThrow(new RuntimeException("LLM offline"));
+
+        ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
+
+        AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
+
+        assertNotNull(resp);
+        assertTrue(resp.isApproved());
+        assertEquals(9.00, resp.getProposedPrice(), 0.01);
+        assertEquals(0.50, resp.getConfidence(), 0.01);
+        assertEquals("Rule-based fallback (LLM offline)", resp.getRationale());
     }
 }

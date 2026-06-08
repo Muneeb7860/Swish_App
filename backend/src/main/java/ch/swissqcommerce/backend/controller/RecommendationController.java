@@ -18,11 +18,18 @@ public class RecommendationController {
         this.chatClient = ChatClient.builder(chatModel).build();
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RecommendationController.class);
+
     @GetMapping
     public String getRecommendations(@RequestParam String cartItems) {
-        return chatClient.prompt()
-                .user("Suggest exactly 3 grocery items that complement these cart items: " + cartItems)
-                .call()
-                .content();
+        try {
+            return chatClient.prompt()
+                    .user("Suggest exactly 3 grocery items that complement these cart items: " + cartItems)
+                    .call()
+                    .content();
+        } catch (Exception ex) {
+            log.warn("RecommendationController: External AI recommendation failed ({}). Returning fallback popular items.", ex.getMessage());
+            return "Fresh Milk, Organic Bananas, Sliced Bread";
+        }
     }
 }

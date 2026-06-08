@@ -39,4 +39,13 @@ public class RecommendationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Milk, Bread, Eggs"));
     }
+
+    @Test
+    public void testGetRecommendations_Fallback() throws Exception {
+        when(chatModel.call(any(org.springframework.ai.chat.prompt.Prompt.class))).thenThrow(new RuntimeException("OpenAI quota exceeded"));
+
+        mockMvc.perform(get("/api/recommendations?cartItems=Butter"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Fresh Milk, Organic Bananas, Sliced Bread"));
+    }
 }
