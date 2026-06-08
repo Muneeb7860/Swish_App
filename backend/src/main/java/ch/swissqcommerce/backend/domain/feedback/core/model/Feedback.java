@@ -31,6 +31,6 @@ public class Feedback {
     @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
