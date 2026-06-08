@@ -108,4 +108,17 @@ public class OrderEntity {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemEntity> orderItems;
+
+    @Column(name = "delivery_pin", length = 4)
+    @Size(max = 4)
+    private String deliveryPin;
+
+    @Column(name = "proof_of_delivery_photo_url")
+    private String proofOfDeliveryPhotoUrl;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "rejection_photo_url")
+    private String rejectionPhotoUrl;
 }

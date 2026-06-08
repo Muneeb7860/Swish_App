@@ -205,6 +205,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         }
         
         ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog log = ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog.builder()
+                .logId(java.util.UUID.randomUUID().toString())
                 .storeId(storeId)
                 .productId(productId)
                 .batchId(batchId)

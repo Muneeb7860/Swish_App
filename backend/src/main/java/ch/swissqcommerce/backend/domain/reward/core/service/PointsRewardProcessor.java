@@ -1,10 +1,13 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
 
-import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
+import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
 import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @Component
 public class PointsRewardProcessor implements RewardProcessor {
@@ -23,19 +26,28 @@ public class PointsRewardProcessor implements RewardProcessor {
     @Override
     public void process(String customerId, int amount, String description) {
         RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId)
-                .orElseGet(() -> {
-                    RewardPoints newPoints = new RewardPoints();
-                    newPoints.setCustomerId(customerId);
-                    newPoints.setLoyaltyPoints(0);
-                    return newPoints;
-                });
+                .orElseGet(() -> RewardPoints.builder()
+                        .customerId(customerId)
+                        .loyaltyPoints(0)
+                        .build());
+
         points.setLoyaltyPoints(points.getLoyaltyPoints() + amount);
         rewardOutPort.saveRewardPoints(points);
 
-        CustomerLoyalty log = new CustomerLoyalty();
-        log.setCustomerId(customerId);
-        log.setPointsChanged(amount);
-        log.setDescription(description);
-        rewardOutPort.saveLoyaltyRecord(log);
+        CustomerLoyalty record = CustomerLoyalty.builder()
+                .customerId(customerId)
+                .pointsChanged(amount)
+                .description(description)
+                .createdAt(OffsetDateTime.now())
+                .build();
+        rewardOutPort.saveLoyaltyRecord(record);
+    }
+
+    public RewardPoints calculatePointsForOrder(String customerId, String orderId, BigDecimal amount) {
+        return null; // legacy/mocked
+    }
+
+    public CustomerLoyalty updateCustomerTier(String customerId, RewardPoints points) {
+        return null; // legacy/mocked
     }
 }

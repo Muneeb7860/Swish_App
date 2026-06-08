@@ -16,9 +16,17 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     private final InventoryRepositoryPort inventoryRepositoryPort;
     private final InventoryEventPublisherPort eventPublisherPort;
 
+    private static void requirePositiveQuantity(int quantity, String operation) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException(
+                    operation + " quantity must be greater than zero, got: " + quantity);
+        }
+    }
+
     @Override
     @Transactional
     public InventoryItem reserveStock(String skuStr, int quantity) {
+        requirePositiveQuantity(quantity, "Reserve");
         SKU sku = new SKU(skuStr);
         InventoryItem item = inventoryRepositoryPort.findBySku(sku)
                 .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
@@ -38,6 +46,7 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     @Override
     @Transactional
     public void releaseStock(String skuStr, int quantity) {
+        requirePositiveQuantity(quantity, "Release");
         SKU sku = new SKU(skuStr);
         InventoryItem item = inventoryRepositoryPort.findBySku(sku)
                 .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
@@ -49,6 +58,7 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     @Override
     @Transactional
     public void fulfillStock(String skuStr, int quantity) {
+        requirePositiveQuantity(quantity, "Fulfill");
         SKU sku = new SKU(skuStr);
         InventoryItem item = inventoryRepositoryPort.findBySku(sku)
                 .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
@@ -60,6 +70,7 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     @Override
     @Transactional
     public InventoryItem addStock(String skuStr, int quantity) {
+        requirePositiveQuantity(quantity, "AddStock");
         SKU sku = new SKU(skuStr);
         InventoryItem item = inventoryRepositoryPort.findBySku(sku)
                 .orElseThrow(() -> new IllegalArgumentException("SKU not found"));

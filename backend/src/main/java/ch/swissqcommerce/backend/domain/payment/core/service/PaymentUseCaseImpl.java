@@ -105,6 +105,7 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
                         saved.getPaymentId(), orderId, saved.getAmount(), customerId))
                 .build();
         outboxEventPort.save(fraudEvent);
+        eventPublisher.publishEvent(fraudEvent);
 
         return saved;
     }
@@ -137,10 +138,11 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
                 .aggregateType("Payment")
                 .aggregateId(saved.getPaymentId().toString())
                 .eventType("payment.notification")
-                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"status\": \"CAPTURED\"}",
-                        saved.getPaymentId(), saved.getOrderId()))
+                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"status\": \"CAPTURED\", \"amount\": %s}",
+                        saved.getPaymentId(), saved.getOrderId(), saved.getAmount()))
                 .build();
         outboxEventPort.save(notificationEvent);
+        eventPublisher.publishEvent(notificationEvent);
 
         return saved;
     }

@@ -169,6 +169,10 @@ public class TransactionPersistenceAdapter implements
                 .perishableMaintenanceFee(entity.getPerishableMaintenanceFee())
                 .priceLockedAt(entity.getPriceLockedAt())
                 .createdAt(entity.getCreatedAt())
+                .deliveryPin(entity.getDeliveryPin())
+                .proofOfDeliveryPhotoUrl(entity.getProofOfDeliveryPhotoUrl())
+                .rejectionReason(entity.getRejectionReason())
+                .rejectionPhotoUrl(entity.getRejectionPhotoUrl())
                 .build();
                 
         if (entity.getOrderItems() != null) {
@@ -206,6 +210,10 @@ public class TransactionPersistenceAdapter implements
                 .perishableMaintenanceFee(domain.getPerishableMaintenanceFee() != null ? domain.getPerishableMaintenanceFee() : java.math.BigDecimal.ZERO)
                 .priceLockedAt(domain.getPriceLockedAt())
                 .createdAt(domain.getCreatedAt())
+                .deliveryPin(domain.getDeliveryPin())
+                .proofOfDeliveryPhotoUrl(domain.getProofOfDeliveryPhotoUrl())
+                .rejectionReason(domain.getRejectionReason())
+                .rejectionPhotoUrl(domain.getRejectionPhotoUrl())
                 .build();
 
         if (domain.getOrderItems() != null) {

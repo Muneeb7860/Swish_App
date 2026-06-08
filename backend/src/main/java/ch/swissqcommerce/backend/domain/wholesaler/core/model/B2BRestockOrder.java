@@ -24,6 +24,7 @@ public class B2BRestockOrder {
     @Builder.Default
     private Boolean isFallback = false;
 
+    @Builder.Default
     private String status = "pending";
 
     private String idempotencyKey;

@@ -12,7 +12,7 @@ import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
-
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
@@ -191,9 +191,13 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
     }
 
     @Override
-    public ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog recordTelemetry(
-            Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
         return telemetryService.recordTelemetry(orderId, lat, lng, temp, false);
+    }
+
+    @Override
+    public void cleanupOrderTelemetry(Integer orderId) {
+        telemetryService.cleanupOrder(orderId);
     }
 }
 

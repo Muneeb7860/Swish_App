@@ -74,6 +74,21 @@ public class OrderServiceImpl implements OrderUseCase {
             throw new IllegalArgumentException("Cart items cannot be null or empty");
         }
 
+        // Validate individual cart items: reject zero/negative quantities and duplicate SKUs
+        Set<String> seenItemIds = new java.util.HashSet<>();
+        for (CartItem cartItem : items) {
+            if (cartItem.quantity() <= 0) {
+                throw new IllegalArgumentException(
+                        "Cart item quantity must be greater than zero, got: " + cartItem.quantity()
+                                + " for item: " + cartItem.itemId());
+            }
+            if (!seenItemIds.add(cartItem.itemId())) {
+                throw new IllegalArgumentException(
+                        "Duplicate item in cart: " + cartItem.itemId()
+                                + ". Consolidate quantities into a single line item.");
+            }
+        }
+
         // 1. Initial quick idempotency check
         if (idempotencyKey != null) {
             Optional<Order> existingOrder = orderPort.findByIdempotencyKey(idempotencyKey);
@@ -92,6 +107,8 @@ public class OrderServiceImpl implements OrderUseCase {
         BigDecimal cartSubtotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
         
+        String generatedPin = String.format("%04d", new java.util.Random().nextInt(10000));
+        
         Order order = Order.builder()
                 .customer(customer)
                 .store(store)
@@ -99,6 +116,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .bagsReturned(bagsReturned)
                 .idempotencyKey(idempotencyKey)
                 .tipAmount(tip)
+                .deliveryPin(generatedPin)
                 .build();
 
         boolean containsPerishable = false;

@@ -77,6 +77,14 @@ nginx/ssl/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+# macOS Finder duplicates (e.g. "foo 2.py", "bar 3.txt")
+* [0-9].*
+
+# ─── One-shot scaffolding scripts (must live in tools/ or a separate repo) ───
+/*.py
+/backend/*.py
+/backend/maven_errors.txt
+/backend/*.log
 
 # ─── Portable runtimes (Windows) ─────────────────────────────────────────────
 node-v*.zip

@@ -14,4 +14,5 @@ public interface TelemetryUseCase {
     GeoLocationPort.RiderLocation getLatestLocation(Integer orderId);
     void queueTick(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, boolean dryIceInjected);
     void flushTickBuffer();
+    void cleanupOrder(Integer orderId);
 }

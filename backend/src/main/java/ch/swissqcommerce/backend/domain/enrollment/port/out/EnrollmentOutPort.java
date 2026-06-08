@@ -25,5 +25,6 @@ public interface EnrollmentOutPort {
     Optional<Rider> findRiderByFullName(String fullName);
     void injectDryIce(Integer orderId);
     OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
+    void cleanupOrderTelemetry(Integer orderId);
 }
 

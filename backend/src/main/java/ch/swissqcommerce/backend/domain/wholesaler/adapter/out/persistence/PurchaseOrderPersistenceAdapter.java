@@ -6,7 +6,6 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.PurchaseOrderPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.Optional;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +29,7 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
     @Override
     public WastageLog saveWastageLog(WastageLog log) {
         WastageLogEntity entity = WastageLogEntity.builder()
-                .logId(log.getLogId() != null ? log.getLogId() : UUID.randomUUID().toString())
+                .logId(log.getLogId() != null ? log.getLogId() : java.util.UUID.randomUUID().toString())
                 .storeId(log.getStoreId())
                 .productId(log.getProductId())
                 .batchId(log.getBatchId())
@@ -90,7 +89,7 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
                 
         if (domain.getItems() != null) {
             entity.setItems(new java.util.ArrayList<>(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
-                    .itemId(itemDomain.getItemId())
+                    .itemId(itemDomain.getItemId() != null ? itemDomain.getItemId() : java.util.UUID.randomUUID().toString())
                     .productId(itemDomain.getProductId())
                     .requestedQty(itemDomain.getRequestedQty())
                     .receivedQty(itemDomain.getReceivedQty())
