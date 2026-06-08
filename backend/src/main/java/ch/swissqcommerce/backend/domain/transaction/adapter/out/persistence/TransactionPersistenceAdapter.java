@@ -140,6 +140,13 @@ public class TransactionPersistenceAdapter implements
                 .toList();
     }
 
+    @Override
+    public List<Order> findAllById(List<Integer> ids) {
+        return orderRepository.findAllById(ids).stream()
+                .map(this::mapToDomain)
+                .toList();
+    }
+
     private Order mapToDomain(OrderEntity entity) {
         if (entity == null) return null;
         Order order = Order.builder()
@@ -229,6 +236,7 @@ public class TransactionPersistenceAdapter implements
                 .currentCashInHand(entity.getCurrentCashInHand())
                 .activeShiftId(entity.getActiveShiftId())
                 .createdAt(entity.getCreatedAt())
+                .gearExempt(entity.isGearExempt())
                 .build();
     }
 
@@ -246,6 +254,7 @@ public class TransactionPersistenceAdapter implements
         entity.setCashCollectedLimit(domain.getCashCollectedLimit());
         entity.setCurrentCashInHand(domain.getCurrentCashInHand() != null ? domain.getCurrentCashInHand() : java.math.BigDecimal.ZERO);
         entity.setActiveShiftId(domain.getActiveShiftId());
+        entity.setGearExempt(domain.isGearExempt());
         return entity;
     }
 

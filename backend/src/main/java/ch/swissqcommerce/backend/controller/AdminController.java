@@ -1,8 +1,11 @@
 package ch.swissqcommerce.backend.controller;
 
+import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
 import ch.swissqcommerce.backend.model.ChaosFaultLog;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.service.AdminService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -20,6 +23,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin")
+@Tag(name = "Admin", description = "Chaos engineering, onboarding gate, HITL queue, and system health")
 public class AdminController {
 
     @Autowired
@@ -74,8 +78,18 @@ public class AdminController {
     }
 
     /**
+     * GET /api/admin/onboard/queue - List pending rider onboarding applications.
+     */
+    @Operation(summary = "List pending onboarding applications")
+    @GetMapping("/onboard/queue")
+    public ResponseEntity<List<OnboardingApplication>> getOnboardingQueue() {
+        return ResponseEntity.ok(adminService.getPendingOnboardingApplications());
+    }
+
+    /**
      * POST /api/admin/onboard/queue/{appId}/approve - Approve onboarding gate.
      */
+    @Operation(summary = "Approve a rider onboarding gate")
     @PostMapping("/onboard/queue/{appId}/approve")
     public ResponseEntity<Map<String, Object>> approveOnboarding(
             @PathVariable String appId,

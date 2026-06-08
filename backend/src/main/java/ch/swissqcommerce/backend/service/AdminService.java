@@ -122,6 +122,13 @@ public class AdminService {
     }
 
     /**
+     * Returns all pending rider onboarding applications.
+     */
+    public List<OnboardingApplication> getPendingOnboardingApplications() {
+        return onboardingRepository.findByApprovalAdminFalse();
+    }
+
+    /**
      * Returns all pending HITL queue tickets.
      */
     public List<HitlQueue> getPendingHitlTickets() {

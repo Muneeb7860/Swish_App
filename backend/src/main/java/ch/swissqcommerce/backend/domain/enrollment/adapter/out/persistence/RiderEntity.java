@@ -68,4 +68,8 @@ public class RiderEntity {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "gear_exempt", nullable = false)
+    @Builder.Default
+    private boolean gearExempt = false;
 }

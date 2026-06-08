@@ -176,24 +176,27 @@ public class DispatchPersistenceAdapter implements DispatchPort {
             return false;
         }
 
-        if (criteria.weightKg().compareTo(vehicleConfig.getMaxWeightKg()) > 0) {
-            log.warn("Order weight {} exceeds vehicle max weight limit {}.", criteria.weightKg(), vehicleConfig.getMaxWeightKg());
+        BigDecimal limitWithTolerance = vehicleConfig.getMaxWeightKg().multiply(new BigDecimal("1.10"));
+        if (criteria.weightKg().compareTo(limitWithTolerance) > 0) {
+            log.warn("Order weight {} exceeds vehicle max weight limit {} (including 10% tolerance).", criteria.weightKg(), limitWithTolerance);
             return false;
         }
 
-        OffsetDateTime oneDayAgo = OffsetDateTime.now().minusDays(1);
-        List<GearScanEntity> scans = gearScanRepository.findByRiderIdOrderByScanTimeDesc(criteria.riderId());
-        boolean hasValidGear = scans.stream()
-                .filter(s -> "THERMAL_BAG".equals(s.getGearType()))
-                .filter(s -> "PASSED".equals(s.getVerificationStatus()))
-                .anyMatch(s -> {
-                    OffsetDateTime time = s.getScanTime() != null ? s.getScanTime() : OffsetDateTime.now();
-                    return time.isAfter(oneDayAgo);
-                });
+        if (!criteria.gearExempt()) {
+            OffsetDateTime oneDayAgo = OffsetDateTime.now().minusDays(1);
+            List<GearScanEntity> scans = gearScanRepository.findByRiderIdOrderByScanTimeDesc(criteria.riderId());
+            boolean hasValidGear = scans.stream()
+                    .filter(s -> "THERMAL_BAG".equals(s.getGearType()))
+                    .filter(s -> "PASSED".equals(s.getVerificationStatus()))
+                    .anyMatch(s -> {
+                        OffsetDateTime time = s.getScanTime() != null ? s.getScanTime() : OffsetDateTime.now();
+                        return time.isAfter(oneDayAgo);
+                    });
 
-        if (!hasValidGear) {
-            log.warn("Rider {} has no valid passed thermal bag gear scan in the last 24 hours.", criteria.riderId());
-            return false;
+            if (!hasValidGear) {
+                log.warn("Rider {} has no valid passed thermal bag gear scan in the last 24 hours.", criteria.riderId());
+                return false;
+            }
         }
 
         if (criteria.customerId() == null) {
@@ -201,9 +204,8 @@ public class DispatchPersistenceAdapter implements DispatchPort {
             return false;
         }
 
-        if (criteria.customerId().equals(criteria.riderId()) || 
-            (criteria.customerFullName() != null && criteria.customerFullName().equalsIgnoreCase(criteria.riderFullName()))) {
-            log.warn("Self-matching detected. Customer ID or name matches Rider profile: customer={}, rider={}", 
+        if (criteria.customerId().equals(criteria.riderId())) {
+            log.warn("Self-matching detected. Customer ID matches Rider profile: customer={}, rider={}", 
                     criteria.customerId(), criteria.riderId());
             return false;
         }

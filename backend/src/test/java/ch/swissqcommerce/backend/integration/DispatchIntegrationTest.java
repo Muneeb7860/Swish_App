@@ -116,10 +116,10 @@ public class DispatchIntegrationTest {
         normalRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder()
                 .riderId("RIDER-EBike-1").build();
 
-        // 4. Seed Self-Matching Rider (Name matches Customer)
+        // 4. Seed Self-Matching Rider (ID matches Customer)
         riderRepository.save(ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity.builder()
-                .riderId("RIDER-SelfMatch-1")
-                .fullName("Alice Smith") // Exact match with customer name
+                .riderId("CUST-100") // Exact match with customer ID
+                .fullName("Bob Jones")
                 .vehicleType("Scooter")
                 .onboardingStatus("active")
                 .walletBalance(BigDecimal.ZERO)
@@ -128,7 +128,7 @@ public class DispatchIntegrationTest {
                 .trustScore(100)
                 .build());
         selfMatchingRider = ch.swissqcommerce.backend.domain.enrollment.core.model.Rider.builder()
-                .riderId("RIDER-SelfMatch-1").build();
+                .riderId("CUST-100").build();
     }
 
     @Test
@@ -178,6 +178,31 @@ public class DispatchIntegrationTest {
         
         Order updatedOrder = orderPort.findById(order.getOrderId()).orElseThrow();
         assertEquals(normalRider.getRiderId(), updatedOrder.getRider().getRiderId());
+    }
+
+    @Test
+    public void testAssignOrder_SucceedsWithWeightTolerance() {
+        // Given - Submit gear scan
+        dispatchUseCase.submitGearScan(normalRider.getRiderId(), "THERMAL_BAG", "PASSED", "http://image.url/bag.jpg");
+
+        // Act & Assert (Weight of 10.50kg exceeds E-Bike limit of 10.00kg, but is within 10% tolerance (11.00kg))
+        ActiveShipment shipment = dispatchUseCase.assignOrder(order.getOrderId(), normalRider.getRiderId(), new BigDecimal("10.50"));
+        assertNotNull(shipment);
+        assertEquals("ASSIGNED", shipment.getStatus().name());
+    }
+
+    @Test
+    public void testAssignOrder_SucceedsWithoutGearScanIfExempt() {
+        // Given - Rider is gear exempt
+        ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity exemptRiderEntity = 
+                riderRepository.findById(normalRider.getRiderId()).orElseThrow();
+        exemptRiderEntity.setGearExempt(true);
+        riderRepository.saveAndFlush(exemptRiderEntity);
+
+        // Act & Assert (No gear scan submitted, but assignment succeeds due to exemption)
+        ActiveShipment shipment = dispatchUseCase.assignOrder(order.getOrderId(), normalRider.getRiderId(), new BigDecimal("5.00"));
+        assertNotNull(shipment);
+        assertEquals("ASSIGNED", shipment.getStatus().name());
     }
 
     @Test

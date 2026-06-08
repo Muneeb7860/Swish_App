@@ -122,10 +122,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
                 dispatchPort.saveActiveShipment(shipment);
             }
 
-            List<Order> orders = new ArrayList<>();
-            for (Integer id : orderIdsToFetch) {
-                orderPort.findById(id).ifPresent(orders::add);
-            }
+            List<Order> orders = orderPort.findAllById(orderIdsToFetch);
             for (Order order : orders) {
                 order.setStatus("pending");
                 order.setRider(null);
@@ -156,7 +153,8 @@ public class DispatchServiceImpl implements DispatchUseCase {
                 rider.getFullName(),
                 customerId,
                 customerName,
-                weightKg
+                weightKg,
+                rider.isGearExempt()
         );
 
         boolean eligible = dispatchPort.isRiderEligible(criteria);

@@ -24,7 +24,8 @@ public interface DispatchPort {
             String riderFullName,
             String customerId,
             String customerFullName,
-            BigDecimal weightKg
+            BigDecimal weightKg,
+            boolean gearExempt
     ) {}
 
     boolean isRiderEligible(EligibilityCriteria criteria);

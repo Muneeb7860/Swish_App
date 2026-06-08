@@ -92,6 +92,7 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
                 .currentCashInHand(rider.getCurrentCashInHand())
                 .activeShiftId(rider.getActiveShiftId())
                 .createdAt(rider.getCreatedAt())
+                .gearExempt(rider.isGearExempt())
                 .build();
     }
 
@@ -110,6 +111,7 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
                 .currentCashInHand(entity.getCurrentCashInHand())
                 .activeShiftId(entity.getActiveShiftId())
                 .createdAt(entity.getCreatedAt())
+                .gearExempt(entity.isGearExempt())
                 .build();
     }
 
