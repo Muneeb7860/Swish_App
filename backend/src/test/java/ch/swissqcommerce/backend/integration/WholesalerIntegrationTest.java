@@ -119,8 +119,8 @@ public class WholesalerIntegrationTest {
         assertNotNull(po.getPoId());
         assertEquals("DRAFT", po.getStatus());
         assertEquals(1, po.getItems().size());
-        assertEquals("SKU-EGGS", po.getItems().get(0).getSku());
-        assertEquals(200, po.getItems().get(0).getOrderedQty());
+        assertEquals("SKU-EGGS", po.getItems().get(0).getProductId());
+        assertEquals(200, po.getItems().get(0).getRequestedQty());
         assertEquals(0, po.getItems().get(0).getReceivedQty());
     }
 
