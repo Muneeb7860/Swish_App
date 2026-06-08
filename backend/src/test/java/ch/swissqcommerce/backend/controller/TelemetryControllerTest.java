@@ -3,8 +3,7 @@ package ch.swissqcommerce.backend.controller;
 import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import ch.swissqcommerce.backend.service.InMemoryGeoStore;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,15 +32,6 @@ public class TelemetryControllerTest {
 
     @MockBean
     private TelemetryUseCase telemetryService;
-
-    @MockBean
-    private InMemoryGeoStore geoStore;
-
-    @MockBean
-    private TelemetryPort telemetryPort;
-
-    @MockBean
-    private ch.swissqcommerce.backend.repository.OrderRepository orderRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -73,8 +63,8 @@ public class TelemetryControllerTest {
 
     @Test
     public void testStreamTelemetry() throws Exception {
-        when(geoStore.getLatestLocation(1)).thenReturn(
-            new InMemoryGeoStore.RiderLocation(
+        when(telemetryService.getLatestLocation(1)).thenReturn(
+            new GeoLocationPort.RiderLocation(
                 new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0")
             )
         );
@@ -85,7 +75,7 @@ public class TelemetryControllerTest {
 
     @Test
     public void testInjectDryIce() throws Exception {
-        when(geoStore.getLatestLocation(1)).thenReturn(null);
+        when(telemetryService.getLatestLocation(1)).thenReturn(null);
 
         mockMvc.perform(post("/api/telemetry/1/dry-ice"))
                 .andExpect(status().isOk())

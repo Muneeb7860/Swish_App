@@ -19,6 +19,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRe
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.agent.adapter.in.web.AgentController;
+import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -262,7 +263,7 @@ public class RewardsAndGovernanceIntegrationTest {
     @Test
     public void testB2BProcurementNegotiationGuardrailFailure() {
         // Given
-        AgentController.NegotiationRequest request = new AgentController.NegotiationRequest();
+        AgentUseCase.NegotiationRequest request = new AgentUseCase.NegotiationRequest();
         request.setItemId("item-1");
         request.setItemName("Swiss Milk Premium");
         request.setBasePrice(2.50);
@@ -276,7 +277,7 @@ public class RewardsAndGovernanceIntegrationTest {
                         2.50, 0.95, "Good price", "ACCEPTED", 0.00005));
 
         // When
-        ResponseEntity<AgentController.NegotiationResponse> responseEntity = agentController.negotiate(request);
+        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity = agentController.negotiate(request);
 
         // Then
         assertNotNull(responseEntity);
@@ -313,7 +314,7 @@ public class RewardsAndGovernanceIntegrationTest {
                 .build();
         wholesalerRepository.save(otherWholesaler);
 
-        AgentController.NegotiationRequest request = new AgentController.NegotiationRequest();
+        AgentUseCase.NegotiationRequest request = new AgentUseCase.NegotiationRequest();
         request.setItemId("item-1");
         request.setItemName("Swiss Milk Premium");
         request.setBasePrice(2.50);
@@ -332,7 +333,7 @@ public class RewardsAndGovernanceIntegrationTest {
                         2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
 
         // When
-        ResponseEntity<AgentController.NegotiationResponse> responseEntity = agentController.negotiate(request);
+        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity = agentController.negotiate(request);
 
         // Then
         assertNotNull(responseEntity);

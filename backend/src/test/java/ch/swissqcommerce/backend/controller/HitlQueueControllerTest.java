@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.controller;
 
+import ch.swissqcommerce.backend.domain.governance.adapter.in.web.HitlQueueController;
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +33,6 @@ public class HitlQueueControllerTest {
     @MockBean
     private GovernanceUseCase governanceUseCase;
 
-    @MockBean
-    private ProcurementApprovalRepository approvalsRepository;
-
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -47,11 +44,7 @@ public class HitlQueueControllerTest {
         pending.setWholesalerId("W1");
         pending.setAmount(new BigDecimal("6000.00"));
 
-        ProcurementApproval approved = new ProcurementApproval();
-        approved.setId(2);
-        approved.setStatus("APPROVED");
-
-        when(approvalsRepository.findAll()).thenReturn(Arrays.asList(pending, approved));
+        when(governanceUseCase.getPendingApprovals()).thenReturn(Arrays.asList(pending));
 
         mockMvc.perform(get("/api/governance/hitl"))
                 .andExpect(status().isOk())

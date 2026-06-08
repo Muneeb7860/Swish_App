@@ -3,6 +3,7 @@ package ch.swissqcommerce.backend.domain.telemetry.core.service;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
@@ -20,12 +21,38 @@ import java.util.NoSuchElementException;
 public class TelemetryServiceImpl implements TelemetryUseCase {
 
     private final java.util.concurrent.ConcurrentHashMap<Integer, java.time.OffsetDateTime> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTick> tickBuffer = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
     @Autowired
     private TelemetryPort telemetryPort;
 
     @Autowired
     private LedgerUseCase ledgerUseCase;
+
+    @Autowired
+    private GeoLocationPort geoLocationPort;
+
+    public static class TelemetryTick {
+        private final Integer orderId;
+        private final BigDecimal latitude;
+        private final BigDecimal longitude;
+        private final BigDecimal temperature;
+        private final boolean dryIceInjected;
+
+        public TelemetryTick(Integer orderId, BigDecimal latitude, BigDecimal longitude, BigDecimal temperature, boolean dryIceInjected) {
+            this.orderId = orderId;
+            this.latitude = latitude;
+            this.longitude = longitude;
+            this.temperature = temperature;
+            this.dryIceInjected = dryIceInjected;
+        }
+
+        public Integer getOrderId() { return orderId; }
+        public BigDecimal getLatitude() { return latitude; }
+        public BigDecimal getLongitude() { return longitude; }
+        public BigDecimal getTemperature() { return temperature; }
+        public boolean isDryIceInjected() { return dryIceInjected; }
+    }
 
     @Override
     @Transactional
@@ -122,5 +149,50 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         // Record a clean telemetry tick resetting temp
         recordTelemetry(orderId, order.getRider().getActiveLat(), order.getRider().getActiveLng(), 
                         new BigDecimal("4.0"), true);
+    }
+
+    @Override
+    public void updateLocation(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+        geoLocationPort.updateLocation(orderId, lat, lng, temp);
+    }
+
+    @Override
+    public GeoLocationPort.RiderLocation getLatestLocation(Integer orderId) {
+        return geoLocationPort.getLatestLocation(orderId);
+    }
+
+    @Override
+    public void queueTick(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, boolean dryIceInjected) {
+        tickBuffer.add(new TelemetryTick(orderId, lat, lng, temp, dryIceInjected));
+    }
+
+    @Override
+    @Transactional
+    public void flushTickBuffer() {
+        if (tickBuffer.isEmpty()) return;
+        java.util.List<TelemetryTick> ticksToFlush = new java.util.ArrayList<>();
+        TelemetryTick tick;
+        while ((tick = tickBuffer.poll()) != null) {
+            ticksToFlush.add(tick);
+        }
+        if (ticksToFlush.isEmpty()) return;
+        for (TelemetryTick request : ticksToFlush) {
+            try {
+                telemetryPort.findOrderById(request.getOrderId()).ifPresent(order -> {
+                    OrderTelemetryLog log = OrderTelemetryLog.builder()
+                            .order(order)
+                            .deviceTimestamp(OffsetDateTime.now())
+                            .latitude(request.getLatitude())
+                            .longitude(request.getLongitude())
+                            .temperature(request.getTemperature())
+                            .dryIceInjected(request.isDryIceInjected())
+                            .alertTriggered(false)
+                            .build();
+                    telemetryPort.save(log);
+                });
+            } catch (Exception e) {
+                tickBuffer.add(request); // Re-queue on failure
+            }
+        }
     }
 }
