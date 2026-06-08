@@ -188,7 +188,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
             }
         }
         
-        po.setStatus(allFullyReceived ? "FULLY_RECEIVED" : "PARTIALLY_RECEIVED");
+        po.setStatus(allFullyReceived ? "RECEIVED" : "PARTIALLY_RECEIVED");
         po.setGrnVerificationFileUrl(grnFileUrl);
         po.setInboundDate(java.time.OffsetDateTime.now());
         po.setUpdatedAt(java.time.OffsetDateTime.now());
