@@ -2,12 +2,13 @@ package ch.swissqcommerce.backend.domain.dispatch.core.service;
 
 import ch.swissqcommerce.backend.domain.dispatch.core.model.ActiveShipment;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.GearScan;
+import ch.swissqcommerce.backend.domain.dispatch.core.model.ShipmentStatus;
 import ch.swissqcommerce.backend.domain.dispatch.port.in.DispatchUseCase;
 import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,14 +27,14 @@ import java.util.UUID;
 public class DispatchServiceImpl implements DispatchUseCase {
 
     private final DispatchPort dispatchPort;
-    private final RiderRepository riderRepository;
-    private final OrderRepository orderRepository;
+    private final EnrollmentOutPort enrollmentOutPort;
+    private final OrderPort orderPort;
 
     @Override
     @Transactional
     public GearScan submitGearScan(String riderId, String gearType, String verificationStatus, String imageUrl) {
         // Confirm rider exists
-        if (!riderRepository.existsById(riderId)) {
+        if (enrollmentOutPort.findRiderById(riderId).isEmpty()) {
             throw new NoSuchElementException("Rider not found: " + riderId);
         }
 
@@ -53,12 +54,12 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment updateRiderGps(String riderId, BigDecimal lat, BigDecimal lng) {
-        Rider rider = riderRepository.findById(riderId)
+        Rider rider = enrollmentOutPort.findRiderById(riderId)
                 .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
 
         rider.setActiveLat(lat);
         rider.setActiveLng(lng);
-        riderRepository.save(rider);
+        enrollmentOutPort.saveRider(rider);
 
         List<ActiveShipment> activeShipments = dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "ASSIGNED");
         activeShipments.addAll(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "PICKING_UP"));
@@ -109,7 +110,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
 
         for (ActiveShipment shipment : activeShipments) {
             if (shipment.getStationarySince() != null && shipment.getStationarySince().isBefore(now.minusMinutes(10))) {
-                shipment.setStatus("REALLOCATED");
+                shipment.setStatus(ShipmentStatus.REALLOCATED);
                 shipment.setUpdatedAt(now);
                 shipmentsToReallocate.add(shipment);
                 orderIdsToFetch.add(shipment.getOrderId());
@@ -121,13 +122,16 @@ public class DispatchServiceImpl implements DispatchUseCase {
                 dispatchPort.saveActiveShipment(shipment);
             }
 
-            List<Order> orders = orderRepository.findAllById(orderIdsToFetch);
+            List<Order> orders = new ArrayList<>();
+            for (Integer id : orderIdsToFetch) {
+                orderPort.findById(id).ifPresent(orders::add);
+            }
             for (Order order : orders) {
                 order.setStatus("pending");
                 order.setRider(null);
                 reallocatedOrders.add(order.getOrderId());
+                orderPort.save(order);
             }
-            orderRepository.saveAll(orders);
         }
 
         return reallocatedOrders;
@@ -136,10 +140,10 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment assignOrder(Integer orderId, String riderId, BigDecimal weightKg) {
-        Rider rider = riderRepository.findById(riderId)
+        Rider rider = enrollmentOutPort.findRiderById(riderId)
                 .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
 
-        Order order = orderRepository.findById(orderId)
+        Order order = orderPort.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
         String customerId = order.getCustomer() != null ? order.getCustomer().getCustomerId() : null;
@@ -162,7 +166,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
 
         // Assign order to rider
         order.setRider(rider);
-        orderRepository.save(order);
+        orderPort.save(order);
 
         // Update active shipment entry
         ActiveShipment shipment = dispatchPort.findActiveShipmentByOrder(orderId)
@@ -173,7 +177,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
                         .build());
 
         shipment.setRiderId(riderId);
-        shipment.setStatus("ASSIGNED");
+        shipment.setStatus(ShipmentStatus.ASSIGNED);
         shipment.setAssignedAt(OffsetDateTime.now());
         shipment.setUpdatedAt(OffsetDateTime.now());
 
@@ -186,7 +190,7 @@ public class DispatchServiceImpl implements DispatchUseCase {
         ActiveShipment shipment = dispatchPort.findActiveShipmentByOrder(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Active shipment not found for order: " + orderId));
 
-        shipment.setStatus(status);
+        shipment.setStatus(ShipmentStatus.valueOf(status.toUpperCase()));
         shipment.setUpdatedAt(OffsetDateTime.now());
         return dispatchPort.saveActiveShipment(shipment);
     }

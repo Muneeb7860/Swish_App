@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DomainEventEntityEntity {
+public class DomainEventEntity {
     @Id
     private String eventId;
     private String aggregateId;

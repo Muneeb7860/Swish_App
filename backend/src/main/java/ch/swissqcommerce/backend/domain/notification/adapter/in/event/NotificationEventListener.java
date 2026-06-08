@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.notification.adapter.in.event;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+
 
 import ch.swissqcommerce.backend.domain.notification.port.in.NotificationUseCase;
 import lombok.RequiredArgsConstructor;

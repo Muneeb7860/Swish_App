@@ -8,6 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface B2BRestockOrderRepository extends JpaRepository<B2BRestockOrderEntity, Integer> {
-    List<B2BRestockOrder> findByWholesalerWholesalerIdOrderByCreatedAtDesc(String wholesalerId);
-    Optional<B2BRestockOrder> findByIdempotencyKey(String idempotencyKey);
+    List<B2BRestockOrderEntity> findByWholesalerWholesalerIdOrderByCreatedAtDesc(String wholesalerId);
+    Optional<B2BRestockOrderEntity> findByIdempotencyKey(String idempotencyKey);
 }

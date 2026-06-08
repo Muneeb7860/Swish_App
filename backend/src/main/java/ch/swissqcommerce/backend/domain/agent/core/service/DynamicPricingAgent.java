@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;

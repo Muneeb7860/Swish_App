@@ -1,4 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.core.service;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.UUID;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.model.Inventory;
+
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
@@ -311,7 +318,7 @@ public class OrderServiceImpl implements OrderUseCase {
                     .ticketId(ticketId)
                     .type("refund_customer")
                     .customer(customer)
-                    .order(order)
+                    .orderId(order.getOrderId())
                     .description("AI-AUTOPILOT: Refund request auto-approved due to verified SLA breach for order " + orderId + ". Override By: ai-autopilot. Reason: Verified SLA countdown breach (countdown <= 0)")
                     .amount(order.getTotalAmount())
                     .status("approved")
@@ -342,7 +349,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 .ticketId(ticketId)
                 .type("refund_customer")
                 .customer(customer)
-                .order(order)
+                .orderId(order.getOrderId())
                 .description("Refund request for order " + orderId + ". Reason: " + claimReason)
                 .amount(order.getTotalAmount())
                 .status("pending")

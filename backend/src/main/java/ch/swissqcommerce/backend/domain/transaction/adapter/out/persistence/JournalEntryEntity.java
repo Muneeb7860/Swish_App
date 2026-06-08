@@ -46,5 +46,5 @@ public class JournalEntryEntity {
     private String entryHash;
 
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<LedgerLine> ledgerLines;
+    private List<LedgerLineEntity> ledgerLines;
 }

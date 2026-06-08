@@ -17,7 +17,8 @@ public class EventServiceImpl implements EventUseCase {
     @Override
     public DomainEventEntity publishEvent(String topic, String payload) {
         DomainEventEntity event = DomainEventEntity.builder()
-                .topic(topic)
+                .eventId(java.util.UUID.randomUUID().toString())
+                .eventType(topic)
                 .payload(payload)
                 .status("PENDING")
                 .createdAt(OffsetDateTime.now())

@@ -1,7 +1,6 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import ch.swissqcommerce.backend.model.Customer;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -49,7 +48,6 @@ public class PaymentEntity {
     @Column(name = "status", length = 20, nullable = false)
     @NotBlank
     @Size(max = 20)
-    @Builder.Default
     private String status = "AUTHORIZED";
 
     @Column(name = "idempotency_key", length = 100, unique = true)

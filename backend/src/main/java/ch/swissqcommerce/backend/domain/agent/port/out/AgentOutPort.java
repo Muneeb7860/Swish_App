@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.agent.port.out;
+import java.util.List;
+
 
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;

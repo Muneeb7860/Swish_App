@@ -39,7 +39,6 @@ public class RiderEntity {
     @Column(name = "wallet_balance", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
-    @Builder.Default
     private BigDecimal walletBalance = BigDecimal.ZERO;
 
     @Column(name = "active_lat", precision = 9, scale = 6)
@@ -51,19 +50,16 @@ public class RiderEntity {
     @Column(name = "trust_score", nullable = false)
     @Min(0)
     @Max(100)
-    @Builder.Default
     private Integer trustScore = 100;
 
     @Column(name = "cash_collected_limit", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
-    @Builder.Default
     private BigDecimal cashCollectedLimit = new BigDecimal("100.00");
 
     @Column(name = "current_cash_in_hand", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
-    @Builder.Default
     private BigDecimal currentCashInHand = BigDecimal.ZERO;
 
     @Column(name = "active_shift_id", length = 50)

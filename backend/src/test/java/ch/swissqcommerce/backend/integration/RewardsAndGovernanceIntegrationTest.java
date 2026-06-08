@@ -13,10 +13,14 @@ import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderEntity;
+import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.agent.adapter.in.web.AgentController;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +62,9 @@ public class RewardsAndGovernanceIntegrationTest {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderPort orderPort;
 
     @Autowired
     private OrderTelemetryLogRepository telemetryLogRepository;
@@ -121,21 +128,25 @@ public class RewardsAndGovernanceIntegrationTest {
         customerRepository.save(customer);
 
         // Seed Wholesaler
-        wholesaler = Wholesaler.builder()
+        WholesalerEntity wholesalerEntity = WholesalerEntity.builder()
                 .wholesalerId("WHOLE-999")
                 .name("Starfleet Supplies")
+                .baseInvoiceAmount(new BigDecimal("1000.00"))
+                .fallbackInvoiceAmount(new BigDecimal("2000.00"))
                 .build();
-        wholesalerRepository.save(wholesaler);
+        wholesalerRepository.save(wholesalerEntity);
+        wholesaler = Wholesaler.builder().wholesalerId("WHOLE-999").name("Starfleet Supplies").build();
 
         // Seed Restock Order
-        restockOrder = B2BRestockOrder.builder()
-                .wholesaler(wholesaler)
+        B2BRestockOrderEntity restockOrderEntity = B2BRestockOrderEntity.builder()
+                .wholesaler(wholesalerEntity)
                 .invoiceAmount(new BigDecimal("5200.00"))
                 .isFallback(false)
                 .status("pending")
                 .idempotencyKey("KEY-HITL-1")
                 .build();
-        restockOrderRepository.save(restockOrder);
+        restockOrderRepository.save(restockOrderEntity);
+        restockOrder = B2BRestockOrder.builder().restockOrderId(restockOrderEntity.getRestockOrderId()).wholesaler(wholesaler).invoiceAmount(new BigDecimal("5200.00")).build();
 
         // Seed Order
         order = Order.builder()
@@ -145,18 +156,18 @@ public class RewardsAndGovernanceIntegrationTest {
                 .status("picked")
                 .idempotencyKey("KEY-ORDER-1")
                 .build();
-        orderRepository.save(order);
+        orderPort.save(order);
 
         // Seed Telemetry logs for order
-        OrderTelemetryLog log1 = OrderTelemetryLog.builder()
-                .order(order)
+        OrderTelemetryLogEntity log1 = OrderTelemetryLogEntity.builder()
+                .orderId(order.getOrderId())
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(new BigDecimal("47.3769"))
                 .longitude(new BigDecimal("8.5417"))
                 .temperature(new BigDecimal("5.2"))
                 .build();
-        OrderTelemetryLog log2 = OrderTelemetryLog.builder()
-                .order(order)
+        OrderTelemetryLogEntity log2 = OrderTelemetryLogEntity.builder()
+                .orderId(order.getOrderId())
                 .deviceTimestamp(OffsetDateTime.now().plusSeconds(5))
                 .latitude(new BigDecimal("47.3770"))
                 .longitude(new BigDecimal("8.5418"))
@@ -178,7 +189,7 @@ public class RewardsAndGovernanceIntegrationTest {
         RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId).orElseThrow();
         assertEquals(50, points.getLoyaltyPoints());
 
-        List<CustomerLoyalty> logs = loyaltyRepository.findByCustomerId(customerId);
+        List<ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyEntity> logs = loyaltyRepository.findByCustomerId(customerId);
         assertEquals(1, logs.size());
         assertEquals(50, logs.get(0).getPointsChanged());
         assertEquals("Points added via UseCase", logs.get(0).getDescription());
@@ -203,9 +214,9 @@ public class RewardsAndGovernanceIntegrationTest {
         governanceUseCase.auditNegotiation(restockOrderId, "WHOLE-999", amount);
 
         // Then - Verify pending override request created
-        List<ProcurementApproval> approvals = approvalsRepository.findAll();
+        List<ProcurementApprovalEntity> approvals = approvalsRepository.findAll();
         assertFalse(approvals.isEmpty());
-        ProcurementApproval approval = approvals.get(0);
+        ProcurementApprovalEntity approval = approvals.get(0);
         assertEquals("PENDING", approval.getStatus());
         assertEquals(amount, approval.getAmount());
 
@@ -213,12 +224,12 @@ public class RewardsAndGovernanceIntegrationTest {
         governanceUseCase.approveOverride(approval.getId(), "operator-admin", "Urgent restock approved");
 
         // Then - Verify approved and restock order released
-        ProcurementApproval updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
+        ProcurementApprovalEntity updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
         assertEquals("APPROVED", updatedApproval.getStatus());
         assertEquals("operator-admin", updatedApproval.getOverrideBy());
         assertEquals("Urgent restock approved", updatedApproval.getOverrideReason());
 
-        B2BRestockOrder updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
+        B2BRestockOrderEntity updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
         assertEquals("fulfilled", updatedRestock.getStatus());
     }
 
@@ -229,16 +240,16 @@ public class RewardsAndGovernanceIntegrationTest {
         BigDecimal amount = restockOrder.getInvoiceAmount();
 
         governanceUseCase.auditNegotiation(restockOrderId, "WHOLE-999", amount);
-        ProcurementApproval approval = approvalsRepository.findAll().get(0);
+        ProcurementApprovalEntity approval = approvalsRepository.findAll().get(0);
 
         // When - Reject override
         governanceUseCase.rejectOverride(approval.getId(), "operator-admin", "Too expensive, reject");
 
         // Then - Verify rejected and restock order failed
-        ProcurementApproval updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
+        ProcurementApprovalEntity updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
         assertEquals("REJECTED", updatedApproval.getStatus());
 
-        B2BRestockOrder updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
+        B2BRestockOrderEntity updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
         assertEquals("failed", updatedRestock.getStatus());
     }
 
@@ -284,9 +295,9 @@ public class RewardsAndGovernanceIntegrationTest {
         assertFalse(responseEntity.getBody().isApproved());
 
         // Verify that B2BRestockOrder was created in pending state
-        List<B2BRestockOrder> restockOrders = restockOrderRepository.findAll();
+        List<B2BRestockOrderEntity> restockOrders = restockOrderRepository.findAll();
         // The one seeded in setUp is "KEY-HITL-1", we find the new one
-        B2BRestockOrder pendingOrder = restockOrders.stream()
+        B2BRestockOrderEntity pendingOrder = restockOrders.stream()
                 .filter(o -> !"KEY-HITL-1".equals(o.getIdempotencyKey()))
                 .findFirst()
                 .orElseThrow();
@@ -294,8 +305,8 @@ public class RewardsAndGovernanceIntegrationTest {
         assertEquals(0, pendingOrder.getInvoiceAmount().compareTo(BigDecimal.valueOf(7500.00)));
 
         // Verify that ProcurementApproval request was created pointing to the restock order
-        List<ProcurementApproval> approvals = approvalsRepository.findAll();
-        ProcurementApproval pendingApproval = approvals.stream()
+        List<ProcurementApprovalEntity> approvals = approvalsRepository.findAll();
+        ProcurementApprovalEntity pendingApproval = approvals.stream()
                 .filter(a -> pendingOrder.getRestockOrderId().equals(a.getRestockOrderId()))
                 .findFirst()
                 .orElseThrow();
@@ -306,10 +317,12 @@ public class RewardsAndGovernanceIntegrationTest {
     @Test
     public void testMultiWholesalerRfqAuction() {
         // Given
-        Wholesaler otherWholesaler = Wholesaler.builder()
+        WholesalerEntity otherWholesaler = WholesalerEntity.builder()
                 .wholesalerId("WHOLE-888")
                 .name("Galactic Supplies")
                 .isActive(true)
+                .baseInvoiceAmount(new BigDecimal("1000.00"))
+                .fallbackInvoiceAmount(new BigDecimal("2000.00"))
                 .build();
         wholesalerRepository.save(otherWholesaler);
 

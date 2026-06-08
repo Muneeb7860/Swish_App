@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 
-import lombok.Builder;
 import lombok.Getter;
 
 import java.time.OffsetDateTime;
@@ -14,8 +13,6 @@ import java.time.OffsetDateTime;
 @Getter
 @Builder
 @Data
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class Session {
     private final String id;

@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface OrderTelemetryLogEntityRepository extends JpaRepository<OrderTelemetryLogEntity, Integer> {
-    List<OrderTelemetryLogEntity> findByOrderOrderIdOrderByDeviceTimestampDesc(Integer orderId);
+public interface OrderTelemetryLogRepository extends JpaRepository<OrderTelemetryLogEntity, Integer> {
+    List<OrderTelemetryLogEntity> findByOrderIdOrderByDeviceTimestampDesc(Integer orderId);
 }

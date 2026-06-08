@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
+@RestController("orderManagementOrderController")
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class OrderController {

@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface DomainEventEntityRepository extends JpaRepository<DomainEventEntity, UUID> {
+public interface DomainEventRepository extends JpaRepository<DomainEventEntity, String> {
 }

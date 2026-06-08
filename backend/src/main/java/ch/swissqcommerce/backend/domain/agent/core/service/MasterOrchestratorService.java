@@ -133,7 +133,7 @@ public class MasterOrchestratorService implements AgentUseCase {
                 .ticketId(ticketId)
                 .type("agent_escalation")
                 .customer(customer)
-                .order(order)
+                .orderId(order != null ? order.getOrderId() : null)
                 .description(String.format("Agent escalation due to: %s. Message: %s", reason, request.getMessage()))
                 .amount(order != null ? order.getTotalAmount() : BigDecimal.ZERO)
                 .status("pending")

@@ -6,6 +6,7 @@ import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationRepository;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationEntity;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -105,7 +106,7 @@ public class AdminService {
      */
     @Transactional
     public Map<String, Object> approveOnboarding(String applicationId, String gate) {
-        OnboardingApplication app = onboardingRepository.findById(applicationId)
+        OnboardingApplicationEntity app = onboardingRepository.findById(applicationId)
                 .orElseThrow(() -> new NoSuchElementException("Application not found: " + applicationId));
 
         switch (gate.toLowerCase()) {

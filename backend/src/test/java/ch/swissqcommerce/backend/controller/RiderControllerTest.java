@@ -2,7 +2,7 @@ package ch.swissqcommerce.backend.controller;
 
 import ch.swissqcommerce.backend.domain.enrollment.adapter.in.web.RiderController;
 import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +36,18 @@ public class RiderControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    public static class OnboardingRequest {
+        private String name;
+        private String vehicleType;
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getVehicleType() { return vehicleType; }
+        public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
+    }
+
     @Test
     public void testSubmitOnboarding() throws Exception {
-        RiderController.OnboardingRequest req = new RiderController.OnboardingRequest();
+        OnboardingRequest req = new OnboardingRequest();
         req.setName("John");
         req.setVehicleType("Bike");
 

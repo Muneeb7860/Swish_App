@@ -7,5 +7,5 @@ import java.util.Optional;
 
 @Repository
 public interface WholesalerRepository extends JpaRepository<WholesalerEntity, String> {
-    Optional<Wholesaler> findByIsPrimary(Boolean isPrimary);
+    Optional<WholesalerEntity> findByIsPrimary(Boolean isPrimary);
 }

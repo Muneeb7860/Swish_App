@@ -38,11 +38,9 @@ public class OnboardingApplicationEntity {
     private Boolean approvalOps = false;
 
     @Column(name = "approval_compliance", nullable = false)
-    @Builder.Default
     private Boolean approvalCompliance = false;
 
     @Column(name = "approval_admin", nullable = false)
-    @Builder.Default
     private Boolean approvalAdmin = false;
 
     @Column(name = "created_at", insertable = false, updatable = false)

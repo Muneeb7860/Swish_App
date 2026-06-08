@@ -6,17 +6,15 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 
-import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 @Builder
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserAccount {
-    private final String id;
+    private String id;
     private EmailAddress emailAddress;
     private PasswordHash passwordHash;
     private AccountStatus status;

@@ -1,4 +1,12 @@
 package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 
 import ch.swissqcommerce.backend.model.DarkStore;
 import jakarta.persistence.*;
@@ -14,6 +22,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
 public class B2BRestockOrderEntity {
 
     @Id
@@ -27,7 +36,7 @@ public class B2BRestockOrderEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wholesaler_id")
-    private Wholesaler wholesaler;
+    private WholesalerEntity wholesaler;
 
     @Column(name = "invoice_amount", precision = 10, scale = 2, nullable = false)
     @NotNull
@@ -41,7 +50,6 @@ public class B2BRestockOrderEntity {
     @Column(name = "status", length = 20, nullable = false)
     @NotBlank
     @Size(max = 20)
-    @Builder.Default
     private String status = "pending";
 
     @Column(name = "idempotency_key", length = 100, unique = true)

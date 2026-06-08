@@ -38,7 +38,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         boolean alert = temp.compareTo(new BigDecimal("8.0")) > 0;
 
         OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
-                .order(order)
+                .orderId(order.getOrderId())
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(lat)
                 .longitude(lng)

@@ -1,4 +1,9 @@
 package ch.swissqcommerce.backend.domain.enrollment.core.service;
+import java.util.List;
+import java.util.UUID;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 

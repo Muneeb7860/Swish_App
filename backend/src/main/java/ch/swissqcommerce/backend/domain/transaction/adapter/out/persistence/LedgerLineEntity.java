@@ -25,7 +25,7 @@ public class LedgerLineEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entry_id", nullable = false)
     @JsonIgnore
-    private JournalEntry journalEntry;
+    private JournalEntryEntity journalEntry;
 
     @Column(name = "account_type", length = 20, nullable = false)
     @NotBlank
@@ -45,6 +45,5 @@ public class LedgerLineEntity {
     @Column(name = "credit", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
-    @Builder.Default
     private BigDecimal credit = BigDecimal.ZERO;
 }

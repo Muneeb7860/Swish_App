@@ -1,7 +1,16 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
+import ch.swissqcommerce.backend.model.Inventory;
+
+
+import ch.swissqcommerce.backend.domain.transaction.core.model.OrderItemId;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 
 import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.domain.transaction.core.model.OrderItemId;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -17,13 +26,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
 public class OrderItemEntity {
 
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     @JsonIgnore
-    private Order order;
+    private OrderEntity order;
 
     @Id
     @ManyToOne(fetch = FetchType.LAZY)

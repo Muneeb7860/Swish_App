@@ -21,7 +21,7 @@ public class RiderAcademyCertificateEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rider_id", nullable = false)
-    private Rider rider;
+    private RiderEntity rider;
 
     @NotBlank
     @Column(name = "course_name", length = 100, nullable = false)

@@ -2,8 +2,9 @@ package ch.swissqcommerce.backend.domain.governance.core.service;
 
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalEntityPort;
+import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
@@ -30,14 +31,14 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GovernanceServiceImpl.class);
 
-    private final ProcurementApprovalEntityPort approvalsPort;
+    private final ProcurementApprovalPort approvalsPort;
     private final B2BRestockOrderPort restockOrderPort;
     private final TelemetryPort telemetryPort;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public GovernanceServiceImpl(ProcurementApprovalEntityPort approvalsPort,
+    public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
                                  B2BRestockOrderPort restockOrderPort,
                                  TelemetryPort telemetryPort) {
         this.approvalsPort = approvalsPort;
@@ -100,7 +101,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         B2BRestockOrder restockOrder = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
 
-        ProcurementApprovalEntity approval = ProcurementApprovalEntity.builder()
+        ProcurementApproval approval = ProcurementApproval.builder()
                 .restockOrderId(restockOrderId)
                 .wholesalerId(wholesalerId)
                 .amount(amount)
@@ -113,7 +114,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void approveOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApprovalEntity approval = approvalsPort.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
@@ -137,7 +138,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void rejectOverride(Integer approvalId, String operator, String reason) {
-        ProcurementApprovalEntity approval = approvalsPort.findById(approvalId)
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {

@@ -23,7 +23,7 @@ public class NotificationPersistenceAdapter implements NotificationPort {
                 .body(notification.getBody())
                 .status(notification.getStatus())
                 .scheduledAt(notification.getScheduledAt())
-                .setSentAt(notification.getSentAt())
+                .sentAt(notification.getSentAt())
                 .build();
         repository.save(entity);
         return notification;

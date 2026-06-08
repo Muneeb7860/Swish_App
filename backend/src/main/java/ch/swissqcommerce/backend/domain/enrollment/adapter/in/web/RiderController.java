@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.enrollment.adapter.in.web;
+import java.math.BigDecimal;
+
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

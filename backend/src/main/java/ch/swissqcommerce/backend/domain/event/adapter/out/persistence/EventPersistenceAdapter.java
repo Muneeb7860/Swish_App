@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class EventPersistenceAdapter implements EventPort {
 
-    private final DomainEventEntityRepository repository;
+    private final DomainEventRepository repository;
 
     @Override
     public DomainEventEntity saveEvent(DomainEventEntity event) {

@@ -7,5 +7,5 @@ import java.util.List;
 
 @Repository
 public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyaltyEntity, Integer> {
-    List<CustomerLoyalty> findByCustomerId(String customerId);
+    List<CustomerLoyaltyEntity> findByCustomerId(String customerId);
 }

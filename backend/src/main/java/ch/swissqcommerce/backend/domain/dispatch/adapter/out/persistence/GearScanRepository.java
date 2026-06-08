@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface GearScanRepository extends JpaRepository<GearScanEntity, String> {
-    List<GearScan> findByRiderIdOrderByScanTimeDesc(String riderId);
+    List<GearScanEntity> findByRiderIdOrderByScanTimeDesc(String riderId);
 }

@@ -1,4 +1,7 @@
 package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
+import java.util.List;
+import java.util.ArrayList;
+
 
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
@@ -48,18 +51,16 @@ public class TelemetryController {
         if (ticksToFlush.isEmpty()) return;
         for (TelemetryTickRequest request : ticksToFlush) {
             try {
-                orderRepository.findById(request.getOrderId()).ifPresent(order -> {
-                    OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
-                            .order(order)
-                            .deviceTimestamp(OffsetDateTime.now())
-                            .latitude(request.getLatitude())
-                            .longitude(request.getLongitude())
-                            .temperature(request.getTemperature())
-                            .dryIceInjected(request.isDryIceInjected())
-                            .alertTriggered(false)
-                            .build();
-                    telemetryPort.save(log);
-                });
+                OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
+                        .orderId(request.getOrderId())
+                        .deviceTimestamp(OffsetDateTime.now())
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .temperature(request.getTemperature())
+                        .dryIceInjected(request.isDryIceInjected())
+                        .alertTriggered(false)
+                        .build();
+                telemetryPort.save(log);
             } catch (Exception e) {
                 tickBuffer.add(request); // Re-queue on failure
             }

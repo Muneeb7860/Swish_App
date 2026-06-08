@@ -1,4 +1,6 @@
 package ch.swissqcommerce.backend.domain.ordermanagement.adapter.in.event;
+import ch.swissqcommerce.backend.model.Inventory;
+
 
 import ch.swissqcommerce.backend.domain.ordermanagement.port.in.OrderManagementUseCase;
 import lombok.RequiredArgsConstructor;

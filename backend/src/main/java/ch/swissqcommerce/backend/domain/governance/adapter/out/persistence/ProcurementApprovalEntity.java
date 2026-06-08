@@ -1,23 +1,42 @@
 package ch.swissqcommerce.backend.domain.governance.adapter.out.persistence;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "procurement_approvals")
-@Data
+@Table(name = "procurement_approvals", schema = "oltp")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProcurementApprovalEntityEntity {
+@Data
+public class ProcurementApprovalEntity {
     @Id
-    private String approvalId;
-    private String restockOrderId;
-    private String status;
-    private String reason;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(name = "restock_order_id")
+    private Integer restockOrderId;
+
+    @Column(name = "wholesaler_id")
+    private String wholesalerId;
+
+    @Column(name = "amount", precision = 10, scale = 2, nullable = false)
+    private BigDecimal amount;
+
+    @Column(name = "status", length = 20, nullable = false)
+    @Builder.Default
+    private String status = "PENDING";
+
+    @Column(name = "override_by", length = 100)
+    private String overrideBy;
+
+    @Column(name = "override_reason", columnDefinition = "TEXT")
+    private String overrideReason;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private OffsetDateTime createdAt;
 }
