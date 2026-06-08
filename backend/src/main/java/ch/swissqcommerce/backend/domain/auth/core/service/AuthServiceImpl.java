@@ -7,6 +7,7 @@ import ch.swissqcommerce.backend.domain.auth.port.out.AuthEventPublisherPort;
 import ch.swissqcommerce.backend.domain.auth.port.out.SessionRepositoryPort;
 import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -17,29 +18,37 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthenticationUseCase, EnrollmentUseCase {
 
+    private static final long SESSION_TTL_HOURS = 24;
+
     private final UserRepositoryPort userRepositoryPort;
     private final SessionRepositoryPort sessionRepositoryPort;
     private final AuthEventPublisherPort eventPublisherPort;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public Session login(String email, String password, String deviceFingerprint, String ipAddress) {
         Optional<UserAccount> userOpt = userRepositoryPort.findByEmail(email);
+        // Always run an encoder.matches() even on lookup miss so timing doesn't
+        // leak whether the email exists.
         if (userOpt.isEmpty()) {
+            passwordEncoder.matches(password, "$2a$12$0000000000000000000000000000000000000000000000000000a");
             throw new IllegalArgumentException("Invalid credentials");
         }
 
         UserAccount user = userOpt.get();
-        // In a real app, use a password encoder to verify
-        if (!user.getPasswordHash().getValue().equals(password)) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash().getValue())) {
             throw new IllegalArgumentException("Invalid credentials");
+        }
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            throw new IllegalArgumentException("Account is locked");
         }
 
         Session session = Session.builder()
                 .id(UUID.randomUUID().toString())
                 .userId(user.getId())
-                .deviceFingerprint(new DeviceFingerprint(deviceFingerprint))
-                .ipAddress(new IPAddress(ipAddress))
-                .expiresAt(OffsetDateTime.now().plusHours(24))
+                .deviceFingerprint(deviceFingerprint != null ? new DeviceFingerprint(deviceFingerprint) : null)
+                .ipAddress(ipAddress != null ? new IPAddress(ipAddress) : null)
+                .expiresAt(OffsetDateTime.now().plusHours(SESSION_TTL_HOURS))
                 .active(true)
                 .build();
 
@@ -67,16 +76,18 @@ public class AuthServiceImpl implements AuthenticationUseCase, EnrollmentUseCase
             throw new IllegalArgumentException("Email already in use");
         }
 
+        String hashed = passwordEncoder.encode(password);
+
         UserAccount newUser = UserAccount.builder()
                 .id(UUID.randomUUID().toString())
                 .emailAddress(new EmailAddress(email))
-                .passwordHash(new PasswordHash(password)) // Should be hashed!
+                .passwordHash(new PasswordHash(hashed))
                 .status(AccountStatus.ACTIVE)
                 .build();
 
         UserAccount savedUser = userRepositoryPort.save(newUser);
         eventPublisherPort.publishUserRegisteredEvent(savedUser.getId(), savedUser.getEmailAddress().getValue());
-        
+
         return savedUser;
     }
 }

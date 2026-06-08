@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
@@ -78,7 +79,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
     @Override
     @Transactional
-    public OrderTelemetryLogEntity recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
+    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, 
                                              BigDecimal temp, boolean dryIceInjected) {
         
         Order order = telemetryPort.findOrderById(orderId)
@@ -86,7 +87,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
         boolean alert = temp.compareTo(new BigDecimal("8.0")) > 0;
 
-        OrderTelemetryLogEntity log = OrderTelemetryLogEntity.builder()
+        OrderTelemetryLog log = OrderTelemetryLog.builder()
                 .orderId(order.getOrderId())
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(lat)
@@ -96,7 +97,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
                 .alertTriggered(alert)
                 .build();
 
-        OrderTelemetryLogEntity savedLog = telemetryPort.save(log);
+        OrderTelemetryLog savedLog = telemetryPort.save(log);
 
         // Check thermal spoilage threshold F21
         if (temp.compareTo(new BigDecimal("12.0")) >= 0 && !"spoiled".equalsIgnoreCase(order.getStatus())) {
@@ -228,7 +229,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             try {
                 telemetryPort.findOrderById(request.getOrderId()).ifPresent(order -> {
                     OrderTelemetryLog log = OrderTelemetryLog.builder()
-                            .order(order)
+                            .orderId(order.getOrderId())
                             .deviceTimestamp(OffsetDateTime.now())
                             .latitude(request.getLatitude())
                             .longitude(request.getLongitude())

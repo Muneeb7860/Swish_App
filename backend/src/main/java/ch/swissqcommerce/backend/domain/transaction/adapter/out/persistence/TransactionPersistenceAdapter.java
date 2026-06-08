@@ -202,14 +202,14 @@ public class TransactionPersistenceAdapter implements
                 .build();
 
         if (domain.getOrderItems() != null) {
-            entity.setOrderItems(domain.getOrderItems().stream().map(domainItem -> {
+            entity.setOrderItems(new java.util.ArrayList<>(domain.getOrderItems().stream().map(domainItem -> {
                 OrderItemEntity itemEntity = new OrderItemEntity();
                 itemEntity.setOrder(entity);
                 itemEntity.setItem(domainItem.getItem());
                 itemEntity.setQuantity(domainItem.getQuantity());
                 itemEntity.setPrice(domainItem.getPrice());
                 return itemEntity;
-            }).toList());
+            }).toList()));
         }
         return entity;
     }

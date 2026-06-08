@@ -10,7 +10,7 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.*;
 
 import java.math.BigDecimal;
@@ -66,7 +66,7 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public OrderTelemetryLogEntity recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
         return outPort.recordTelemetry(orderId, lat, lng, temp);
     }
 

@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
@@ -165,7 +165,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         log.info("GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}", orderId, podHash);
         try {
             int orderIdInt = Integer.parseInt(orderId);
-            List<OrderTelemetryLogEntity> logs = telemetryPort.findByOrderId(orderIdInt);
+            List<OrderTelemetryLog> logs = telemetryPort.findByOrderId(orderIdInt);
             if (logs.isEmpty()) {
                 throw new ResourceNotFoundException("No telemetry logs found for order " + orderId);
             }
@@ -174,7 +174,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             BigDecimal maxTemp = BigDecimal.valueOf(-999.0);
             BigDecimal sumTemp = BigDecimal.ZERO;
 
-            for (OrderTelemetryLogEntity tLog : logs) {
+            for (OrderTelemetryLog tLog : logs) {
                 BigDecimal temp = tLog.getTemperature();
                 if (temp.compareTo(minTemp) < 0) minTemp = temp;
                 if (temp.compareTo(maxTemp) > 0) maxTemp = temp;

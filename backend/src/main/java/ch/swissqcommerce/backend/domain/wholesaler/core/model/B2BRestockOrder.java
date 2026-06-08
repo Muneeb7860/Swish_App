@@ -21,8 +21,10 @@ public class B2BRestockOrder {
 
     private BigDecimal invoiceAmount;
 
+    @Builder.Default
     private Boolean isFallback = false;
 
+    @Builder.Default
     private String status = "pending";
 
     private String idempotencyKey;

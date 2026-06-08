@@ -35,6 +35,29 @@ export interface Order {
 	slaRemaining: number;
 }
 
+export interface SavedAddress {
+	id: string;
+	label: string;
+	line1: string;
+	city: string;
+	zip: string;
+}
+
+export interface SavedCard {
+	id: string;
+	last4: string;
+	brand: string;
+	expiry: string;
+}
+
+export interface OrderHistoryItem {
+	id: number;
+	date: string;
+	items: string;
+	total: number;
+	status: string;
+}
+
 export interface CustomerAppProps {
 	products: Product[];
 	cart: CartItem[];
@@ -47,15 +70,15 @@ export interface CustomerAppProps {
 	setCustomerTab: React.Dispatch<React.SetStateAction<string>>;
 	profileSubTab: string;
 	setProfileSubTab: React.Dispatch<React.SetStateAction<string>>;
-	savedAddresses?: any[];
-	savedCards?: any[];
+	savedAddresses?: SavedAddress[];
+	savedCards?: SavedCard[];
 	favorites?: string[];
 	vipMember: boolean;
 	vouchers: Voucher[];
 	customerTrustScore: number;
 	gdprTokenProbation: boolean;
 	handleGdprPurge: () => void;
-	orderHistory: any[];
+	orderHistory: OrderHistoryItem[];
 	esgCheckbox: boolean;
 	setEsgCheckbox: React.Dispatch<React.SetStateAction<boolean>>;
 	tipAmount: number;
@@ -161,12 +184,20 @@ export default function CustomerApp({
 	};
 
 	const addToCart = (product: Product) => {
+		// Show substitution modal for low-stock items (only once per item)
 		if (product.stock < 5 && !showSubstitutionModal) {
 			setSubTargetItem(product);
 			setShowSubstitutionModal(true);
 		}
 		setCart((prev: CartItem[]) => {
 			const existing = prev.find((item) => item.id === product.id);
+			const currentQty = existing?.qty ?? 0;
+
+			// Guard: never allow cart quantity to exceed available stock
+			if (currentQty >= product.stock) {
+				return prev; // silently cap — stock counter in UI already shows the limit
+			}
+
 			if (existing) {
 				return prev.map((item) =>
 					item.id === product.id ? { ...item, qty: item.qty + 1 } : item,
@@ -760,9 +791,9 @@ export default function CustomerApp({
 												gap: "0.5rem",
 											}}
 										>
-											{orderHistory.map((order) => (
+											{orderHistory.map((historyItem: OrderHistoryItem) => (
 												<div
-													key={order.id}
+													key={historyItem.id}
 													style={{
 														display: "flex",
 														justifyContent: "space-between",
@@ -772,25 +803,25 @@ export default function CustomerApp({
 													}}
 												>
 													<div>
-														<strong>Order #{order.id}</strong> ({order.date})
+														<strong>Order #{historyItem.id}</strong> ({historyItem.date})
 														<div
 															style={{
 																color: "var(--text-muted)",
 																fontSize: "0.7rem",
 															}}
 														>
-															{order.items}
+															{historyItem.items}
 														</div>
 													</div>
 													<div style={{ textAlign: "right" }}>
-														<strong>${order.total.toFixed(2)}</strong>
+														<strong>${historyItem.total.toFixed(2)}</strong>
 														<div
 															style={{
 																color: "var(--color-customer)",
 																fontSize: "0.7rem",
 															}}
 														>
-															{order.status}
+															{historyItem.status}
 														</div>
 													</div>
 												</div>
