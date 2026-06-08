@@ -106,6 +106,7 @@ public class AdminService {
      * Processes onboarding approval gate for a rider application.
      * Implements F11 3-gate approval: ops -> compliance -> admin.
      */
+    @SecurityAudit(action = "admin.onboarding.approve")
     @Transactional
     public Map<String, Object> approveOnboarding(String applicationId, String gate) {
         Map<String, Object> riderResult = riderUseCase.approveOnboarding(applicationId, gate);
@@ -139,6 +140,7 @@ public class AdminService {
      * Resolves a HITL queue ticket (approve or reject).
      * For refund approvals, processes the refund through the ledger.
      */
+    @SecurityAudit(action = "admin.hitl.resolve")
     @Transactional
     public Map<String, Object> resolveHitlTicket(String ticketId, String decision, String reason) {
         HitlQueue ticket = hitlQueueRepository.findById(ticketId)

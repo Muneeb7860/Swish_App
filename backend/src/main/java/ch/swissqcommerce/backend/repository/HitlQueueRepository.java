@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface HitlQueueRepository extends JpaRepository<HitlQueue, String> {
     List<HitlQueue> findByStatusOrderByCreatedAtDesc(String status);
+    long countByStatus(String status);
 }
