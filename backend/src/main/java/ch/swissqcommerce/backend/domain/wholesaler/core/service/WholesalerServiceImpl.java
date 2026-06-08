@@ -63,11 +63,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         // Check if primary wholesaler is eligible (trust >= 60 and active)
         if (!selected.getIsActive() || selected.getTrustScore() < 60) {
             // Switch to fallback wholesaler
-            selected = wholesalerPort.findAll().stream()
-                    .filter(w -> !w.getWholesalerId().equals(currentSelectedId))
-                    .filter(Wholesaler::getIsActive)
-                    .filter(w -> w.getTrustScore() >= 60)
-                    .findFirst()
+            selected = wholesalerPort.findFallbackWholesaler(currentSelectedId, 60)
                     .orElseThrow(() -> new IllegalStateException("No eligible wholesaler available for restock."));
             isFallback = true;
         }
@@ -125,23 +121,23 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
 
-        List<B2BRestockOrder> allOrders = restockOrderPort.findByWholesalerId(wholesalerId);
-
-        BigDecimal totalInvoiced = allOrders.stream()
-                .filter(o -> "fulfilled".equalsIgnoreCase(o.getStatus()))
-                .map(B2BRestockOrder::getInvoiceAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        long pendingCount = allOrders.stream()
-                .filter(o -> "pending".equalsIgnoreCase(o.getStatus()))
-                .count();
+        Map<String, Object> aggregation = restockOrderPort.getInvoiceSummaryAggregation(wholesalerId);
+        
+        BigDecimal totalInvoiced = aggregation != null && aggregation.get("totalInvoiced") != null ? 
+                new BigDecimal(aggregation.get("totalInvoiced").toString()) : BigDecimal.ZERO;
+        
+        long pendingCount = aggregation != null && aggregation.get("pendingCount") != null ? 
+                ((Number) aggregation.get("pendingCount")).longValue() : 0L;
+                
+        long totalOrderCount = aggregation != null && aggregation.get("totalCount") != null ? 
+                ((Number) aggregation.get("totalCount")).longValue() : 0L;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wholesalerId", wholesalerId);
         result.put("wholesalerName", wholesaler.getName());
         result.put("totalFulfilledInvoiceAmount", totalInvoiced);
         result.put("pendingOrderCount", pendingCount);
-        result.put("totalOrderCount", allOrders.size());
+        result.put("totalOrderCount", totalOrderCount);
         result.put("academyDiscountActive", wholesaler.getAcademyDiscountActive());
         result.put("trustScore", wholesaler.getTrustScore());
         return result;
@@ -181,6 +177,12 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         for (ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem item : po.getItems()) {
             Integer recv = itemReceipts.get(item.getProductId());
             if (recv != null) {
+                if (recv < 0) {
+                    throw new IllegalArgumentException("Received quantity cannot be negative for product: " + item.getProductId());
+                }
+                if (item.getReceivedQty() + recv > item.getRequestedQty()) {
+                    throw new IllegalArgumentException("Received quantity cannot exceed requested quantity for product: " + item.getProductId());
+                }
                 item.setReceivedQty(item.getReceivedQty() + recv);
             }
             if (item.getReceivedQty() < item.getRequestedQty()) {
@@ -198,6 +200,10 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     @Override
     @Transactional
     public ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog logWastage(String storeId, String productId, String batchId, Integer qty, String reason, String loggedBy) {
+        if (qty == null || qty <= 0) {
+            throw new IllegalArgumentException("Wastage quantity must be greater than zero.");
+        }
+        
         ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog log = ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog.builder()
                 .storeId(storeId)
                 .productId(productId)
