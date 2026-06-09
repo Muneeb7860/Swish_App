@@ -122,9 +122,11 @@ jobs:
   cypress-e2e:
     name: Cypress E2E (auth, orders, rider, admin)
     runs-on: ubuntu-latest
-    # E2E requires the full stack. We spin up the backend in H2 dev mode
-    # (no external DB or Redis needed — MockBean handles both in test profile).
-    # The frontend Vite dev server runs against the backend.
+    # E2E requires the full stack. We spin up the backend against a real
+    # PostgreSQL service — the Flyway migrations use PostgreSQL PL/pgSQL
+    # functions and triggers that H2 cannot parse — plus a real Redis. The
+    # backend runs under the `staging` profile (Postgres datasource; GCP
+    # Secret Manager stays disabled). The Vite dev server runs against it.
     needs: [backend-quality]
 
     services:
@@ -137,6 +139,23 @@ jobs:
           - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # PostgreSQL backs the `staging` profile. Host port 5420 matches the
+      # datasource URL in application-staging.properties (localhost:5420);
+      # credentials match the staging defaults (postgres / swisssecure2026).
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: swiss_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: swisssecure2026
+        ports:
+          - 5420:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d swiss_db"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -163,7 +182,7 @@ jobs:
         working-directory: ./backend
         run: mvn -q dependency:resolve
 
-      - name: Start backend (H2 dev profile, background)
+      - name: Start backend (staging profile, Postgres, background)
         working-directory: ./backend
         env:
           JWT_SECRET: ci-e2e-test-secret-32-chars-long!!
@@ -174,7 +193,7 @@ jobs:
         run: |
           mvn spring-boot:run \
             -Dspring-boot.run.jvmArguments="-Dserver.port=8083" \
-            -Dspring-boot.run.profiles=default &
+            -Dspring-boot.run.profiles=staging &
           echo "Backend PID: $!"
           # Wait until /actuator/health returns UP (max 90s)
           for i in $(seq 1 30); do

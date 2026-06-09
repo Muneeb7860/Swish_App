@@ -53,7 +53,10 @@ jobs:
       - name: Run tests
         working-directory: ./backend
         env:
-          JWT_SECRET: ci-test-secret-placeholder
+          # Must be >= 256 bits (32 bytes) — TokenServiceAdapter builds an
+          # HMAC-SHA key via Keys.hmacShaKeyFor(), which rejects shorter keys
+          # with a WeakKeyException that fails every @SpringBootTest context.
+          JWT_SECRET: ci-test-secret-placeholder-min-32-bytes!!
         run: mvn -q clean test
 
   # ─── Stage 2: Build + push Docker image ────────────────────────────────────

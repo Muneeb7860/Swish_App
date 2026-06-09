@@ -697,11 +697,11 @@ export default function App() {
 		}
 
 		const payload = {
-			username: mfaRole === "admin" ? "swissadmin" : "swissuser",
+			email: `${mfaRole}@swish.local`,
 			password: mfaPassword,
 		};
 
-		fetch("/api/auth/login", {
+		fetch("/api/v1/auth/login", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -755,7 +755,7 @@ export default function App() {
 	};
 
 	const handleMfaVerify = () => {
-		fetch("/api/auth/mfa/verify", {
+		fetch("/api/v1/auth/mfa/verify", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
