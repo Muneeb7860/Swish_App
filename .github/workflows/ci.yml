@@ -5,10 +5,12 @@ on:
     branches:
       - develop
       - master
+      - Mac_Machine
   pull_request:
     branches:
       - develop
       - master
+      - Mac_Machine
 
 jobs:
   backend-quality:
