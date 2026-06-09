@@ -12,6 +12,8 @@ import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.*;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -66,11 +68,22 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, String callerRiderId) {
+        // Security: verify the authenticated rider is the one assigned to this order.
+        // Prevents a malicious rider from submitting temperature data for a competitor's
+        // delivery and having it marked as spoiled.
+        Order order = outPort.findOrderById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Rider assignedRider = order.getRider();
+        if (assignedRider == null || !callerRiderId.equals(assignedRider.getRiderId())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Rider " + callerRiderId + " is not assigned to order " + orderId);
+        }
         return outPort.recordTelemetry(orderId, lat, lng, temp);
     }
 
     @Override
+    @CacheEvict(value = "orders", key = "#orderId")
     public Map<String, Object> confirmDelivery(Integer orderId, String pin, String photoUrl) {
         Order order = outPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
@@ -133,6 +146,7 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
+    @CacheEvict(value = "orders", key = "#orderId")
     public Map<String, Object> rejectDelivery(Integer orderId, String reason, String rejectionPhotoUrl) {
         Order order = outPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
@@ -166,6 +180,7 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
+    @Cacheable(value = "academy-courses")
     public List<Map<String, String>> getAcademyCourses() {
         return List.of(
             Map.of("course_id", "COURSE_001", "course_name", "Cold Chain Logistics Mastery"),

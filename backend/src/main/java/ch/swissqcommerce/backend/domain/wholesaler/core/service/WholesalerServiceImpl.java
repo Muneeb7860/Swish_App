@@ -8,6 +8,9 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.DarkStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +33,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     private LedgerUseCase ledgerService;
 
     @Override
+    @Cacheable(value = "wholesaler-restocks", key = "#wholesalerId")
     public List<B2BRestockOrder> getAssignedRestocks(String wholesalerId) {
         wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
@@ -38,6 +42,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
 
     @Override
     @Transactional
+    @CacheEvict(value = "wholesaler-restocks", allEntries = true)
     public B2BRestockOrder createRestockOrder(String storeId, String preferredWholesalerId, String idempotencyKey) {
         // Idempotency guard
         if (idempotencyKey != null) {
@@ -87,6 +92,10 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "wholesaler-restocks", allEntries = true),
+        @CacheEvict(value = "wholesaler-invoices", allEntries = true)
+    })
     public Map<String, Object> fulfillRestock(Integer restockOrderId) {
         B2BRestockOrder restock = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new NoSuchElementException("Restock order not found: " + restockOrderId));
@@ -117,6 +126,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     }
 
     @Override
+    @Cacheable(value = "wholesaler-invoices", key = "#wholesalerId")
     public Map<String, Object> getInvoiceSummary(String wholesalerId) {
         Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));

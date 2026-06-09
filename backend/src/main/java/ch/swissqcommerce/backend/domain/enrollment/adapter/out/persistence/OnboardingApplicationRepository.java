@@ -9,4 +9,5 @@ import java.util.List;
 public interface OnboardingApplicationRepository extends JpaRepository<OnboardingApplicationEntity, String> {
     List<OnboardingApplication> findByApplicantType(String applicantType);
     List<OnboardingApplication> findByApprovalAdminFalse();
+    long countByApprovalAdminFalse();
 }

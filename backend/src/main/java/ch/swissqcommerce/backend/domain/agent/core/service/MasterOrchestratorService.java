@@ -17,6 +17,9 @@ import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +42,19 @@ public class MasterOrchestratorService implements AgentUseCase {
     private final DarkStoreRepository darkStoreRepository;
     private final B2BRestockOrderPort restockOrderPort;
     private final GovernanceUseCase governanceUseCase;
+    private final MeterRegistry meterRegistry;
+
+    // Prometheus counter — incremented every time the budget/rate guardrail fires.
+    // Drives the AgentDailyBudgetExceeded alert in alert.rules.
+    private Counter budgetGuardrailCounter;
+
+    @PostConstruct
+    public void registerMetrics() {
+        budgetGuardrailCounter = Counter.builder("agent.budget.guardrail.triggers")
+                .description("Number of times the AI agent daily-budget or hourly-rate limit was reached")
+                .tag("service", "master-orchestrator")
+                .register(meterRegistry);
+    }
 
     private double dailyCost = 0.0;
     private int hourlyRequestCount = 0;
@@ -74,6 +90,9 @@ public class MasterOrchestratorService implements AgentUseCase {
 
         if (dailyCost >= 5.0 || hourlyRequestCount >= 100) {
             String reason = dailyCost >= 5.0 ? "Daily budget limit of $5 exceeded" : "Hourly request limit of 100 exceeded";
+            // Increment Prometheus counter — drives the AgentDailyBudgetExceeded alert.
+            // Null-guard: @PostConstruct is not invoked in unit tests (no Spring context).
+            if (budgetGuardrailCounter != null) budgetGuardrailCounter.increment();
             String ticketId = triggerHitl(request, null, null, reason);
             return AgentResponse.builder()
                     .reply("System limit reached. Your request is routed to a customer support agent.")

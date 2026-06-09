@@ -9,6 +9,7 @@ import ch.swissqcommerce.backend.domain.auth.core.model.UserAccount;
 import ch.swissqcommerce.backend.domain.auth.port.in.AuthenticationUseCase;
 import ch.swissqcommerce.backend.domain.auth.port.in.EnrollmentUseCase;
 import ch.swissqcommerce.backend.domain.auth.port.out.TokenServicePort;
+import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +32,7 @@ public class AuthController {
     private final AuthenticationUseCase authenticationUseCase;
     private final EnrollmentUseCase enrollmentUseCase;
     private final TokenServicePort tokenServicePort;
+    private final UserRepositoryPort userRepositoryPort;
 
     @Data
     public static class MfaVerifyRequest {
@@ -62,7 +65,12 @@ public class AuthController {
                 req.getDeviceFingerprint(),
                 httpReq.getRemoteAddr()
         );
-        String token = tokenServicePort.generateToken(session.getId(), session.getUserId());
+        // Look up the user's role so the JWT carries the correct authority.
+        // AuthServiceImpl already validated credentials, so the lookup will succeed.
+        String role = userRepositoryPort.findByEmail(req.getEmail())
+                .map(UserAccount::getRole)
+                .orElse("CUSTOMER");
+        String token = tokenServicePort.generateToken(session.getId(), session.getUserId(), role);
         LoginResponse body = LoginResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
@@ -77,11 +85,11 @@ public class AuthController {
                              "Call this only when login returned mfa_required=true.")
     @PostMapping("/mfa/verify")
     public ResponseEntity<Map<String, Object>> verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
-        // Delegate to auth use-case when MFA is fully implemented
-        return ResponseEntity.ok(Map.of(
-                "token", "mock-jwt-token-after-mfa",
-                "expires_in", 86400
-        ));
+        // MFA verification is not yet implemented. Returning 501 to prevent clients
+        // from treating any response as a successful authentication. Do NOT return a
+        // token (even a mock) here — doing so bypasses MFA entirely.
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("error", "MFA verification is not yet implemented."));
     }
 
     @Operation(summary = "Logout and invalidate session")

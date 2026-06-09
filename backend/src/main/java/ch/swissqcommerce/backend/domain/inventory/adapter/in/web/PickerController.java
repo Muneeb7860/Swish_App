@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,6 +44,7 @@ public class PickerController {
      */
     @Operation(summary = "List picker queue",
                description = "Returns all pickers currently active and available for order picking in a given store.")
+    @PreAuthorize("hasAnyRole('PICKER','ADMIN')")
     @GetMapping("/picker/queue")
     public ResponseEntity<List<Picker>> getPickerQueue(
             @RequestParam(required = false) String storeId) {
@@ -57,6 +59,7 @@ public class PickerController {
      */
     @Operation(summary = "Picker handover to rider",
                description = "Records that a picker has completed picking and handed the packed order to the assigned rider.")
+    @PreAuthorize("hasAnyRole('PICKER','ADMIN')")
     @PostMapping("/picker/handover")
     public ResponseEntity<Map<String, Object>> handover(@Valid @RequestBody HandoverRequest req) {
         // In full implementation this calls a PickerUseCase.handover() method.
@@ -73,6 +76,7 @@ public class PickerController {
      */
     @Operation(summary = "Trigger stock rebalancing",
                description = "Initiates a transfer of SKU stock between dark-store locations to prevent stockouts.")
+    @PreAuthorize("hasAnyRole('PICKER','ADMIN')")
     @PostMapping("/rebalance")
     public ResponseEntity<Map<String, Object>> rebalance(@Valid @RequestBody RebalanceRequest req) {
         // Delegates to a StockRebalanceUseCase in full implementation.

@@ -9,6 +9,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -24,6 +29,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 public class OrderIntegrationTest {
+
+    @TestConfiguration
+    static class TestCacheConfig {
+        @Bean @Primary
+        public CacheManager cacheManager() {
+            return new ConcurrentMapCacheManager(
+                "orders", "customer-orders", "wholesaler-restocks",
+                "wholesaler-invoices", "academy-courses", "system-health", "catalog"
+            );
+        }
+    }
 
     @Autowired
     private OrderUseCase orderService;

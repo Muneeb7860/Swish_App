@@ -1,6 +1,42 @@
 import * as Lucide from "lucide-react";
 import React from "react";
 
+interface OnboardingApp {
+	id: string;
+	name: string;
+	type: string;
+	approvals: { l1: boolean; l2: boolean; l3: boolean };
+}
+
+interface HitlTicket {
+	id: string;
+	type: string;
+	amount: number;
+	desc: string;
+}
+
+interface AdminPanelProps {
+	coldChainBreakdownActive: boolean;
+	setColdChainBreakdownActive: (v: boolean) => void;
+	wholesalerOutageActive: boolean;
+	setWholesalerOutageActive: (v: boolean) => void;
+	paymentOutageActive: boolean;
+	setPaymentOutageActive: (v: boolean) => void;
+	redisCrashActive: boolean;
+	setRedisCrashActive: (v: boolean) => void;
+	dbLatencyActive: boolean;
+	setDbLatencyActive: (v: boolean) => void;
+	riderTrafficActive: boolean;
+	setRiderTrafficActive: (v: boolean) => void;
+	simulateTelemetryFraud: boolean;
+	setSimulateTelemetryFraud: (v: boolean) => void;
+	onboardingQueue: OnboardingApp[];
+	handleApproveOnboard: (id: string, level: "l1" | "l2" | "l3") => void;
+	hitlQueue: HitlTicket[];
+	handleReleaseHitl: (ticket: HitlTicket) => void;
+	handleVoidHitl: (ticket: HitlTicket) => void;
+}
+
 export default function AdminPanel({
 	coldChainBreakdownActive,
 	setColdChainBreakdownActive,
@@ -21,7 +57,7 @@ export default function AdminPanel({
 	hitlQueue,
 	handleReleaseHitl,
 	handleVoidHitl,
-}) {
+}: AdminPanelProps) {
 	return (
 		<div
 			className="admin-dashboard"

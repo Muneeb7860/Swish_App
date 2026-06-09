@@ -8,6 +8,7 @@ import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApprova
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.config.SecurityAudit;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.exception.RuleViolationException;
 import org.slf4j.Logger;
@@ -113,6 +114,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     }
 
     @Override
+    @SecurityAudit(action = "governance.override.approve")
     public void approveOverride(Integer approvalId, String operator, String reason) {
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
@@ -137,6 +139,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     }
 
     @Override
+    @SecurityAudit(action = "governance.override.reject")
     public void rejectOverride(Integer approvalId, String operator, String reason) {
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
