@@ -20,7 +20,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -78,10 +77,13 @@ public class PaymentController {
             @Valid @RequestBody AuthorizeRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         try {
+            assertPaymentOwnership(req.getCustomerId());
             Payment payment = paymentUseCase.authorizePayment(
                     req.getOrderId(), req.getCustomerId(), req.getAmount(), req.getPaymentMethod(),
                     idempotencyKey);
             return ResponseEntity.status(201).body(payment);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -91,8 +93,13 @@ public class PaymentController {
 
     @Operation(summary = "List payments for a customer")
     @GetMapping
-    public ResponseEntity<List<Payment>> listPayments(@RequestParam String customerId) {
-        return ResponseEntity.ok(paymentUseCase.getPaymentsByCustomer(customerId));
+    public ResponseEntity<?> listPayments(@RequestParam String customerId) {
+        try {
+            assertPaymentOwnership(customerId);
+            return ResponseEntity.ok(paymentUseCase.getPaymentsByCustomer(customerId));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
     }
 
     // ---- Get by ID (GET /api/payments/{id}) -------------------------------------
@@ -101,7 +108,11 @@ public class PaymentController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getPayment(@PathVariable Integer id) {
         try {
-            return ResponseEntity.ok(paymentUseCase.getPayment(id));
+            Payment payment = paymentUseCase.getPayment(id);
+            assertPaymentOwnership(payment.getCustomerId());
+            return ResponseEntity.ok(payment);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         }
