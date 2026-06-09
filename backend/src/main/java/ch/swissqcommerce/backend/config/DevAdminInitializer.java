@@ -16,8 +16,11 @@ import java.util.UUID;
  * Seeds a single ADMIN user on application startup when both {@code ADMIN_EMAIL}
  * and {@code ADMIN_PASSWORD} environment variables are present.
  *
- * <p>Runs only on the {@code default} and {@code dev} Spring profiles so it
- * never executes in production (profile {@code prod}).
+ * <p>Runs on the {@code default}, {@code dev}, and {@code staging} profiles —
+ * the last of which is what CI uses to boot the backend for the Cypress E2E
+ * suite — so it never executes in production (profile {@code prod}). Seeding is
+ * additionally gated on the {@code ADMIN_EMAIL} / {@code ADMIN_PASSWORD} env
+ * vars being present, so non-CI staging boots without them seed nothing.
  *
  * <p>Idempotent: if the email already exists the record is <em>not</em> updated
  * — restart-safe and safe to run in CI on every boot.
@@ -32,7 +35,7 @@ import java.util.UUID;
  * and stores it as {@code CYPRESS_ADMIN_TOKEN}.
  */
 @Component
-@Profile({"default", "dev"})
+@Profile({"default", "dev", "staging"})
 @RequiredArgsConstructor
 @Slf4j
 public class DevAdminInitializer implements ApplicationRunner {
