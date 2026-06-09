@@ -39,6 +39,7 @@ public class AuthPersistenceAdapter implements UserRepositoryPort {
                 .email(user.getEmailAddress().getValue())
                 .passwordHash(user.getPasswordHash().getValue())
                 .status(user.getStatus() != null ? user.getStatus().name() : AccountStatus.ACTIVE.name())
+                .role(user.getRole() != null ? user.getRole() : "CUSTOMER")
                 .build();
     }
 
@@ -48,6 +49,7 @@ public class AuthPersistenceAdapter implements UserRepositoryPort {
                 .emailAddress(new EmailAddress(e.getEmail()))
                 .passwordHash(new PasswordHash(e.getPasswordHash()))
                 .status(AccountStatus.valueOf(e.getStatus()))
+                .role(e.getRole() != null ? e.getRole() : "CUSTOMER")
                 .build();
     }
 }

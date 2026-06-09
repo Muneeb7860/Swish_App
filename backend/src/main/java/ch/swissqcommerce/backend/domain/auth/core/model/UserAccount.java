@@ -18,6 +18,9 @@ public class UserAccount {
     private EmailAddress emailAddress;
     private PasswordHash passwordHash;
     private AccountStatus status;
+    /** JWT role claim — "CUSTOMER", "ADMIN", "RIDER", or "WHOLESALER". */
+    @Builder.Default
+    private String role = "CUSTOMER";
 
     public void lockAccount() {
         this.status = AccountStatus.LOCKED;

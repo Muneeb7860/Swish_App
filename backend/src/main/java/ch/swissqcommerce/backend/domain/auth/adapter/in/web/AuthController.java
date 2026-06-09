@@ -9,6 +9,7 @@ import ch.swissqcommerce.backend.domain.auth.core.model.UserAccount;
 import ch.swissqcommerce.backend.domain.auth.port.in.AuthenticationUseCase;
 import ch.swissqcommerce.backend.domain.auth.port.in.EnrollmentUseCase;
 import ch.swissqcommerce.backend.domain.auth.port.out.TokenServicePort;
+import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,7 @@ public class AuthController {
     private final AuthenticationUseCase authenticationUseCase;
     private final EnrollmentUseCase enrollmentUseCase;
     private final TokenServicePort tokenServicePort;
+    private final UserRepositoryPort userRepositoryPort;
 
     @Data
     public static class MfaVerifyRequest {
@@ -63,7 +65,12 @@ public class AuthController {
                 req.getDeviceFingerprint(),
                 httpReq.getRemoteAddr()
         );
-        String token = tokenServicePort.generateToken(session.getId(), session.getUserId());
+        // Look up the user's role so the JWT carries the correct authority.
+        // AuthServiceImpl already validated credentials, so the lookup will succeed.
+        String role = userRepositoryPort.findByEmail(req.getEmail())
+                .map(UserAccount::getRole)
+                .orElse("CUSTOMER");
+        String token = tokenServicePort.generateToken(session.getId(), session.getUserId(), role);
         LoginResponse body = LoginResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
