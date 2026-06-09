@@ -70,6 +70,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify GCP secrets are configured
+        run: |
+          missing=0
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "::error::Missing GitHub secret GCP_PROJECT_ID"
+            missing=1
+          fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then
+            echo "::error::Missing GitHub secret GCP_WORKLOAD_IDENTITY_PROVIDER"
+            missing=1
+          fi
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT }}" ]; then
+            echo "::error::Missing GitHub secret GCP_SERVICE_ACCOUNT"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo ""
+            echo "Run scripts/setup-gcp.sh locally, then add the printed values under"
+            echo "Repository Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
       # Keyless authentication to GCP via OIDC Workload Identity Federation.
       # No long-lived service account key stored in GitHub.
       # Setup guide: https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions
