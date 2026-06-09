@@ -60,10 +60,10 @@ public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<Idemp
                     .flatMap(state -> {
                         if ("PROCESSING".equals(state)) {
                             // Request is currently running. Return 409 Conflict.
-                            return handleConflict(exchange, idempotencyKey);
+                            return handleConflict(exchange, idempotencyKey).then(Mono.just(true));
                         } else {
                             // Request is completed and response is cached. Replay it.
-                            return handleReplay(exchange, state);
+                            return handleReplay(exchange, state).then(Mono.just(true));
                         }
                     })
                     .switchIfEmpty(Mono.defer(() -> {
@@ -78,14 +78,11 @@ public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<Idemp
                                         return chain.filter(decoratedExchange)
                                                 .then(Mono.defer(() -> {
                                                     HttpStatusCode statusCode = decorator.getStatusCode();
-                                                    if (statusCode != null && statusCode.is5xxServerError()) {
-                                                        // Server error, delete key so client can retry
-                                                        return redisTemplate.delete(redisKey).then();
-                                                    } else if (statusCode != null && (statusCode.is2xxSuccessful() || statusCode.is3xxRedirection())) {
-                                                        // Successful response, cache it
+                                                    if (statusCode != null && (statusCode.is2xxSuccessful() || statusCode.is3xxRedirection())) {
                                                         return cacheResponse(redisKey, decorator);
+                                                    } else {
+                                                        return redisTemplate.delete(redisKey).then();
                                                     }
-                                                    return Mono.empty();
                                                 }))
                                                 .onErrorResume(throwable -> {
                                                     // Severe network error/exception, delete key
@@ -96,8 +93,9 @@ public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<Idemp
                                         // Concurrent race condition, key was set right after our check
                                         return handleConflict(exchange, idempotencyKey);
                                     }
-                                });
-                    }));
+                                }).then(Mono.just(true));
+                    }))
+                    .then();
         };
     }
 
