@@ -1,0 +1,107 @@
+# Cloud Build pipeline — Swish Backend
+#
+# Triggered by: pushes to Mac_Machine branch (configured in Cloud Build console
+#               or via gcloud builds triggers create github --branch-pattern=Mac_Machine)
+#
+# Environment variables required (set in Cloud Build substitutions or the trigger):
+#   _REGION          = europe-west6        (Artifact Registry region)
+#   _REPO            = swish               (Artifact Registry repo name)
+#   _SERVICE         = swish-backend       (Cloud Run service name)
+#   _PROJECT_ID      = (auto-set by Cloud Build as $PROJECT_ID)
+#
+# Required Cloud Build service account roles:
+#   roles/run.admin
+#   roles/artifactregistry.writer
+#   roles/iam.serviceAccountUser   (to impersonate the runtime service account)
+# ─────────────────────────────────────────────────────────────────────────────
+
+substitutions:
+  _REGION: europe-west6
+  _REPO: swish
+  _SERVICE: swish-backend
+
+steps:
+  # ── Step 1: Run backend tests (fail fast before building the image) ─────────
+  - name: "maven:3.9-eclipse-temurin-17"
+    id: run-tests
+    entrypoint: mvn
+    args: ["-q", "clean", "test", "--file", "backend/pom.xml"]
+    env:
+      - "JWT_SECRET=ci-test-secret-not-used-in-prod"
+
+  # ── Step 2: Build the Docker image ────────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: build-image
+    waitFor: ["run-tests"]
+    args:
+      - build
+      - --tag
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA"
+      - --tag
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest"
+      - --cache-from
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest"
+      - ./backend
+
+  # ── Step 3: Push to Artifact Registry ─────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: push-image
+    waitFor: ["build-image"]
+    args:
+      - push
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}"
+
+  # ── Step 4: Deploy to Cloud Run ───────────────────────────────────────────
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: deploy-cloud-run
+    waitFor: ["push-image"]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE}"
+      - "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--service-account=swish-backend-sa@$PROJECT_ID.iam.gserviceaccount.com"
+      - "--port=8080"
+      - "--memory=512Mi"
+      - "--cpu=1"
+      - "--concurrency=80"
+      - "--min-instances=0"
+      - "--max-instances=5"
+      - "--set-env-vars=SPRING_PROFILES_ACTIVE=prod,GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+      - "--no-allow-unauthenticated"
+      # JWT_SECRET is loaded from Secret Manager via spring.config.import=optional:sm://
+      # in application-prod.properties — no --set-secrets flag needed.
+
+  # ── Step 5: Verify the revision is serving traffic ────────────────────────
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: verify-deployment
+    waitFor: ["deploy-cloud-run"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE} \
+          --region=${_REGION} --format='value(status.url)')
+        echo "Service URL: $SERVICE_URL"
+        # Verify the health endpoint via the Cloud Run internal URL
+        STATUS=$(curl -sf \
+          -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+          "$SERVICE_URL/actuator/health" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+        echo "Health status: $STATUS"
+        [ "$STATUS" = "UP" ] && echo "✅ Deployment verified" || (echo "❌ Health check failed" && exit 1)
+
+# Artifacts: the built and tagged Docker image
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest"
+
+# Cloud Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8   # 8-vCPU builder for faster Maven compilation
+
+timeout: 1200s   # 20-minute timeout to accommodate Maven + Docker build
