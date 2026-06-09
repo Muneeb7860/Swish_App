@@ -33,7 +33,7 @@ export default defineConfig({
     responseTimeout: 30000,
     requestTimeout: 15000,
 
-    setupNodeEvents(on, _config) {
+    setupNodeEvents(on) {
       on("task", {
         log(message) {
           console.log(message);
