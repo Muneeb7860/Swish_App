@@ -12,6 +12,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -263,6 +264,12 @@ public class AgentEvalIntegrationTest {
 
     @Test @Order(99)
     public void evalBudgetGuardrail_DailyBudgetExceeded_BlocksSubsequentRequest() {
+        // Snapshot the counter BEFORE the test fires the guardrail
+        Counter guardrailCounter = meterRegistry.find("agent.budget.guardrail.triggers").counter();
+        assertNotNull(guardrailCounter,
+            "Prometheus counter 'agent.budget.guardrail.triggers' must be registered at startup");
+        double counterBefore = guardrailCounter.count();
+
         // First request burns the $5 daily budget
         CustomerSupportAgent.AgentAnalysis highCost = new CustomerSupportAgent.AgentAnalysis(
                 "Done.", 0.99, null, null, 6.00
@@ -281,5 +288,9 @@ public class AgentEvalIntegrationTest {
         assertTrue(blocked.isHitlStatus(), "Blocked request must be flagged as HITL");
         assertEquals(0.0, blocked.getTokenCost(), "Blocked request incurs zero token cost");
         assertNotNull(blocked.getTicketId(), "Blocked request must produce a HITL ticket ID");
+
+        // Verify the counter was incremented exactly once (req2 triggered the guardrail)
+        assertEquals(counterBefore + 1, guardrailCounter.count(), 0.001,
+            "Budget guardrail counter must increment by 1 when the limit fires");
     }
 }

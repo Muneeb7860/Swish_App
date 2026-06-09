@@ -1,0 +1,21 @@
+{
+  "_comment": "Test configuration fixture. Sensitive values (adminToken, etc.) must be supplied via CYPRESS_* environment variables, never committed here.",
+  "defaultPassword": "Cypress1!",
+  "gatewayPort": 8083,
+  "viteFrontendPort": 5173,
+  "defaultTimeoutMs": 10000,
+  "adminEndpoints": [
+    "/api/admin/health",
+    "/api/admin/onboard/queue",
+    "/api/admin/hitl/queue",
+    "/api/admin/chaos/active"
+  ],
+  "publicEndpoints": [
+    "/actuator/health",
+    "/api/v1/auth/login",
+    "/api/v1/auth/register"
+  ],
+  "prometheusGauges": [
+    "security_anomaly_analyzed_ratio"
+  ]
+}

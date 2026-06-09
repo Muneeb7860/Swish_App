@@ -17,6 +17,7 @@ import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -47,6 +48,10 @@ public class MasterOrchestratorServiceTest {
     @Mock private DarkStoreRepository darkStoreRepository;
     @Mock private B2BRestockOrderPort restockOrderPort;
     @Mock private GovernanceUseCase governanceUseCase;
+    // MeterRegistry is injected via @RequiredArgsConstructor.
+    // @PostConstruct is NOT called by @InjectMocks so budgetGuardrailCounter
+    // stays null — the null-guard in the service handles this gracefully.
+    @Mock private MeterRegistry meterRegistry;
 
     @InjectMocks
     private MasterOrchestratorService masterOrchestratorService;
