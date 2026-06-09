@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import ch.swissqcommerce.backend.config.SecurityAudit;
+import org.springframework.cache.annotation.Cacheable;
 
 /**
  * Admin domain service for system operations including
@@ -212,13 +213,15 @@ public class AdminService {
 
     /**
      * Returns system health dashboard data.
+     * Cached for 30 seconds — dashboard polls this; stale-ok within that window.
      */
+    @Cacheable("system-health")
     public Map<String, Object> getSystemHealth() {
         Map<String, Object> health = new LinkedHashMap<>();
         health.put("status", "OPERATIONAL");
         health.put("activeFaults", chaosFaultLogRepository.findByResolvedAtIsNull().size());
         health.put("pendingHitlTickets", hitlQueueRepository.findByStatusOrderByCreatedAtDesc("pending").size());
-        health.put("pendingOnboarding", onboardingRepository.findByApprovalAdminFalse().size());
+        health.put("pendingOnboarding", onboardingRepository.countByApprovalAdminFalse());
         health.put("totalOrders", orderRepository.count());
         health.put("totalInventoryItems", inventoryRepository.count());
         health.put("totalRiders", riderRepository.count());

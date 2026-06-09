@@ -14,6 +14,9 @@ import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.HitlQueuePort;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -64,7 +67,8 @@ public class OrderServiceImpl implements OrderUseCase {
     @Override
     @Transactional
     @ch.swissqcommerce.backend.config.TransactionalRetry(maxRetries = 3, backoffMs = 150)
-    public Order checkout(String customerId, List<CartItem> items, String paymentMethod, 
+    @CacheEvict(value = "customer-orders", key = "#customerId")
+    public Order checkout(String customerId, List<CartItem> items, String paymentMethod,
                            BigDecimal tip, Integer bagsReturned, String idempotencyKey) {
         
         if (customerId == null || customerId.isBlank()) {
@@ -297,6 +301,7 @@ public class OrderServiceImpl implements OrderUseCase {
 
     @Override
     @Transactional
+    @CacheEvict(value = "orders", key = "#orderId")
     public Map<String, Object> requestRefund(Integer orderId, String claimReason, BigDecimal customerLatitude, BigDecimal customerLongitude) {
         Order order = orderPort.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found."));
@@ -383,11 +388,15 @@ public class OrderServiceImpl implements OrderUseCase {
 
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "customer-orders", key = "#customerId")
     public List<Order> getCustomerOrders(String customerId) {
         return orderPort.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "orders", key = "#orderId")
     public Order getOrderById(Integer orderId) {
         return orderPort.findById(orderId)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Order not found: " + orderId));
