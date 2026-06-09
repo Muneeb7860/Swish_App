@@ -5,8 +5,11 @@ import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.OutboxEventRepository;
 import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +29,26 @@ public class SecurityController {
     private final SecurityTrustLedgerRepository trustLedgerRepository;
     private final HitlQueueRepository hitlQueueRepository;
     private final OutboxEventRepository outboxEventRepository;
+    private final MeterRegistry meterRegistry;
+
+    /**
+     * Registers a Prometheus gauge that tracks what fraction of security anomalies
+     * have been analyzed: analyzedCount / (pendingCount + analyzedCount).
+     * Scraped on every Prometheus pull — no manual refresh needed.
+     */
+    @PostConstruct
+    public void registerAnomalyRatioGauge() {
+        Gauge.builder("security.anomaly.analyzed.ratio",
+                    () -> {
+                        long pending  = outboxEventRepository.countByEventTypeAndStatus("security.anomaly", "PENDING");
+                        long analyzed = outboxEventRepository.countByEventTypeAndStatus("security.anomaly", "ANALYZED");
+                        long total = pending + analyzed;
+                        return total == 0 ? 1.0 : (double) analyzed / total;
+                    })
+                .description("Fraction of security anomalies resolved (0 = all pending, 1 = all analyzed)")
+                .tag("domain", "security")
+                .register(meterRegistry);
+    }
 
     /**
      * GET /api/security/audit — retrieve the security trust ledger audit trail.
