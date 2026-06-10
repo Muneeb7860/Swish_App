@@ -269,16 +269,8 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         if (ticksToFlush.isEmpty()) return;
         for (TelemetryTick request : ticksToFlush) {
             try {
-                OrderTelemetryLog log = OrderTelemetryLog.builder()
-                        .orderId(request.getOrderId())
-                        .deviceTimestamp(OffsetDateTime.now())
-                        .latitude(request.getLatitude())
-                        .longitude(request.getLongitude())
-                        .temperature(request.getTemperature())
-                        .dryIceInjected(request.isDryIceInjected())
-                        .alertTriggered(false)
-                        .build();
-                telemetryPort.save(log);
+                recordTelemetry(request.getOrderId(), request.getLatitude(), request.getLongitude(),
+                        request.getTemperature(), request.isDryIceInjected());
             } catch (Exception e) {
                 tickBuffer.add(request); // Re-queue on failure
             }

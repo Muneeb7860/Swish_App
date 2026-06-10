@@ -67,8 +67,12 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         final String currentSelectedId = selected.getWholesalerId();
         // Check if primary wholesaler is eligible (trust >= 60 and active)
         if (!selected.getIsActive() || selected.getTrustScore() < 60) {
-            // Switch to fallback wholesaler
-            selected = wholesalerPort.findFallbackWholesaler(currentSelectedId, 60)
+            // Switch to fallback wholesaler — scan all and pick first eligible non-preferred
+            selected = wholesalerPort.findAll().stream()
+                    .filter(w -> !w.getWholesalerId().equals(currentSelectedId)
+                            && Boolean.TRUE.equals(w.getIsActive())
+                            && w.getTrustScore() >= 60)
+                    .findFirst()
                     .orElseThrow(() -> new IllegalStateException("No eligible wholesaler available for restock."));
             isFallback = true;
         }
@@ -131,23 +135,23 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
 
-        Map<String, Object> aggregation = restockOrderPort.getInvoiceSummaryAggregation(wholesalerId);
-        
-        BigDecimal totalInvoiced = aggregation != null && aggregation.get("totalInvoiced") != null ? 
-                new BigDecimal(aggregation.get("totalInvoiced").toString()) : BigDecimal.ZERO;
-        
-        long pendingCount = aggregation != null && aggregation.get("pendingCount") != null ? 
-                ((Number) aggregation.get("pendingCount")).longValue() : 0L;
-                
-        long totalOrderCount = aggregation != null && aggregation.get("totalCount") != null ? 
-                ((Number) aggregation.get("totalCount")).longValue() : 0L;
+        List<B2BRestockOrder> orders = restockOrderPort.findByWholesalerId(wholesalerId);
+
+        BigDecimal totalFulfilled = orders.stream()
+                .filter(o -> "fulfilled".equalsIgnoreCase(o.getStatus()))
+                .map(B2BRestockOrder::getInvoiceAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long pendingCount = orders.stream()
+                .filter(o -> "pending".equalsIgnoreCase(o.getStatus()))
+                .count();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wholesalerId", wholesalerId);
         result.put("wholesalerName", wholesaler.getName());
-        result.put("totalFulfilledInvoiceAmount", totalInvoiced);
+        result.put("totalFulfilledInvoiceAmount", totalFulfilled);
         result.put("pendingOrderCount", pendingCount);
-        result.put("totalOrderCount", totalOrderCount);
+        result.put("totalOrderCount", orders.size());
         result.put("academyDiscountActive", wholesaler.getAcademyDiscountActive());
         result.put("trustScore", wholesaler.getTrustScore());
         return result;
