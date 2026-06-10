@@ -1,0 +1,7 @@
+agent_id: mistral_summarizer
+base_library: shared_guardrails.yaml
+overrides:
+  code_safety_cautionary:
+    default_action: warn
+  license_check:
+    enabled: false

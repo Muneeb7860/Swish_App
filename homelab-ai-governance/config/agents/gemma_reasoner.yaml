@@ -1,0 +1,7 @@
+agent_id: gemma_reasoner
+base_library: shared_guardrails.yaml
+overrides:
+  code_safety_cautionary:
+    default_action: warn
+  markdown_formatting_filter:
+    enabled: false
