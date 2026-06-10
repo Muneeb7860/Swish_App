@@ -176,4 +176,38 @@ public class B2bNotificationWebSocketHandlerTest {
             }
         }
     }
+
+    @Test
+    public void testPublishToUser() {
+        when(redisTemplate.convertAndSend("notifications:b2b:user-1", "test-payload"))
+                .thenReturn(Mono.just(1L));
+
+        Mono<Long> result = handler.publishToUser("user-1", "test-payload");
+        
+        StepVerifier.create(result)
+                .expectNext(1L)
+                .verifyComplete();
+                
+        verify(redisTemplate).convertAndSend("notifications:b2b:user-1", "test-payload");
+    }
+
+    @Test
+    public void testFallbackUserIdFromQueryParam() {
+        WebSocketSession session = createMockSession(null, "userId=user-query&other=val");
+        
+        // Mock Redis
+        ReactiveSubscription.Message<String, String> mockMessage = mock(ReactiveSubscription.Message.class);
+        when(mockMessage.getMessage()).thenReturn("redis-payload");
+        when((Flux) redisTemplate.listenToChannel("notifications:b2b:user-query")).thenReturn(Flux.empty());
+        
+        when(session.send(any())).thenReturn(Mono.empty());
+        when(session.receive()).thenReturn(Flux.empty());
+
+        Mono<Void> handleResult = handler.handle(session);
+
+        StepVerifier.create(handleResult).verifyComplete();
+
+        // Verify that Redis subscription occurred with the query param user ID
+        verify(redisTemplate).listenToChannel("notifications:b2b:user-query");
+    }
 }
