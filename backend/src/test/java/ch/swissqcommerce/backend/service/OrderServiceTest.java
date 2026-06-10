@@ -180,4 +180,67 @@ public class OrderServiceTest {
         assertEquals(new BigDecimal("10.00"), customer.getWalletBalance());
         verify(hitlQueuePort, times(1)).save(any(HitlQueue.class));
     }
+
+    @Test
+    public void testCheckout_ValidationErrors() {
+        assertThrows(IllegalArgumentException.class, () -> orderService.checkout(null, List.of(new OrderUseCase.CartItem("1", 1)), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", null, "C", BigDecimal.ZERO, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(new OrderUseCase.CartItem("1", 0)), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(new OrderUseCase.CartItem("1", 1), new OrderUseCase.CartItem("1", 1)), "C", BigDecimal.ZERO, 0, null));
+    }
+
+    @Test
+    public void testCheckout_InsufficientStock() {
+        Customer customer = new Customer();
+        customer.setCustomerId("CUST-1");
+
+        DarkStore store = new DarkStore();
+        store.setStoreId("Central Store");
+
+        Inventory inventory = new Inventory();
+        inventory.setItemId("ITEM-1");
+        inventory.setStock(0);
+        inventory.setStore(store);
+
+        when(customerPort.findCustomerById("CUST-1")).thenReturn(Optional.of(customer));
+        when(inventoryPort.findInventoryById("ITEM-1")).thenReturn(Optional.of(inventory));
+        when(darkStorePort.findDarkStoreById("Central Store")).thenReturn(Optional.of(store));
+        when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
+
+        assertThrows(IllegalStateException.class, () -> orderService.checkout("CUST-1", List.of(new OrderUseCase.CartItem("ITEM-1", 1)), "C", BigDecimal.ZERO, 0, null));
+    }
+
+    @Test
+    public void testCheckoutFallback() {
+        Throwable t = new RuntimeException("DB down");
+        assertThrows(IllegalStateException.class, () -> orderService.checkoutFallback("C1", List.of(), "C", BigDecimal.ZERO, 0, null, t));
+    }
+
+    @Test
+    public void testGetCustomerOrders() {
+        Order order = new Order();
+        order.setOrderId(1);
+        when(orderPort.findByCustomerIdOrderByCreatedAtDesc("C1")).thenReturn(List.of(order));
+
+        List<Order> result = orderService.getCustomerOrders("C1");
+        assertEquals(1, result.size());
+        assertEquals(1, result.get(0).getOrderId());
+    }
+
+    @Test
+    public void testGetOrderById() {
+        Order order = new Order();
+        order.setOrderId(1);
+        when(orderPort.findById(1)).thenReturn(Optional.of(order));
+
+        Order result = orderService.getOrderById(1);
+        assertEquals(1, result.getOrderId());
+    }
+
+    @Test
+    public void testGetOrderById_NotFound() {
+        when(orderPort.findById(99)).thenReturn(Optional.empty());
+        assertThrows(java.util.NoSuchElementException.class, () -> orderService.getOrderById(99));
+    }
 }
