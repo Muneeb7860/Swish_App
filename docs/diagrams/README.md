@@ -8,7 +8,8 @@ This folder contains the formal design artifacts that complement the existing HL
 - `domain-sequence-diagrams.md` — core cross-domain flow sequences (part 1): order saga, AI agent orchestration + HITL, B2B RFQ auction + governance, rider dispatch.
 - `domain-sequence-diagrams-part2.md` — remaining domain flows (part 2): auth/JWT + authorization, checkout + refund, double-entry ledger, transactional outbox, telemetry CQRS, rider enrollment/delivery, rewards. Ends with a 22-domain coverage matrix.
 - `api-contracts.md` — BFF/OpenAPI API contract summary.
-- `data-model-erd.md` — transactional ERD and data model relationships.
+- `data-model-erd.md` — **aspirational target** ERD (7-DB sharded microservices model; not yet adopted).
+- `data-model-erd-asbuilt.md` — **as-built, validated** ERD: the real `oltp/olap/dispatch/wholesaler` schema from the Flyway migrations, cross-checked against the JPA entities, with a validation-findings table (drift + prod-blockers).
 
 ## Usage
 - Use `architecture-diagrams.md` when reviewing system architecture and deployment boundaries.
