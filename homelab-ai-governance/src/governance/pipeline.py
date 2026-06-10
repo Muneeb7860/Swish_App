@@ -1,0 +1,264 @@
+"""Unified Governance Pipeline — coordinates routing, guardrails, and self-correction."""
+
+from __future__ import annotations
+
+import logging
+import re
+from typing import Any
+
+from governance.agents.base import BaseAgent
+from governance.agents.cloud_agent import CloudAgent
+from governance.agents.ollama_agent import OllamaAgent
+from governance.audit import get_audit_logger
+from governance.config import ConfigError, load_routing_config
+from governance.evaluator.loop import run_self_correction_loop
+from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
+from governance.guardrails.loader import load_guardrails
+from governance.router.classifier import classify_intent
+from governance.router.decision_table import route_query
+from governance.router.pii_scan import pre_route_pii_scan
+from governance.router.token_validator import validate_token_count
+from governance.stubs.context_constructor import construct_context
+from governance.stubs.memory_mesh import retrieve_context
+
+logger = logging.getLogger(__name__)
+
+
+def get_agent(agent_id: str) -> BaseAgent:
+    """Load agent configurations and instantiate the appropriate agent class."""
+    routing_cfg = load_routing_config()
+    agents_registry = routing_cfg.get("agents", {})
+
+    if agent_id not in agents_registry:
+        raise ConfigError(f"Agent '{agent_id}' is not registered in routing_config.yaml")
+
+    cfg = agents_registry[agent_id]
+    backend = cfg.get("backend")
+    model = cfg.get("model")
+    timeout_ms = cfg.get("timeout_ms", 30000)
+
+    if backend == "ollama":
+        ollama_url = cfg.get("ollama_url", "http://localhost:11434")
+        return OllamaAgent(
+            agent_id=agent_id,
+            model=model,
+            ollama_url=ollama_url,
+            timeout_ms=timeout_ms,
+        )
+    elif backend in ("openai_compatible", "openai"):
+        base_url = cfg.get("base_url")
+        api_key_env = cfg.get("api_key_env")
+        if not base_url or not api_key_env:
+            raise ConfigError(
+                f"Cloud agent '{agent_id}' must specify base_url and api_key_env"
+            )
+        return CloudAgent(
+            agent_id=agent_id,
+            model=model,
+            base_url=base_url,
+            api_key_env=api_key_env,
+            timeout_ms=timeout_ms,
+        )
+    else:
+        raise ConfigError(f"Unsupported backend type '{backend}' for agent '{agent_id}'")
+
+
+def clean_telemetry_tags(text: str) -> str:
+    """Remove internal telemetry trace tags or metadata comments from final response."""
+    # Strip <telemetry>...</telemetry> XML tags
+    text = re.sub(r"<telemetry\b[^>]*>([\s\S]*?)</telemetry>", "", text)
+    # Strip HTML-style telemetry comments <!-- telemetry: ... -->
+    text = re.sub(r"<!--\s*telemetry[\s\S]*?-->", "", text)
+    # Strip bracketed telemetry lines or markers
+    text = re.sub(r"\[telemetry:[^\]]*\]", "", text)
+    return text.strip()
+
+
+def execute_pipeline(
+    query: str,
+    expected_format: str | None = None,
+    local_only_override: bool = False,
+) -> dict[str, Any]:
+    """Orchestrates the entire query governance pipeline.
+
+    1. Scans for PII to enforce local routing constraint.
+    2. Performs context enrichment.
+    3. Classifies query intent and complexity.
+    4. Gates against total prompt+context token limits.
+    5. Matches intent × complexity to the optimal agent via decision table.
+    6. Applies input guardrails (redact, block, strip, warn).
+    7. Executes model inference with the chosen agent.
+    8. Applies initial output guardrails.
+    9. Enters recursive self-correction loop (up to 3 retries) on failure.
+    10. Escalates to local Gemma 4B fallback if self-correction fails.
+    11. Sanitizes internal telemetry tags and delivers final clean response.
+    """
+    input_hash = compute_input_hash(query)
+    audit = get_audit_logger()
+    audit.log_event("pipeline_start", query=query, input_hash=input_hash)
+
+    # 1. PII Scan
+    pii_res = pre_route_pii_scan(query)
+    local_only = pii_res.local_only or local_only_override
+
+    # 2. Context Enrichment
+    context_docs = retrieve_context(query)
+    context_str = construct_context(context_docs)
+
+    # 3. Intent Classification
+    classification = classify_intent(query)
+
+    # 4. Token Validation
+    token_val = validate_token_count(query, context_str)
+    if not token_val.within_limit:
+        audit.log_event(
+            "token_limit_exceeded",
+            input_hash=input_hash,
+            estimated_tokens=token_val.estimated_tokens,
+            max_allowed=token_val.max_allowed,
+        )
+        return {
+            "status": "blocked",
+            "message": (
+                f"Request blocked: estimated token count ({token_val.estimated_tokens}) "
+                f"exceeds maximum allowed context limit ({token_val.max_allowed})."
+            ),
+            "triggered_rules": [{"rule_id": "token_limit", "action": "block", "severity": "high"}],
+            "warnings": [],
+        }
+
+    # 5. Semantic Routing
+    decision = route_query(classification, local_only=local_only, input_hash=input_hash)
+    agent_id = decision.agent_id
+
+    # 6. Instantiate agent
+    try:
+        agent = get_agent(agent_id)
+    except Exception as e:
+        logger.error("Failed to load agent %s: %s. Defaulting to gemma_reasoner.", agent_id, e)
+        agent = get_agent("gemma_reasoner")
+        agent_id = "gemma_reasoner"
+
+    # 7. Apply Input Guardrails
+    rules = load_guardrails(agent_id)
+    input_guardrail = apply_rules(
+        rules=rules,
+        phase="input",
+        content=query,
+        agent_id=agent_id,
+        input_hash=input_hash,
+    )
+    if not input_guardrail["allowed"]:
+        audit.log_event("pipeline_blocked", phase="input", input_hash=input_hash)
+        return blocked_response(input_guardrail["triggered_rules"])
+
+    processed_query = input_guardrail["content"]
+
+    # 8. Model Inference (with enriched context)
+    final_prompt = (
+        f"Context:\n{context_str}\n\nQuery:\n{processed_query}"
+        if context_str
+        else processed_query
+    )
+
+    try:
+        logger.info("Executing initial inference on agent '%s'", agent_id)
+        response = agent.generate(final_prompt)
+        candidate_text = response.text
+    except Exception as e:
+        logger.error("Initial inference failed for agent %s: %s", agent_id, e)
+        # Immediate fallback to gemma_reasoner if not already running it
+        if agent_id != "gemma_reasoner":
+            logger.info("Escalating immediately to fallback gemma_reasoner due to agent crash")
+            agent = get_agent("gemma_reasoner")
+            agent_id = "gemma_reasoner"
+            simplified_prompt = f"Please answer the following question clearly:\n\n{processed_query}"
+            try:
+                response = agent.generate(simplified_prompt)
+                candidate_text = response.text
+            except Exception as fe:
+                return {
+                    "status": "failed",
+                    "message": f"Both primary agent and fallback reasoner failed. Error: {fe}",
+                    "warnings": [],
+                }
+        else:
+            return {
+                "status": "failed",
+                "message": f"Primary reasoner inference failed. Error: {e}",
+                "warnings": [],
+            }
+
+    # 9. Apply Initial Output Guardrails
+    output_guardrail = apply_rules(
+        rules=rules,
+        phase="output",
+        content=candidate_text,
+        agent_id=agent_id,
+        input_hash=input_hash,
+    )
+    if not output_guardrail["allowed"]:
+        audit.log_event("pipeline_blocked", phase="output", input_hash=input_hash)
+        return blocked_response(output_guardrail["triggered_rules"])
+
+    candidate_text = output_guardrail["content"]
+
+    # 10. Recursive Self-Correction Loop
+    fallback_agent = get_agent("gemma_reasoner") if agent_id != "gemma_reasoner" else None
+
+    loop_result = run_self_correction_loop(
+        agent=agent,
+        candidate=candidate_text,
+        original_prompt=processed_query,
+        context_docs=context_str,
+        expected_format=expected_format,
+        fallback_agent=fallback_agent,
+    )
+
+    # 11. Final Output Guardrails and Sanitization
+    final_rules = load_guardrails("gemma_reasoner" if loop_result.fallback_used else agent_id)
+    final_output_guardrail = apply_rules(
+        rules=final_rules,
+        phase="output",
+        content=loop_result.final_response,
+        agent_id="gemma_reasoner" if loop_result.fallback_used else agent_id,
+        input_hash=input_hash,
+    )
+    if not final_output_guardrail["allowed"]:
+        audit.log_event("pipeline_blocked", phase="final_output", input_hash=input_hash)
+        return blocked_response(final_output_guardrail["triggered_rules"])
+
+    sanitized_response = clean_telemetry_tags(final_output_guardrail["content"])
+
+    audit.log_event(
+        "pipeline_success",
+        input_hash=input_hash,
+        agent_id="gemma_reasoner" if loop_result.fallback_used else agent_id,
+        fallback_used=loop_result.fallback_used,
+        attempts=loop_result.attempts,
+    )
+
+    all_warnings = (
+        input_guardrail.get("warnings", [])
+        + output_guardrail.get("warnings", [])
+        + final_output_guardrail.get("warnings", [])
+    )
+
+    return {
+        "status": "success",
+        "response": sanitized_response,
+        "agent_id": "gemma_reasoner" if loop_result.fallback_used else agent_id,
+        "routing_decision": {
+            "intent": classification.intent,
+            "complexity": classification.complexity,
+            "confidence": classification.confidence,
+            "matched_rule": decision.matched_rule,
+            "local_only": local_only,
+        },
+        "loop_result": {
+            "attempts": loop_result.attempts,
+            "passed": loop_result.passed,
+            "fallback_used": loop_result.fallback_used,
+        },
+        "warnings": all_warnings,
+    }
