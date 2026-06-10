@@ -38,7 +38,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // Return 401 (not Spring's default 403) when an anonymous user hits a
             // protected endpoint.  Authenticated users who are denied get 403 via
-            // the accessDeniedHandler below.
+            // Spring Security's default AccessDeniedHandlerImpl (sendError(403)).
             // NOTE: /error MUST be in permitAll so Tomcat's error dispatch (which
             // re-enters the filter chain without a JWT) reaches BasicErrorController
             // and returns the original 403 body rather than triggering a second

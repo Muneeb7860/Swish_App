@@ -235,8 +235,8 @@ public class AdminService {
         Map<String, Object> health = new LinkedHashMap<>();
         health.put("status", "OPERATIONAL");
         // Key names must match E2E assertions: pendingOnboardingApplications, activeChaosEvents
-        health.put("activeChaosEvents", chaosFaultLogRepository.findByResolvedAtIsNull().size());
-        health.put("pendingHitlTickets", hitlQueueRepository.findByStatusOrderByCreatedAtDesc("pending").size());
+        health.put("activeChaosEvents", chaosFaultLogRepository.countByResolvedAtIsNull());
+        health.put("pendingHitlTickets", hitlQueueRepository.countByStatus("pending"));
         health.put("pendingOnboardingApplications", onboardingRepository.countByApprovalAdminFalse());
         health.put("totalOrders", orderRepository.count());
         health.put("totalInventoryItems", inventoryRepository.count());

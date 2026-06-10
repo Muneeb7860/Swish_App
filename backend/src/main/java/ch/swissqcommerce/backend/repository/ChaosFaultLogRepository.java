@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface ChaosFaultLogRepository extends JpaRepository<ChaosFaultLog, Integer> {
     List<ChaosFaultLog> findByResolvedAtIsNull();
+    long countByResolvedAtIsNull();
 }

@@ -65,21 +65,28 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         }
 
         final String currentSelectedId = selected.getWholesalerId();
-        // Check if primary wholesaler is eligible (trust >= 60 and active)
-        if (!selected.getIsActive() || selected.getTrustScore() < 60) {
-            // Switch to fallback wholesaler — scan all and pick first eligible non-preferred
+        // Check if primary wholesaler is eligible (trust >= 60 and active).
+        // Null trust/active flags (legacy rows) count as ineligible rather than NPE.
+        if (!isEligible(selected)) {
+            // Switch to fallback: highest-trust eligible wholesaler other than the
+            // preferred one (max() keeps the choice deterministic, unlike findFirst()
+            // over JPA's unspecified iteration order).
             selected = wholesalerPort.findAll().stream()
-                    .filter(w -> !w.getWholesalerId().equals(currentSelectedId)
-                            && Boolean.TRUE.equals(w.getIsActive())
-                            && w.getTrustScore() >= 60)
-                    .findFirst()
+                    .filter(w -> w.getWholesalerId() != null
+                            && !w.getWholesalerId().equals(currentSelectedId)
+                            && isEligible(w))
+                    .max(Comparator.comparingInt(Wholesaler::getTrustScore))
                     .orElseThrow(() -> new IllegalStateException("No eligible wholesaler available for restock."));
             isFallback = true;
         }
 
         // Calculate invoice amount with academy discount
         BigDecimal invoiceAmount = isFallback ? selected.getFallbackInvoiceAmount() : selected.getBaseInvoiceAmount();
-        if (selected.getAcademyDiscountActive()) {
+        if (invoiceAmount == null) {
+            throw new IllegalStateException("Wholesaler " + selected.getWholesalerId()
+                    + " has no " + (isFallback ? "fallback" : "base") + " invoice amount configured.");
+        }
+        if (Boolean.TRUE.equals(selected.getAcademyDiscountActive())) {
             invoiceAmount = invoiceAmount.multiply(new BigDecimal("0.90")); // 10% discount
         }
 
@@ -92,6 +99,11 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
                 .build();
 
         return restockOrderPort.save(restockOrder);
+    }
+
+    private static boolean isEligible(Wholesaler w) {
+        return Boolean.TRUE.equals(w.getIsActive())
+                && w.getTrustScore() != null && w.getTrustScore() >= 60;
     }
 
     @Override
@@ -137,14 +149,15 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
 
         List<B2BRestockOrder> orders = restockOrderPort.findByWholesalerId(wholesalerId);
 
-        BigDecimal totalFulfilled = orders.stream()
-                .filter(o -> "fulfilled".equalsIgnoreCase(o.getStatus()))
-                .map(B2BRestockOrder::getInvoiceAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        long pendingCount = orders.stream()
-                .filter(o -> "pending".equalsIgnoreCase(o.getStatus()))
-                .count();
+        BigDecimal totalFulfilled = BigDecimal.ZERO;
+        long pendingCount = 0;
+        for (B2BRestockOrder o : orders) {
+            if ("fulfilled".equalsIgnoreCase(o.getStatus()) && o.getInvoiceAmount() != null) {
+                totalFulfilled = totalFulfilled.add(o.getInvoiceAmount());
+            } else if ("pending".equalsIgnoreCase(o.getStatus())) {
+                pendingCount++;
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wholesalerId", wholesalerId);
