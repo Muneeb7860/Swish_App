@@ -59,22 +59,51 @@ export const useAiStream = () => {
 			// Read the SSE stream chunks
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder("utf-8");
+			let buffer = "";
+			let accumulatedLength = 0;
+			const MAX_STREAM_BYTES = 262144; // 256KB limit
 
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
 
 				const chunk = decoder.decode(value, { stream: true });
+				buffer += chunk;
 
-				// SSE lines start with "data:"
-				const lines = chunk.split("\n");
+				const lines = buffer.split("\n");
+				buffer = lines.pop() || "";
+
 				for (const line of lines) {
 					if (line.startsWith("data:")) {
-						const data = line.slice(5).trim();
+						const rawData = line.slice(5).trim();
+						// Basic HTML tag stripping and sanitization to prevent XSS
+						const cleanData = rawData
+							.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, "")
+							.replace(/<[^>]+>/g, "");
+
+						accumulatedLength += cleanData.length;
+						if (accumulatedLength > MAX_STREAM_BYTES) {
+							throw new Error("AI Stream payload size limit exceeded");
+						}
+
 						// Append the new token to our state for real-time UI typing effect
-						setStreamData((prev) => prev + data + " ");
+						setStreamData((prev) => prev + cleanData + " ");
 					}
 				}
+			}
+
+			// Process remaining buffer
+			if (buffer.startsWith("data:")) {
+				const rawData = buffer.slice(5).trim();
+				const cleanData = rawData
+					.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, "")
+					.replace(/<[^>]+>/g, "");
+
+				accumulatedLength += cleanData.length;
+				if (accumulatedLength > MAX_STREAM_BYTES) {
+					throw new Error("AI Stream payload size limit exceeded");
+				}
+				setStreamData((prev) => prev + cleanData + " ");
 			}
 		} catch (err: unknown) {
 			// AbortError is expected when the stream is intentionally cancelled —

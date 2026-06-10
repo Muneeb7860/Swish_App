@@ -96,7 +96,50 @@ export const useResilientWebSocket = (
 
     ws.onmessage = (event) => {
       try {
-        const payload = JSON.parse(event.data);
+        const rawData = event.data;
+        if (typeof rawData !== 'string') {
+          throw new Error('WebSocket message data is not a string');
+        }
+        // Size Gating: Max 128KB
+        if (rawData.length > 131072) {
+          throw new Error('WebSocket payload size limit exceeded');
+        }
+        // JSON Nesting Depth Guard: Max 20 levels
+        let depth = 0;
+        for (let i = 0; i < rawData.length; i++) {
+          const char = rawData[i];
+          if (char === '{' || char === '[') {
+            depth++;
+            if (depth > 20) {
+              throw new Error('WebSocket payload nesting depth limit exceeded');
+            }
+          } else if (char === '}' || char === ']') {
+            depth--;
+          }
+        }
+
+        const rawPayload = JSON.parse(rawData);
+
+        // Recursive Sanitization helper to secure text values
+        const sanitizeValue = (val: any): any => {
+          if (typeof val === 'string') {
+            return val
+              .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
+              .replace(/<[^>]+>/g, '');
+          }
+          if (val !== null && typeof val === 'object') {
+            const cleanObj: any = Array.isArray(val) ? [] : {};
+            for (const key in val) {
+              if (Object.prototype.hasOwnProperty.call(val, key)) {
+                cleanObj[key] = sanitizeValue(val[key]);
+              }
+            }
+            return cleanObj;
+          }
+          return val;
+        };
+
+        const payload = sanitizeValue(rawPayload);
 
         if (payload.type === 'HEARTBEAT') {
           return;
@@ -120,8 +163,8 @@ export const useResilientWebSocket = (
         if (onMessageReceived.current) {
           onMessageReceived.current(payload);
         }
-      } catch (err) {
-        console.error('[WebSocket] Failed to parse message:', err, event.data);
+      } catch (err: any) {
+        console.error('[WebSocket] Failed to validate/parse message:', err.message);
       }
     };
 
