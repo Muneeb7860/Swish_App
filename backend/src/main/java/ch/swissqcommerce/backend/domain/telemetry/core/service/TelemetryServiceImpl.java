@@ -116,6 +116,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
         OrderTelemetryLog log = OrderTelemetryLog.builder()
                 .orderId(order.getOrderId())
+                .order(order)
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(lat)
                 .longitude(lng)
@@ -126,8 +127,9 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
         OrderTelemetryLog savedLog = telemetryPort.save(log);
 
-        // Check thermal spoilage threshold F21
-        if (temp.compareTo(new BigDecimal("12.0")) >= 0 && !"spoiled".equalsIgnoreCase(order.getStatus())) {
+        // Check thermal spoilage threshold F21 — only in-transit cargo can spoil;
+        // late/buffered ticks must not corrupt delivered or cancelled orders.
+        if (temp.compareTo(new BigDecimal("12.0")) >= 0 && "shipping".equalsIgnoreCase(order.getStatus())) {
             order.setStatus("spoiled");
             telemetryPort.saveOrder(order);
 
@@ -161,6 +163,9 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         return OrderTelemetryLog.builder()
                 .logId(savedLog.getLogId())
                 .orderId(savedLog.getOrderId())
+                // Use the local order: the persistence adapter does not round-trip the
+                // back-reference, so savedLog.getOrder() is always null in production.
+                .order(order)
                 .deviceTimestamp(savedLog.getDeviceTimestamp())
                 .serverTimestamp(savedLog.getServerTimestamp())
                 .latitude(savedLog.getLatitude())
@@ -200,6 +205,9 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
         if (!"shipping".equalsIgnoreCase(order.getStatus())) {
             throw new IllegalStateException("Coolant can only be injected during shipping transit.");
+        }
+        if (order.getRider() == null) {
+            throw new IllegalStateException("Order has no assigned rider; cannot record coolant telemetry.");
         }
 
         // Charge merchant $2.00
@@ -267,18 +275,14 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         if (ticksToFlush.isEmpty()) return;
         for (TelemetryTick request : ticksToFlush) {
             try {
-                OrderTelemetryLog log = OrderTelemetryLog.builder()
-                        .orderId(request.getOrderId())
-                        .deviceTimestamp(OffsetDateTime.now())
-                        .latitude(request.getLatitude())
-                        .longitude(request.getLongitude())
-                        .temperature(request.getTemperature())
-                        .dryIceInjected(request.isDryIceInjected())
-                        .alertTriggered(false)
-                        .build();
-                telemetryPort.save(log);
+                recordTelemetry(request.getOrderId(), request.getLatitude(), request.getLongitude(),
+                        request.getTemperature(), request.isDryIceInjected());
+            } catch (NoSuchElementException e) {
+                // Order is gone — the tick can never succeed; drop it instead of
+                // re-queueing a poison entry that would retry on every flush forever.
+                log.warn("Dropping telemetry tick for missing order {}", request.getOrderId());
             } catch (Exception e) {
-                tickBuffer.add(request); // Re-queue on failure
+                tickBuffer.add(request); // Re-queue on transient failure
             }
         }
     }

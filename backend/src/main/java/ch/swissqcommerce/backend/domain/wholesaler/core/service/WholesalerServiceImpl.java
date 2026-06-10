@@ -65,17 +65,28 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         }
 
         final String currentSelectedId = selected.getWholesalerId();
-        // Check if primary wholesaler is eligible (trust >= 60 and active)
-        if (!selected.getIsActive() || selected.getTrustScore() < 60) {
-            // Switch to fallback wholesaler
-            selected = wholesalerPort.findFallbackWholesaler(currentSelectedId, 60)
+        // Check if primary wholesaler is eligible (trust >= 60 and active).
+        // Null trust/active flags (legacy rows) count as ineligible rather than NPE.
+        if (!isEligible(selected)) {
+            // Switch to fallback: highest-trust eligible wholesaler other than the
+            // preferred one (max() keeps the choice deterministic, unlike findFirst()
+            // over JPA's unspecified iteration order).
+            selected = wholesalerPort.findAll().stream()
+                    .filter(w -> w.getWholesalerId() != null
+                            && !w.getWholesalerId().equals(currentSelectedId)
+                            && isEligible(w))
+                    .max(Comparator.comparingInt(Wholesaler::getTrustScore))
                     .orElseThrow(() -> new IllegalStateException("No eligible wholesaler available for restock."));
             isFallback = true;
         }
 
         // Calculate invoice amount with academy discount
         BigDecimal invoiceAmount = isFallback ? selected.getFallbackInvoiceAmount() : selected.getBaseInvoiceAmount();
-        if (selected.getAcademyDiscountActive()) {
+        if (invoiceAmount == null) {
+            throw new IllegalStateException("Wholesaler " + selected.getWholesalerId()
+                    + " has no " + (isFallback ? "fallback" : "base") + " invoice amount configured.");
+        }
+        if (Boolean.TRUE.equals(selected.getAcademyDiscountActive())) {
             invoiceAmount = invoiceAmount.multiply(new BigDecimal("0.90")); // 10% discount
         }
 
@@ -88,6 +99,11 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
                 .build();
 
         return restockOrderPort.save(restockOrder);
+    }
+
+    private static boolean isEligible(Wholesaler w) {
+        return Boolean.TRUE.equals(w.getIsActive())
+                && w.getTrustScore() != null && w.getTrustScore() >= 60;
     }
 
     @Override
@@ -131,23 +147,24 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
 
-        Map<String, Object> aggregation = restockOrderPort.getInvoiceSummaryAggregation(wholesalerId);
-        
-        BigDecimal totalInvoiced = aggregation != null && aggregation.get("totalInvoiced") != null ? 
-                new BigDecimal(aggregation.get("totalInvoiced").toString()) : BigDecimal.ZERO;
-        
-        long pendingCount = aggregation != null && aggregation.get("pendingCount") != null ? 
-                ((Number) aggregation.get("pendingCount")).longValue() : 0L;
-                
-        long totalOrderCount = aggregation != null && aggregation.get("totalCount") != null ? 
-                ((Number) aggregation.get("totalCount")).longValue() : 0L;
+        List<B2BRestockOrder> orders = restockOrderPort.findByWholesalerId(wholesalerId);
+
+        BigDecimal totalFulfilled = BigDecimal.ZERO;
+        long pendingCount = 0;
+        for (B2BRestockOrder o : orders) {
+            if ("fulfilled".equalsIgnoreCase(o.getStatus()) && o.getInvoiceAmount() != null) {
+                totalFulfilled = totalFulfilled.add(o.getInvoiceAmount());
+            } else if ("pending".equalsIgnoreCase(o.getStatus())) {
+                pendingCount++;
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wholesalerId", wholesalerId);
         result.put("wholesalerName", wholesaler.getName());
-        result.put("totalFulfilledInvoiceAmount", totalInvoiced);
+        result.put("totalFulfilledInvoiceAmount", totalFulfilled);
         result.put("pendingOrderCount", pendingCount);
-        result.put("totalOrderCount", totalOrderCount);
+        result.put("totalOrderCount", orders.size());
         result.put("academyDiscountActive", wholesaler.getAcademyDiscountActive());
         result.put("trustScore", wholesaler.getTrustScore());
         return result;

@@ -37,11 +37,6 @@ public class WholesalerPersistenceAdapter implements WholesalerPort, B2BRestockO
     }
 
     @Override
-    public Optional<Wholesaler> findFallbackWholesaler(String excludeId, int minTrust) {
-        return wholesalerRepository.findFallbackWholesaler(excludeId, minTrust).map(this::toDomain);
-    }
-
-    @Override
     public Wholesaler save(Wholesaler wholesaler) {
         return toDomain(wholesalerRepository.save(toEntity(wholesaler)));
     }
@@ -59,11 +54,6 @@ public class WholesalerPersistenceAdapter implements WholesalerPort, B2BRestockO
     @Override
     public List<B2BRestockOrder> findByWholesalerId(String wholesalerId) {
         return restockOrderRepository.findByWholesalerWholesalerIdOrderByCreatedAtDesc(wholesalerId).stream().map(this::toDomain).toList();
-    }
-
-    @Override
-    public java.util.Map<String, Object> getInvoiceSummaryAggregation(String wholesalerId) {
-        return restockOrderRepository.getInvoiceSummaryAggregation(wholesalerId);
     }
 
     @Override
