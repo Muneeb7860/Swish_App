@@ -215,5 +215,8 @@ sequenceDiagram
 | B2B RFQ auction + governance HITL | ✅ (this doc) | ✅ |
 | Rider dispatch + reallocation | ✅ (this doc) | ✅ |
 
-Remaining flows worth diagramming next: customer checkout (pricing + ledger),
-3-gate rider enrollment, telemetry CQRS ingestion, and reward/loyalty accrual.
+The remaining flows — customer checkout + refund, double-entry ledger,
+transactional outbox, telemetry CQRS, auth/authorization, 3-gate rider
+enrollment, delivery, and rewards — are documented in
+[`domain-sequence-diagrams-part2.md`](./domain-sequence-diagrams-part2.md),
+which also carries the full 22-domain coverage matrix.
