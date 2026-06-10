@@ -30,4 +30,5 @@ public class TestConfig {
         Mockito.when(mockTemplate.opsForValue()).thenReturn(mockOps);
         return mockTemplate;
     }
+
 }

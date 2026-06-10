@@ -55,4 +55,12 @@ public class Order {
     private OffsetDateTime createdAt;
 
     private List<OrderItem> orderItems;
+
+    private String deliveryPin;
+
+    private String proofOfDeliveryPhotoUrl;
+
+    private String rejectionReason;
+
+    private String rejectionPhotoUrl;
 }

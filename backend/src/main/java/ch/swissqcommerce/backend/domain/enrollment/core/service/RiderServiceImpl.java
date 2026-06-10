@@ -12,6 +12,8 @@ import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.model.*;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -66,12 +68,23 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, String callerRiderId) {
+        // Security: verify the authenticated rider is the one assigned to this order.
+        // Prevents a malicious rider from submitting temperature data for a competitor's
+        // delivery and having it marked as spoiled.
+        Order order = outPort.findOrderById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Rider assignedRider = order.getRider();
+        if (assignedRider == null || !callerRiderId.equals(assignedRider.getRiderId())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Rider " + callerRiderId + " is not assigned to order " + orderId);
+        }
         return outPort.recordTelemetry(orderId, lat, lng, temp);
     }
 
     @Override
-    public Map<String, Object> confirmDelivery(Integer orderId) {
+    @CacheEvict(value = "orders", key = "#orderId")
+    public Map<String, Object> confirmDelivery(Integer orderId, String pin, String photoUrl) {
         Order order = outPort.findOrderById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
@@ -79,8 +92,18 @@ public class RiderServiceImpl implements RiderUseCase {
             throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
         }
 
+        if (order.getDeliveryPin() != null && order.getDeliveryPin().equals(pin)) {
+            // PIN matched
+        } else if (photoUrl != null && !photoUrl.isBlank()) {
+            // PIN mismatched or absent, but proof of delivery photo provided
+            order.setProofOfDeliveryPhotoUrl(photoUrl);
+        } else {
+            throw new IllegalArgumentException("Invalid Handover: Must provide correct delivery PIN or a Proof of Delivery Photo.");
+        }
+
         order.setStatus("delivered");
         outPort.saveOrder(order);
+        outPort.cleanupOrderTelemetry(orderId);
 
         // Boost rider trust
         Rider rider = order.getRider();
@@ -123,6 +146,41 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
+    @CacheEvict(value = "orders", key = "#orderId")
+    public Map<String, Object> rejectDelivery(Integer orderId, String reason, String rejectionPhotoUrl) {
+        Order order = outPort.findOrderById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        if (!"shipping".equalsIgnoreCase(order.getStatus())) {
+            throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
+        }
+
+        if (reason == null || reason.isBlank() || rejectionPhotoUrl == null || rejectionPhotoUrl.isBlank()) {
+            throw new IllegalArgumentException("Invalid Rejection: Must provide a valid reason and rejection photo.");
+        }
+
+        order.setStatus("rejected_at_door");
+        order.setRejectionReason(reason);
+        order.setRejectionPhotoUrl(rejectionPhotoUrl);
+        outPort.saveOrder(order);
+        outPort.cleanupOrderTelemetry(orderId);
+
+        // Instant Wallet Refund
+        Customer customer = order.getCustomer();
+        if (customer != null) {
+            customer.setWalletBalance(customer.getWalletBalance().add(order.getTotalAmount()));
+            outPort.saveCustomer(customer);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "rejected_at_door");
+        result.put("orderId", orderId);
+        result.put("message", "Delivery rejected at the door. Instant refund issued to customer wallet.");
+        return result;
+    }
+
+    @Override
+    @Cacheable(value = "academy-courses")
     public List<Map<String, String>> getAcademyCourses() {
         return List.of(
             Map.of("course_id", "COURSE_001", "course_name", "Cold Chain Logistics Mastery"),

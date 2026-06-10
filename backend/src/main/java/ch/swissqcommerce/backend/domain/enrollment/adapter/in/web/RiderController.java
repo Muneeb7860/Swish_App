@@ -8,6 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
@@ -63,7 +66,9 @@ public class RiderController {
 
     /**
      * POST /api/rider/onboard/{applicationId}/approve - Approve a specific gate for rider onboarding application.
+     * Restricted to ROLE_ADMIN — riders must not be able to self-approve their own applications.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/onboard/{applicationId}/approve")
     @Transactional
     public ResponseEntity<Map<String, Object>> approveOnboarding(
@@ -85,24 +90,64 @@ public class RiderController {
 
     /**
      * POST /api/rider/orders/{id}/telemetry - Record GPS/thermal telemetry ping.
+     * The authenticated rider must be the one assigned to the order — a rider cannot
+     * submit telemetry for another rider's delivery.
      */
     @PostMapping("/orders/{id}/telemetry")
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public ResponseEntity<OrderTelemetryLog> recordTelemetry(
+    public ResponseEntity<?> recordTelemetry(
             @PathVariable Integer id,
             @Valid @RequestBody TelemetryPingRequest request) {
-        OrderTelemetryLog log = riderUseCase.recordPing(
-                id, request.getLatitude(), request.getLongitude(), request.getTemperature());
-        return ResponseEntity.status(201).body(log);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return ResponseEntity.status(401).body(java.util.Map.of("error", "Unauthorized."));
+        }
+        String callerRiderId = auth.getName();
+        try {
+            OrderTelemetryLog log = riderUseCase.recordPing(
+                    id, request.getLatitude(), request.getLongitude(), request.getTemperature(), callerRiderId);
+            return ResponseEntity.status(201).body(log);
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.status(403).body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @Data
+    public static class ConfirmDeliveryRequest {
+        private String pin;
+        private String photoUrl;
+    }
+
+    @Data
+    public static class RejectDeliveryRequest {
+        @NotBlank(message = "Rejection reason is required")
+        private String reason;
+        
+        @NotBlank(message = "Rejection photo URL is required")
+        private String photoUrl;
     }
 
     /**
-     * POST /api/rider/orders/{id}/deliver - Confirm delivery.
+     * POST /api/rider/orders/{id}/deliver - Confirm delivery with PIN or Photo.
      */
     @PostMapping("/orders/{id}/deliver")
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public ResponseEntity<Map<String, Object>> confirmDelivery(@PathVariable Integer id) {
-        Map<String, Object> result = riderUseCase.confirmDelivery(id);
+    public ResponseEntity<Map<String, Object>> confirmDelivery(
+            @PathVariable Integer id,
+            @Valid @RequestBody ConfirmDeliveryRequest request) {
+        Map<String, Object> result = riderUseCase.confirmDelivery(id, request.getPin(), request.getPhotoUrl());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * POST /api/rider/orders/{id}/reject - Reject delivery at the door.
+     */
+    @PostMapping("/orders/{id}/reject")
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public ResponseEntity<Map<String, Object>> rejectDelivery(
+            @PathVariable Integer id,
+            @Valid @RequestBody RejectDeliveryRequest request) {
+        Map<String, Object> result = riderUseCase.rejectDelivery(id, request.getReason(), request.getPhotoUrl());
         return ResponseEntity.ok(result);
     }
 

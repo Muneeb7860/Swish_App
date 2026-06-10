@@ -29,7 +29,7 @@ public class RiderServiceTest {
     @InjectMocks private RiderServiceImpl riderService;
 
     @Test
-    public void testConfirmDelivery_Success() {
+    public void testConfirmDelivery_SuccessWithPin() {
         Rider rider = new Rider();
         rider.setTrustScore(90);
 
@@ -42,10 +42,11 @@ public class RiderServiceTest {
         order.setStatus("shipping");
         order.setRider(rider);
         order.setCustomer(customer);
+        order.setDeliveryPin("1234");
 
         when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        Map<String, Object> result = riderService.confirmDelivery(1);
+        Map<String, Object> result = riderService.confirmDelivery(1, "1234", null);
 
         assertEquals("delivered", order.getStatus());
         assertEquals(95, rider.getTrustScore());
@@ -57,6 +58,69 @@ public class RiderServiceTest {
         verify(outPort, times(1)).saveRider(rider);
         verify(outPort, times(1)).saveCustomer(customer);
         verify(outPort, times(1)).saveTrustLedger(any(SecurityTrustLedger.class));
+    }
+
+    @Test
+    public void testConfirmDelivery_SuccessWithPhotoFallback() {
+        Rider rider = new Rider();
+        rider.setTrustScore(90);
+
+        Customer customer = new Customer();
+        customer.setTrustScore(90);
+        customer.setConsecutiveOrdersCompleted(2);
+        customer.setIsOnProbation(true);
+
+        Order order = new Order();
+        order.setStatus("shipping");
+        order.setRider(rider);
+        order.setCustomer(customer);
+        order.setDeliveryPin("1234");
+
+        when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
+
+        Map<String, Object> result = riderService.confirmDelivery(1, "9999", "http://proof.photo/url");
+
+        assertEquals("delivered", order.getStatus());
+        assertEquals("http://proof.photo/url", order.getProofOfDeliveryPhotoUrl());
+        
+        verify(outPort, times(1)).saveOrder(order);
+    }
+
+    @Test
+    public void testConfirmDelivery_FailureMismatchedPinAndNoPhoto() {
+        Order order = new Order();
+        order.setStatus("shipping");
+        order.setDeliveryPin("1234");
+
+        when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            riderService.confirmDelivery(1, "9999", null);
+        });
+    }
+
+    @Test
+    public void testRejectDelivery_Success() {
+        Customer customer = new Customer();
+        customer.setWalletBalance(new java.math.BigDecimal("50.00"));
+
+        Order order = new Order();
+        order.setStatus("shipping");
+        order.setCustomer(customer);
+        order.setTotalAmount(new java.math.BigDecimal("25.50"));
+
+        when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
+
+        Map<String, Object> result = riderService.rejectDelivery(1, "Damaged perishables", "http://reject.photo/url");
+
+        assertEquals("rejected_at_door", order.getStatus());
+        assertEquals("Damaged perishables", order.getRejectionReason());
+        assertEquals("http://reject.photo/url", order.getRejectionPhotoUrl());
+        assertEquals(new java.math.BigDecimal("75.50"), customer.getWalletBalance());
+
+        verify(outPort, times(1)).saveOrder(order);
+        verify(outPort, times(1)).saveCustomer(customer);
+        verify(outPort, times(1)).cleanupOrderTelemetry(1);
     }
 
     @Test

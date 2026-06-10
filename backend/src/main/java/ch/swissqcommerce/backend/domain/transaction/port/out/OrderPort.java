@@ -10,4 +10,5 @@ public interface OrderPort {
     Order save(Order order);
     void flush();
     List<Order> findByCustomerIdOrderByCreatedAtDesc(String customerId);
+    List<Order> findAllById(List<Integer> ids);
 }

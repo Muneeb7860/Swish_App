@@ -12,7 +12,7 @@ import java.util.Optional;
 public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
-    private final WastageLogRepository wastageLogRepository;
+    private final WastageLogEntityRepository wastageLogRepository;
 
     @Override
     public PurchaseOrder savePurchaseOrder(PurchaseOrder po) {
@@ -64,13 +64,13 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
                 .build();
                 
         if (entity.getItems() != null) {
-            domain.setItems(entity.getItems().stream().map(itemEntity -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
+            domain.setItems(new java.util.ArrayList<>(entity.getItems().stream().map(itemEntity -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
                     .itemId(itemEntity.getItemId())
                     .productId(itemEntity.getProductId())
                     .requestedQty(itemEntity.getRequestedQty())
                     .receivedQty(itemEntity.getReceivedQty())
                     .purchaseOrder(domain)
-                    .build()).toList());
+                    .build()).toList()));
         }
         return domain;
     }

@@ -7,14 +7,18 @@ info:
     Enforces JWT security with Multi-Factor Authentication (MFA) parameters, GDPR compliance controls,
     and Chaos Engineering fault logs.
     Includes Idempotency key headers to prevent duplicate execution on critical payment/write routes.
-  version: 1.1.0
+    Auto-generated from SpringDoc OpenAPI 3.0 at /v3/api-docs — DO NOT manually edit path entries.
+  version: 1.2.0
+  contact:
+    name: SwissQ Commerce Engineering
+    email: dev@swissqcommerce.ch
 servers:
   - url: http://localhost:8080
-    description: Local Development BFF Server
+    description: Local Development (Spring Boot, port 8080)
   - url: https://api.staging.swissqcommerce.ch
     description: Staging Environment BFF Server
 paths:
-  /api/auth/login:
+  /api/v1/auth/login:
     post:
       summary: Authenticate User Credentials
       description: Validates username/password. If MFA is active, returns a 200 with mfa_required=true and session token.
@@ -51,7 +55,7 @@ paths:
         '401':
           description: Invalid username or password.
 
-  /api/auth/mfa/verify:
+  /api/v1/auth/mfa/verify:
     post:
       summary: Complete MFA Verification
       description: Validates SMS OTP or Google Authenticator TOTP code to release the authorized JWT token.
@@ -84,12 +88,32 @@ paths:
         '401':
           description: Invalid or expired MFA passcode.
 
+  /api/v1/auth/logout:
+    post:
+      summary: Logout / Invalidate Session
+      description: Invalidates the current JWT session. Client must discard the token.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
   /api/customer/catalog:
     get:
       summary: Retrieve Inventory Catalog
       description: Returns the real-time stock and prices for both MFC stores (Central and East).
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Successful catalog retrieval.
@@ -107,7 +131,7 @@ paths:
       summary: Place Order (Cart Checkout)
       description: Initiates order picking and payment checkout. Routes to alternative MFC store if capacity or congestion is hit.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -131,7 +155,7 @@ paths:
       summary: List Customer Orders
       description: Retrieves the order history for the authenticated customer.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -146,7 +170,7 @@ paths:
       summary: Request AI-Assisted Refund
       description: Submits a refund claim. Checks customer trust score, refund ratio, and validates GPS geofences/EXIF metadata.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -200,7 +224,7 @@ paths:
       summary: Authorize a distributed payment transaction
       description: Creates a payment authorization record, reserves funds, and emits a transactional outbox event for settlement.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -224,7 +248,7 @@ paths:
       summary: List customer payments
       description: Retrieves payment authorizations and settlements for a customer.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: customerId
           in: query
@@ -248,7 +272,7 @@ paths:
       summary: Retrieve payment details
       description: Returns details for a single payment authorization or settlement.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -272,7 +296,7 @@ paths:
       summary: Capture an authorized payment
       description: Captures a previously authorized payment and transitions settlement status.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -296,7 +320,7 @@ paths:
       summary: Admin rollback compensation
       description: Reverses a failed or fraudulent payment across downstreams.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -316,7 +340,7 @@ paths:
       summary: GDPR Article 17 Erasure Request
       description: Wipes customer profile (name, email, card tokens) and maps future sessions to a hashed probation identity.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Profile purged. Next session starts under probation status.
@@ -336,7 +360,7 @@ paths:
       summary: Customer Double-Entry Ledger Statements
       description: Returns the customer's chronological double-entry ledger lines and balance.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Ledger statements retrieved successfully.
@@ -352,7 +376,7 @@ paths:
       summary: Inject Dry Ice Coolant Mitigation
       description: Charges merchant $2.00 to reset transit cargo temperature back to 4.0°C.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -381,7 +405,7 @@ paths:
       summary: Submit Rider Onboarding Documents
       description: Registers application for manual compliance and operational validation.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -418,7 +442,7 @@ paths:
       summary: List Rider Academy Courses
       description: Fetches available certification courses.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Courses retrieved successfully.
@@ -439,7 +463,7 @@ paths:
       summary: Complete Academy Course
       description: Issues a certificate and grants a trust score bonus.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -456,7 +480,7 @@ paths:
       summary: Retrieve MFC Pick Backlog Queue
       description: Fetch orders pending picking at the authenticated picker's store.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -471,7 +495,7 @@ paths:
       summary: Complete Order Picking & Handover
       description: Completes order packing. Awards lightning badge if done under 4.0s. Triggers fallback replacement if packing error occurred.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -511,7 +535,7 @@ paths:
       summary: Rebalance Micro-Fulfillment Centers
       description: Admin-triggered or scheduler-triggered stock transfer from surplus MFC to deficit MFC.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -552,7 +576,7 @@ paths:
       summary: Retrieve Wholesaler Restocking Queue
       description: Fetch restocking orders assigned to the authenticated B2B Wholesaler.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: List of assigned B2B restocks.
@@ -570,7 +594,7 @@ paths:
       summary: Fulfill Restock Order (Acknowledge Invoice)
       description: Wholesaler acknowledges a restocking order, confirming shipment and triggering invoice logging.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -600,7 +624,7 @@ paths:
       summary: Retrieve Wholesaler B2B Invoices
       description: Retrieve invoicing details for auditing and financial ledger verification.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -615,7 +639,7 @@ paths:
       summary: Inject/Resolve Chaos Fault
       description: Dynamically toggle active infrastructure breakdowns (cold chain failure, B2B wholesaler outage, rider traffic).
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -651,7 +675,7 @@ paths:
     get:
       summary: List Onboarding Applications
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -665,7 +689,7 @@ paths:
       summary: Approve/Reject Onboarding Application
       description: Grants operations and compliance clearances to applicants.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -700,7 +724,7 @@ paths:
     get:
       summary: List HITL Tickets
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -713,7 +737,7 @@ paths:
     post:
       summary: Approve/Void HITL Ticket
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -746,7 +770,7 @@ paths:
       summary: Retrieve Audit Logs
       description: Fetches immutable audit logs from MongoDB.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Audit logs retrieved successfully.
@@ -756,7 +780,7 @@ paths:
       summary: Rotate Vault Secrets
       description: Rotates JWT keys and DB credentials across microservices via Vault.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Secret rotation initiated.
@@ -766,17 +790,18 @@ paths:
       summary: GDPR/PCI Compliance Check
       description: Generates a compliance snapshot report.
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Report generated.
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: JWT Bearer token obtained from /api/v1/auth/login (or MFA verify). Pass as 'Authorization: Bearer <token>'.
   parameters:
     IdempotencyKey:
       name: X-Idempotency-Key

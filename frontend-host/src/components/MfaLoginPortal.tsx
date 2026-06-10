@@ -1,6 +1,31 @@
 import * as Lucide from "lucide-react";
 import React from "react";
 
+interface ActiveProfile {
+	logLevel: string;
+	mfaRequired: boolean;
+	[key: string]: unknown;
+}
+
+interface MfaLoginPortalProps {
+	isAuthenticated: boolean;
+	activeProfile: ActiveProfile | null;
+	mfaStep: "credentials" | "otp";
+	setMfaStep: (step: "credentials" | "otp") => void;
+	mfaRole: string;
+	setMfaRole: (role: string) => void;
+	mfaPassword: string;
+	setMfaPassword: (pw: string) => void;
+	mfaOtpInput: string;
+	setMfaOtpInput: (otp: string) => void;
+	mfaMethod: "sms" | "totp";
+	setMfaMethod: (method: "sms" | "totp") => void;
+	totpSecretCode: string;
+	totpTimer: number;
+	handleMfaSendOtp: () => void;
+	handleMfaVerify: () => void;
+}
+
 export default function MfaLoginPortal({
 	isAuthenticated,
 	activeProfile,
@@ -18,7 +43,7 @@ export default function MfaLoginPortal({
 	totpTimer,
 	handleMfaSendOtp,
 	handleMfaVerify,
-}) {
+}: MfaLoginPortalProps) {
 	if (isAuthenticated) return null;
 
 	return (

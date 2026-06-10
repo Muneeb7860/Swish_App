@@ -1,6 +1,46 @@
 import * as Lucide from "lucide-react";
 import React from "react";
 
+interface KafkaLog {
+	id: string | number;
+	time: string;
+	event: string;
+	source: string;
+	meta: string;
+}
+
+interface AgentMetrics {
+	dailyCost: number;
+	hourlyRequestCount: number;
+	dailyBudgetLimit: number;
+	hourlyRequestLimit: number;
+}
+
+interface ActiveProfile {
+	logLevel: string;
+	dbLatencyDefault: number;
+	mfaRequired: boolean;
+}
+
+interface SystemEngineRoomProps {
+	rateLimitActive: boolean;
+	dbLatencyActive: boolean;
+	redisCrashActive: boolean;
+	paymentOutageActive: boolean;
+	riderTrafficActive: boolean;
+	circuitBreakerTripped: boolean;
+	activeProfile: ActiveProfile;
+	oltpWriteLatency: number;
+	olapSyncTimer: number;
+	jwtFlash: boolean;
+	vaultTimer: number;
+	latencyHistory: number[];
+	cacheHits: number;
+	cacheMisses: number;
+	kafkaLogs: KafkaLog[];
+	agentMetrics?: AgentMetrics;
+}
+
 export default function SystemEngineRoom({
 	rateLimitActive,
 	dbLatencyActive,
@@ -23,7 +63,7 @@ export default function SystemEngineRoom({
 		dailyBudgetLimit: 5.0,
 		hourlyRequestLimit: 100,
 	},
-}) {
+}: SystemEngineRoomProps) {
 	const currentBffLatency =
 		latencyHistory.length > 0 ? latencyHistory[latencyHistory.length - 1] : 4;
 	const totalCacheQueries = cacheHits + cacheMisses;

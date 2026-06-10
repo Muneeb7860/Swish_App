@@ -5,10 +5,12 @@ on:
     branches:
       - develop
       - master
+      - Mac_Machine
   pull_request:
     branches:
       - develop
       - master
+      - Mac_Machine
 
 jobs:
   backend-quality:
@@ -116,6 +118,135 @@ jobs:
       - name: Build MFE Assets for Production
         working-directory: ./${{ matrix.mfe }}
         run: npm run build
+
+  cypress-e2e:
+    name: Cypress E2E (auth, orders, rider, admin)
+    runs-on: ubuntu-latest
+    # E2E requires the full stack. We spin up the backend against a real
+    # PostgreSQL service — the Flyway migrations use PostgreSQL PL/pgSQL
+    # functions and triggers that H2 cannot parse — plus a real Redis. The
+    # backend runs under the `staging` profile (Postgres datasource; GCP
+    # Secret Manager stays disabled). The Vite dev server runs against it.
+    needs: [backend-quality]
+
+    services:
+      # Redis is needed by the Spring Boot app even in test mode
+      # (StringRedisTemplate is @MockBean'd but the autoconfiguration still fires)
+      # Use a real Redis so the app starts without connection errors.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # PostgreSQL backs the `staging` profile. Host port 5420 matches the
+      # datasource URL in application-staging.properties (localhost:5420);
+      # credentials match the staging defaults (postgres / swisssecure2026).
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: swiss_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: swisssecure2026
+        ports:
+          - 5420:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d swiss_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: maven
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend-customer/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: mvn -q dependency:resolve
+
+      - name: Start backend (staging profile, Postgres, background)
+        working-directory: ./backend
+        env:
+          JWT_SECRET: ci-e2e-test-secret-32-chars-long!!
+          SPRING_DATA_REDIS_HOST: localhost
+          SPRING_DATA_REDIS_PORT: "6379"
+          ADMIN_EMAIL: ci-admin@swish.local
+          ADMIN_PASSWORD: CiAdm1nP@ss!
+        run: |
+          mvn spring-boot:run \
+            -Dspring-boot.run.jvmArguments="-Dserver.port=8083" \
+            -Dspring-boot.run.profiles=staging &
+          echo "Backend PID: $!"
+          # Wait until /actuator/health returns UP (max 90s)
+          for i in $(seq 1 30); do
+            STATUS=$(curl -sf http://localhost:8083/actuator/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','?'))" 2>/dev/null || echo "?")
+            echo "Attempt $i — health: $STATUS"
+            [ "$STATUS" = "UP" ] && break
+            sleep 3
+          done
+          [ "$STATUS" = "UP" ] || (echo "Backend did not start in time" && exit 1)
+
+      - name: Fetch admin JWT for Cypress
+        id: admin-jwt
+        run: |
+          ADMIN_TOKEN=$(curl -sf -X POST http://localhost:8083/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-admin@swish.local","password":"CiAdm1nP@ss!"}' \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
+          echo "ADMIN_TOKEN=${ADMIN_TOKEN}" >> "$GITHUB_ENV"
+          echo "Admin JWT fetched (length ${#ADMIN_TOKEN})"
+
+      - name: Install Cypress dependencies
+        working-directory: ./frontend-customer
+        run: npm ci
+
+      - name: Start Vite dev server (background)
+        working-directory: ./frontend-customer
+        env:
+          # Point the React app at the direct backend (no gateway in CI).
+          # AuthGate.tsx and App.tsx read import.meta.env.VITE_API_URL at
+          # build/dev time; without this the components would try port 8080
+          # (the full-stack gateway default) and fail to reach the backend.
+          VITE_API_URL: http://localhost:8083
+        run: |
+          npm run dev -- --port 5173 &
+          sleep 8   # give Vite time to compile
+
+      - name: Run Cypress E2E tests
+        working-directory: ./frontend-customer
+        env:
+          CYPRESS_BASE_URL: http://localhost:5173
+          CYPRESS_API_URL: http://localhost:8083
+          CYPRESS_ADMIN_TOKEN: ${{ env.ADMIN_TOKEN }}
+        run: npm run cy:run -- --reporter junit --reporter-options "mochaFile=cypress/results/junit-[hash].xml"
+
+      - name: Upload Cypress test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-results
+          path: |
+            frontend-customer/cypress/results/
+            frontend-customer/cypress/screenshots/
+          retention-days: 7
 
   security-trivy:
     name: FileSystem Vulnerability Audit (Trivy)

@@ -1,29 +1,166 @@
 groups:
-- name: swish_app_alerts
-  rules:
-  - alert: HighApiLatency
-    expr: http_server_requests_seconds_sum / http_server_requests_seconds_count > 0.5
-    for: 1m
-    labels:
-      severity: warning
-    annotations:
-      summary: "High API Latency on {{ $labels.instance }}"
-      description: "The API latency is above 500ms for more than 1 minute."
+  - name: swish_jvm
+    rules:
+      - alert: JvmHeapHighUsage
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage above 85% on {{ $labels.job }}"
+          description: "Heap: {{ $value | humanizePercentage }} used on {{ $labels.instance }}"
 
-  - alert: KafkaDlqSpike
-    expr: rate(kafka_producer_record_error_total[1m]) > 0
-    for: 1m
-    labels:
-      severity: critical
-    annotations:
-      summary: "Kafka DLQ Spiking on {{ $labels.instance }}"
-      description: "Errors producing to Kafka are detected, likely messages are hitting the DLQ."
+      - alert: JvmHeapCritical
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "JVM heap near OOM on {{ $labels.job }}"
+          description: "Heap: {{ $value | humanizePercentage }} — OOM imminent on {{ $labels.instance }}"
 
-  - alert: HighErrorRate
-    expr: rate(http_server_requests_seconds_count{status=~"5.."}[1m]) > 5
-    for: 1m
-    labels:
-      severity: critical
-    annotations:
-      summary: "High 5xx Error Rate on {{ $labels.instance }}"
-      description: "More than 5 HTTP 5xx errors per minute detected."
+  - name: swish_http
+    rules:
+      - alert: HighApiLatency
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_sum{job="backend"}[2m])) by (uri)
+            /
+            sum(rate(http_server_requests_seconds_count{job="backend"}[2m])) by (uri)
+          ) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API response on {{ $labels.uri }}"
+          description: "Mean latency {{ $value | humanizeDuration }} on {{ $labels.uri }}"
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="backend",status=~"5.."}[1m])) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate on backend"
+          description: "{{ $value | humanize }} errors/sec — check logs immediately"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is DOWN"
+          description: "{{ $labels.instance }} has been unreachable for 30s"
+
+  - name: swish_kafka
+    rules:
+      - alert: KafkaDlqSpike
+        expr: |
+          rate(kafka_producer_record_error_total[1m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka produce errors on {{ $labels.job }}"
+          description: "Messages hitting DLQ at {{ $value | humanize }}/sec"
+
+      - alert: KafkaConsumerLag
+        expr: |
+          kafka_consumer_fetch_manager_records_lag > 1000
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag on {{ $labels.job }}"
+          description: "Consumer group {{ $labels.consumergroup }} lag: {{ $value }}"
+
+  - name: swish_database
+    rules:
+      - alert: HikariConnectionPoolExhausted
+        expr: |
+          hikaricp_connections_pending > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB connection pool under pressure on {{ $labels.job }}"
+          description: "{{ $value }} threads waiting for a connection"
+
+  # ── Security / AI anomaly alerts ────────────────────────────────────────────
+  # Driven by the Micrometer Gauge registered in SecurityController:
+  #   security.anomaly.analyzed.ratio = analyzed / (pending + analyzed)
+  # 1.0 → all anomalies resolved.  0.0 → everything is pending.
+  - name: swish_security
+    rules:
+      - alert: SecurityAnomalyBacklogHigh
+        # Ratio < 0.50 means more than half of detected anomalies are still pending
+        # review by the security team. This triggers during an attack wave or when
+        # the HITL queue is not being drained.
+        expr: |
+          security_anomaly_analyzed_ratio{domain="security"} < 0.50
+        for: 5m
+        labels:
+          severity: warning
+          domain: security
+        annotations:
+          summary: "Security anomaly backlog above 50% on {{ $labels.job }}"
+          description: >-
+            Only {{ $value | humanizePercentage }} of detected security anomalies
+            have been analyzed. {{ $labels.instance }} — drain the HITL queue at
+            /api/admin/hitl/queue before the backlog grows further.
+
+      - alert: SecurityAnomalyBacklogCritical
+        # Ratio < 0.20 means ≥80% of anomalies are unreviewed. This indicates
+        # either a large-scale incident or a stalled HITL pipeline.
+        expr: |
+          security_anomaly_analyzed_ratio{domain="security"} < 0.20
+        for: 2m
+        labels:
+          severity: critical
+          domain: security
+        annotations:
+          summary: "CRITICAL — security anomaly backlog ≥ 80% unresolved on {{ $labels.job }}"
+          description: >-
+            {{ $value | humanizePercentage }} of anomalies analyzed — 80%+ are PENDING.
+            Possible ongoing attack or broken anomaly pipeline. Immediate review required.
+            Endpoint: {{ $labels.instance }}/api/admin/hitl/queue
+
+      - alert: HitlQueueStale
+        # If the ratio hasn't changed at all for 30 minutes it means no new anomalies
+        # are being classified AND no existing ones are being resolved — the pipeline
+        # may be frozen.
+        expr: |
+          changes(security_anomaly_analyzed_ratio{domain="security"}[30m]) == 0
+            and
+          security_anomaly_analyzed_ratio{domain="security"} < 1.0
+        for: 5m
+        labels:
+          severity: warning
+          domain: security
+        annotations:
+          summary: "HITL anomaly pipeline appears stalled on {{ $labels.job }}"
+          description: >-
+            security.anomaly.analyzed.ratio has not changed in 30 minutes and is
+            not at 1.0 ({{ $value | humanizePercentage }}). Check the outbox event
+            processor and anomaly detection service on {{ $labels.instance }}.
+
+      - alert: AgentDailyBudgetExceeded
+        # budget_guardrail_triggers_total is a counter incremented inside
+        # MasterOrchestratorService whenever dailyCost >= 5.0 fires.
+        # Any trigger in a 5-minute window means the AI budget cap fired.
+        expr: |
+          increase(agent_budget_guardrail_triggers_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: ai
+        annotations:
+          summary: "AI agent daily budget guardrail triggered on {{ $labels.job }}"
+          description: >-
+            MasterOrchestratorService fired the $5/day budget cap on {{ $labels.instance }}.
+            Subsequent customer requests are being routed to the HITL queue.
+            Check token cost per request and consider increasing the daily budget limit.

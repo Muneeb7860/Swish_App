@@ -140,6 +140,13 @@ public class TransactionPersistenceAdapter implements
                 .toList();
     }
 
+    @Override
+    public List<Order> findAllById(List<Integer> ids) {
+        return orderRepository.findAllById(ids).stream()
+                .map(this::mapToDomain)
+                .toList();
+    }
+
     private Order mapToDomain(OrderEntity entity) {
         if (entity == null) return null;
         Order order = Order.builder()
@@ -162,17 +169,21 @@ public class TransactionPersistenceAdapter implements
                 .perishableMaintenanceFee(entity.getPerishableMaintenanceFee())
                 .priceLockedAt(entity.getPriceLockedAt())
                 .createdAt(entity.getCreatedAt())
+                .deliveryPin(entity.getDeliveryPin())
+                .proofOfDeliveryPhotoUrl(entity.getProofOfDeliveryPhotoUrl())
+                .rejectionReason(entity.getRejectionReason())
+                .rejectionPhotoUrl(entity.getRejectionPhotoUrl())
                 .build();
                 
         if (entity.getOrderItems() != null) {
-            order.setOrderItems(entity.getOrderItems().stream().map(itemEntity -> 
+            order.setOrderItems(new java.util.ArrayList<>(entity.getOrderItems().stream().map(itemEntity ->
                 ch.swissqcommerce.backend.domain.transaction.core.model.OrderItem.builder()
                         .order(order)
                         .item(itemEntity.getItem())
                         .quantity(itemEntity.getQuantity())
                         .price(itemEntity.getPrice())
                         .build()
-            ).toList());
+            ).toList()));
         }
         return order;
     }
@@ -199,6 +210,10 @@ public class TransactionPersistenceAdapter implements
                 .perishableMaintenanceFee(domain.getPerishableMaintenanceFee() != null ? domain.getPerishableMaintenanceFee() : java.math.BigDecimal.ZERO)
                 .priceLockedAt(domain.getPriceLockedAt())
                 .createdAt(domain.getCreatedAt())
+                .deliveryPin(domain.getDeliveryPin())
+                .proofOfDeliveryPhotoUrl(domain.getProofOfDeliveryPhotoUrl())
+                .rejectionReason(domain.getRejectionReason())
+                .rejectionPhotoUrl(domain.getRejectionPhotoUrl())
                 .build();
 
         if (domain.getOrderItems() != null) {
@@ -229,6 +244,7 @@ public class TransactionPersistenceAdapter implements
                 .currentCashInHand(entity.getCurrentCashInHand())
                 .activeShiftId(entity.getActiveShiftId())
                 .createdAt(entity.getCreatedAt())
+                .gearExempt(entity.isGearExempt())
                 .build();
     }
 
@@ -246,6 +262,7 @@ public class TransactionPersistenceAdapter implements
         entity.setCashCollectedLimit(domain.getCashCollectedLimit());
         entity.setCurrentCashInHand(domain.getCurrentCashInHand() != null ? domain.getCurrentCashInHand() : java.math.BigDecimal.ZERO);
         entity.setActiveShiftId(domain.getActiveShiftId());
+        entity.setGearExempt(domain.isGearExempt());
         return entity;
     }
 

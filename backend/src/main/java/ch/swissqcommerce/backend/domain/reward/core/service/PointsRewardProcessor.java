@@ -30,7 +30,7 @@ public class PointsRewardProcessor implements RewardProcessor {
                         .customerId(customerId)
                         .loyaltyPoints(0)
                         .build());
-        
+
         points.setLoyaltyPoints(points.getLoyaltyPoints() + amount);
         rewardOutPort.saveRewardPoints(points);
 

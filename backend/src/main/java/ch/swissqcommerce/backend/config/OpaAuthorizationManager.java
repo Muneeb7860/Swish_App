@@ -46,7 +46,12 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
     @Override
     public AuthorizationDecision check(Supplier<Authentication> authenticationSupplier, RequestAuthorizationContext context) {
         Authentication authentication = authenticationSupplier.get();
-        if (authentication == null || !authentication.isAuthenticated()) {
+        // AnonymousAuthenticationToken reports isAuthenticated()==true, so reject it
+        // explicitly — otherwise requests with no JWT pass this guard and get
+        // role-matched as ROLE_ANONYMOUS (the open /api/rider/onboard rule would
+        // then admit unauthenticated callers).
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
             return new AuthorizationDecision(false);
         }
 
@@ -77,7 +82,7 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
                 if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                     Map resultContainer = (Map) response.getBody().get("result");
                     if (resultContainer != null && Boolean.TRUE.equals(resultContainer.get("allow"))) {
-                        log.info("OPA Authz [ALLOW]: user={}, uri={}, method={}", username, uri, method);
+                        log.debug("OPA Authz [ALLOW]: user={}, uri={}, method={}", username, uri, method);
                         return new AuthorizationDecision(true);
                     }
                 }
@@ -93,15 +98,51 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
     }
 
     private AuthorizationDecision evaluateFallbackRules(String uri, List<String> roles) {
-        if (uri.startsWith("/api/admin/")) {
-            return new AuthorizationDecision(roles.contains("ROLE_ADMIN"));
+        // Admin-only paths
+        if (uri.startsWith("/api/admin") || uri.startsWith("/api/security")) {
+            boolean granted = roles.contains("ROLE_ADMIN");
+            if (!granted) log.warn("OPA Fallback [DENY - admin-only path]: uri={}, roles={}", uri, roles);
+            return new AuthorizationDecision(granted);
         }
-        if (uri.startsWith("/api/orders/")) {
+        // Customer + admin paths — note: no trailing slash so /api/orders (list)
+        // and /api/orders/{id} (detail) are both matched correctly.
+        if (uri.startsWith("/api/orders") || uri.startsWith("/api/customer")
+                || uri.startsWith("/api/payments")) {
             return new AuthorizationDecision(roles.contains("ROLE_CUSTOMER") || roles.contains("ROLE_ADMIN"));
         }
-        if (uri.startsWith("/api/rider/")) {
+        // Onboarding gate approval is admin-only (matches @PreAuthorize on the
+        // controller) — must be checked BEFORE the open onboarding rule below,
+        // which would otherwise match it by prefix.
+        if (uri.startsWith("/api/rider/onboard") && uri.endsWith("/approve")) {
+            return new AuthorizationDecision(roles.contains("ROLE_ADMIN"));
+        }
+        // Rider onboarding is open to any authenticated user — a customer applies
+        // to become a rider before they hold ROLE_RIDER.
+        if (uri.startsWith("/api/rider/onboard")) {
+            return new AuthorizationDecision(true);
+        }
+        // All other rider paths require ROLE_RIDER or ROLE_ADMIN.
+        if (uri.startsWith("/api/rider")) {
             return new AuthorizationDecision(roles.contains("ROLE_RIDER") || roles.contains("ROLE_ADMIN"));
         }
-        return new AuthorizationDecision(true);
+        // Picker/inventory paths — ROLE_PICKER or ROLE_ADMIN only
+        if (uri.startsWith("/api/inventory")) {
+            return new AuthorizationDecision(roles.contains("ROLE_PICKER") || roles.contains("ROLE_ADMIN"));
+        }
+        // Wholesaler B2B paths — ROLE_WHOLESALER or ROLE_ADMIN only
+        if (uri.startsWith("/api/wholesaler")) {
+            return new AuthorizationDecision(roles.contains("ROLE_WHOLESALER") || roles.contains("ROLE_ADMIN"));
+        }
+        // Device/cold-chain telemetry — riders post ticks, admins inspect
+        if (uri.startsWith("/api/telemetry")) {
+            return new AuthorizationDecision(roles.contains("ROLE_RIDER") || roles.contains("ROLE_ADMIN"));
+        }
+        // Any path without an explicit rule (e.g. /api/ai, /api/dispatch,
+        // /api/governance/hitl, /api/ledger, /api/v1/* domain APIs) is admin-only
+        // rather than denied outright: non-admin access still fails closed, but
+        // operators are not locked out of paths nobody remembered to list here.
+        boolean adminOnly = roles.contains("ROLE_ADMIN");
+        if (!adminOnly) log.warn("OPA Fallback [DENY - unmatched path]: uri={}, roles={}", uri, roles);
+        return new AuthorizationDecision(adminOnly);
     }
 }

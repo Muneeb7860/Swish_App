@@ -8,6 +8,9 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.DarkStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +33,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     private LedgerUseCase ledgerService;
 
     @Override
+    @Cacheable(value = "wholesaler-restocks", key = "#wholesalerId")
     public List<B2BRestockOrder> getAssignedRestocks(String wholesalerId) {
         wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
@@ -38,6 +42,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
 
     @Override
     @Transactional
+    @CacheEvict(value = "wholesaler-restocks", allEntries = true)
     public B2BRestockOrder createRestockOrder(String storeId, String preferredWholesalerId, String idempotencyKey) {
         // Idempotency guard
         if (idempotencyKey != null) {
@@ -60,21 +65,28 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         }
 
         final String currentSelectedId = selected.getWholesalerId();
-        // Check if primary wholesaler is eligible (trust >= 60 and active)
-        if (!selected.getIsActive() || selected.getTrustScore() < 60) {
-            // Switch to fallback wholesaler
+        // Check if primary wholesaler is eligible (trust >= 60 and active).
+        // Null trust/active flags (legacy rows) count as ineligible rather than NPE.
+        if (!isEligible(selected)) {
+            // Switch to fallback: highest-trust eligible wholesaler other than the
+            // preferred one (max() keeps the choice deterministic, unlike findFirst()
+            // over JPA's unspecified iteration order).
             selected = wholesalerPort.findAll().stream()
-                    .filter(w -> !w.getWholesalerId().equals(currentSelectedId))
-                    .filter(Wholesaler::getIsActive)
-                    .filter(w -> w.getTrustScore() >= 60)
-                    .findFirst()
+                    .filter(w -> w.getWholesalerId() != null
+                            && !w.getWholesalerId().equals(currentSelectedId)
+                            && isEligible(w))
+                    .max(Comparator.comparingInt(Wholesaler::getTrustScore))
                     .orElseThrow(() -> new IllegalStateException("No eligible wholesaler available for restock."));
             isFallback = true;
         }
 
         // Calculate invoice amount with academy discount
         BigDecimal invoiceAmount = isFallback ? selected.getFallbackInvoiceAmount() : selected.getBaseInvoiceAmount();
-        if (selected.getAcademyDiscountActive()) {
+        if (invoiceAmount == null) {
+            throw new IllegalStateException("Wholesaler " + selected.getWholesalerId()
+                    + " has no " + (isFallback ? "fallback" : "base") + " invoice amount configured.");
+        }
+        if (Boolean.TRUE.equals(selected.getAcademyDiscountActive())) {
             invoiceAmount = invoiceAmount.multiply(new BigDecimal("0.90")); // 10% discount
         }
 
@@ -89,8 +101,17 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         return restockOrderPort.save(restockOrder);
     }
 
+    private static boolean isEligible(Wholesaler w) {
+        return Boolean.TRUE.equals(w.getIsActive())
+                && w.getTrustScore() != null && w.getTrustScore() >= 60;
+    }
+
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "wholesaler-restocks", allEntries = true),
+        @CacheEvict(value = "wholesaler-invoices", allEntries = true)
+    })
     public Map<String, Object> fulfillRestock(Integer restockOrderId) {
         B2BRestockOrder restock = restockOrderPort.findById(restockOrderId)
                 .orElseThrow(() -> new NoSuchElementException("Restock order not found: " + restockOrderId));
@@ -121,27 +142,29 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     }
 
     @Override
+    @Cacheable(value = "wholesaler-invoices", key = "#wholesalerId")
     public Map<String, Object> getInvoiceSummary(String wholesalerId) {
         Wholesaler wholesaler = wholesalerPort.findById(wholesalerId)
                 .orElseThrow(() -> new NoSuchElementException("Wholesaler not found: " + wholesalerId));
 
-        List<B2BRestockOrder> allOrders = restockOrderPort.findByWholesalerId(wholesalerId);
+        List<B2BRestockOrder> orders = restockOrderPort.findByWholesalerId(wholesalerId);
 
-        BigDecimal totalInvoiced = allOrders.stream()
-                .filter(o -> "fulfilled".equalsIgnoreCase(o.getStatus()))
-                .map(B2BRestockOrder::getInvoiceAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        long pendingCount = allOrders.stream()
-                .filter(o -> "pending".equalsIgnoreCase(o.getStatus()))
-                .count();
+        BigDecimal totalFulfilled = BigDecimal.ZERO;
+        long pendingCount = 0;
+        for (B2BRestockOrder o : orders) {
+            if ("fulfilled".equalsIgnoreCase(o.getStatus()) && o.getInvoiceAmount() != null) {
+                totalFulfilled = totalFulfilled.add(o.getInvoiceAmount());
+            } else if ("pending".equalsIgnoreCase(o.getStatus())) {
+                pendingCount++;
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wholesalerId", wholesalerId);
         result.put("wholesalerName", wholesaler.getName());
-        result.put("totalFulfilledInvoiceAmount", totalInvoiced);
+        result.put("totalFulfilledInvoiceAmount", totalFulfilled);
         result.put("pendingOrderCount", pendingCount);
-        result.put("totalOrderCount", allOrders.size());
+        result.put("totalOrderCount", orders.size());
         result.put("academyDiscountActive", wholesaler.getAcademyDiscountActive());
         result.put("trustScore", wholesaler.getTrustScore());
         return result;
@@ -160,7 +183,7 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
                 
         List<ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem> items = requestedItems.entrySet().stream()
                 .map(e -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
-                        .itemId(java.util.UUID.randomUUID().toString())
+                        .itemId(UUID.randomUUID().toString())
                         .productId(e.getKey())
                         .requestedQty(e.getValue())
                         .receivedQty(0)
@@ -181,6 +204,12 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
         for (ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem item : po.getItems()) {
             Integer recv = itemReceipts.get(item.getProductId());
             if (recv != null) {
+                if (recv < 0) {
+                    throw new IllegalArgumentException("Received quantity cannot be negative for product: " + item.getProductId());
+                }
+                if (item.getReceivedQty() + recv > item.getRequestedQty()) {
+                    throw new IllegalArgumentException("Received quantity cannot exceed requested quantity for product: " + item.getProductId());
+                }
                 item.setReceivedQty(item.getReceivedQty() + recv);
             }
             if (item.getReceivedQty() < item.getRequestedQty()) {
@@ -198,6 +227,10 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     @Override
     @Transactional
     public ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog logWastage(String storeId, String productId, String batchId, Integer qty, String reason, String loggedBy) {
+        if (qty == null || qty <= 0) {
+            throw new IllegalArgumentException("Wastage quantity must be greater than zero.");
+        }
+        
         ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog log = ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog.builder()
                 .logId(java.util.UUID.randomUUID().toString())
                 .storeId(storeId)

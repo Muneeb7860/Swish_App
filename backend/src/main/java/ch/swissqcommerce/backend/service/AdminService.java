@@ -4,6 +4,7 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationEntity;
 import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationRepository;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
@@ -15,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import ch.swissqcommerce.backend.config.SecurityAudit;
+import org.springframework.cache.annotation.Cacheable;
 
 /**
  * Admin domain service for system operations including
@@ -106,6 +109,7 @@ public class AdminService {
      * Processes onboarding approval gate for a rider application.
      * Implements F11 3-gate approval: ops -> compliance -> admin.
      */
+    @SecurityAudit(action = "admin.onboarding.approve")
     @Transactional
     public Map<String, Object> approveOnboarding(String applicationId, String gate) {
         Map<String, Object> riderResult = riderUseCase.approveOnboarding(applicationId, gate);
@@ -122,6 +126,26 @@ public class AdminService {
     }
 
     /**
+     * Returns all pending rider onboarding applications.
+     * Maps OnboardingApplicationEntity → OnboardingApplication domain model since
+     * JPA cannot auto-project an entity to a different class in derived queries.
+     */
+    public List<OnboardingApplication> getPendingOnboardingApplications() {
+        return onboardingRepository.findByApprovalAdminFalse().stream()
+                .map(entity -> OnboardingApplication.builder()
+                        .applicationId(entity.getApplicationId())
+                        .applicantType(entity.getApplicantType())
+                        .name(entity.getName())
+                        .details(entity.getDetails())
+                        .approvalOps(entity.getApprovalOps())
+                        .approvalCompliance(entity.getApprovalCompliance())
+                        .approvalAdmin(entity.getApprovalAdmin())
+                        .createdAt(entity.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Returns all pending HITL queue tickets.
      */
     public List<HitlQueue> getPendingHitlTickets() {
@@ -132,6 +156,7 @@ public class AdminService {
      * Resolves a HITL queue ticket (approve or reject).
      * For refund approvals, processes the refund through the ledger.
      */
+    @SecurityAudit(action = "admin.hitl.resolve")
     @Transactional
     public Map<String, Object> resolveHitlTicket(String ticketId, String decision, String reason) {
         HitlQueue ticket = hitlQueueRepository.findById(ticketId)
@@ -203,13 +228,16 @@ public class AdminService {
 
     /**
      * Returns system health dashboard data.
+     * Cached for 30 seconds — dashboard polls this; stale-ok within that window.
      */
+    @Cacheable("system-health")
     public Map<String, Object> getSystemHealth() {
         Map<String, Object> health = new LinkedHashMap<>();
         health.put("status", "OPERATIONAL");
-        health.put("activeFaults", chaosFaultLogRepository.findByResolvedAtIsNull().size());
-        health.put("pendingHitlTickets", hitlQueueRepository.findByStatusOrderByCreatedAtDesc("pending").size());
-        health.put("pendingOnboarding", onboardingRepository.findByApprovalAdminFalse().size());
+        // Key names must match E2E assertions: pendingOnboardingApplications, activeChaosEvents
+        health.put("activeChaosEvents", chaosFaultLogRepository.countByResolvedAtIsNull());
+        health.put("pendingHitlTickets", hitlQueueRepository.countByStatus("pending"));
+        health.put("pendingOnboardingApplications", onboardingRepository.countByApprovalAdminFalse());
         health.put("totalOrders", orderRepository.count());
         health.put("totalInventoryItems", inventoryRepository.count());
         health.put("totalRiders", riderRepository.count());

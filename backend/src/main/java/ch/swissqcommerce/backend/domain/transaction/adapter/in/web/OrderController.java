@@ -39,8 +39,23 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getCustomerOrders(@RequestParam String customerId) {
-        List<Order> orders = orderUseCase.getCustomerOrders(customerId);
+    public ResponseEntity<?> getCustomerOrders(
+            @RequestParam(required = false) String customerId,
+            org.springframework.security.core.Authentication authentication) {
+        // If no explicit customerId is supplied (typical from the Cypress / SPA
+        // client), fall back to the authenticated user's own ID encoded in the JWT
+        // subject claim.  Return 401 if there is no authenticated principal at all.
+        String authId = authentication != null ? authentication.getName() : null;
+        if (authId == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        String effectiveCustomerId = (customerId != null && !customerId.isBlank()) ? customerId : authId;
+        // Object-level authz (IDOR guard): only admins may read another customer's orders.
+        if (!effectiveCustomerId.equals(authId)
+                && authentication.getAuthorities().stream().noneMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()))) {
+            return ResponseEntity.status(403).body(Map.of("error", "Cannot access another customer's orders"));
+        }
+        List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
         List<OrderResponseDTO> responseDTOs = orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         return ResponseEntity.ok(responseDTOs);
     }

@@ -1,0 +1,25 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: swish-prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: '10s'
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: swish-zipkin
+          urlDisplayLabel: 'View in Zipkin'
+
+  - name: Zipkin
+    type: zipkin
+    uid: swish-zipkin
+    access: proxy
+    url: http://zipkin:9411
+    isDefault: false
+    editable: false

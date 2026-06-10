@@ -10,6 +10,7 @@ import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.Rider
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 
@@ -17,22 +18,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class TelemetryPersistenceAdapter implements TelemetryPort {
 
     private final OrderTelemetryLogRepository telemetryLogRepository;
     private final OrderRepository orderRepository;
     private final RiderRepository riderRepository;
     private final SecurityTrustLedgerRepository securityTrustLedgerRepository;
-
-    public TelemetryPersistenceAdapter(OrderTelemetryLogRepository telemetryLogRepository,
-                                     OrderRepository orderRepository,
-                                     RiderRepository riderRepository,
-                                     SecurityTrustLedgerRepository securityTrustLedgerRepository) {
-        this.telemetryLogRepository = telemetryLogRepository;
-        this.orderRepository = orderRepository;
-        this.riderRepository = riderRepository;
-        this.securityTrustLedgerRepository = securityTrustLedgerRepository;
-    }
 
     private OrderTelemetryLogEntity toEntity(OrderTelemetryLog log) {
         if (log == null) return null;
@@ -87,16 +79,16 @@ public class TelemetryPersistenceAdapter implements TelemetryPort {
                 .priceLockedAt(entity.getPriceLockedAt())
                 .createdAt(entity.getCreatedAt())
                 .build();
-                
+
         if (entity.getOrderItems() != null) {
-            order.setOrderItems(entity.getOrderItems().stream().map(itemEntity -> 
+            order.setOrderItems(new java.util.ArrayList<>(entity.getOrderItems().stream().map(itemEntity ->
                 ch.swissqcommerce.backend.domain.transaction.core.model.OrderItem.builder()
                         .order(order)
                         .item(itemEntity.getItem())
                         .quantity(itemEntity.getQuantity())
                         .price(itemEntity.getPrice())
                         .build()
-            ).toList());
+            ).toList()));
         }
         return order;
     }

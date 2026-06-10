@@ -22,27 +22,26 @@ import java.util.Date;
 @Component
 public class TokenServiceAdapter implements TokenServicePort {
 
+    /** Fallback role used when callers pass null — should not occur in production. */
     private static final String DEFAULT_ROLE = "CUSTOMER";
 
-    private final String jwtSecret;
     private final long expirationMs;
     private final SecretKey signingKey;
 
     public TokenServiceAdapter(
             @Value("${jwt.secret}") String jwtSecret,
             @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
-        this.jwtSecret = jwtSecret;
         this.expirationMs = expirationMs;
         this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    public String generateToken(String sessionId, String userId) {
+    public String generateToken(String sessionId, String userId, String role) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(userId)
-                .claim("role", DEFAULT_ROLE)
+                .claim("role", role != null ? role : DEFAULT_ROLE)
                 .claim("sid", sessionId)
                 .issuedAt(now)
                 .expiration(exp)

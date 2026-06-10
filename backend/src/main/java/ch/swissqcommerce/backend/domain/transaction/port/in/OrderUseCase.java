@@ -8,6 +8,8 @@ import java.util.List;
 public interface OrderUseCase {
     List<Order> getCustomerOrders(String customerId);
 
+    Order getOrderById(Integer orderId);
+
     record CartItem(String itemId, int quantity) {}
 
     Order checkout(String customerId, List<CartItem> items, String paymentMethod,

@@ -31,6 +31,12 @@ public class UserAccountEntity {
     @Column(name = "status", length = 20, nullable = false)
     private String status;
 
+    /** User role — determines the Spring Security authority granted in the JWT.
+     *  Values: CUSTOMER (default), ADMIN, RIDER, WHOLESALER. */
+    @Column(name = "role", length = 20, nullable = false)
+    @Builder.Default
+    private String role = "CUSTOMER";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
