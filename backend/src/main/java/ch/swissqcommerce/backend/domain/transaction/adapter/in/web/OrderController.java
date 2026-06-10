@@ -39,8 +39,19 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getCustomerOrders(@RequestParam String customerId) {
-        List<Order> orders = orderUseCase.getCustomerOrders(customerId);
+    public ResponseEntity<?> getCustomerOrders(
+            @RequestParam(required = false) String customerId,
+            org.springframework.security.core.Authentication authentication) {
+        // If no explicit customerId is supplied (typical from the Cypress / SPA
+        // client), fall back to the authenticated user's own ID encoded in the JWT
+        // subject claim.  Return 401 if there is no authenticated principal at all.
+        String effectiveCustomerId = (customerId != null && !customerId.isBlank())
+                ? customerId
+                : (authentication != null ? authentication.getName() : null);
+        if (effectiveCustomerId == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
         List<OrderResponseDTO> responseDTOs = orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         return ResponseEntity.ok(responseDTOs);
     }

@@ -62,7 +62,7 @@ export default function App() {
 				<button
 					type="button"
 					onClick={async () => {
-						await fetch("http://localhost:8080/api/v1/auth/logout", {
+						await fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth/logout`, {
 							method: "POST",
 							headers: { "X-Session-Id": session.sessionId },
 						}).catch(() => {});

@@ -15,7 +15,10 @@ export default defineConfig({
     // Platform gateway / backend — all API calls go here.
     // Override via CYPRESS_API_URL env var in CI.
     env: {
-      apiUrl: "http://localhost:8080",
+      // Backend port: 8083 is the spring-boot default (server.port=${PORT:8083}).
+      // Override via CYPRESS_API_URL if the backend runs elsewhere (e.g. behind
+      // the platform-gateway on 8080 in full docker-compose mode).
+      apiUrl: "http://localhost:8083",
       // Admin JWT — supplied in CI via CYPRESS_ADMIN_TOKEN after logging in as
       // the seeded admin (see DevAdminInitializer + the CI "Fetch admin JWT" step).
       adminToken: "",

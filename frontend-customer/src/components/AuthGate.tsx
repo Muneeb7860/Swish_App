@@ -1,6 +1,9 @@
 import { useState } from "react";
 
-const API = "http://localhost:8080/api/v1/auth";
+// VITE_API_URL is injected by the dev-server at start time.
+// • Full-stack (docker-compose with gateway): defaults to http://localhost:8080
+// • E2E CI / local testing (direct backend, no gateway): set VITE_API_URL=http://localhost:8083
+const API = `${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth`;
 
 interface AuthSession {
 	token: string;

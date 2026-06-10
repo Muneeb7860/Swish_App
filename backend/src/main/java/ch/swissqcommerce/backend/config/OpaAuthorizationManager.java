@@ -94,20 +94,28 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
 
     private AuthorizationDecision evaluateFallbackRules(String uri, List<String> roles) {
         // Admin-only paths
-        if (uri.startsWith("/api/admin/") || uri.startsWith("/api/security/")) {
-            return new AuthorizationDecision(roles.contains("ROLE_ADMIN"));
+        if (uri.startsWith("/api/admin") || uri.startsWith("/api/security")) {
+            boolean granted = roles.contains("ROLE_ADMIN");
+            if (!granted) log.warn("OPA Fallback [DENY - admin-only path]: uri={}, roles={}", uri, roles);
+            return new AuthorizationDecision(granted);
         }
-        // Customer + admin paths
-        if (uri.startsWith("/api/orders/") || uri.startsWith("/api/customer/")
-                || uri.startsWith("/api/payments/")) {
+        // Customer + admin paths — note: no trailing slash so /api/orders (list)
+        // and /api/orders/{id} (detail) are both matched correctly.
+        if (uri.startsWith("/api/orders") || uri.startsWith("/api/customer")
+                || uri.startsWith("/api/payments")) {
             return new AuthorizationDecision(roles.contains("ROLE_CUSTOMER") || roles.contains("ROLE_ADMIN"));
         }
-        // Rider + admin paths
-        if (uri.startsWith("/api/rider/")) {
+        // Rider onboarding is open to any authenticated user — a customer applies
+        // to become a rider before they hold ROLE_RIDER.
+        if (uri.startsWith("/api/rider/onboard")) {
+            return new AuthorizationDecision(true);
+        }
+        // All other rider paths require ROLE_RIDER or ROLE_ADMIN.
+        if (uri.startsWith("/api/rider")) {
             return new AuthorizationDecision(roles.contains("ROLE_RIDER") || roles.contains("ROLE_ADMIN"));
         }
         // Picker/inventory paths — ROLE_PICKER or ROLE_ADMIN only
-        if (uri.startsWith("/api/inventory/")) {
+        if (uri.startsWith("/api/inventory")) {
             return new AuthorizationDecision(roles.contains("ROLE_PICKER") || roles.contains("ROLE_ADMIN"));
         }
         // Deny everything not explicitly listed above (deny-by-default)

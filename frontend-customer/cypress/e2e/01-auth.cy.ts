@@ -56,8 +56,10 @@ describe("Auth flow — UI", () => {
     cy.get('input[type="password"]').type(password);
     cy.contains("button", "Create account").click();
 
-    // Backend returns 409 / 400; AuthGate shows data.message
-    cy.get("p")
+    // Backend returns 409 / 400; AuthGate shows data.message in the form's error <p>.
+    // Use "form p" to avoid matching the subtitle <p> ("15-minute grocery delivery")
+    // which appears earlier in the DOM and always has a grey colour.
+    cy.get("form p")
       .should("have.css", "color")
       .and("match", /rgb\(239, 83, 80\)/); // error red (#ef5350)
   });
@@ -68,7 +70,10 @@ describe("Auth flow — UI", () => {
     cy.visit("/");
     cy.get('input[type="email"]').type(testEmail);
     cy.get('input[type="password"]').type(password);
-    cy.contains("button", "Log in").click();
+    // The AuthGate renders two buttons labelled "Log in": a mode-tab button and
+    // the form submit button.  Use the submit button explicitly to avoid clicking
+    // the tab (which only re-selects the current mode and never triggers a fetch).
+    cy.get('button[type="submit"]').click();
 
     // After login the app mounts the CustomerApp — look for logout button
     cy.contains("Log out", { timeout: 10000 }).should("be.visible");
@@ -79,9 +84,11 @@ describe("Auth flow — UI", () => {
     cy.visit("/");
     cy.get('input[type="email"]').type(testEmail);
     cy.get('input[type="password"]').type("WrongPass999!");
-    cy.contains("button", "Log in").click();
+    // See note in "logs in with correct credentials" — use the submit button.
+    cy.get('button[type="submit"]').click();
 
-    cy.get("p", { timeout: 8000 })
+    // Error text appears inside the form; use "form p" to skip the subtitle <p>.
+    cy.get("form p", { timeout: 8000 })
       .should("have.css", "color")
       .and("match", /rgb\(239, 83, 80\)/);
   });
@@ -99,7 +106,8 @@ describe("Auth flow — UI", () => {
     cy.visit("/");
     cy.get('input[type="email"]').type(testEmail);
     cy.get('input[type="password"]').type(password);
-    cy.contains("button", "Log in").click();
+    // See note in "logs in with correct credentials" — use the submit button.
+    cy.get('button[type="submit"]').click();
     cy.contains("Log out", { timeout: 10000 }).click();
 
     // Should be back at AuthGate
@@ -110,6 +118,9 @@ describe("Auth flow — UI", () => {
   // ─── API-level sanity checks ───────────────────────────────────────────────
 
   it("API: login returns a bearer token and sessionId", () => {
+    // Ensure the user exists even if the preceding UI-registration test skipped
+    // or failed for an unrelated reason (e.g. flaky browser paint timing).
+    cy.apiRegister(testEmail, password); // no-op if already registered (returns 400, ignored)
     cy.apiLogin(testEmail, password).then((session) => {
       expect(session.token).to.be.a("string").and.to.have.length.greaterThan(20);
       expect(session.sessionId).to.be.a("string").and.to.have.length.greaterThan(0);
@@ -117,6 +128,7 @@ describe("Auth flow — UI", () => {
   });
 
   it("API: logout invalidates the session (subsequent calls return 204)", () => {
+    cy.apiRegister(testEmail, password); // idempotent guard — see note above
     cy.apiLogin(testEmail, password).then((session) => {
       cy.apiLogout(session.sessionId);
       // Second logout on the same session should still return 204 (no-op)
