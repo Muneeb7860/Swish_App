@@ -29,7 +29,7 @@ Legend: ✅ built · 🟡 partial · 🔴 not yet (roadmap).
 | FR-03 | Telemetry ingestion (MQTT/HTTPS → **TimescaleDB**) | `TelemetryServiceImpl` cold-chain CQRS on **PostgreSQL**; HTTP not MQTT | 🟡 | R3 |
 | FR-04 | Ledger auditing (SHA-256 hash chain, REST search) | `LedgerServiceImpl` + DB hash-chain & balance triggers + `/ledger` API | ✅ | — |
 | FR-05 | Operator dashboard + RBAC | `frontend-admin` + JWT/OPA RBAC + unified HITL queue | ✅ | — |
-| FR-06 | Billing engine (per-hub flat tier, invoicing) | **Not implemented** | 🔴 | R2 |
+| FR-06 | Billing engine (per-hub flat tier, invoicing) | `billing` context (V22): flat-tier subscription BASIC/PRO/ENTERPRISE + per-period invoicing | ✅ | **done (R2)** |
 | FR-07 | Alert & notification (SMS/Email/Webhook) | `notification-engine` (Email/SMS/Push/WS) + SLA/temp/anomaly alerts | ✅ | — |
 
 ### A.2 Architecture & patterns (HLD)
@@ -72,7 +72,7 @@ target's polyglot pieces in only where they pay off.
 | Phase | Theme | Work |
 | :-- | :--- | :--- |
 | **R1** | Doc reconciliation *(done)* | This file + status banners on BRD/HLD; validated ERD/LLD/C4/sequence set. |
-| **R2** | Close functional gaps | **FR-06 billing engine** (per-hub flat-tier + invoice); **FR-01 retailer self-service portal** (registration, API-key issuance) reusing the 3-gate onboarding engine. |
+| **R2** | Close functional gaps | **FR-06 billing engine** ✅ *(done — `billing` context, V22)*; **FR-01 retailer self-service portal** (registration, API-key issuance) reusing the 3-gate onboarding engine ← next. |
 | **R3** | Polyglot data path | **FR-02 Mongo CDC sink** for `NegotiationEvent`; **FR-03 TimescaleDB** hypertable for telemetry + optional MQTT ingestion adapter. |
 | **R4** | Selective decomposition | Extract the highest-contention contexts (payment, telemetry) to their own DB/service; introduce Vault + inter-service mTLS where a real service boundary exists. |
 | **R5** | Distributed hybrid agentic | Wire `MasterOrchestratorService` → `homelab-ai-governance` pipeline (the Java↔Python bridge) so support/procurement routes through the governed hybrid router. |
