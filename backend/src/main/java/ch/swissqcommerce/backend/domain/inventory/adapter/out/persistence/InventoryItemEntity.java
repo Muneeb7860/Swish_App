@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * JPA entity for the hexagonal inventory domain, backed by the inventory_items table
- * (created in V8a__wholesaler_schema.sql).
+ * JPA entity for the hexagonal inventory domain, backed by the oltp.inventory_items table
+ * (created in V21__add_missing_event_inventory_tables.sql).
  */
 @Entity
-@Table(name = "inventory_items")
+@Table(name = "inventory_items", schema = "oltp")
 @Getter
 @Setter
 @Builder

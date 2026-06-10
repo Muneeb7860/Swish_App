@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "promotions")
+@Table(name = "promotions", schema = "oltp")
 @Data
 @Builder
 @NoArgsConstructor

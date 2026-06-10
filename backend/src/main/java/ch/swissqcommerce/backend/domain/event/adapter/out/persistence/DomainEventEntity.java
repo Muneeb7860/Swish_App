@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "domain_events")
+@Table(name = "domain_events", schema = "oltp")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -430,8 +430,8 @@ Severity: 🔴 fix before prod · 🟡 drift / inconsistency · 🟢 verified-co
 
 | ID | Sev | Finding | Recommendation |
 | :-- | :-: | :--- | :--- |
-| F-1 | 🔴 | `DomainEventEntity → domain_events` and `InventoryItemEntity → inventory_items` have **no `CREATE TABLE` in any migration**. They exist only via Hibernate `ddl-auto`. Under prod (`ddl-auto=validate` + Flyway-only), these tables are absent → context fails. | Add a Flyway migration creating both (in `oltp`), or drop the unused entities. |
-| F-2 | 🟡 | Schema mismatch: `saga_customer_orders` & `promotions` are created in **`oltp`**, `delivery_zones` & `rider_shifts` in **`dispatch`**, but their entities (`CustomerOrderEntity`, `PromotionEntity`, `DeliveryZoneEntity`, `RiderShiftEntity`) declare **no `schema`**. Resolution depends on the connection `search_path`. | Add the explicit `schema=` to each `@Table` to remove search_path ambiguity. |
+| F-1 | ✅ | ~~`DomainEventEntity → domain_events` and `InventoryItemEntity → inventory_items` have **no `CREATE TABLE` in any migration**.~~ **RESOLVED** in `V21__add_missing_event_inventory_tables.sql` — both tables created in `oltp` with columns matched to the entities; entities now declare `schema="oltp"`. | — |
+| F-2 | ✅ | ~~Schema-less `@Table` on `saga_customer_orders`/`promotions` (→`oltp`) and `delivery_zones`/`rider_shifts` (→`dispatch`).~~ **RESOLVED** — explicit `schema=` added to all four `@Table` annotations, matching the migrations. | — |
 | F-3 | 🟡 | `RewardPointsEntity` and `Customer` **both map to `oltp.customers`** (RewardPoints is a read-projection over `loyalty_points`). Two writable entities on one table risks divergent updates. | Make `RewardPointsEntity` `@Immutable`/read-only, or fold into `Customer`. |
 | F-4 | 🟡 | Two `wastage_logs` tables: `WastageLog` (`oltp`) and `WastageLogEntity` (`wholesaler`). Same name, different schemas/shapes. | Rename one (e.g. `wholesaler.wholesaler_wastage_logs`) to avoid confusion. |
 | F-5 | 🟡 | Two unlinked order models: rich `oltp.orders` (transaction domain) and `oltp.saga_customer_orders` (ordermanagement saga). No FK relates them. | Decide the system of record; bridge by `order_id` or merge the saga state onto `orders`. |
@@ -441,6 +441,7 @@ Severity: 🔴 fix before prod · 🟡 drift / inconsistency · 🟢 verified-co
 | F-9 | 🟢 | Optimistic-locking `version` columns on `customers` and `inventory` back the `@TransactionalRetry` checkout path. | None — keep. |
 
 **Verdict:** the as-built data model is coherent and the financial core is
-rigorously constrained. Two concrete prod-blocking gaps (F-1) and a set of
-low-risk drifts (F-2…F-6) are itemised above. The aspirational sharded ERD in
-`data-model-erd.md` should be marked as target-state, not current.
+rigorously constrained. The prod-blocking gap (F-1) and the schema ambiguity
+(F-2) are now **fixed** (`V21` + explicit `schema=`); the remaining items
+(F-3…F-6) are low-risk drifts left as follow-ups. The aspirational sharded ERD
+in `data-model-erd.md` should be marked as target-state, not current.

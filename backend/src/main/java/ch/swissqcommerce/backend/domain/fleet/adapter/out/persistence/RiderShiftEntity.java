@@ -6,7 +6,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "rider_shifts")
+@Table(name = "rider_shifts", schema = "dispatch")
 public class RiderShiftEntity {
     @Id
     private String shiftId;
