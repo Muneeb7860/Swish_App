@@ -733,8 +733,12 @@ export default function App() {
 					setIsAuthenticated(true);
 					setCurrentUserSession({ role: mfaRole });
 					setActiveRole(mfaRole);
-					setAuthToken(data.token);
-					localStorage.setItem("jwt_token", data.token);
+					const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+					const tokenToSet = jwtRegex.test(data.token) ? data.token : "";
+					setAuthToken(tokenToSet);
+					if (tokenToSet) {
+						localStorage.setItem("jwt_token", tokenToSet);
+					}
 					logKafka(
 						"system",
 						"auth.success",
@@ -776,8 +780,12 @@ export default function App() {
 				setIsAuthenticated(true);
 				setCurrentUserSession({ role: mfaRole });
 				setActiveRole(mfaRole);
-				setAuthToken(data.token);
-				localStorage.setItem("jwt_token", data.token);
+				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+				const tokenToSet = jwtRegex.test(data.token) ? data.token : "";
+				setAuthToken(tokenToSet);
+				if (tokenToSet) {
+					localStorage.setItem("jwt_token", tokenToSet);
+				}
 				logKafka(
 					"system",
 					"auth.success",
@@ -1020,21 +1028,54 @@ export default function App() {
 
 			es.addEventListener("telemetry-update", (event: any) => {
 				try {
-					const tick = JSON.parse(event.data);
+					const dataStr = event.data;
+					if (typeof dataStr !== "string") {
+						throw new Error("Invalid telemetry event data type");
+					}
+					// Size Gating: Max 50KB payload
+					if (dataStr.length > 51200) {
+						throw new Error("Telemetry payload size limit exceeded");
+					}
+					// JSON Nesting Depth Guard: Max 20 levels
+					let depth = 0;
+					for (let i = 0; i < dataStr.length; i++) {
+						const char = dataStr[i];
+						if (char === '{' || char === '[') {
+							depth++;
+							if (depth > 20) {
+								throw new Error("Telemetry payload nesting depth limit exceeded");
+							}
+						} else if (char === '}' || char === ']') {
+							depth--;
+						}
+					}
+
+					const tick = JSON.parse(dataStr);
+					const latVal = typeof tick.latitude === "number" ? tick.latitude : parseFloat(tick.latitude);
+					const lngVal = typeof tick.longitude === "number" ? tick.longitude : parseFloat(tick.longitude);
+					const tempVal = typeof tick.temperature === "number" ? tick.temperature : parseFloat(tick.temperature);
+					
+					if (isNaN(latVal) || isNaN(lngVal) || isNaN(tempVal)) {
+						throw new Error("Invalid numeric value in telemetry update");
+					}
+
+					const rawTimestamp = tick.timestamp || new Date().toISOString();
+					const cleanTimestamp = String(rawTimestamp).replace(/<[^>]+>/g, "");
+
 					setRiderCoords({
-						lat: tick.latitude,
-						lng: tick.longitude,
-						temperature: tick.temperature,
-						timestamp: tick.timestamp || new Date().toISOString(),
-						thermalBreachActive: tick.thermalBreachActive || false,
+						lat: latVal,
+						lng: lngVal,
+						temperature: tempVal,
+						timestamp: cleanTimestamp,
+						thermalBreachActive: !!tick.thermalBreachActive,
 					});
 					logKafka(
 						"rider",
 						"sse.tick_received",
-						`Lat ${tick.latitude?.toFixed(4)} Lng ${tick.longitude?.toFixed(4)} Temp ${tick.temperature}°C (Breach: ${tick.thermalBreachActive})`,
+						`Lat ${latVal.toFixed(4)} Lng ${lngVal.toFixed(4)} Temp ${tempVal.toFixed(1)}°C (Breach: ${!!tick.thermalBreachActive})`,
 					);
-				} catch (parseErr) {
-					console.warn("[SSE] Could not parse telemetry tick:", event.data);
+				} catch (parseErr: any) {
+					console.warn("[SSE] Telemetry tick validation/parse error:", parseErr.message);
 				}
 			});
 

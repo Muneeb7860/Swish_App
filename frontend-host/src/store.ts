@@ -861,13 +861,19 @@ export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (
 						typeof val === "function" ? val(state.sessionToken) : val,
 				}) as any,
 		),
-	authToken: localStorage.getItem("jwt_token") || "",
+	authToken: (() => {
+		const token = localStorage.getItem("jwt_token") || "";
+		const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+		return jwtRegex.test(token) ? token : "";
+	})(),
 	setAuthToken: (val) =>
 		set(
-			(state: any) =>
-				({
-					authToken: typeof val === "function" ? val(state.authToken) : val,
-				}) as any,
+			(state: any) => {
+				const rawToken = typeof val === "function" ? val(state.authToken) : val;
+				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+				const cleanToken = jwtRegex.test(rawToken) ? rawToken : "";
+				return { authToken: cleanToken } as any;
+			}
 		),
 	gdprTokenProbation: false,
 	setGdprTokenProbation: (val) =>
