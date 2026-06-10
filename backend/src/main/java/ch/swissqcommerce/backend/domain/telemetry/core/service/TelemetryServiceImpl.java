@@ -116,6 +116,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
         OrderTelemetryLog log = OrderTelemetryLog.builder()
                 .orderId(order.getOrderId())
+                .order(order)
                 .deviceTimestamp(OffsetDateTime.now())
                 .latitude(lat)
                 .longitude(lng)
@@ -161,6 +162,7 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         return OrderTelemetryLog.builder()
                 .logId(savedLog.getLogId())
                 .orderId(savedLog.getOrderId())
+                .order(savedLog.getOrder())
                 .deviceTimestamp(savedLog.getDeviceTimestamp())
                 .serverTimestamp(savedLog.getServerTimestamp())
                 .latitude(savedLog.getLatitude())
