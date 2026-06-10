@@ -1,5 +1,11 @@
 # Low-Level Design (LLD)
 
+> **Diagrams (use case · sequence · class) and BRD/HLD/ERD validation:** see
+> [`diagrams/lld-complete.md`](./diagrams/lld-complete.md). Sequence diagrams for
+> every domain flow are in [`diagrams/domain-sequence-diagrams.md`](./diagrams/domain-sequence-diagrams.md)
+> (+ part 2); the validated data model is in
+> [`diagrams/data-model-erd-asbuilt.md`](./diagrams/data-model-erd-asbuilt.md).
+
 ## 1. Design Patterns Implementation
 
 ### Transactional Outbox
