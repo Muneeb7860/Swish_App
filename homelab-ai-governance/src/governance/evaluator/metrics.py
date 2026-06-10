@@ -138,6 +138,22 @@ def _extract_directives(prompt: str) -> list[str]:
 # ── Format Integrity Score (FIS) ─────────────────────────────────────────────
 
 
+def _check_nesting_depth(s: str, max_depth: int = 20) -> bool:
+    """Validate that the nesting depth of braces/brackets does not exceed max_depth.
+
+    Prevents RecursionError/Denial-of-Service when parsing malicious nested structures.
+    """
+    depth = 0
+    for char in s:
+        if char in "{[":
+            depth += 1
+            if depth > max_depth:
+                return False
+        elif char in "}]":
+            depth -= 1
+    return True
+
+
 def compute_format_integrity(
     candidate: str, expected_format: str | None
 ) -> tuple[float, dict[str, Any]]:
@@ -153,12 +169,14 @@ def compute_format_integrity(
         try:
             # Try to extract JSON from response (may be wrapped in markdown)
             json_match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", candidate)
-            if json_match:
-                json.loads(json_match.group())
-                return 1.0, {"valid_json": True, "extracted": True}
-            else:
-                json.loads(candidate)
-                return 1.0, {"valid_json": True, "extracted": False}
+            target_str = json_match.group() if json_match else candidate
+
+            # Enforce nesting depth ceiling to prevent stack-overflow / ReDoS
+            if not _check_nesting_depth(target_str, max_depth=20):
+                return 0.0, {"valid_json": False, "error": "Exceeded maximum JSON nesting depth of 20"}
+
+            json.loads(target_str)
+            return 1.0, {"valid_json": True, "extracted": bool(json_match)}
         except json.JSONDecodeError as e:
             return 0.0, {"valid_json": False, "error": str(e)}
 
@@ -180,12 +198,26 @@ def compute_context_conservation(
 ) -> tuple[float, dict[str, Any]]:
     """Measure source grounding of the candidate against context documents.
 
-    MVP: Token overlap ratio between candidate claims and context.
-    Phase 5: Replace with NLI contradiction analysis.
+    Includes a numeric entity guard to penalize scores heavily when new/hallucinated
+    numbers appear in the response that are not grounded in the context.
     """
     if not context_docs or not context_docs.strip():
         # No context to check against — pass by default
         return 1.0, {"method": "no_context", "note": "No context docs provided"}
+
+    # Extract numbers (integers or decimals) from candidate and context
+    candidate_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?\b", candidate))
+    context_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?\b", context_docs))
+
+    # Strip formatting like commas/dots from numbers for exact comparison
+    normalized_candidate_nums = {num.replace(",", "").replace(".", "") for num in candidate_numbers}
+    normalized_context_nums = {num.replace(",", "").replace(".", "") for num in context_numbers}
+
+    # Filter out single digits 0-9 to avoid list indices triggering violations
+    unsupported_numbers = {
+        num for num in (normalized_candidate_nums - normalized_context_nums)
+        if len(num) > 1 or num not in {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+    }
 
     # Tokenize both
     context_tokens = set(_normalize_tokens(context_docs))
@@ -214,11 +246,17 @@ def compute_context_conservation(
 
     ratio = len(meaningful_grounded) / len(meaningful_candidate)
 
-    return min(ratio, 1.0), {
-        "method": "token_overlap",
+    # Apply penalty for hallucinated numeric sequences
+    penalty = 0.2 * len(unsupported_numbers)
+    final_ratio = max(0.0, ratio - penalty)
+
+    return min(final_ratio, 1.0), {
+        "method": "token_overlap_with_numeric_guard",
         "candidate_tokens": len(meaningful_candidate),
         "grounded_tokens": len(meaningful_grounded),
-        "ratio": round(ratio, 3),
+        "unsupported_numbers": list(unsupported_numbers),
+        "penalty": round(penalty, 3),
+        "ratio": round(final_ratio, 3),
     }
 
 

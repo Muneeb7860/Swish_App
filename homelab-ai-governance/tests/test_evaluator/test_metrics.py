@@ -89,3 +89,32 @@ def test_evaluate_output_aggregation():
     )
     assert scores_clamp.passed is False
     assert scores_clamp.total == 0.0
+
+
+def test_json_nesting_depth():
+    """Verify that deeply nested JSON is gated by nesting depth limit."""
+    # Build a JSON with >20 levels of nesting
+    nested = "{" * 25 + "}" * 25
+    score, details = compute_format_integrity(nested, expected_format="json")
+    assert score == 0.0
+    assert "nesting depth" in details["error"]
+
+
+def test_ccr_numeric_hallucination():
+    """Verify that introducing unsupported numbers incurs a penalty on CCR."""
+    context = "The item price is 50 dollars."
+    
+    # Grounded response with correct price
+    grounded = "The price is 50."
+    score, details = compute_context_conservation(grounded, context)
+    assert score == 1.0
+    assert len(details.get("unsupported_numbers", [])) == 0
+
+    # Hallucinated response with different price
+    hallucinated = "The price is 99."
+    score_h, details_h = compute_context_conservation(hallucinated, context)
+    # The score should be severely penalized
+    assert score_h < 0.5
+    assert "99" in details_h.get("unsupported_numbers", [])
+    assert details_h.get("penalty", 0.0) == 0.2
+
