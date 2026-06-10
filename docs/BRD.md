@@ -7,6 +7,12 @@
 |---|---|---|---|
 | v2.0.0 | 2026‑06‑02 | Technical Product Owner / Architect | **Approved – Conditions** |
 
+> 🧭 **Target vs as-built.** This BRD is the North-Star vision. Current
+> realisation status of every functional requirement (FR-01…FR-07) — built /
+> partial / roadmap — and the convergence plan are tracked in
+> [`AS_BUILT_VS_TARGET.md`](./AS_BUILT_VS_TARGET.md). Today: FR-04/05/07 ✅ built,
+> FR-01/02/03 🟡 partial, FR-06 (billing) 🔴 the one open functional gap.
+
 ---
 
 ## 1. Executive Summary & Strategic Rationale

@@ -1,6 +1,12 @@
 # High-Level Design (HLD): Swish Quick Commerce
 **Version**: 3.0.0 (Microservices Edition)
 
+> 🧭 **This HLD describes the target (North-Star) architecture.** The as-built
+> system is a modular monolith on a single PostgreSQL (4 schemas); several
+> elements here (database-per-service, MongoDB, TimescaleDB, Vault, mTLS) are
+> roadmap items. Current status of every component and the convergence plan:
+> [`AS_BUILT_VS_TARGET.md`](./AS_BUILT_VS_TARGET.md).
+
 ---
 
 ## 1. System Context & Network Topology
