@@ -228,7 +228,6 @@
                          uses @WebMvcTest which cannot load OpaAuthorizationManager (requires
                          RestTemplateBuilder not present in the WebMvc slice). -->
                     <testExcludes>
-                        <testExclude>**/AuthServiceTest.java</testExclude>
                         <testExclude>**/controller/InventoryControllerTest.java</testExclude>
                     </testExcludes>
                 </configuration>

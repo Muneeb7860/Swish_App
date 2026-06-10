@@ -62,4 +62,58 @@ public class LedgerServiceTest {
         verify(customerRepository, times(1)).save(any(Customer.class));
         assertEquals(new BigDecimal("90.00"), cust.getWalletBalance());
     }
+
+    @Test
+    public void testRecordTransaction_Unbalanced() {
+        List<LedgerUseCase.LedgerLeg> legs = List.of(
+            new LedgerUseCase.LedgerLeg("customer", "C1", new BigDecimal("10.00"), BigDecimal.ZERO),
+            new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("5.00"))
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> ledgerService.recordTransaction("REF", "DESC", legs));
+    }
+
+    @Test
+    public void testRecordTransaction_EmptyLegs() {
+        assertThrows(IllegalArgumentException.class, () -> ledgerService.recordTransaction("REF", "DESC", List.of()));
+    }
+
+    @Test
+    public void testRecordTransaction_NegativeWalletBalance() {
+        Customer cust = new Customer();
+        cust.setCustomerId("C1");
+        cust.setWalletBalance(new BigDecimal("5.00"));
+
+        when(customerRepository.findById("C1")).thenReturn(Optional.of(cust));
+        when(journalEntryRepository.findFirstByOrderByEntryIdDesc()).thenReturn(Optional.empty());
+        when(journalEntryRepository.save(any(ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.JournalEntryEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        List<LedgerUseCase.LedgerLeg> legs = List.of(
+            new LedgerUseCase.LedgerLeg("customer", "C1", new BigDecimal("10.00"), BigDecimal.ZERO),
+            new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("10.00"))
+        );
+
+        assertThrows(IllegalStateException.class, () -> ledgerService.recordTransaction("REF", "DESC", legs));
+    }
+
+    @Test
+    public void testGetCustomerLedger() {
+        ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.LedgerLineEntity entity = 
+            new ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.LedgerLineEntity();
+        entity.setLineId(1);
+        entity.setAccountType("customer");
+        entity.setActorId("C1");
+        entity.setDebit(BigDecimal.TEN);
+        entity.setCredit(BigDecimal.ZERO);
+
+        when(ledgerLineRepository.findByAccountTypeAndActorIdOrderByLineIdDesc("customer", "C1"))
+            .thenReturn(List.of(entity));
+
+        List<ch.swissqcommerce.backend.domain.transaction.core.model.LedgerLine> lines = ledgerService.getCustomerLedger("C1");
+        
+        assertNotNull(lines);
+        assertEquals(1, lines.size());
+        assertEquals("C1", lines.get(0).getActorId());
+        assertEquals(BigDecimal.TEN, lines.get(0).getDebit());
+    }
 }
