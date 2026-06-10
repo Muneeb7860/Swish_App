@@ -126,3 +126,37 @@ def test_pipeline_fallback_escalation(monkeypatch):
     assert "fallback answer" in res["response"]
     assert res["agent_id"] == "gemma_reasoner"
 
+
+def test_rate_limiter_logic():
+    """Verify that the RateLimiter counts and blocks requests when limit is exceeded."""
+    from governance.audit import RateLimiter
+    
+    # Create rate limiter with small limit of 2 requests
+    limiter = RateLimiter(limit_per_hour=2)
+    assert limiter.is_allowed() is True
+    
+    limiter.record_request()
+    assert limiter.is_allowed() is True
+    
+    limiter.record_request()
+    # Limit reached (2 requests recorded)
+    assert limiter.is_allowed() is False
+
+
+def test_pipeline_blocked_by_rate_limiter(monkeypatch):
+    """Verify that the pipeline immediately blocks execution when rate limit is exceeded."""
+    # Force RateLimiter to report limit exceeded
+    class MockRateLimiter:
+        def is_allowed(self):
+            return False
+        def get_limit(self):
+            return 100
+            
+    monkeypatch.setattr("governance.pipeline.get_rate_limiter", lambda: MockRateLimiter())
+    
+    res = execute_pipeline("Hello")
+    assert res["status"] == "blocked"
+    assert "rate limit" in res["message"]
+    assert res["triggered_rules"][0]["rule_id"] == "rate_limit"
+
+

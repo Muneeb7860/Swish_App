@@ -30,6 +30,46 @@ def run_detector(detector_config: dict[str, Any], content: str) -> bool:
 # ── Individual detector implementations ──────────────────────────────────────
 
 
+def _build_obfuscation_pattern(term: str) -> str:
+    """Build a regex pattern that matches the term even with common leetspeak and symbol insertion."""
+    char_maps = {
+        "a": "[aA@4]",
+        "b": "[bB]",
+        "c": "[cC]",
+        "d": "[dD]",
+        "e": "[eE3]",
+        "f": "[fF]",
+        "g": "[gG]",
+        "h": "[hH]",
+        "i": "[iI!1]",
+        "j": "[jJ]",
+        "k": "[kK]",
+        "l": "[lL1]",
+        "m": "[mM]",
+        "n": "[nN]",
+        "o": "[oO0]",
+        "p": "[pP]",
+        "q": "[qQ]",
+        "r": "[rR]",
+        "s": "[sS$5]",
+        "t": "[tT7]",
+        "u": "[uU]",
+        "v": "[vV]",
+        "w": "[wW]",
+        "x": "[xX]",
+        "y": "[yY]",
+        "z": "[zZ]"
+    }
+    
+    pattern_parts = []
+    for char in term.lower():
+        mapped = char_maps.get(char, re.escape(char))
+        pattern_parts.append(mapped)
+        
+    # Allow any amount of non-alphanumeric symbols/spaces between characters (e.g., s.w.e.a.r, s_w_e_a_r)
+    return r"[\W_]*".join(pattern_parts)
+
+
 def _detect_regex(config: dict[str, Any], content: str) -> bool:
     """Match any pattern in the detector's pattern list."""
     for p in config.get("patterns", []):
@@ -39,21 +79,18 @@ def _detect_regex(config: dict[str, Any], content: str) -> bool:
 
 
 def _detect_keyword_list(config: dict[str, Any], content: str) -> bool:
-    """Match terms from a file-based keyword list."""
+    """Match terms from a file-based keyword list with obfuscation resistance."""
     terms = load_terms(config["source"])
     mode = config.get("match_mode", "substring")
 
-    if mode == "word_boundary":
-        for term in terms:
-            pattern = r"\b" + re.escape(term) + r"\b"
-            if re.search(pattern, content, re.IGNORECASE):
-                return True
-        return False
-    elif mode == "case_insensitive":
-        content_lower = content.lower()
-        return any(t.lower() in content_lower for t in terms)
-    else:
-        return any(t in content for t in terms)
+    for term in terms:
+        pattern = _build_obfuscation_pattern(term)
+        if mode == "word_boundary":
+            pattern = r"\b" + pattern + r"\b"
+            
+        if re.search(pattern, content, re.IGNORECASE):
+            return True
+    return False
 
 
 def _detect_heuristic(config: dict[str, Any], content: str) -> bool:
@@ -116,15 +153,11 @@ def redact_matches(detector_config: dict[str, Any], content: str) -> str:
         result = content
         mode = detector_config.get("match_mode", "substring")
         for term in terms:
+            pattern = _build_obfuscation_pattern(term)
             if mode == "word_boundary":
-                result = re.sub(
-                    r"\b" + re.escape(term) + r"\b",
-                    "[REDACTED]",
-                    result,
-                    flags=re.IGNORECASE,
-                )
-            else:
-                result = result.replace(term, "[REDACTED]")
+                pattern = r"\b" + pattern + r"\b"
+            
+            result = re.sub(pattern, "[REDACTED]", result, flags=re.IGNORECASE)
         return result
 
     return content

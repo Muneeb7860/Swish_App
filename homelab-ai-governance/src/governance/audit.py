@@ -179,9 +179,42 @@ class CostTracker:
             return self._daily_cost
 
 
+class RateLimiter:
+    """Tracks sliding-window hourly request count to prevent resource exhaustion."""
+
+    def __init__(self, limit_per_hour: int | None = None):
+        self._default_limit = limit_per_hour or 100
+        self.requests: list[float] = []
+        self._lock = threading.Lock()
+
+    def get_limit(self) -> int:
+        """Dynamically load the hourly limit from routing config."""
+        try:
+            from governance.config import load_routing_config
+            config = load_routing_config()
+            return config.get("budget", {}).get("hourly_request_limit", self._default_limit)
+        except Exception:
+            return self._default_limit
+
+    def is_allowed(self) -> bool:
+        """Check if a new request is allowed within the hourly limit."""
+        with self._lock:
+            now = time.time()
+            limit = self.get_limit()
+            # Clean up records older than 1 hour (3600 seconds)
+            self.requests = [t for t in self.requests if now - t < 3600]
+            return len(self.requests) < limit
+
+    def record_request(self) -> None:
+        """Record a new request timestamp."""
+        with self._lock:
+            self.requests.append(time.time())
+
+
 # Module-level singleton (lazy init)
 _audit_logger: AuditLogger | None = None
 _cost_tracker: CostTracker | None = None
+_rate_limiter: RateLimiter | None = None
 
 
 def get_audit_logger(log_dir: str | Path | None = None) -> AuditLogger:
@@ -198,3 +231,12 @@ def get_cost_tracker() -> CostTracker:
     if _cost_tracker is None:
         _cost_tracker = CostTracker(get_audit_logger())
     return _cost_tracker
+
+
+def get_rate_limiter() -> RateLimiter:
+    """Get or create the global RateLimiter singleton."""
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = RateLimiter()
+    return _rate_limiter
+
