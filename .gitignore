@@ -108,3 +108,10 @@ coverage/
 *.dll
 *.so
 *.dylib
+
+# ─── Load-test & runtime artifacts (not source) ──────────────────────────────
+# JMeter load-test output (html_report/, *.jtl, aggregate/summary CSVs) and the
+# runtime governance audit log are generated artifacts, not committed source.
+/results/
+/data/
+*.jtl
