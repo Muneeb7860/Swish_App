@@ -35,6 +35,7 @@ interface AdminPanelProps {
 	hitlQueue: HitlTicket[];
 	handleReleaseHitl: (ticket: HitlTicket) => void;
 	handleVoidHitl: (ticket: HitlTicket) => void;
+	hitlLoading?: boolean;
 }
 
 export default function AdminPanel({
@@ -57,6 +58,7 @@ export default function AdminPanel({
 	hitlQueue,
 	handleReleaseHitl,
 	handleVoidHitl,
+	hitlLoading = false,
 }: AdminPanelProps) {
 	return (
 		<div
@@ -424,7 +426,13 @@ export default function AdminPanel({
 							marginTop: "0.75rem",
 						}}
 					>
-						{hitlQueue.length === 0 ? (
+						{hitlLoading ? (
+							<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", padding: "0.5rem" }}>
+								<div className="skeleton-shimmer skeleton-text medium" style={{ height: 14 }} />
+								<div className="skeleton-shimmer skeleton-text" style={{ height: 10 }} />
+								<div className="skeleton-shimmer skeleton-text short" style={{ height: 10 }} />
+							</div>
+						) : hitlQueue.length === 0 ? (
 							<p
 								style={{
 									fontSize: "0.7rem",

@@ -97,11 +97,12 @@ def compute_completeness_index(
 
     candidate_lower = candidate.lower()
     covered = []
+    candidate_tokens = set(re.sub(r"[^\w\s]", "", candidate_lower).split())
     for directive in directives:
         # Check if key tokens from the directive appear in the candidate
-        tokens = set(directive.lower().split())
+        tokens = set(re.sub(r"[^\w\s]", "", directive.lower()).split())
         # Require at least 40% of directive tokens to appear
-        matched = sum(1 for t in tokens if t in candidate_lower)
+        matched = sum(1 for t in tokens if t in candidate_tokens)
         coverage = matched / max(len(tokens), 1)
         if coverage >= 0.4:
             covered.append(directive)
@@ -263,4 +264,4 @@ def compute_context_conservation(
 def _normalize_tokens(text: str) -> list[str]:
     """Lowercase, strip punctuation, and split into tokens."""
     cleaned = re.sub(r"[^\w\s]", " ", text.lower())
-    return [t for t in cleaned.split() if len(t) > 2]
+    return [t for t in cleaned.split() if len(t) > 2 or t.isdigit()]

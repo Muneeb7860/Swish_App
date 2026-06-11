@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
+import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
@@ -14,11 +15,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class B2BProcurementAgent {
 
+    private final PythonGovernanceAdapter pythonGovernanceAdapter;
     private final GeminiFreeAdapter geminiFreeAdapter;
     private final MockLlmAdapter mockLlmAdapter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private LlmGatewayPort getLlmGateway() {
+        if (pythonGovernanceAdapter.isConfigured()) {
+            return pythonGovernanceAdapter;
+        }
         if (geminiFreeAdapter.isConfigured()) {
             return geminiFreeAdapter;
         }

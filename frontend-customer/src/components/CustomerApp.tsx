@@ -89,6 +89,7 @@ export interface CustomerAppProps {
 	setVoucherCode?: React.Dispatch<React.SetStateAction<string>>;
 	activeOrder: Order | null;
 	generateCertificate: (role: string) => void;
+	catalogLoading?: boolean;
 }
 
 export default function CustomerApp({
@@ -119,6 +120,7 @@ export default function CustomerApp({
 	handleCheckout,
 	activeOrder,
 	generateCertificate,
+	catalogLoading = false,
 }: CustomerAppProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
@@ -223,6 +225,90 @@ export default function CustomerApp({
 		0,
 		cartSubtotal + deliveryFee + tipAmount - esgRebate - appliedDiscount,
 	);
+
+	let productShelfContent;
+	if (catalogLoading) {
+		productShelfContent = Array.from({ length: 8 }).map((_, i) => (
+			<div key={i} className="product-card" style={{ cursor: "default" }}>
+				<div className="skeleton-image skeleton-shimmer" />
+				<div className="skeleton-text medium skeleton-shimmer" />
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem" }}>
+					<div className="skeleton-text short skeleton-shimmer" style={{ margin: 0, height: 16, width: "40%" }} />
+					<div className="skeleton-shimmer" style={{ width: 40, height: 24, borderRadius: 8 }} />
+				</div>
+			</div>
+		));
+	} else if (filteredProducts.length === 0) {
+		productShelfContent = (
+			<div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+				<Lucide.SearchCheck size={32} style={{ opacity: 0.3, marginBottom: "0.5rem", display: "inline-block" }} />
+				<p>No products found matching your search.</p>
+			</div>
+		);
+	} else {
+		productShelfContent = filteredProducts.map((p) => (
+			<div key={p.id} className="product-card">
+				{p.perishable && (
+					<span className="badge-perishable">
+						Cold Chain Perishable
+					</span>
+				)}
+				<div className="product-emoji-row">
+					<span style={{ fontSize: "2rem" }}>{p.emoji}</span>
+					<button
+						key={cart.find((item) => item.id === p.id)?.qty || 0}
+						className={`add-cart-btn ${cart.find((item) => item.id === p.id) ? "scale-pop-animation" : ""}`}
+						onClick={() => addToCart(p)}
+					>
+						<Lucide.Plus size={16} />
+					</button>
+				</div>
+				<h4 style={{ fontWeight: 700, margin: "0.5rem 0 0.2rem 0" }}>
+					{p.name}
+				</h4>
+				<span
+					style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+				>
+					{p.category}
+				</span>
+				<div
+					className="product-price-row"
+					style={{
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginTop: "0.75rem",
+					}}
+				>
+					<span
+						style={{
+							fontWeight: 800,
+							color: "var(--color-customer)",
+						}}
+					>
+						${p.price.toFixed(2)}
+					</span>
+					{p.stock < 5 ? (
+						<span
+							className="glowing-stock-counter"
+							style={{ fontSize: "0.75rem", fontWeight: "bold" }}
+						>
+							🔥 Only {p.stock} left!
+						</span>
+					) : (
+						<span
+							style={{
+								fontSize: "0.65rem",
+								color: "var(--text-muted)",
+							}}
+						>
+							Stock: {p.stock} units
+						</span>
+					)}
+				</div>
+			</div>
+		));
+	}
 
 	return (
 		<div className="customer-dashboard">
@@ -578,68 +664,7 @@ export default function CustomerApp({
 
 						{/* Product Shelf Grid */}
 						<div className="product-shelf-grid">
-							{filteredProducts.map((p) => (
-								<div key={p.id} className="product-card">
-									{p.perishable && (
-										<span className="badge-perishable">
-											Cold Chain Perishable
-										</span>
-									)}
-									<div className="product-emoji-row">
-										<span style={{ fontSize: "2rem" }}>{p.emoji}</span>
-										<button
-											key={cart.find((item) => item.id === p.id)?.qty || 0}
-											className={`add-cart-btn ${cart.find((item) => item.id === p.id) ? "scale-pop-animation" : ""}`}
-											onClick={() => addToCart(p)}
-										>
-											<Lucide.Plus size={16} />
-										</button>
-									</div>
-									<h4 style={{ fontWeight: 700, margin: "0.5rem 0 0.2rem 0" }}>
-										{p.name}
-									</h4>
-									<span
-										style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-									>
-										{p.category}
-									</span>
-									<div
-										className="product-price-row"
-										style={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											marginTop: "0.75rem",
-										}}
-									>
-										<span
-											style={{
-												fontWeight: 800,
-												color: "var(--color-customer)",
-											}}
-										>
-											${p.price.toFixed(2)}
-										</span>
-										{p.stock < 5 ? (
-											<span
-												className="glowing-stock-counter"
-												style={{ fontSize: "0.75rem", fontWeight: "bold" }}
-											>
-												🔥 Only {p.stock} left!
-											</span>
-										) : (
-											<span
-												style={{
-													fontSize: "0.65rem",
-													color: "var(--text-muted)",
-												}}
-											>
-												Stock: {p.stock} units
-											</span>
-										)}
-									</div>
-								</div>
-							))}
+							{productShelfContent}
 						</div>
 					</div>
 				) : (

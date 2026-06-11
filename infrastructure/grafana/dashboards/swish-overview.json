@@ -1392,6 +1392,265 @@
           "placement": "bottom"
         }
       }
+    },
+    {
+      "type": "row",
+      "id": 60,
+      "title": "🔴 SLA, Resilience & Payment Performance",
+      "gridPos": {
+        "x": 0,
+        "y": 108,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 61,
+      "type": "gauge",
+      "title": "SLA Delivery Compliance Rate (15-Min Target)",
+      "description": "Percentage of deliveries completed within the 15-minute SLA target. Calculated using HTTP delivery request duration histogram bucket: http_server_requests_seconds_bucket{le='900'} / http_server_requests_seconds_count",
+      "gridPos": {
+        "x": 0,
+        "y": 109,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_bucket{uri=~\"/api/rider/orders/.*/deliver\",le=\"900\"}[5m])) / (sum(rate(http_server_requests_seconds_count{uri=~\"/api/rider/orders/.*/deliver\"}[5m])) + 0.00001)",
+          "legendFormat": "SLA Compliant",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 62,
+      "type": "timeseries",
+      "title": "Circuit Breaker States (Resilience4j)",
+      "description": "Resilience4j circuit breaker state: Closed (0), Open (1), Half-Open (2)",
+      "gridPos": {
+        "x": 6,
+        "y": 109,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state",
+          "legendFormat": "{{name}} - {{state}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 63,
+      "type": "gauge",
+      "title": "Payment Authorization Success Rate",
+      "description": "Ratio of successful payment responses over total payment intents created",
+      "gridPos": {
+        "x": 12,
+        "y": 109,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/api/payments.*\",status=~\"2..\"}[5m])) / (sum(rate(http_server_requests_seconds_count{uri=~\"/api/payments.*\"}[5m])) + 0.00001)",
+          "legendFormat": "Success Rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.98
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 64,
+      "type": "timeseries",
+      "title": "Kafka Consumer Lag by Topic",
+      "description": "Records lag per Kafka topic (orders, inventory, dispatch)",
+      "gridPos": {
+        "x": 18,
+        "y": 109,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(kafka_consumer_fetch_manager_records_lag{job=\"notification-engine\"}) by (topic)",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 65,
+      "type": "timeseries",
+      "title": "Order Lifecycle Throughput (per min)",
+      "description": "Rate of orders created, completed, and rejected per minute",
+      "gridPos": {
+        "x": 0,
+        "y": 116,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/api/customer/orders.*\",method=\"POST\",status=~\"2..\"}[1m])) * 60",
+          "legendFormat": "Orders Placed",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/api/rider/orders.*deliver.*\",status=~\"2..\"}[1m])) * 60",
+          "legendFormat": "Completed",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/api/rider/orders.*reject.*\",status=~\"2..\"}[1m])) * 60",
+          "legendFormat": "Rejected/Spoiled",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
   ]
 }

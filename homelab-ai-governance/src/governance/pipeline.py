@@ -9,7 +9,7 @@ from typing import Any
 from governance.agents.base import BaseAgent
 from governance.agents.cloud_agent import CloudAgent
 from governance.agents.ollama_agent import OllamaAgent
-from governance.audit import get_audit_logger
+from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
 from governance.evaluator.loop import run_self_correction_loop
 from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
@@ -98,7 +98,6 @@ def execute_pipeline(
     audit.log_event("pipeline_start", query=query, input_hash=input_hash)
 
     # Rate Limiting Hardening Gate (Slide-window check)
-    from governance.audit import get_rate_limiter
     rate_limiter = get_rate_limiter()
     if not rate_limiter.is_allowed():
         audit.log_event(

@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
+import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine;
@@ -25,6 +26,9 @@ import static org.mockito.Mockito.*;
 public class DynamicPricingAgentTest {
 
     @Mock
+    private PythonGovernanceAdapter pythonGovernanceAdapter;
+
+    @Mock
     private GeminiFreeAdapter geminiFreeAdapter;
 
     @Mock
@@ -40,6 +44,7 @@ public class DynamicPricingAgentTest {
     public void setUp() {
         executorService = Executors.newSingleThreadExecutor();
         dynamicPricingAgent = new DynamicPricingAgent(
+                pythonGovernanceAdapter,
                 geminiFreeAdapter,
                 mockLlmAdapter,
                 pricingGuardrailsEngine,

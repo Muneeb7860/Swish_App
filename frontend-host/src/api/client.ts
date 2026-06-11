@@ -1,0 +1,198 @@
+import { useStore } from "../store";
+
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const SESSION_ID = "sess-" + Math.random().toString(36).substring(2, 11);
+
+interface FetchOptions extends RequestInit {
+	idempotencyKey?: string;
+	bypassMock?: boolean;
+}
+
+export class ApiClient {
+	private static async delay(ms: number): Promise<void> {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	private static getHeaders(options?: FetchOptions): HeadersInit {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			"X-Session-Id": SESSION_ID,
+		};
+
+		// Safely get authToken at runtime to avoid circular dependency
+		try {
+			const state = useStore.getState();
+			if (state && state.authToken) {
+				headers["Authorization"] = `Bearer ${state.authToken}`;
+			}
+		} catch (e) {
+			console.warn("Could not retrieve token from store", e);
+		}
+
+		if (options?.idempotencyKey) {
+			headers["X-Idempotency-Key"] = options.idempotencyKey;
+		}
+
+		return headers;
+	}
+
+	public static isMockMode(): boolean {
+		const mockMode = import.meta.env.VITE_MOCK_MODE === "true";
+		return mockMode;
+	}
+
+	private static handleUnauthorized(): void {
+		try {
+			const state = useStore.getState();
+			if (state) {
+				state.setIsAuthenticated(false);
+				state.setAuthToken("");
+				state.setCurrentUserSession(null);
+			}
+		} catch (e) {
+			console.error("Failed to clear auth state on 401", e);
+		}
+	}
+
+	public static async request<T>(
+		path: string,
+		options: FetchOptions = {},
+		mockFallback?: () => T | Promise<T>
+	): Promise<T> {
+		const url = `${BASE_URL}${path}`;
+
+		// If explicitly in mock mode, return mock data
+		if (this.isMockMode() && !options.bypassMock && mockFallback) {
+			await this.delay(500); // Simulate network latency
+			return mockFallback();
+		}
+
+		const mergedOptions: RequestInit = {
+			...options,
+			headers: {
+				...this.getHeaders(options),
+				...options.headers,
+			},
+		};
+
+		let retries = 3;
+		let delayMs = 1000;
+
+		while (retries >= 0) {
+			try {
+				const response = await fetch(url, mergedOptions);
+
+				if (response.status === 401) {
+					this.handleUnauthorized();
+					throw new Error("Unauthorized");
+				}
+
+				if (response.status === 429) {
+					if (retries === 0) {
+						throw new Error("Rate limit exceeded");
+					}
+					console.warn(`Rate limited (429). Retrying in ${delayMs}ms...`);
+					await this.delay(delayMs);
+					retries--;
+					delayMs *= 2;
+					continue;
+				}
+
+				if (!response.ok) {
+					const errorText = await response.text().catch(() => "Unknown error");
+					throw new Error(`HTTP ${response.status}: ${errorText}`);
+				}
+
+				// If response has no content (e.g. 204 or empty 200)
+				const text = await response.text();
+				return text ? (JSON.parse(text) as T) : ({} as T);
+
+			} catch (error) {
+				// Fallback to mock data on network error
+				if (mockFallback && !options.bypassMock) {
+					console.warn(`API request to ${path} failed (${(error as Error).message}). Falling back to mock data.`);
+					await this.delay(400); // Simulate network latency
+					return mockFallback();
+				}
+
+				if (retries === 0 || responseStatusNotRetryable(error)) {
+					throw error;
+				}
+
+				await this.delay(500);
+				retries--;
+			}
+		}
+
+		throw new Error("Request failed after retries");
+	}
+
+	public static async get<T>(
+		path: string,
+		options?: FetchOptions,
+		mockFallback?: () => T | Promise<T>
+	): Promise<T> {
+		return this.request<T>(path, { ...options, method: "GET" }, mockFallback);
+	}
+
+	public static async post<T>(
+		path: string,
+		body?: any,
+		options?: FetchOptions,
+		mockFallback?: () => T | Promise<T>
+	): Promise<T> {
+		const idempotencyKey = options?.idempotencyKey || (options?.method !== "GET" ? this.generateIdempotencyKey() : undefined);
+		return this.request<T>(
+			path,
+			{
+				...options,
+				method: "POST",
+				body: body ? JSON.stringify(body) : undefined,
+				idempotencyKey,
+			},
+			mockFallback
+		);
+	}
+
+	public static async put<T>(
+		path: string,
+		body?: any,
+		options?: FetchOptions,
+		mockFallback?: () => T | Promise<T>
+	): Promise<T> {
+		const idempotencyKey = options?.idempotencyKey || this.generateIdempotencyKey();
+		return this.request<T>(
+			path,
+			{
+				...options,
+				method: "PUT",
+				body: body ? JSON.stringify(body) : undefined,
+				idempotencyKey,
+			},
+			mockFallback
+		);
+	}
+
+	public static async delete<T>(
+		path: string,
+		options?: FetchOptions,
+		mockFallback?: () => T | Promise<T>
+	): Promise<T> {
+		const idempotencyKey = options?.idempotencyKey || this.generateIdempotencyKey();
+		return this.request<T>(
+			path,
+			{ ...options, method: "DELETE", idempotencyKey },
+			mockFallback
+		);
+	}
+
+	private static generateIdempotencyKey(): string {
+		return "idem-" + Math.random().toString(36).substring(2, 15) + "-" + Date.now();
+	}
+}
+
+function responseStatusNotRetryable(error: any): boolean {
+	// Don't retry if it is an Auth/Client input error
+	const msg = String(error?.message || "");
+	return msg.includes("HTTP 400") || msg.includes("HTTP 401") || msg.includes("HTTP 403") || msg.includes("HTTP 404") || msg.includes("Unauthorized");
+}

@@ -77,7 +77,10 @@ def load_guardrails(agent_id: str) -> list[dict[str, Any]]:
 
             cfg.update(agent_override)
 
-        if cfg.get("enabled", True):
+        if "enabled" not in cfg:
+            cfg["enabled"] = True
+
+        if cfg["enabled"]:
             resolved.append(cfg)
 
     return resolved

@@ -18,17 +18,17 @@ class PIIPattern(NamedTuple):
 
 # Compiled PII patterns — order matters for redaction (most specific first)
 PII_PATTERNS: list[PIIPattern] = [
-    PIIPattern("connection_string", re.compile(r"(?i)(postgres|mysql|mongodb|redis)://[^\s]+")),
-    PIIPattern("api_key", re.compile(
+    PIIPattern("CONNECTION_STRING", re.compile(r"(?i)(postgres|mysql|mongodb|redis)://[^\s]+")),
+    PIIPattern("API_KEY", re.compile(
         r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*[\"']?[a-zA-Z0-9_\-]{16,}"
     )),
-    PIIPattern("credit_card", re.compile(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
-    PIIPattern("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
-    PIIPattern("email", re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")),
-    PIIPattern("phone_us", re.compile(
-        r"\b(\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"
+    PIIPattern("CREDIT_CARD", re.compile(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
+    PIIPattern("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
+    PIIPattern("EMAIL", re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")),
+    PIIPattern("PHONE_NUMBER", re.compile(
+        r"\+?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{2,4}[-.\s]?\d{2,4}|\b\d{3}-\d{3}-\d{4}\b"
     )),
-    PIIPattern("ip_address", re.compile(
+    PIIPattern("IP_ADDRESS", re.compile(
         r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
     )),
 ]

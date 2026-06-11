@@ -14,6 +14,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -32,12 +34,18 @@ public class RiderController {
 
     @Data
     public static class OnboardingRequest {
+        @JsonProperty("full_name")
+        @JsonAlias({"name", "fullName"})
         @NotBlank(message = "Name is required")
         private String name;
 
+        @JsonProperty("vehicle_type")
+        @JsonAlias({"vehicleType", "vehicle_type"})
         @NotBlank(message = "Vehicle type is required")
         private String vehicleType;
 
+        @JsonProperty("driver_license_base64")
+        @JsonAlias({"details", "driverLicenseBase64"})
         private String details;
     }
 
@@ -158,7 +166,15 @@ public class RiderController {
 
     @PostMapping("/academy/courses/{courseId}/complete")
     @Transactional
-    public ResponseEntity<?> completeCourse(@PathVariable String courseId, @RequestParam String riderId) {
+    public ResponseEntity<?> completeCourse(
+            @PathVariable String courseId,
+            @RequestParam(required = false) String riderId) {
+        if (riderId == null || riderId.isBlank()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                riderId = auth.getName();
+            }
+        }
         return ResponseEntity.ok(riderUseCase.completeAcademyCourse(riderId, courseId));
     }
 }

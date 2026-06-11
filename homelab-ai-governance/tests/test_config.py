@@ -53,7 +53,7 @@ def test_load_agent_config():
     """Test loading the agent configs."""
     gemma = load_agent_config("gemma_reasoner")
     assert isinstance(gemma, dict)
-    assert gemma.get("role") == "reasoner"
+    assert gemma.get("agent_id") == "gemma_reasoner"
 
 
 def test_load_terms():

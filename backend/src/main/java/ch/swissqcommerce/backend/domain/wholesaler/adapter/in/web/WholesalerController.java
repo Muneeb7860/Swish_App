@@ -14,6 +14,11 @@ import ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog;
 
 import java.util.List;
 import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @RestController
 @RequestMapping("/api/wholesaler")
@@ -80,10 +85,36 @@ public class WholesalerController {
         return ResponseEntity.ok(result);
     }
 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class B2BInvoiceDto {
+        @JsonProperty("invoice_id")
+        private Integer invoiceId;
+        @JsonProperty("restock_order_id")
+        private Integer restockOrderId;
+        @JsonProperty("wholesaler_id")
+        private String wholesalerId;
+        private BigDecimal amount;
+        private String status;
+        @JsonProperty("created_at")
+        private OffsetDateTime createdAt;
+    }
+
     @GetMapping("/invoices")
-    public ResponseEntity<Map<String, Object>> getInvoiceSummary(@RequestParam(required = false, defaultValue = "WHOLESALER-1") String id) {
-        Map<String, Object> summary = wholesalerService.getInvoiceSummary(id);
-        return ResponseEntity.ok(summary);
+    public ResponseEntity<List<B2BInvoiceDto>> getInvoices(@RequestParam(required = false, defaultValue = "WHOLESALER-1") String id) {
+        List<B2BRestockOrder> restocks = wholesalerService.getAssignedRestocks(id);
+        List<B2BInvoiceDto> invoices = restocks.stream()
+                .map(order -> new B2BInvoiceDto(
+                        order.getRestockOrderId(), // invoice_id
+                        order.getRestockOrderId(), // restock_order_id
+                        order.getWholesaler() != null ? order.getWholesaler().getWholesalerId() : id,
+                        order.getInvoiceAmount(),
+                        "fulfilled".equalsIgnoreCase(order.getStatus()) ? "paid" : "unpaid",
+                        order.getCreatedAt()
+                ))
+                .toList();
+        return ResponseEntity.ok(invoices);
     }
 
     // PO & Wastage endpoints

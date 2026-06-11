@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
@@ -36,8 +37,10 @@ public class AuthController {
 
     @Data
     public static class MfaVerifyRequest {
+        @JsonProperty("session_token")
         @NotBlank(message = "Session token is required")
         private String sessionToken;
+        @JsonProperty("code")
         @NotBlank(message = "OTP code is required")
         private String otpCode;
     }

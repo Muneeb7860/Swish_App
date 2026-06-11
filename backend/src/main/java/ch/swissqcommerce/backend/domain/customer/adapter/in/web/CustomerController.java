@@ -20,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -54,19 +56,37 @@ public class CustomerController {
 
     @Data
     public static class CheckoutRequest {
-        @NotBlank private String customerId;
+        // Optional in request body, defaulted from JWT principal if blank
+        private String customerId;
         @NotNull  private List<OrderUseCase.CartItem> items;
+        @JsonProperty("payment_method")
+        @JsonAlias("paymentMethod")
         @NotBlank private String paymentMethod;
+        @JsonProperty("tip_amount")
+        @JsonAlias("tipAmount")
         private BigDecimal tip;
+        @JsonProperty("bags_returned")
+        @JsonAlias("bagsReturned")
         private Integer bagsReturned;
+        @JsonProperty("idempotency_key")
+        @JsonAlias("idempotencyKey")
         private String idempotencyKey;
     }
 
     @Data
     public static class RefundRequest {
+        @JsonProperty("claim_reason")
+        @JsonAlias("claimReason")
         @NotBlank private String claimReason;
+        @JsonProperty("customer_latitude")
+        @JsonAlias("customerLatitude")
         @NotNull  private BigDecimal customerLatitude;
+        @JsonProperty("customer_longitude")
+        @JsonAlias("customerLongitude")
         @NotNull  private BigDecimal customerLongitude;
+        @JsonProperty("photo_exif_timestamp")
+        @JsonAlias("photoExifTimestamp")
+        private String photoExifTimestamp;
     }
 
     /** Asserts the authenticated principal owns the given customerId, or is an admin. */
@@ -89,6 +109,12 @@ public class CustomerController {
     public ResponseEntity<?> placeOrder(
             @Valid @RequestBody CheckoutRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        if (req.getCustomerId() == null || req.getCustomerId().isBlank()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                req.setCustomerId(auth.getName());
+            }
+        }
         assertOwnership(req.getCustomerId());
         try {
             Order order = orderUseCase.checkout(
@@ -109,7 +135,13 @@ public class CustomerController {
     @Operation(summary = "List orders for a customer")
     @GetMapping("/orders")
     public ResponseEntity<?> getOrders(
-            @Parameter(description = "Customer ID") @RequestParam String customerId) {
+            @Parameter(description = "Customer ID") @RequestParam(required = false) String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                customerId = auth.getName();
+            }
+        }
         assertOwnership(customerId);
         return ResponseEntity.ok(orderUseCase.getCustomerOrders(customerId));
     }
@@ -143,7 +175,13 @@ public class CustomerController {
                description = "Returns all ledger lines (wallet credits/debits, reward cashback, refunds) for the customer.")
     @GetMapping("/ledger")
     public ResponseEntity<?> getLedger(
-            @RequestParam String customerId) {
+            @RequestParam(required = false) String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                customerId = auth.getName();
+            }
+        }
         assertOwnership(customerId);
         return ResponseEntity.ok(ledgerUseCase.getCustomerLedger(customerId));
     }
@@ -154,10 +192,13 @@ public class CustomerController {
                description = "Irreversible. Deletes PII, order history, wallet, and loyalty data. Admin or self only.")
     @PostMapping("/profile/purge")
     @Transactional
-    public ResponseEntity<?> purgeProfile(@RequestParam String customerId) {
+    public ResponseEntity<?> purgeProfile(@RequestParam(required = false) String customerId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Unauthorized."));
+        }
+        if (customerId == null || customerId.isBlank()) {
+            customerId = auth.getName();
         }
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));

@@ -1,53 +1,78 @@
-# Handover: Swish App Backend Development (Domain 7 Complete)
+# Handover: Swish App Sprint 5 & Phase R5 Completion
 
 ## 📌 Context
-We have completed the implementation and verification of **Domain 7: Handover & Rejection Logistics (PIN Verification & Rejection Loop)**. Additionally, we staged the workspace files and resolved all previous unmerged path conflicts.
+During this session, we completed two major work areas:
+1. **Sprint 5: API Contract & DTO Payload Alignment**: Resolved contract mismatches between React micro-frontends and Spring Boot controllers.
+2. **Phase R5: Java-Python Bridge (Distributed Hybrid Agentic Governance)**: Exposed the Python AI governance pipeline as a REST microservice and integrated it with the Spring Boot backend as the primary LLM gateway with offline fallback protection.
 
 ---
 
 ## 🛠️ Changes Implemented
 
-### 1. Database & Domain Models
-* **Modified** `Order.java` and `OrderEntity.java`:
-  * Added fields for Handover PIN: `deliveryPin` (String, length 4).
-  * Added fields for Handover/Rejection Photos: `proofOfDeliveryPhotoUrl`, `rejectionReason`, `rejectionPhotoUrl`.
-  * Updated persistence mappings in `TransactionPersistenceAdapter.java` (`mapToDomain` and `mapToEntity`).
+### 1. DTO & API Contract Realignment
+* **JWT Fallbacks**: Updated controller endpoints in [CustomerController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/customer/adapter/in/web/CustomerController.java) and [RiderController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/in/web/RiderController.java) to make `customerId` and `riderId` optional. When missing, they default automatically to the authenticated JWT principal.
+* **Jackson Compatibilities**: Added `@JsonAlias` annotations on request DTOs inside `CustomerController`, `RiderController`, and `PaymentController` to support both **snake_case** (production frontend & OpenAPI specs) and **camelCase** (existing unit/security tests) payloads.
+* **Wholesaler Invoices Endpoint**: Updated `/api/wholesaler/invoices` in [WholesalerController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/wholesaler/adapter/in/web/WholesalerController.java) to return `B2BInvoiceDto[]` mapped from restock orders instead of returning a summary map.
 
-### 2. Transaction Domain
-* **Modified** `OrderServiceImpl.java`:
-  * Inside `checkout()`, added random 4-digit PIN generation before storing the Order entity.
+### 2. Python Governance REST Microservice (`homelab-ai-governance`)
+* **REST API Wrapper**: Added dependencies (`fastapi`, `uvicorn`, `pydantic`) in [pyproject.toml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/pyproject.toml) and standardized the build-backend to `setuptools.build_meta`. Created:
+  - [server.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/server.py): Exposes `POST /api/v1/govern` (runs `execute_pipeline`) and `GET /health`.
+  - [cli.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/cli.py): CLI wrapper starting the Uvicorn FastAPI server on localhost.
+* **Pipeline Hardening**:
+  - Normalized tokenization inside `metrics.py` to strip punctuation and retain numeric entities, allowing correct overlap evaluation of digits.
+  - Fixed `RateLimiter` inside `audit.py` to prioritize explicit limit overrides passed during initialization.
+  - Set default rule `enabled: True` state in `loader.py` if not explicitly declared in `shared_guardrails.yaml`.
+  - Updated PII scan regex patterns to use uppercase name constants to match test assertions.
 
-### 3. Enrollment Domain (Rider Services)
-* **Modified** `RiderController.java`:
-  * Added `ConfirmDeliveryRequest` (fields: `pin`, `photoUrl`) and `RejectDeliveryRequest` (fields: `reason`, `photoUrl`) DTOs.
-  * Added `POST /api/rider/orders/{id}/reject` endpoint.
-  * Updated `POST /api/rider/orders/{id}/deliver` endpoint to accept `ConfirmDeliveryRequest`.
-* **Modified** `RiderUseCase.java` & `RiderServiceImpl.java`:
-  * Refactored `confirmDelivery` to check the PIN. If correct, handover is confirmed. If missing/incorrect, it falls back to requiring `photoUrl`.
-  * Implemented `rejectDelivery` to handle door rejection. Marks the order as `rejected_at_door`, stores the reason and photo, and instantly refunds the order's total amount back to the customer's wallet.
+### 3. Java-Python Bridge (`backend`)
+* **Properties Config**: Declared `swish.governance.api.url=${SWISH_GOVERNANCE_API_URL:}` in `application.properties`.
+* **Outbound Adapter**: Created [PythonGovernanceAdapter.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapter.java) implementing `LlmGatewayPort`. It calls the Python FastAPI service, and automatically falls back to `GeminiFreeAdapter` or `MockLlmAdapter` if the Python service is offline or fails.
+* **Agent Integration**: Wired the new adapter into all three AI agents as the primary gateway:
+  - `CustomerSupportAgent`
+  - `B2BProcurementAgent`
+  - `DynamicPricingAgent` (along with constructor mockup updates in [DynamicPricingAgentTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/DynamicPricingAgentTest.java)).
 
 ---
 
 ## 🧪 Verification & Testing
-* **Updated** `RiderServiceTest.java` to cover the new handover scenarios:
-  * `testConfirmDelivery_SuccessWithPin`: Successful delivery with matching PIN.
-  * `testConfirmDelivery_SuccessWithPhotoFallback`: Successful delivery fallback when PIN is incorrect but proof-of-delivery photo is provided.
-  * `testConfirmDelivery_FailureMismatchedPinAndNoPhoto`: Handover rejected with `IllegalArgumentException` when no valid PIN or photo proof is supplied.
-  * `testRejectDelivery_Success`: Successful door rejection with proper reason/photo, confirming status change and wallet balance refund.
-* **Results**: Ran `mvn test` in the `backend` directory. **120 tests run, 120 passed, 0 failures**.
 
----
-
-## 📂 Git & Staging Status
-All conflict files have been resolved, and files for Domain 7 have been staged:
-* Modified/created Java classes under `backend/src` are staged and ready for commit.
-* Walkthrough details have been updated in the IDE brain artifacts.
-
----
-
-## 🚀 Next Steps
-You can commit and push the staged changes directly from your command line:
+### 1. Python Governance Tests
+All **50 tests** pass successfully inside the `homelab-ai-governance` virtual environment:
 ```bash
-git commit -m "feat(logistics): implement PIN-based delivery handover and door rejection refund loop"
-git push origin Mac_Machine
+cd homelab-ai-governance
+.venv/bin/pytest
 ```
+**Result**:
+`50 passed in 0.14s`
+
+### 2. Spring Boot Backend Tests
+All **262 tests** (including 7 new test cases under `PythonGovernanceAdapterTest`) pass successfully:
+```bash
+cd backend
+mvn clean test
+```
+**Result**:
+`Tests run: 262, Failures: 0, Errors: 0, Skipped: 0`
+`BUILD SUCCESS`
+
+---
+
+## 🚀 How to Run locally
+
+1. **Activate Environment and Run Python Server**:
+   ```bash
+   cd homelab-ai-governance
+   .venv/bin/governance --port 5000
+   ```
+2. **Start the Backend**:
+   ```bash
+   export SWISH_GOVERNANCE_API_URL=http://localhost:5000
+   cd backend
+   mvn spring-boot:run
+   ```
+3. **Trigger B2B Negotiation or support requests**:
+   - `POST /api/agent/chat` (Customer Support)
+   - `POST /api/agent/negotiate` (B2B Procurement RFQ)
+   - `POST /api/agent/price-recommendation` (Dynamic Pricing)
+
+All requests will route through the governed Python pipeline with full semantic routing, rate-limiting, and guardrail checks active.

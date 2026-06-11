@@ -37,7 +37,7 @@ def _build_obfuscation_pattern(term: str) -> str:
         "b": "[bB]",
         "c": "[cC]",
         "d": "[dD]",
-        "e": "[eE3]",
+        "e": "[eE3@]",
         "f": "[fF]",
         "g": "[gG]",
         "h": "[hH]",

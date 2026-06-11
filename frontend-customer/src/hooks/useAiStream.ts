@@ -37,13 +37,19 @@ export const useAiStream = () => {
 		setError(null);
 
 		try {
+			const jwtToken = localStorage.getItem("jwt_token");
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+				Accept: "text/event-stream",
+			};
+			if (jwtToken) {
+				headers["Authorization"] = `Bearer ${jwtToken}`;
+			}
+
 			// Endpoint routes through the BFF proxy (e.g., /api/ai/orchestrate)
 			const response = await fetch(endpoint, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "text/event-stream",
-				},
+				headers,
 				body: JSON.stringify({ prompt }),
 				signal: controller.signal,
 			});

@@ -15,6 +15,7 @@ import SupportBot from "./components/SupportBot";
 import { useEnvProfiles } from "./hooks/useEnvProfiles";
 import { useStore } from "./store";
 import { syncProductsFromFirebase } from "./firebaseSync";
+import * as api from "./api/endpoints";
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = (
@@ -150,6 +151,39 @@ class LocalErrorBoundary extends React.Component<
 							failed to load or experienced a runtime crash. Downstream systems
 							and checkout capabilities remain operational.
 						</p>
+						{this.state.error && (
+							<code style={{ fontSize: "0.75rem", color: "#f87171", background: "rgba(0,0,0,0.2)", padding: "0.25rem 0.5rem", borderRadius: "4px" }}>
+								{this.state.error.toString()}
+							</code>
+						)}
+						<button
+							onClick={() => {
+								this.setState({ hasError: false, error: null });
+								window.location.reload();
+							}}
+							style={{
+								marginTop: "1rem",
+								padding: "0.5rem 1.25rem",
+								background: "rgba(239, 68, 68, 0.2)",
+								border: "1px solid #ef4444",
+								color: "#fca5a5",
+								borderRadius: "8px",
+								fontSize: "0.8rem",
+								fontWeight: 600,
+								cursor: "pointer",
+								transition: "all 0.2s ease"
+							}}
+							onMouseOver={(e) => {
+								e.currentTarget.style.background = "#ef4444";
+								e.currentTarget.style.color = "#fff";
+							}}
+							onMouseOut={(e) => {
+								e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
+								e.currentTarget.style.color = "#fca5a5";
+							}}
+						>
+							Retry Loading
+						</button>
 					</div>
 				</div>
 			);
@@ -426,12 +460,40 @@ export default function App() {
 		setActiveProfileKey,
 		activeProfile,
 	} = useEnvProfiles();
+	const [catalogLoading, setCatalogLoading] = useState(false);
+	const [hitlLoading, setHitlLoading] = useState(false);
 	// customer, rider, business, inventory, admin
 
 	useEffect(() => {
 		// Start real-time Firebase syncing
 		syncProductsFromFirebase().catch(err => console.error("Firebase sync error:", err));
 	}, []);
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			setCatalogLoading(true);
+			api.getCatalog()
+				.then((items) => {
+					const mapped = items.map((item) => ({
+						id: item.item_id,
+						name: item.name,
+						price: item.price,
+						stock: item.stock,
+						stockEast: Math.max(0, item.stock - 2),
+						category: item.category,
+						emoji: item.emoji,
+						perishable: item.perishable,
+					}));
+					setProducts(mapped);
+				})
+				.catch((err) => {
+					console.error("Failed to load catalog from BFF:", err);
+				})
+				.finally(() => {
+					setCatalogLoading(false);
+				});
+		}
+	}, [isAuthenticated, setProducts]);
 
 	const ROLES = ["customer", "rider", "inventory", "business", "admin"];
 	const handleRoleChange = (newRole: string) => {
@@ -701,20 +763,7 @@ export default function App() {
 			password: mfaPassword,
 		};
 
-		fetch("/api/v1/auth/login", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
-		})
-			.then(async (res) => {
-				if (!res.ok) {
-					const errText = await res.text();
-					throw new Error(errText || "Authentication failed");
-				}
-				return res.json();
-			})
+		api.login(payload)
 			.then((data) => {
 				if (data.mfaRequired) {
 					setSessionToken(data.sessionToken);
@@ -759,23 +808,10 @@ export default function App() {
 	};
 
 	const handleMfaVerify = () => {
-		fetch("/api/v1/auth/mfa/verify", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				sessionToken: sessionToken,
-				code: mfaOtpInput,
-			}),
+		api.verifyMfa({
+			session_token: sessionToken,
+			code: mfaOtpInput,
 		})
-			.then(async (res) => {
-				if (!res.ok) {
-					const errText = await res.text();
-					throw new Error(errText || "MFA Verification failed");
-				}
-				return res.json();
-			})
 			.then((data) => {
 				setIsAuthenticated(true);
 				setCurrentUserSession({ role: mfaRole });
@@ -825,57 +861,90 @@ export default function App() {
 
 	// Onboarding Handlers
 	const handleApplyOnboard = (type, name) => {
-		logKafka(
-			"admin",
-			"onboard.applied",
-			`${name} submitted onboarding application.`,
-		);
+		api.submitOnboard({
+			full_name: name,
+			vehicle_type: "E-Bike",
+			driver_license_base64: "demo-license-data-base64"
+		})
+			.then((res) => {
+				const id = res.application_id || `app-${Math.random().toString(36).substring(2, 7)}`;
+				setOnboardingQueue((prev) => [
+					...prev,
+					{
+						id,
+						name,
+						type,
+						approvals: { l1: false, l2: false, l3: false }
+					}
+				]);
+				logKafka(
+					"admin",
+					"onboard.applied",
+					`${name} submitted onboarding application (${id}).`,
+				);
+			})
+			.catch((err) => {
+				triggerToast(`Failed to submit onboarding: ${err.message}`, "admin");
+			});
 	};
 
 	const handleApproveOnboard = (appId, level) => {
-		setOnboardingQueue((prev) =>
-			prev.map((app) => {
-				if (app.id === appId) {
-					const nextApprovals = { ...app.approvals, [level]: true };
-					const active =
-						nextApprovals.l1 && nextApprovals.l2 && nextApprovals.l3;
+		const roleMap: Record<string, "Ops" | "Compliance" | "Admin"> = {
+			l1: "Ops",
+			l2: "Compliance",
+			l3: "Admin"
+		};
+		const validatorRole = roleMap[level] || "Ops";
 
-					if (active) {
-						if (app.type === "rider") {
-							setRiderOnboardStatus("active");
-							triggerToast(
-								"Onboarding Complete: Rider Dave is now ACTIVE!",
-								"rider",
-							);
-							logKafka(
-								"admin",
-								"rider.onboarded",
-								`Rider Dave approved across all 3 layers. System dispatch credentials generated.`,
-							);
-						} else if (app.type === "merchant") {
-							setBusinessOnboardStatus("active");
-							triggerToast(
-								"Onboarding Complete: Merchant is now ACTIVE!",
-								"business",
-							);
-							logKafka(
-								"admin",
-								"merchant.onboarded",
-								"FreshGrocer Store verified. Catalog sync activated.",
-							);
+		api.approveOnboard(appId, { approve: true, validator_role: validatorRole })
+			.then(() => {
+				setOnboardingQueue((prev) =>
+					prev.map((app) => {
+						if (app.id === appId) {
+							const nextApprovals = { ...app.approvals, [level]: true };
+							const active =
+								nextApprovals.l1 && nextApprovals.l2 && nextApprovals.l3;
+
+							if (active) {
+								if (app.type === "rider") {
+									setRiderOnboardStatus("active");
+									triggerToast(
+										"Onboarding Complete: Rider Dave is now ACTIVE!",
+										"rider",
+									);
+									logKafka(
+										"admin",
+										"rider.onboarded",
+										`Rider Dave approved across all 3 layers. System dispatch credentials generated.`,
+									);
+								} else if (app.type === "merchant") {
+									setBusinessOnboardStatus("active");
+									triggerToast(
+										"Onboarding Complete: Merchant is now ACTIVE!",
+										"business",
+									);
+									logKafka(
+										"admin",
+										"merchant.onboarded",
+										"FreshGrocer Store verified. Catalog sync activated.",
+									);
+								}
+							} else {
+								logKafka(
+									"admin",
+									`onboard.l${level.slice(1)}_approved`,
+									`Approved Level ${level.slice(1)} check for ${app.name}`,
+								);
+							}
+							return { ...app, approvals: nextApprovals };
 						}
-					} else {
-						logKafka(
-							"admin",
-							`onboard.l${level.slice(1)}_approved`,
-							`Approved Level ${level.slice(1)} check for ${app.name}`,
-						);
-					}
-					return { ...app, approvals: nextApprovals };
-				}
-				return app;
-			}),
-		);
+						return app;
+					}),
+				);
+			})
+			.catch((err) => {
+				triggerToast(`Failed to approve onboarding: ${err.message}`, "admin");
+			});
 	};
 
 	// Interactive Checkout
@@ -900,117 +969,114 @@ export default function App() {
 			`Checkout requested for ${cart.length} items. Total: $${finalAmount.toFixed(2)}.`,
 		);
 
-		if (paymentMethod === "Wallet") {
-			setCustomerWallet((w) => w - finalAmount);
-			setMerchantWallet((w) => w + finalAmount);
-			logLedger(
-				"customer",
-				"CUST-WALLET-PAY",
-				`Purchased groceries via Wallet`,
-				0,
-				finalAmount,
-			);
-		} else if (paymentOutageActive) {
-			logKafka(
-				"system",
-				"gateway.outage",
-				"Swipe gateway timeout! Initiating fallback chain Swipe ➔ PayPal...",
-			);
-			triggerToast("Swipe down! Falling back to PayPal gateway...", "system");
-			logLedger(
-				"customer",
-				"GATEWAY-FAILOVER",
-				"Swipe timed out. Charged via PayPal",
-				0,
-				finalAmount,
-			);
-		} else {
-			setMerchantWallet((w) => w + finalAmount);
-			logLedger(
-				"customer",
-				"GATEWAY-CHARGE",
-				`Swipe API charge authorization success`,
-				0,
-				finalAmount,
-			);
-		}
+		const orderItems = cart.map(item => ({
+			item_id: item.id,
+			quantity: item.qty
+		}));
 
-		const itemsDescription = cart
-			.map((item) => `${item.qty}x ${item.name}`)
-			.join(", ");
-		const hasPerishables = cart.some((item) => item.perishable);
-
-		const nextOrder = {
-			id: Math.floor(1000 + Math.random() * 9000),
-			items: itemsDescription,
-			total: finalAmount,
-			progress: 0,
-			status: "picking",
-			perishable: hasPerishables,
-			temperature: hasPerishables ? 4.0 : null,
-			slaRemaining: activePickingCongested ? 280 : 180,
+		const orderRequest = {
+			items: orderItems,
+			payment_method: paymentMethod,
+			tip_amount: tipAmount,
+			bags_returned: 0
 		};
 
-		setActiveOrder(nextOrder);
-		setCart([]);
-		setCustomerOrderCount((c) => c + 1);
+		api.placeOrder(orderRequest)
+			.then((orderResponse) => {
+				const orderId = orderResponse.order_id;
+				const paymentRequest = {
+					order_id: orderId,
+					customer_id: "CUST-Dave",
+					amount: finalAmount,
+					payment_method: paymentMethod
+				};
 
-		setPickingBacklogQueue((q) => {
-			const nextQ = q + 1;
-			if (nextQ > 1) {
-				setActivePickingCongested(true);
-				setPickerSlaDuration(6.8);
-			}
-			return nextQ;
-		});
+				return api.createPayment(paymentRequest)
+					.then((paymentResponse) => {
+						return api.capturePayment(paymentResponse.payment_id);
+					})
+					.then(() => {
+						if (paymentMethod === "Wallet") {
+							setCustomerWallet((w) => w - finalAmount);
+							setMerchantWallet((w) => w + finalAmount);
+							logLedger(
+								"customer",
+								"CUST-WALLET-PAY",
+								`Purchased groceries via Wallet`,
+								0,
+								finalAmount,
+							);
+						} else {
+							setMerchantWallet((w) => w + finalAmount);
+							logLedger(
+								"customer",
+								"GATEWAY-CHARGE",
+								`Swipe API charge authorization success`,
+								0,
+								finalAmount,
+							);
+						}
 
-		logKafka(
-			"inventory",
-			"order.received",
-			`Order #${nextOrder.id} dispatched to picker queue.`,
-		);
-		triggerToast(`Order #${nextOrder.id} placed successfully!`, "customer");
+						const itemsDescription = cart
+							.map((item) => `${item.qty}x ${item.name}`)
+							.join(", ");
+						const hasPerishables = cart.some((item) => item.perishable);
+
+						const nextOrder = {
+							id: orderId,
+							items: itemsDescription,
+							total: finalAmount,
+							progress: 0,
+							status: "picking",
+							perishable: hasPerishables,
+							temperature: hasPerishables ? 4.0 : null,
+							slaRemaining: activePickingCongested ? 280 : 180,
+						};
+
+						setActiveOrder(nextOrder);
+						setCart([]);
+						setCustomerOrderCount((c) => c + 1);
+
+						setPickingBacklogQueue((q) => {
+							const nextQ = q + 1;
+							if (nextQ > 1) {
+								setActivePickingCongested(true);
+								setPickerSlaDuration(6.8);
+							}
+							return nextQ;
+						});
+
+						logKafka(
+							"inventory",
+							"order.received",
+							`Order #${nextOrder.id} dispatched to picker queue.`,
+						);
+						triggerToast(`Order #${nextOrder.id} placed successfully!`, "customer");
+					});
+			})
+			.catch((err) => {
+				console.error("Checkout failed:", err);
+				if (paymentOutageActive) {
+					logKafka(
+						"system",
+						"gateway.outage",
+						"Swipe gateway timeout! Initiating fallback chain Swipe ➔ PayPal...",
+					);
+					triggerToast("Swipe down! Falling back to PayPal gateway...", "system");
+					logLedger(
+						"customer",
+						"GATEWAY-FAILOVER",
+						"Swipe timed out. Charged via PayPal",
+						0,
+						finalAmount,
+					);
+				} else {
+					triggerToast(`Checkout failed: ${err.message}`, "admin");
+				}
+			});
 	};
 
-	const handlePickerHandover = () => {
-		if (!activeOrder) return;
-
-		const orderId = activeOrder.id;
-		setActiveOrder((prev) => ({ ...prev, status: "transit" }));
-		logKafka(
-			"rider",
-			"order.dispatched",
-			`Order #${orderId} loaded on delivery cargo. Transit started.`,
-		);
-		triggerToast(`Order #${orderId} handed over to Rider Dave!`, "rider");
-
-		setPickingBacklogQueue((q) => {
-			const nextQ = Math.max(0, q - 1);
-			if (nextQ <= 1) {
-				setActivePickingCongested(false);
-				setPickerSlaDuration(2.1);
-			}
-			return nextQ;
-		});
-
-		const duration = pickerSlaDuration;
-		if (duration < 4.0) {
-			setPickerBadge("Lightning Picker");
-			setMerchantWallet((w) => w - 1.0);
-			logLedger(
-				"system",
-				"PICKER-BONUS",
-				"Lightning Picker badge speed bonus paid",
-				1.0,
-				0,
-			);
-			updatePickerTrust(10, "Lightning picking SLA completed");
-			triggerToast("Picker awarded Lightning speed bonus!", "inventory");
-		} else {
-			setPickerBadge("Standard");
-			updatePickerTrust(5, "Picking completed on time");
-		}
-
+	const startTransitTracking = (orderId: number) => {
 		// ── SSE: Subscribe to live BFF telemetry stream with Exponential Backoff ──
 		const connectSseWithBackoff = (targetOrderId, attempt = 0) => {
 			closeSseStream();
@@ -1131,28 +1197,16 @@ export default function App() {
 				// Fetch-based telemetry ingestion (push to BFF gateway)
 				const lat = 47.3769 + nextProgress * 0.0001;
 				const lng = 8.5417 + nextProgress * 0.0001;
-				fetch("/api/telemetry/tick", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${authToken}`,
-					},
-					body: JSON.stringify({
-						orderId: prev.id,
-						latitude: lat,
-						longitude: lng,
-						temperature: nextTemp || 0.0,
-						dryIceInjected: false,
-					}),
+				api.ingestTelemetryTick({
+					orderId: prev.id,
+					latitude: lat,
+					longitude: lng,
+					temperature: nextTemp || 0.0,
+					dryIceInjected: false,
 				})
 					.then((res) => {
-						if (res.status === 503) {
-							setCircuitBreakerTripped(true);
-							logKafka(
-								"system",
-								"gateway.circuit_breaker_tripped",
-								"Rider Telemetry tick ingestion failed: Circuit Breaker active.",
-							);
+						if (res && res.alertTriggered) {
+							// Handle potential circuit breaker state if simulated
 						}
 					})
 					.catch((err) =>
@@ -1169,57 +1223,116 @@ export default function App() {
 		}, 1000);
 	};
 
+	const handlePickerHandover = () => {
+		if (!activeOrder) return;
+
+		const orderId = activeOrder.id;
+		const duration = pickerSlaDuration;
+
+		api.handoverItem({
+			order_id: orderId,
+			duration_seconds: duration,
+			contains_packing_error: false
+		})
+			.then((res) => {
+				setActiveOrder((prev) => prev ? { ...prev, status: "transit" } : null);
+				logKafka(
+					"rider",
+					"order.dispatched",
+					`Order #${orderId} loaded on delivery cargo. Transit started.`,
+				);
+				triggerToast(`Order #${orderId} handed over to Rider Dave!`, "rider");
+
+				setPickingBacklogQueue((q) => {
+					const nextQ = Math.max(0, q - 1);
+					if (nextQ <= 1) {
+						setActivePickingCongested(false);
+						setPickerSlaDuration(2.1);
+					}
+					return nextQ;
+				});
+
+				if (res.lightning_bonus_awarded) {
+					setPickerBadge("Lightning Picker");
+					setMerchantWallet((w) => w - 1.0);
+					logLedger(
+						"system",
+						"PICKER-BONUS",
+						"Lightning Picker badge speed bonus paid",
+						1.0,
+						0,
+					);
+					updatePickerTrust(10, "Lightning picking SLA completed");
+					triggerToast("Picker awarded Lightning speed bonus!", "inventory");
+				} else {
+					setPickerBadge("Standard");
+					updatePickerTrust(5, "Picking completed on time");
+				}
+
+				startTransitTracking(orderId);
+			})
+			.catch((err) => {
+				triggerToast(`Picker handover failed: ${err.message}`, "inventory");
+			});
+	};
+
 	const handleOrderDeliveryComplete = (order, podHash = "") => {
 		// Close SSE stream — order lifecycle complete
 		closeSseStream();
 		setRiderCoords(null);
 
-		const tipPaid = tipAmount;
-		if (tipPaid > 0) {
-			setRiderWallet((w) => w + tipPaid);
-			setCustomerWallet((w) => w - tipPaid);
-			logLedger(
-				"customer",
-				"RIDER-TIP-DEBIT",
-				`Rider Dave coordinate tip payout`,
-				tipPaid,
-				0,
-			);
-			logKafka(
-				"rider",
-				"wallet.tip_received",
-				`Rider Dave received tip: $${tipPaid.toFixed(2)}.`,
-			);
-		}
+		api.confirmDelivery(order.id, { pin: "1234", photoUrl: "mock-pod-photo" })
+			.then(() => {
+				const tipPaid = tipAmount;
+				if (tipPaid > 0) {
+					setRiderWallet((w) => w + tipPaid);
+					setCustomerWallet((w) => w - tipPaid);
+					logLedger(
+						"customer",
+						"RIDER-TIP-DEBIT",
+						`Rider Dave coordinate tip payout`,
+						tipPaid,
+						0,
+					);
+					logKafka(
+						"rider",
+						"wallet.tip_received",
+						`Rider Dave received tip: $${tipPaid.toFixed(2)}.`,
+					);
+				}
 
-		setRiderWallet((w) => w + 5.0);
-		updateRiderTrust(5, "Order delivered successfully");
-		updateCustomerTrust(5, "Order completed without issue");
+				setRiderWallet((w) => w + 5.0);
+				updateRiderTrust(5, "Order delivered successfully");
+				updateCustomerTrust(5, "Order completed without issue");
 
-		setOrderHistory((prev) => [
-			{
-				id: order.id,
-				date: "Today",
-				items: order.items,
-				total: order.total,
-				status: "delivered",
-				paymentMethod: "Wallet",
-				podHash: podHash,
-			},
-			...prev,
-		]);
+				setOrderHistory((prev) => [
+					{
+						id: order.id,
+						date: "Today",
+						items: order.items,
+						total: order.total,
+						status: "delivered",
+						paymentMethod: "Wallet",
+						podHash: podHash,
+					},
+					...prev,
+				]);
 
-		logKafka(
-			"rider",
-			"order.delivered",
-			`Order #${order.id} delivered. PoD Handshake Hash: ${podHash || "N/A"}`,
-		);
-		triggerToast(
-			`Order #${order.id} delivered! PoD Hash: ${podHash ? podHash.substring(0, 10) + "..." : "N/A"}`,
-			"customer",
-		);
-		setActiveOrder(null);
-		setTipAmount(0);
+				logKafka(
+					"rider",
+					"order.delivered",
+					`Order #${order.id} delivered. PoD Handshake Hash: ${podHash || "N/A"}`,
+				);
+				triggerToast(
+					`Order #${order.id} delivered! PoD Hash: ${podHash ? podHash.substring(0, 10) + "..." : "N/A"}`,
+					"customer",
+				);
+				setActiveOrder(null);
+				setTipAmount(0);
+			})
+			.catch((err) => {
+				triggerToast(`Delivery confirmation failed: ${err.message}`, "rider");
+			});
 	};
 
 	const handlePerishablesSpoiled = (order) => {
@@ -1260,15 +1373,9 @@ export default function App() {
 			0,
 		);
 
-		// Trigger Real BFF Telemetry Coolant Integration
-		fetch(`/api/telemetry/${id}/dry-ice`, {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${authToken}`,
-			},
-		})
+		api.injectDryIce(id)
 			.then((res) => {
-				if (res.status === 503) {
+				if (res && res.status === 503) {
 					setCircuitBreakerTripped(true);
 					triggerToast(
 						"BFF Gateway: Downstream service offline. Circuit Breaker TRIPPED.",
@@ -1430,15 +1537,8 @@ export default function App() {
 	};
 
 	const fetchHitlQueues = useCallback(() => {
-		const headers = {
-			Authorization: authToken ? `Bearer ${authToken}` : "",
-		};
-
-		const fetchB2b = fetch(
-			`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl`,
-			{ headers },
-		)
-			.then((res) => (res.ok ? res.json() : []))
+		setHitlLoading(true);
+		const fetchB2b = api.getB2bHitlQueue()
 			.then((data) => {
 				if (!Array.isArray(data)) return [];
 				return data.map((item) => ({
@@ -1455,22 +1555,18 @@ export default function App() {
 			})
 			.catch(() => []);
 
-		const fetchGeneral = fetch(
-			`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue`,
-			{ headers },
-		)
-			.then((res) => (res.ok ? res.json() : []))
+		const fetchGeneral = api.getHitlQueue()
 			.then((data) => {
 				if (!Array.isArray(data)) return [];
 				return data.map((item) => ({
-					id: item.ticketId,
-					originalId: item.ticketId,
+					id: item.ticket_id || item.ticketId,
+					originalId: item.ticket_id || item.ticketId,
 					type: item.type,
 					desc: item.description,
 					amount: item.amount,
 					actionData: {
-						customerId: item.customer?.customerId,
-						orderId: item.order?.orderId,
+						customerId: item.customer_id || item.customer?.customerId,
+						orderId: item.order_id || item.order?.orderId,
 					},
 				}));
 			})
@@ -1481,8 +1577,11 @@ export default function App() {
 				const merged = [...b2bList, ...generalList];
 				setHitlQueue(merged);
 			})
-			.catch(() => {});
-	}, [authToken, setHitlQueue]);
+			.catch(() => {})
+			.finally(() => {
+				setHitlLoading(false);
+			});
+	}, [setHitlQueue]);
 
 	useEffect(() => {
 		fetchHitlQueues();
@@ -1495,87 +1594,56 @@ export default function App() {
 	const handleReleaseHitl = (ticket) => {
 		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
-			fetch(
-				`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/approve`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: authToken ? `Bearer ${authToken}` : "",
-					},
-					body: JSON.stringify({
-						operator: "swissadmin",
-						reason: "B2B Restock approved via Admin console",
-					}),
-				},
-			)
-				.then((res) => {
-					if (res.ok) {
-						triggerToast("B2B Restock order approved and released!", "admin");
-						setMerchantWallet((w) => w - ticket.amount);
-						logLedger(
-							"system",
-							"RESTOCK-FUND-RELEASE",
-							`Restocked inventory: approved release to wholesaler`,
-							ticket.amount,
-							0,
-						);
-						logKafka(
-							"system",
-							"hitl.authorized",
-							`Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`,
-						);
-						fetchHitlQueues();
-					} else {
-						triggerToast("Failed to approve B2B restock override.", "admin");
-					}
+			api.approveB2bOverride(realId, {
+				operator: "swissadmin",
+				reason: "B2B Restock approved via Admin console",
+			})
+				.then(() => {
+					triggerToast("B2B Restock order approved and released!", "admin");
+					setMerchantWallet((w) => w - ticket.amount);
+					logLedger(
+						"system",
+						"RESTOCK-FUND-RELEASE",
+						`Restocked inventory: approved release to wholesaler`,
+						ticket.amount,
+						0,
+					);
+					logKafka(
+						"system",
+						"hitl.authorized",
+						`Admin authorized B2B Funds: $${ticket.amount.toFixed(2)} transferred to wholesaler.`,
+					);
+					fetchHitlQueues();
 				})
 				.catch(() =>
 					triggerToast(
-						"Failed to approve B2B restock override (network error).",
+						"Failed to approve B2B restock override.",
 						"admin",
 					),
 				);
 		} else {
-			fetch(
-				`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: authToken ? `Bearer ${authToken}` : "",
-					},
-					body: JSON.stringify({
-						decision: "approve",
-						reason: "Approved via Admin console",
-					}),
-				},
-			)
-				.then((res) => {
-					if (res.ok) {
-						triggerToast("HITL ticket approved successfully.", "admin");
-						setCustomerWallet((w) => w + ticket.amount);
-						setMerchantWallet((w) => w - ticket.amount);
-						logLedger(
-							"system",
-							"CUSTOMER-REFUND",
-							"Approved support bot customer refund request",
-							ticket.amount,
-							0,
-						);
-						logKafka(
-							"system",
-							"hitl.authorized",
-							`Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`,
-						);
-						fetchHitlQueues();
-					} else {
-						triggerToast("Failed to approve HITL ticket.", "admin");
-					}
+			api.resolveHitl(ticket.id, { action: "approve" })
+				.then(() => {
+					triggerToast("HITL ticket approved successfully.", "admin");
+					setCustomerWallet((w) => w + ticket.amount);
+					setMerchantWallet((w) => w - ticket.amount);
+					logLedger(
+						"system",
+						"CUSTOMER-REFUND",
+						"Approved support bot customer refund request",
+						ticket.amount,
+						0,
+					);
+					logKafka(
+						"system",
+						"hitl.authorized",
+						`Admin authorized Support Bot refund of $${ticket.amount.toFixed(2)} to customer.`,
+					);
+					fetchHitlQueues();
 				})
-				.catch(() =>
+				.catch((err) =>
 					triggerToast(
-						"Failed to approve HITL ticket (network error).",
+						`Failed to approve HITL ticket: ${err.message}`,
 						"admin",
 					),
 				);
@@ -1585,70 +1653,39 @@ export default function App() {
 	const handleVoidHitl = (ticket) => {
 		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
-			fetch(
-				`${import.meta.env.VITE_API_BASE_URL}/api/governance/hitl/${realId}/reject`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: authToken ? `Bearer ${authToken}` : "",
-					},
-					body: JSON.stringify({
-						operator: "swissadmin",
-						reason: "B2B Restock rejected via Admin console",
-					}),
-				},
-			)
-				.then((res) => {
-					if (res.ok) {
-						triggerToast("B2B Restock order rejected and canceled.", "admin");
-						logKafka(
-							"admin",
-							"hitl.voided",
-							`Admin VOIDED B2B procurement request for restock order.`,
-						);
-						fetchHitlQueues();
-					} else {
-						triggerToast("Failed to reject B2B restock override.", "admin");
-					}
+			api.rejectB2bOverride(realId, {
+				operator: "swissadmin",
+				reason: "B2B Restock rejected via Admin console",
+			})
+				.then(() => {
+					triggerToast("B2B Restock order rejected and canceled.", "admin");
+					logKafka(
+						"admin",
+						"hitl.voided",
+						`Admin VOIDED B2B procurement request for restock order.`,
+					);
+					fetchHitlQueues();
 				})
 				.catch(() =>
 					triggerToast(
-						"Failed to reject B2B restock override (network error).",
+						"Failed to reject B2B restock override.",
 						"admin",
 					),
 				);
 		} else {
-			fetch(
-				`${import.meta.env.VITE_API_BASE_URL}/api/admin/hitl/queue/${ticket.id}/resolve`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: authToken ? `Bearer ${authToken}` : "",
-					},
-					body: JSON.stringify({
-						decision: "reject",
-						reason: "Rejected via Admin console",
-					}),
-				},
-			)
-				.then((res) => {
-					if (res.ok) {
-						triggerToast("HITL ticket rejected successfully.", "admin");
-						logKafka(
-							"admin",
-							"hitl.voided",
-							"Admin VOIDED AI Bot customer refund request.",
-						);
-						fetchHitlQueues();
-					} else {
-						triggerToast("Failed to reject HITL ticket.", "admin");
-					}
+			api.resolveHitl(ticket.id, { action: "void" })
+				.then(() => {
+					triggerToast("HITL ticket rejected successfully.", "admin");
+					logKafka(
+						"admin",
+						"hitl.voided",
+						"Admin VOIDED AI Bot customer refund request.",
+					);
+					fetchHitlQueues();
 				})
-				.catch(() =>
+				.catch((err) =>
 					triggerToast(
-						"Failed to reject HITL ticket (network error).",
+						`Failed to reject HITL ticket: ${err.message}`,
 						"admin",
 					),
 				);
@@ -2347,6 +2384,7 @@ export default function App() {
 										handleCheckout={handleCheckout}
 										activeOrder={activeOrder}
 										generateCertificate={generateCertificate}
+										catalogLoading={catalogLoading}
 									/>
 								</LocalErrorBoundary>
 							) : (
@@ -2467,6 +2505,7 @@ export default function App() {
 										hitlQueue={hitlQueue}
 										handleReleaseHitl={handleReleaseHitl}
 										handleVoidHitl={handleVoidHitl}
+										hitlLoading={hitlLoading}
 									/>
 								</LocalErrorBoundary>
 							) : (

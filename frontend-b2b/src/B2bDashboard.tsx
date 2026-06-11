@@ -29,7 +29,7 @@ const B2bDashboard: React.FC = () => {
   // Configurable connection settings
   const [gatewayUrl, setGatewayUrl] = useState('http://localhost:8080');
   const [userId, setUserId] = useState('b2b-customer-123');
-  const [accessToken, setAccessToken] = useState('mock_token_for_now');
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('jwt_token') || 'mock_token_for_now');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   // Business state
@@ -125,7 +125,8 @@ const B2bDashboard: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Idempotency-Key': idempotencyKey
+          'X-Idempotency-Key': idempotencyKey,
+          ...(accessToken && accessToken !== 'mock_token_for_now' ? { 'Authorization': `Bearer ${accessToken}` } : {})
         },
         body: JSON.stringify({
           customerId: userId,

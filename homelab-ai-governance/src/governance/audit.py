@@ -183,12 +183,15 @@ class RateLimiter:
     """Tracks sliding-window hourly request count to prevent resource exhaustion."""
 
     def __init__(self, limit_per_hour: int | None = None):
+        self._explicit_limit = limit_per_hour
         self._default_limit = limit_per_hour or 100
         self.requests: list[float] = []
         self._lock = threading.Lock()
 
     def get_limit(self) -> int:
         """Dynamically load the hourly limit from routing config."""
+        if self._explicit_limit is not None:
+            return self._explicit_limit
         try:
             from governance.config import load_routing_config
             config = load_routing_config()

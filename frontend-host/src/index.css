@@ -2219,3 +2219,45 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
     animation: none !important;
   }
 }
+
+/* Shimmer Loading Skeleton */
+.skeleton-shimmer {
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0.03) 25%,
+		rgba(255, 255, 255, 0.08) 50%,
+		rgba(255, 255, 255, 0.03) 75%
+	);
+	background-size: 200% 100%;
+	animation: shimmer-anim 1.5s linear infinite;
+}
+
+@keyframes shimmer-anim {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+.skeleton-text {
+	height: 12px;
+	border-radius: 4px;
+	margin-bottom: 8px;
+	width: 100%;
+}
+
+.skeleton-text.short {
+	width: 40%;
+}
+
+.skeleton-text.medium {
+	width: 70%;
+}
+
+.skeleton-image {
+	height: 100px;
+	border-radius: 10px;
+	margin-bottom: 0.5rem;
+}

@@ -18,6 +18,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -46,6 +48,8 @@ public class PaymentController {
 
     @Data
     public static class ChargeRequest {
+        @JsonProperty("order_id")
+        @JsonAlias("orderId")
         @NotBlank(message = "Order ID is required")
         private String orderId;
         @NotNull @Positive
@@ -56,14 +60,22 @@ public class PaymentController {
 
     @Data
     public static class AuthorizeRequest {
+        @JsonProperty("order_id")
+        @JsonAlias("orderId")
         @NotNull
         private Integer orderId;
+        @JsonProperty("customer_id")
+        @JsonAlias("customerId")
         @NotBlank
         private String customerId;
         @NotNull @Positive
         private BigDecimal amount;
+        @JsonProperty("payment_method")
+        @JsonAlias("paymentMethod")
         @NotBlank
         private String paymentMethod;
+        @JsonProperty("idempotency_key")
+        @JsonAlias("idempotencyKey")
         private String idempotencyKey;
     }
 

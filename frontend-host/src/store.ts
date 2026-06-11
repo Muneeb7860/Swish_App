@@ -872,6 +872,11 @@ export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (
 				const rawToken = typeof val === "function" ? val(state.authToken) : val;
 				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
 				const cleanToken = jwtRegex.test(rawToken) ? rawToken : "";
+				if (cleanToken) {
+					localStorage.setItem("jwt_token", cleanToken);
+				} else {
+					localStorage.removeItem("jwt_token");
+				}
 				return { authToken: cleanToken } as any;
 			}
 		),

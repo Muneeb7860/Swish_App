@@ -78,7 +78,7 @@ def test_pipeline_self_correction_success(monkeypatch):
     # Agent returns invalid JSON on first attempt, then valid JSON on second
     responses = [
         "This is not valid JSON",
-        '{"status": "success", "data": "healed"}',
+        '{"status": "success", "data": "healed", "prompt": "Get system stats"}',
     ]
     monkeypatch.setattr(
         "governance.pipeline.get_agent",

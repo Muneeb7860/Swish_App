@@ -3,6 +3,7 @@ import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
+import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
@@ -19,6 +20,7 @@ import java.util.concurrent.*;
 @Slf4j
 public class DynamicPricingAgent {
 
+    private final PythonGovernanceAdapter pythonGovernanceAdapter;
     private final GeminiFreeAdapter geminiFreeAdapter;
     private final MockLlmAdapter mockLlmAdapter;
     private final PricingGuardrailsEngine pricingGuardrailsEngine;
@@ -29,10 +31,12 @@ public class DynamicPricingAgent {
     private long slaTimeoutMs;
 
     public DynamicPricingAgent(
+            PythonGovernanceAdapter pythonGovernanceAdapter,
             GeminiFreeAdapter geminiFreeAdapter,
             MockLlmAdapter mockLlmAdapter,
             PricingGuardrailsEngine pricingGuardrailsEngine,
             @Qualifier("engineTaskExecutor") Executor executor) {
+        this.pythonGovernanceAdapter = pythonGovernanceAdapter;
         this.geminiFreeAdapter = geminiFreeAdapter;
         this.mockLlmAdapter = mockLlmAdapter;
         this.pricingGuardrailsEngine = pricingGuardrailsEngine;
@@ -40,6 +44,9 @@ public class DynamicPricingAgent {
     }
 
     private LlmGatewayPort getLlmGateway() {
+        if (pythonGovernanceAdapter.isConfigured()) {
+            return pythonGovernanceAdapter;
+        }
         if (geminiFreeAdapter.isConfigured()) {
             return geminiFreeAdapter;
         }

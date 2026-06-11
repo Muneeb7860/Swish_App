@@ -14,6 +14,12 @@ export default defineConfig({
 				rider: "http://localhost:3002/assets/remoteEntry.js",
 				admin: "http://localhost:3003/assets/remoteEntry.js",
 			},
+			exposes: {
+				"./api": "./src/api/endpoints.ts",
+				"./apiTypes": "./src/api/types.ts",
+				"./websocket": "./src/api/websocket.ts",
+				"./LoadingSkeleton": "./src/components/LoadingSkeleton.tsx",
+			},
 			shared: ["react", "react-dom"],
 		}),
 	],

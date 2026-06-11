@@ -79,12 +79,12 @@ public class WholesalerControllerTest {
     }
 
     @Test
-    public void testGetInvoiceSummary() throws Exception {
-        when(wholesalerService.getInvoiceSummary("WHOLESALER-1"))
-                .thenReturn(Map.of("total", 1000));
+    public void testGetInvoices() throws Exception {
+        when(wholesalerService.getAssignedRestocks("WHOLESALER-1"))
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/api/wholesaler/invoices?id=WHOLESALER-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(1000));
+                .andExpect(jsonPath("$").isArray());
     }
 }
