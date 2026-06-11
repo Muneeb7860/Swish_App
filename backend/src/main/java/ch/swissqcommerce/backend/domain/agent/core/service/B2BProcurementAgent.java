@@ -31,6 +31,9 @@ public class B2BProcurementAgent {
         public String wholesalerResponse;
         public double cost;
 
+        public NegotiationAnalysis() {
+        }
+
         public NegotiationAnalysis(double proposedPrice, double confidence, String rationale, String wholesalerResponse, double cost) {
             this.proposedPrice = proposedPrice;
             this.confidence = confidence;

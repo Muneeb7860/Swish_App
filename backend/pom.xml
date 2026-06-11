@@ -201,6 +201,13 @@
             <artifactId>temporal-sdk</artifactId>
             <version>1.23.0</version>
         </dependency>
+        <!-- Temporal testing -->
+        <dependency>
+            <groupId>io.temporal</groupId>
+            <artifactId>temporal-testing</artifactId>
+            <version>1.23.0</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- GCP Secret Manager — loads JWT_SECRET (and other secrets) from
              Google Cloud Secret Manager in the prod profile.

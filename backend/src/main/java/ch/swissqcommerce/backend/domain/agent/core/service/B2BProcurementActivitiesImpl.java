@@ -15,6 +15,7 @@ import java.util.Map;
 public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
 
     private final LlmGatewayPort llmGateway;
+    private final LettaMemoryService lettaMemoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -34,8 +35,31 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
                 "  \"wholesalerResponse\": \"ACCEPTED\" or \"COUNTER_OFFER\" or \"REJECTED\".\n" +
                 "Response MUST be a valid JSON only, without any markdown formatting block.";
 
-        LlmResponse response = llmGateway.callLlm(prompt);
-        return parseResponse(response.getContent(), response.getTokenCost());
+        String content;
+        double cost = 0.0;
+        String sessionKey = "procurement-" + itemId + "-" + wholesalerName.replaceAll("[^a-zA-Z0-9_-]", "-");
+        try {
+            if (lettaMemoryService != null) {
+                String lettaResponse = lettaMemoryService.sendMessage(sessionKey, prompt);
+                if (lettaResponse != null) {
+                    content = lettaResponse;
+                } else {
+                    LlmResponse response = llmGateway.callLlm(prompt);
+                    content = response.getContent();
+                    cost = response.getTokenCost();
+                }
+            } else {
+                LlmResponse response = llmGateway.callLlm(prompt);
+                content = response.getContent();
+                cost = response.getTokenCost();
+            }
+        } catch (Exception e) {
+            LlmResponse response = llmGateway.callLlm(prompt);
+            content = response.getContent();
+            cost = response.getTokenCost();
+        }
+
+        return parseResponse(content, cost);
     }
 
     private B2BProcurementAgent.NegotiationAnalysis parseResponse(String rawContent, double cost) {

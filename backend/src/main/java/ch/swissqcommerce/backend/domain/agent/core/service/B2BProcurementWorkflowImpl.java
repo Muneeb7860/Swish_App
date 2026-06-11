@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 
 import java.time.Duration;
@@ -12,6 +13,10 @@ public class B2BProcurementWorkflowImpl implements B2BProcurementWorkflow {
                     B2BProcurementActivities.class,
                     ActivityOptions.newBuilder()
                             .setStartToCloseTimeout(Duration.ofSeconds(60))
+                            .setRetryOptions(RetryOptions.newBuilder()
+                                    .setMaximumAttempts(3)
+                                    .setBackoffCoefficient(1.0)
+                                    .build())
                             .build());
 
     @Override

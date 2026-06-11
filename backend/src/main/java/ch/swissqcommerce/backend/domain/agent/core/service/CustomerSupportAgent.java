@@ -13,9 +13,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomerSupportAgent {
 
-    // Depends only on the port (ADR-001). The @Primary ResilientLlmGateway is injected,
-    // which owns the fail-safe fallback chain (ADR-007).
     private final LlmGatewayPort llmGateway;
+    private final LettaMemoryService lettaMemoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentAnalysis analyze(AgentRequest request) {
@@ -28,8 +27,9 @@ public class CustomerSupportAgent {
                 "  \"tool_argument\": the identified customerId or orderId or null.\n" +
                 "Response MUST be a valid JSON only, without any markdown formatting block.";
 
-        LlmResponse response = llmGateway.callLlm(prompt);
-        return parseResponse(response.getContent(), response.getTokenCost());
+        double[] cost = new double[1];
+        String content = callLlmWithLettaFallback(prompt, request.getConversationId(), cost);
+        return parseResponse(content, cost[0]);
     }
 
     public AgentAnalysis generateFinalResponse(AgentRequest request, String toolResult, double initialCost) {
@@ -43,8 +43,24 @@ public class CustomerSupportAgent {
                 "  \"tool_argument\": null\n" +
                 "Response MUST be a valid JSON only, without any markdown formatting block.";
 
+        double[] cost = new double[1];
+        String content = callLlmWithLettaFallback(prompt, request.getConversationId(), cost);
+        return parseResponse(content, cost[0] + initialCost);
+    }
+
+    private String callLlmWithLettaFallback(String prompt, String conversationId, double[] tokenCostOut) {
+        try {
+            if (lettaMemoryService != null && conversationId != null) {
+                String lettaResponse = lettaMemoryService.sendMessage(conversationId, prompt);
+                if (lettaResponse != null) {
+                    tokenCostOut[0] = 0.0;
+                    return lettaResponse;
+                }
+            }
+        } catch (Exception ignored) {}
         LlmResponse response = llmGateway.callLlm(prompt);
-        return parseResponse(response.getContent(), response.getTokenCost() + initialCost);
+        tokenCostOut[0] = response.getTokenCost();
+        return response.getContent();
     }
 
     private AgentAnalysis parseResponse(String rawContent, double cost) {

@@ -201,11 +201,47 @@ services:
         limits:
           memory: 512M
 
+  postgres-letta:
+    image: pgvector/pgvector:pg16
+    container_name: postgres-letta
+    environment:
+      POSTGRES_USER: letta
+      POSTGRES_PASSWORD: lettapassword
+      POSTGRES_DB: letta
+    ports:
+      - "5434:5432"
+    volumes:
+      - letta_pgdata:/var/lib/postgresql/data
+    networks:
+      - hybrid-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  letta:
+    image: letta/letta:latest
+    container_name: letta
+    ports:
+      - "8283:8283"
+    environment:
+      - LETTA_PG_URI=postgresql://letta:lettapassword@postgres-letta:5432/letta
+      - OPENAI_API_KEY=dummy-key
+    depends_on:
+      - postgres-letta
+    networks:
+      - hybrid-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
 volumes:
   pgdata:
   mongodata:
   redisdata:
   temporal_pgdata:
+  letta_pgdata:
 
 networks:
   hybrid-net:
