@@ -13,7 +13,36 @@ from governance.pipeline import execute_pipeline
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import os
+
 app = FastAPI(title="Homelab AI Governance Service", version="0.1.0")
+
+# Instrument with OpenTelemetry
+if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        # Initialize OpenTelemetry Trace Provider
+        resource = Resource.create(attributes={"service.name": "homelab-ai-governance"})
+        provider = TracerProvider(resource=resource)
+
+        # OTLP collector HTTP endpoint
+        otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
+        processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
+        provider.add_span_processor(processor)
+        trace.set_tracer_provider(provider)
+
+        # Instrument the app
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("OpenTelemetry instrumentation active exporting to %s", otlp_endpoint)
+    except Exception as e:
+        logger.warning("Failed to initialize OpenTelemetry instrumentation: %s", e)
+
 
 
 class GovernRequest(BaseModel):

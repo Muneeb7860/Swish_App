@@ -14,7 +14,7 @@ def test_completeness_index():
     """Verify that CI accurately measures directive coverage."""
     # Heuristic matches questions
     prompt = "How is weather? What is your budget limit?"
-    
+
     # 2 directives: "How is weather?", "What is your budget limit?"
     # Answer covers both
     ans_full = "The weather is nice. The budget limit is 5.00 USD."
@@ -56,28 +56,38 @@ def test_schema_validations():
 
     # Valid Customer Support JSON
     valid_cs = '{"reply": "Hello!", "confidence": 0.9, "tool": "ORDER_STATUS", "tool_argument": "order-123"}'
-    score, details = compute_format_integrity(valid_cs, expected_format="json", original_prompt=cs_prompt)
+    score, details = compute_format_integrity(
+        valid_cs, expected_format="json", original_prompt=cs_prompt
+    )
     assert score == 1.0
     assert details["valid_schema"] is True
     assert details["schema"] == "customer_support"
 
     # Invalid Customer Support JSON (wrong tool)
-    invalid_cs_tool = '{"reply": "Hello!", "confidence": 0.9, "tool": "INVALID_TOOL", "tool_argument": null}'
-    score, details = compute_format_integrity(invalid_cs_tool, expected_format="json", original_prompt=cs_prompt)
+    invalid_cs_tool = (
+        '{"reply": "Hello!", "confidence": 0.9, "tool": "INVALID_TOOL", "tool_argument": null}'
+    )
+    score, details = compute_format_integrity(
+        invalid_cs_tool, expected_format="json", original_prompt=cs_prompt
+    )
     assert score == 0.0
     assert details["valid_schema"] is False
     assert "Schema validation failed" in details["error"]
 
     # Valid Dynamic Pricing JSON
     valid_dp = '{"surgeMultiplier": 1.5, "discountPercent": 10.0, "confidence": 0.9, "rationale": "Peak traffic"}'
-    score, details = compute_format_integrity(valid_dp, expected_format="json", original_prompt=dp_prompt)
+    score, details = compute_format_integrity(
+        valid_dp, expected_format="json", original_prompt=dp_prompt
+    )
     assert score == 1.0
     assert details["valid_schema"] is True
     assert details["schema"] == "dynamic_pricing"
 
     # Invalid Dynamic Pricing JSON (surgeMultiplier out of bounds)
     invalid_dp_surge = '{"surgeMultiplier": 5.0, "discountPercent": 10.0, "confidence": 0.9, "rationale": "Peak traffic"}'
-    score, details = compute_format_integrity(invalid_dp_surge, expected_format="json", original_prompt=dp_prompt)
+    score, details = compute_format_integrity(
+        invalid_dp_surge, expected_format="json", original_prompt=dp_prompt
+    )
     assert score == 0.0
     assert details["valid_schema"] is False
     assert "Schema validation failed" in details["error"]
@@ -86,7 +96,7 @@ def test_schema_validations():
 def test_context_conservation_ratio():
     """Verify that CCR accurately checks grounding against source context documents."""
     context = "The primary server is running Qwen on port 11434 in the Zurich hub."
-    
+
     # Fully grounded
     grounded = " Zurich hub has a server running Qwen."
     score, details = compute_context_conservation(grounded, context)
@@ -102,7 +112,7 @@ def test_evaluate_output_aggregation():
     """Verify score aggregation and the JSON failure clamp."""
     prompt = "What is the capital of Switzerland?"
     context = "Switzerland has Bern as its capital city."
-    
+
     # Passing response
     res_pass = "Bern is the capital city of Switzerland."
     scores = evaluate_output(
@@ -137,7 +147,7 @@ def test_json_nesting_depth():
 def test_ccr_numeric_hallucination():
     """Verify that introducing unsupported numbers incurs a penalty on CCR."""
     context = "The item price is 50 dollars."
-    
+
     # Grounded response with correct price
     grounded = "The price is 50."
     score, details = compute_context_conservation(grounded, context)
@@ -151,4 +161,3 @@ def test_ccr_numeric_hallucination():
     assert score_h < 0.5
     assert "99" in details_h.get("unsupported_numbers", [])
     assert details_h.get("penalty", 0.0) == 0.2
-

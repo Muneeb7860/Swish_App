@@ -39,7 +39,6 @@ class DynamicPricingSchema(BaseModel):
     rationale: str = Field(..., min_length=1)
 
 
-
 @dataclass
 class EvaluationScores:
     """Individual and aggregated quality scores."""
@@ -105,9 +104,7 @@ def evaluate_output(
 # ── Completeness Index (CI) ─────────────────────────────────────────────────
 
 
-def compute_completeness_index(
-    candidate: str, prompt: str
-) -> tuple[float, dict[str, Any]]:
+def compute_completeness_index(candidate: str, prompt: str) -> tuple[float, dict[str, Any]]:
     """Measure how completely the candidate addresses the prompt.
 
     MVP heuristic: Extract key directives from the prompt (questions, commands)
@@ -197,10 +194,13 @@ def compute_format_integrity(
 
             # Enforce nesting depth ceiling to prevent stack-overflow / ReDoS
             if not _check_nesting_depth(target_str, max_depth=20):
-                return 0.0, {"valid_json": False, "error": "Exceeded maximum JSON nesting depth of 20"}
+                return 0.0, {
+                    "valid_json": False,
+                    "error": "Exceeded maximum JSON nesting depth of 20",
+                }
 
             parsed = json.loads(target_str)
-            
+
             # Pydantic schema validation based on the original prompt context
             prompt_lower = original_prompt.lower()
             schema_name = "generic"
@@ -215,7 +215,7 @@ def compute_format_integrity(
                         "valid_json": True,
                         "valid_schema": False,
                         "schema": schema_name,
-                        "error": f"Schema validation failed: {val_err}"
+                        "error": f"Schema validation failed: {val_err}",
                     }
             elif "dynamic pricing agent" in prompt_lower:
                 schema_name = "dynamic_pricing"
@@ -228,10 +228,15 @@ def compute_format_integrity(
                         "valid_json": True,
                         "valid_schema": False,
                         "schema": schema_name,
-                        "error": f"Schema validation failed: {val_err}"
+                        "error": f"Schema validation failed: {val_err}",
                     }
 
-            return 1.0, {"valid_json": True, "valid_schema": True, "schema": schema_name, "extracted": bool(json_match)}
+            return 1.0, {
+                "valid_json": True,
+                "valid_schema": True,
+                "schema": schema_name,
+                "extracted": bool(json_match),
+            }
         except json.JSONDecodeError as e:
             return 0.0, {"valid_json": False, "error": str(e)}
 
@@ -248,9 +253,7 @@ def compute_format_integrity(
 # ── Context Conservation Ratio (CCR) ────────────────────────────────────────
 
 
-def compute_context_conservation(
-    candidate: str, context_docs: str
-) -> tuple[float, dict[str, Any]]:
+def compute_context_conservation(candidate: str, context_docs: str) -> tuple[float, dict[str, Any]]:
     """Measure source grounding of the candidate against context documents.
 
     Includes a numeric entity guard to penalize scores heavily when new/hallucinated
@@ -270,7 +273,8 @@ def compute_context_conservation(
 
     # Filter out single digits 0-9 to avoid list indices triggering violations
     unsupported_numbers = {
-        num for num in (normalized_candidate_nums - normalized_context_nums)
+        num
+        for num in (normalized_candidate_nums - normalized_context_nums)
         if len(num) > 1 or num not in {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
     }
 
@@ -285,13 +289,65 @@ def compute_context_conservation(
     grounded = candidate_tokens & context_tokens
     # Filter out stop words for a more meaningful ratio
     stop_words = {
-        "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-        "have", "has", "had", "do", "does", "did", "will", "would", "shall",
-        "should", "may", "might", "must", "can", "could", "to", "of", "in",
-        "for", "on", "with", "at", "by", "from", "as", "into", "through",
-        "during", "before", "after", "above", "below", "and", "but", "or",
-        "not", "no", "nor", "so", "yet", "both", "either", "neither",
-        "this", "that", "these", "those", "it", "its",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "shall",
+        "should",
+        "may",
+        "might",
+        "must",
+        "can",
+        "could",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "and",
+        "but",
+        "or",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "yet",
+        "both",
+        "either",
+        "neither",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
     }
     meaningful_candidate = candidate_tokens - stop_words
     meaningful_grounded = grounded - stop_words
