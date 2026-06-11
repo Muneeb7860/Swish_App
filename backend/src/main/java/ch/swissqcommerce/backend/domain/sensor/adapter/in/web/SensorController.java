@@ -1,15 +1,18 @@
 package ch.swissqcommerce.backend.domain.sensor.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
+import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.port.in.SensorUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -72,6 +75,29 @@ public class SensorController {
     @GetMapping
     public ResponseEntity<List<SensorView>> listByRetailer(@RequestParam String retailerId) {
         return ResponseEntity.ok(sensors.listByRetailer(retailerId).stream().map(SensorView::of).toList());
+    }
+
+    public record ReadingRequest(String deviceKey, String metricType, BigDecimal value) {}
+
+    @Operation(summary = "Ingest a device telemetry reading (device-key authenticated, public)")
+    @PostMapping("/readings")
+    public ResponseEntity<?> recordReading(@RequestBody ReadingRequest req) {
+        try {
+            SensorReading r = sensors.recordReading(req.deviceKey(), req.metricType(), req.value());
+            return ResponseEntity.status(201).body(Map.of(
+                    "readingId", r.getReadingId(), "sensorId", r.getSensorId(), "recordedAt", r.getRecordedAt()));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Recent time-series readings for a sensor")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{sensorId}/readings")
+    public ResponseEntity<List<SensorReading>> readings(@PathVariable String sensorId) {
+        return ResponseEntity.ok(sensors.getRecentReadings(sensorId));
     }
 
     private ResponseEntity<?> transition(java.util.function.Supplier<SensorView> action) {

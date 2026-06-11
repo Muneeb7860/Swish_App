@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**", "/api/v1/auth/**",
                     "/api/v1/retailers/register",   // FR-01: public self-service retailer signup
+                    "/api/v1/sensors/readings",     // FR-03: device-key-authenticated telemetry ingestion
                     "/actuator/health", "/actuator/prometheus",   // prometheus: scraped without auth
                     "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                     "/error"   // Spring Boot error dispatch — must be open for accessDeniedHandler to work

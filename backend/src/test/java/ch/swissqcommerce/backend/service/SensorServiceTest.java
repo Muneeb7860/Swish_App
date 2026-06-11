@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
+import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.core.service.SensorServiceImpl;
 import ch.swissqcommerce.backend.domain.sensor.port.in.SensorUseCase;
@@ -10,7 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -88,6 +91,36 @@ class SensorServiceTest {
     void authenticateByDeviceKey_blank_empty() {
         assertTrue(service.authenticateByDeviceKey("").isEmpty());
         verify(port, never()).findByDeviceKeyHash(any());
+    }
+
+    @Test
+    void recordReading_activeDevice_writesReading() {
+        Sensor active = sensor("SNS-5", "ACTIVE");
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.of(active));
+        when(port.saveReading(any())).thenAnswer(i -> i.getArgument(0));
+
+        SensorReading reading = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("4.5"));
+
+        assertEquals("SNS-5", reading.getSensorId());
+        assertEquals("TEMPERATURE", reading.getMetricType());
+        assertEquals(0, new BigDecimal("4.5").compareTo(reading.getValue()));
+        assertNotNull(reading.getRecordedAt());
+    }
+
+    @Test
+    void recordReading_invalidOrInactiveKey_denied() {
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.empty());
+        assertThrows(AccessDeniedException.class,
+                () -> service.recordReading("dev_bad", "TEMPERATURE", BigDecimal.ONE));
+        verify(port, never()).saveReading(any());
+    }
+
+    @Test
+    void recordReading_blankMetric_rejected() {
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.of(sensor("SNS-6", "ACTIVE")));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.recordReading("dev_key", "  ", BigDecimal.ONE));
+        verify(port, never()).saveReading(any());
     }
 
     private Sensor sensor(String id, String status) {

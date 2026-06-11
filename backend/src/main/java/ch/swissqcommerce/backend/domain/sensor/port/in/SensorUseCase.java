@@ -1,8 +1,10 @@
 package ch.swissqcommerce.backend.domain.sensor.port.in;
 
 import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
+import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +26,10 @@ public interface SensorUseCase {
 
     /** Resolve an ACTIVE sensor by raw device key (hashed internally). */
     Optional<Sensor> authenticateByDeviceKey(String deviceKey);
+
+    /** Device-authenticated telemetry ingestion: the device key must match an
+     *  ACTIVE sensor. Writes a reading to the time-series store. */
+    SensorReading recordReading(String deviceKey, String metricType, BigDecimal value);
+
+    List<SensorReading> getRecentReadings(String sensorId);
 }

@@ -147,7 +147,9 @@ jobs:
       # datasource URL in application-staging.properties (localhost:5420);
       # credentials match the staging defaults (postgres / swisssecure2026).
       postgres:
-        image: postgres:16-alpine
+        # TimescaleDB image (drop-in PostgreSQL 16 + the timescaledb extension
+        # preloaded) so the V25 sensor_readings hypertable migration applies.
+        image: timescale/timescaledb:latest-pg16
         env:
           POSTGRES_DB: swiss_db
           POSTGRES_USER: postgres

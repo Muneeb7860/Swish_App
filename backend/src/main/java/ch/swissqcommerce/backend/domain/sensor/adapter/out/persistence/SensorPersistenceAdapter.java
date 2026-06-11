@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.sensor.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
+import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.port.out.SensorPort;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.util.Optional;
 public class SensorPersistenceAdapter implements SensorPort {
 
     private final SensorRepository repository;
+    private final SensorReadingRepository readingRepository;
 
     @Override
     public Sensor save(Sensor sensor) {
@@ -42,6 +44,33 @@ public class SensorPersistenceAdapter implements SensorPort {
     public List<Sensor> findByRetailerId(String retailerId) {
         return repository.findByRetailerIdOrderByCreatedAtDesc(retailerId)
                 .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public SensorReading saveReading(SensorReading reading) {
+        SensorReadingEntity entity = SensorReadingEntity.builder()
+                .sensorId(reading.getSensorId())
+                .recordedAt(reading.getRecordedAt())
+                .metricType(reading.getMetricType())
+                .readingValue(reading.getValue())
+                .build();
+        return toDomain(readingRepository.save(entity));
+    }
+
+    @Override
+    public List<SensorReading> recentReadings(String sensorId) {
+        return readingRepository.findTop100BySensorIdOrderByRecordedAtDesc(sensorId)
+                .stream().map(this::toDomain).toList();
+    }
+
+    private SensorReading toDomain(SensorReadingEntity e) {
+        return SensorReading.builder()
+                .readingId(e.getReadingId())
+                .sensorId(e.getSensorId())
+                .recordedAt(e.getRecordedAt())
+                .metricType(e.getMetricType())
+                .value(e.getReadingValue())
+                .build();
     }
 
     private Sensor toDomain(SensorEntity e) {

@@ -1,16 +1,20 @@
 package ch.swissqcommerce.backend.domain.sensor.core.service;
 
 import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
+import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.port.in.SensorUseCase;
 import ch.swissqcommerce.backend.domain.sensor.port.out.SensorPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -80,6 +84,29 @@ public class SensorServiceImpl implements SensorUseCase {
         if (deviceKey == null || deviceKey.isBlank()) return Optional.empty();
         return port.findByDeviceKeyHash(sha256(deviceKey))
                 .filter(s -> "ACTIVE".equals(s.getStatus()));
+    }
+
+    @Override
+    @Transactional
+    public SensorReading recordReading(String deviceKey, String metricType, BigDecimal value) {
+        Sensor sensor = authenticateByDeviceKey(deviceKey)
+                .orElseThrow(() -> new AccessDeniedException("Invalid or inactive device key"));
+        if (metricType == null || metricType.isBlank()) throw new IllegalArgumentException("metricType is required");
+        if (value == null) throw new IllegalArgumentException("value is required");
+
+        SensorReading reading = SensorReading.builder()
+                .sensorId(sensor.getSensorId())
+                .recordedAt(OffsetDateTime.now())
+                .metricType(metricType)
+                .value(value)
+                .build();
+        return port.saveReading(reading);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SensorReading> getRecentReadings(String sensorId) {
+        return port.recentReadings(sensorId);
     }
 
     private Sensor require(String sensorId) {
