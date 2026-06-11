@@ -37,6 +37,11 @@ Ensure you adhere strictly to any requested formats (e.g., JSON schemas) and sou
 
 ---
 
+### CONTEXT DOCUMENTS
+{context_docs}
+
+---
+
 ### PREVIOUS RESPONSE (FAILED ATTEMPT)
 {candidate_response}
 
@@ -148,6 +153,7 @@ def run_self_correction_loop(
         error_summary = _build_error_summary(scores)
         feedback_prompt = _FEEDBACK_TEMPLATE.format(
             original_prompt=original_prompt,
+            context_docs=context_docs,
             candidate_response=current_candidate,
             validation_error_summary=error_summary,
         )

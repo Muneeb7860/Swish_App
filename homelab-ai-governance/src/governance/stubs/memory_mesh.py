@@ -140,9 +140,11 @@ class MemoryMesh:
         return [self._get_default_document(query)]
 
     def _get_default_document(self, query: str) -> dict[str, Any]:
+        from governance.guardrails.pii_patterns import redact_pii
+        redacted_query = redact_pii(query)
         return {
             "id": "doc_default_1",
-            "content": f"Default context reference document for query: {query}",
+            "content": f"Default context reference document for query: {redacted_query}",
             "score": 0.70,
         }
 

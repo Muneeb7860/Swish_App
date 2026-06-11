@@ -3,7 +3,7 @@ classifier:
   model: llama3.2:3b
   backend: ollama
   ollama_url: http://localhost:11434
-  timeout_ms: 10000
+  timeout_ms: 30000
   cpu_mode: true
 
 routing:

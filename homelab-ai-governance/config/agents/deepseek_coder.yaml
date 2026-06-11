@@ -4,7 +4,7 @@ overrides:
   markdown_formatting_filter:
     enabled: false
   pii_filter:
-    default_action: warn
+    default_action: redact
   license_check:
     default_action: block
   code_safety_cautionary:

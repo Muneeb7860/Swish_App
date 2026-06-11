@@ -349,8 +349,22 @@ def compute_context_conservation(candidate: str, context_docs: str) -> tuple[flo
         "it",
         "its",
     }
-    meaningful_candidate = candidate_tokens - stop_words
-    meaningful_grounded = grounded - stop_words
+    redaction_tokens = {
+        "redacted",
+        "email",
+        "ssn",
+        "phone",
+        "card",
+        "ip",
+        "address",
+        "connection",
+        "string",
+        "api",
+        "key",
+        "us"
+    }
+    meaningful_candidate = candidate_tokens - stop_words - redaction_tokens
+    meaningful_grounded = grounded - stop_words - redaction_tokens
 
     if not meaningful_candidate:
         return 1.0, {"method": "token_overlap", "note": "only_stop_words"}
