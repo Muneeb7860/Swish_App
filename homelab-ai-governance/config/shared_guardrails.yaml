@@ -71,7 +71,7 @@ rules:
   - id: prompt_injection_filter
     description: "Detects prompt injection attempts in user input AND retrieved context"
     applies_to: [input]
-    default_action: strip
+    default_action: block
     severity: critical
     detector:
       type: heuristic

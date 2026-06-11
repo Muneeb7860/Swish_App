@@ -40,6 +40,14 @@ class MemoryMesh:
                     "score": 0.92,
                 }
             ]
+        elif "zurich" in query_lower:
+            return [
+                {
+                    "id": "doc_zurich_1",
+                    "content": "The Zurich delivery hours are from 08:00 to 22:00, Monday through Saturday.",
+                    "score": 0.95,
+                }
+            ]
         
         # Default mock document
         return [

@@ -1,9 +1,9 @@
 # routing_config.yaml — Semantic Router thresholds, agent registry, budget, evaluation
 classifier:
-  model: gemma3:4b
+  model: llama3.2:3b
   backend: ollama
   ollama_url: http://localhost:11434
-  timeout_ms: 2000
+  timeout_ms: 10000
   cpu_mode: true
 
 routing:
@@ -20,22 +20,22 @@ budget:
 agents:
   gemma_reasoner:
     backend: ollama
-    model: gemma3:4b
+    model: llama3.2:3b
     ollama_url: http://localhost:11434
-    timeout_ms: 30000
+    timeout_ms: 45000
     role: reasoner
     fallback: true
 
   mistral_summarizer:
     backend: ollama
-    model: mistral:7b
+    model: mistral:latest
     ollama_url: http://localhost:11434
     timeout_ms: 30000
     role: summarizer
 
   deepseek_coder:
     backend: ollama
-    model: deepseek-coder-v2:6.7b
+    model: deepseek-coder:latest
     ollama_url: http://localhost:11434
     timeout_ms: 45000
     role: coder
