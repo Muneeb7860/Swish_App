@@ -25,7 +25,7 @@ Legend: ✅ built · 🟡 partial · 🔴 not yet (roadmap).
 | FR | Requirement (target) | As-built today | Status | Converge in |
 | :-- | :--- | :--- | :-: | :-- |
 | FR-01 | Retailer self-service onboarding (sensor provisioning, API keys) | `retailer` context (V23): self-signup + 3-gate + API key + auto billing account; **+ `sensor` device-provisioning context (V24)** | ✅ | **done (R2/R3)** |
-| FR-02 | AI negotiation: outbox → Kafka → **MongoDB** → price negotiation | RFQ reverse auction (`MasterOrchestratorService`) + outbox→Kafka relay; Mongo CDC sink not wired | 🟡 | R3 |
+| FR-02 | AI negotiation: outbox → Kafka → **MongoDB** → price negotiation | RFQ reverse auction + outbox→Kafka relay + **Mongo negotiation-event CDC archive** (conditional adapter `swish.mongo.archive.enabled`; NoOp fallback for dev/CI) | ✅ | **done (R3)** |
 | FR-03 | Telemetry ingestion (MQTT/HTTPS → **TimescaleDB**) | order cold-chain CQRS on PostgreSQL + **`sensor_readings` TimescaleDB hypertable** (V25) with device-key HTTP ingestion (`sensor` context); MQTT still pending | 🟡→✅ | R3 (MQTT deferred) |
 | FR-04 | Ledger auditing (SHA-256 hash chain, REST search) | `LedgerServiceImpl` + DB hash-chain & balance triggers + `/ledger` API | ✅ | — |
 | FR-05 | Operator dashboard + RBAC | `frontend-admin` + JWT/OPA RBAC + unified HITL queue | ✅ | — |
@@ -73,7 +73,7 @@ target's polyglot pieces in only where they pay off.
 | :-- | :--- | :--- |
 | **R1** | Doc reconciliation *(done)* | This file + status banners on BRD/HLD; validated ERD/LLD/C4/sequence set. |
 | **R2** ✅ | Close functional gaps | **FR-06 billing engine** ✅ *(`billing` context, V22)*; **FR-01 retailer self-service portal** ✅ *(`retailer` context, V23 — self-signup + 3-gate + API key + billing tie-in)*. Sensor provisioning deferred to R3. |
-| **R3** 🔄 | Polyglot data path | **Sensor provisioning ✅** (`sensor` context, V24 — the device registry that feeds telemetry). Remaining (infra-gated): **FR-02 Mongo CDC sink** for `NegotiationEvent`; **FR-03 TimescaleDB** hypertable + MQTT ingestion. These add datastores whose health checks would fail CI unless CI gains service containers or the adapters are conditional/fallback — decision pending. |
+| **R3** ✅ | Polyglot data path | Sensor provisioning (`sensor`, V24) ✅; **FR-03 TimescaleDB** `sensor_readings` hypertable (V25, CI image → timescaledb) ✅; **FR-02 Mongo** negotiation-event CDC archive (conditional adapter) ✅. MQTT deferred. Hybrid approach: TimescaleDB CI-verified live; Mongo conditional so CI stays Postgres-only and green. |
 | **R4** | Selective decomposition | Extract the highest-contention contexts (payment, telemetry) to their own DB/service; introduce Vault + inter-service mTLS where a real service boundary exists. |
 | **R5** | Distributed hybrid agentic | Wire `MasterOrchestratorService` → `homelab-ai-governance` pipeline (the Java↔Python bridge) so support/procurement routes through the governed hybrid router. |
 

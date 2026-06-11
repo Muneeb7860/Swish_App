@@ -16,6 +16,8 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
+import ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort;
+import ch.swissqcommerce.backend.domain.agent.core.model.NegotiationEvent;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.List;
 
@@ -43,6 +46,7 @@ public class MasterOrchestratorService implements AgentUseCase {
     private final B2BRestockOrderPort restockOrderPort;
     private final GovernanceUseCase governanceUseCase;
     private final MeterRegistry meterRegistry;
+    private final NegotiationArchivePort negotiationArchivePort;
 
     // Prometheus counter — incremented every time the budget/rate guardrail fires.
     // Drives the AgentDailyBudgetExceeded alert in alert.rules.
@@ -281,6 +285,21 @@ public class MasterOrchestratorService implements AgentUseCase {
 
             String wholesalerId = bestWholesaler.getWholesalerId() != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
             governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);
+        }
+
+        // FR-02: archive the negotiation outcome to the document store (best-effort).
+        try {
+            negotiationArchivePort.archive(NegotiationEvent.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .wholesalerId(bestWholesaler.getWholesalerId())
+                    .itemId(request.getItemId())
+                    .proposedPrice(BigDecimal.valueOf(bestAnalysis.proposedPrice))
+                    .quantity(request.getQuantity())
+                    .approved(guardrailResult.isApproved())
+                    .occurredAt(OffsetDateTime.now())
+                    .build());
+        } catch (Exception e) {
+            log.warn("Negotiation archive failed (non-fatal): {}", e.getMessage());
         }
 
         String winningMessage = "RFQ AUCTION WINNER: " + bestWholesaler.getName() + " (Bid: " + bestAnalysis.proposedPrice + " CHF). " + guardrailResult.getMessage();

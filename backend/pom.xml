@@ -81,6 +81,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- MongoDB: event-sourced negotiation archive (FR-02). The Mongo write
+             adapter is conditional (swish.mongo.archive.enabled); the client is
+             lazy and the health indicator is disabled so a missing Mongo never
+             fails startup/CI. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>

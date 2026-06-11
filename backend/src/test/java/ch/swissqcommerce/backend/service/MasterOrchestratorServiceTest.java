@@ -52,6 +52,7 @@ public class MasterOrchestratorServiceTest {
     // @PostConstruct is NOT called by @InjectMocks so budgetGuardrailCounter
     // stays null — the null-guard in the service handles this gracefully.
     @Mock private MeterRegistry meterRegistry;
+    @Mock private ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort negotiationArchivePort;
 
     @InjectMocks
     private MasterOrchestratorService masterOrchestratorService;
