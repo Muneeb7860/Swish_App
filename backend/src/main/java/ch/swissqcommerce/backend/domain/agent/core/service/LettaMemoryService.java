@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import ch.swissqcommerce.backend.config.LettaConfig;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -19,6 +20,7 @@ public class LettaMemoryService {
 
     private final LettaConfig lettaConfig;
     private final RestTemplate lettaRestTemplate;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Sends a message to a stateful Letta agent associated with the conversationId.
@@ -29,6 +31,7 @@ public class LettaMemoryService {
             String agentId = getOrCreateAgent(conversationId);
             if (agentId == null) {
                 log.warn("Could not retrieve or create Letta agent for conversationId: {}", conversationId);
+                incrementFallbackCounter();
                 return null;
             }
 
@@ -77,10 +80,19 @@ public class LettaMemoryService {
                     }
                 }
             }
+            log.warn("Letta server did not return a valid assistant message.");
+            incrementFallbackCounter();
         } catch (Exception e) {
             log.error("Error communicating with Letta Agent Server: {}", e.getMessage());
+            incrementFallbackCounter();
         }
         return null;
+    }
+
+    private void incrementFallbackCounter() {
+        if (meterRegistry != null) {
+            meterRegistry.counter("letta.fallback.triggers", "service", "letta-memory").increment();
+        }
     }
 
     private String getOrCreateAgent(String conversationId) {

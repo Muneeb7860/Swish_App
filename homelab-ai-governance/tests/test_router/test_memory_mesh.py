@@ -7,6 +7,13 @@ import pytest
 
 from governance.stubs.memory_mesh import MemoryMesh, retrieve_context
 
+@pytest.fixture(autouse=True)
+def reset_circuit_breakers():
+    """Reset circuit breaker states on MemoryMesh class before every test."""
+    MemoryMesh._db_failed_time = None
+    MemoryMesh._embedding_failed_time = None
+
+
 def test_memory_mesh_disabled(monkeypatch):
     """Verify that when RAG is disabled, retriever returns local mock stubs."""
     with patch("governance.stubs.memory_mesh.load_routing_config") as mock_cfg:
@@ -121,3 +128,74 @@ def test_memory_mesh_successful_retrieval():
                     """,
             ([0.1] * 768, [0.1] * 768, 2)
         )
+
+
+def test_memory_mesh_circuit_breaker():
+    """Verify that circuit breakers trip under failure and bypass subsequent calls during cooldown."""
+    # Reset circuit breaker states first
+    MemoryMesh._db_failed_time = None
+    MemoryMesh._embedding_failed_time = None
+    
+    with patch("governance.stubs.memory_mesh.load_routing_config") as mock_cfg, \
+         patch("psycopg2.connect") as mock_connect, \
+         patch("httpx.Client") as mock_client:
+        
+        mock_cfg.return_value = {
+            "rag": {
+                "enabled": True,
+                "database_url": "postgresql://test:test@localhost:5432/test",
+                "embedding_model": "nomic-embed-text",
+                "embedding_url": "http://localhost:11434/api/embeddings",
+                "similarity_threshold": 0.60
+            }
+        }
+        
+        # 1. DB connection failure
+        mock_connect.side_effect = Exception("DB offline")
+        
+        mesh = MemoryMesh()
+        # First query should fail and trip DB circuit breaker
+        docs1 = mesh.retrieve("weather query")
+        assert len(docs1) == 1
+        assert docs1[0]["id"] == "doc_weather_1"
+        assert MemoryMesh._db_failed_time is not None
+        
+        # Reset mock_connect call history
+        mock_connect.reset_mock()
+        
+        # Second query should immediately bypass DB connection check without calling psycopg2.connect
+        docs2 = mesh.retrieve("weather query")
+        assert len(docs2) == 1
+        assert docs2[0]["id"] == "doc_weather_1"
+        mock_connect.assert_not_called()
+        
+        # Reset DB breaker, trip embedding breaker
+        MemoryMesh._db_failed_time = None
+        # Mock connection success, but embedding generation raises HTTP error
+        mock_connect.side_effect = None
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
+        
+        mock_client_instance = MagicMock()
+        mock_client_instance.post.side_effect = Exception("Embedding service down")
+        mock_client.return_value.__enter__.return_value = mock_client_instance
+        
+        # First query with DB online but embedding failing
+        docs3 = mesh.retrieve("pricing query")
+        assert len(docs3) == 1
+        assert docs3[0]["id"] == "doc_pricing_1"
+        assert MemoryMesh._embedding_failed_time is not None
+        
+        # Reset mock_client call history
+        mock_client_instance.post.reset_mock()
+        
+        # Second query should bypass embedding generation
+        docs4 = mesh.retrieve("pricing query")
+        assert len(docs4) == 1
+        assert docs4[0]["id"] == "doc_pricing_1"
+        mock_client_instance.post.assert_not_called()
+        
+    # Reset circuit breaker states after test
+    MemoryMesh._db_failed_time = None
+    MemoryMesh._embedding_failed_time = None
+

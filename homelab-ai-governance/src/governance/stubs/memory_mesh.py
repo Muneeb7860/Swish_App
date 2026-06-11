@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 import httpx
 import psycopg2
@@ -39,6 +40,10 @@ class MemoryMesh:
     Falls back gracefully to in-memory mock stubs if any errors occur.
     """
 
+    _db_failed_time: float | None = None
+    _embedding_failed_time: float | None = None
+    _cooldown_duration: float = 30.0
+
     def __init__(self):
         try:
             config = load_routing_config()
@@ -56,6 +61,16 @@ class MemoryMesh:
         """Retrieve documents matching the query."""
         if not self.enabled:
             logger.info("MemoryMesh: RAG is disabled. Returning in-memory stubs.")
+            return self._retrieve_fallbacks(query)
+
+        # Check circuit breakers
+        now = time.time()
+        if self._db_failed_time is not None and (now - self._db_failed_time) < self._cooldown_duration:
+            logger.warning("MemoryMesh: DB circuit breaker is active (cooldown). Bypassing RAG database check.")
+            return self._retrieve_fallbacks(query)
+
+        if self._embedding_failed_time is not None and (now - self._embedding_failed_time) < self._cooldown_duration:
+            logger.warning("MemoryMesh: Embedding circuit breaker is active (cooldown). Bypassing RAG embedding check.")
             return self._retrieve_fallbacks(query)
 
         logger.info("MemoryMesh: retrieving context docs for query: %r", query)
@@ -104,7 +119,8 @@ class MemoryMesh:
             return docs
 
         except Exception as e:
-            logger.warning("MemoryMesh: RAG query execution failed (%s). Falling back to in-memory stubs.", e)
+            logger.warning("MemoryMesh: RAG query execution failed (%s). Tripping DB circuit breaker. Falling back to in-memory stubs.", e)
+            MemoryMesh._db_failed_time = time.time()
             return self._retrieve_fallbacks(query)
         finally:
             if conn:
@@ -132,6 +148,11 @@ class MemoryMesh:
 
     def _generate_embedding(self, text: str) -> list[float] | None:
         """Fetch embedding vector from Ollama API."""
+        now = time.time()
+        if self._embedding_failed_time is not None and (now - self._embedding_failed_time) < self._cooldown_duration:
+            logger.warning("MemoryMesh: Embedding circuit breaker is active (cooldown). Bypassing embedding generation.")
+            return None
+
         try:
             with httpx.Client(timeout=3.0) as client:
                 res = client.post(
@@ -140,8 +161,12 @@ class MemoryMesh:
                 )
                 if res.status_code == 200:
                     return res.json().get("embedding")
+                else:
+                    logger.error("MemoryMesh: embedding generation response error status %s. Tripping embedding circuit breaker.", res.status_code)
+                    MemoryMesh._embedding_failed_time = time.time()
         except Exception as e:
-            logger.error("MemoryMesh: embedding generation error: %s", e)
+            logger.error("MemoryMesh: embedding generation error: %s. Tripping embedding circuit breaker.", e)
+            MemoryMesh._embedding_failed_time = time.time()
         return None
 
     def _init_db(self, conn: psycopg2.extensions.connection) -> None:

@@ -2,6 +2,8 @@ package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.config.LettaConfig;
 import ch.swissqcommerce.backend.domain.agent.core.service.LettaMemoryService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -28,6 +30,12 @@ public class LettaMemoryServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private MeterRegistry meterRegistry;
+
+    @Mock
+    private Counter counter;
+
     private LettaMemoryService lettaMemoryService;
 
     @BeforeEach
@@ -36,7 +44,10 @@ public class LettaMemoryServiceTest {
         when(lettaConfig.getApiUrl()).thenReturn("http://localhost:8283");
         when(lettaConfig.getApiToken()).thenReturn("dummy-key");
         when(lettaConfig.getModel()).thenReturn("openai/gpt-4o");
-        lettaMemoryService = new LettaMemoryService(lettaConfig, restTemplate);
+        
+        when(meterRegistry.counter(eq("letta.fallback.triggers"), any(String[].class))).thenReturn(counter);
+        
+        lettaMemoryService = new LettaMemoryService(lettaConfig, restTemplate, meterRegistry);
     }
 
     @Test
@@ -200,5 +211,19 @@ public class LettaMemoryServiceTest {
         Map<?, ?> bodyMap = (Map<?, ?>) createEntityCaptor.getValue().getBody();
         assertEquals("my-custom-model", bodyMap.get("model"));
         assertEquals("Bearer my-secret-token", createEntityCaptor.getValue().getHeaders().getFirst("Authorization"));
+    }
+
+    @Test
+    public void testSendMessageIncrementsPrometheusCounterOnFailure() {
+        when(restTemplate.exchange(
+                eq("http://localhost:8283/v1/agents"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(Object.class)
+        )).thenThrow(new RestClientException("Connection refused"));
+
+        String result = lettaMemoryService.sendMessage("session-xyz", "Hi agent!");
+        assertNull(result);
+        verify(counter, times(1)).increment();
     }
 }
