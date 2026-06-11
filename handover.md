@@ -7,7 +7,7 @@ During the current development cycle, we successfully implemented and validated 
 3. **Phase 3: Temporal Workflow Orchestration Hardening**: Resolved testing issues with Mockito activity proxy reflections by implementing manual stubs, and hardened workflow activity invocations with explicit retry limits.
 4. **Phase 4: Letta Agent Memory Integration**: Built out stateful agent memory using Letta (formerly MemGPT), featuring dynamic agent session retrieval/creation, multi-turn context preservation, schema-agnostic parsing, and a resilient automatic fallback to the direct LLM gateway if the Letta server is offline.
 5. **Phase 5: Multi-Agent Collaboration & Routing (Agent Mesh)**: Built lightweight in-memory inter-agent delegation between `CustomerSupportAgent` and `DynamicPricingAgent` via the `DYNAMIC_PRICING` tool, implementing strict token cost metering to protect the daily budget guardrail (ADR-007) and parse-guards for LLM-garbled arguments.
-6. **Method Security Hardening**: Added `@PreAuthorize("hasRole('ADMIN')")` security checks to all Human-in-the-Loop (HITL) endpoints (`getPendingApprovals`, `approve`, `reject`) in `HitlQueueController` to enforce strict administrator authorization at the Java method level, verified by a role-based integration test suite.
+6. **Method Security Hardening**: Added `@PreAuthorize("hasRole('ADMIN')")` security checks to all Human-in-the-Loop (HITL) endpoints (`getPendingApprovals`, `approve`, `reject`) in `HitlQueueController` and the entire class of `AdminController` to enforce strict administrator authorization at the Java method level, verified by a role-based integration test suite.
 
 ---
 
@@ -65,8 +65,10 @@ Here is the exact mapping of modified and newly created files in the repository:
 ### 4. Method Security Hardening (Domain 8)
 *   **[HitlQueueController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/governance/adapter/in/web/HitlQueueController.java) [MODIFY]**:
     - Annotated all three HITL endpoints (`getPendingApprovals` GET, `approve` POST, `reject` POST) with `@PreAuthorize("hasRole('ADMIN')")` to enforce method-level role authorization.
+*   **[AdminController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java) [MODIFY]**:
+    - Added `@PreAuthorize("hasRole('ADMIN')")` at the class level to ensure method-level role authorization restricts all administrative endpoints (chaos engineering, onboarding gate, HITL queue, health) to the admin role.
 *   **[SecurityHardeningIntegrationTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/SecurityHardeningIntegrationTest.java) [MODIFY]**:
-    - Wired `HitlQueueController` and implemented `testHitlQueueControllerEndpointsEnforceAdminRole` to verify that unauthenticated/non-admin users (e.g. `ROLE_CUSTOMER`) receive an `AccessDeniedException` while admin users (`ROLE_ADMIN`) successfully pass method security.
+    - Wired `HitlQueueController` and `AdminController` and implemented `testHitlQueueControllerEndpointsEnforceAdminRole` and `testAdminControllerEndpointsEnforceAdminRole` to verify that unauthenticated/non-admin users (e.g. `ROLE_CUSTOMER`) receive an `AccessDeniedException` while admin users (`ROLE_ADMIN`) successfully pass method security.
 
 ---
 
@@ -81,7 +83,7 @@ cd backend
 mvn clean test
 ```
 **Results**:
-- **Tests Run**: 286
+- **Tests Run**: 287
 - **Failures**: 0
 - **Errors**: 0
 - **Skipped**: 0

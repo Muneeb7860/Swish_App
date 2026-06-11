@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.integration;
 
+import ch.swissqcommerce.backend.controller.AdminController;
 import ch.swissqcommerce.backend.domain.governance.adapter.in.web.HitlQueueController;
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
@@ -56,6 +57,7 @@ public class SecurityHardeningIntegrationTest {
     @Autowired private GovernanceUseCase governanceUseCase;
     @Autowired private SecurityController securityController;
     @Autowired private HitlQueueController hitlQueueController;
+    @Autowired private AdminController adminController;
 
     @Autowired private CustomerRepository customerRepository;
     @Autowired private HitlQueueRepository hitlQueueRepository;
@@ -422,6 +424,43 @@ public class SecurityHardeningIntegrationTest {
         // Accessing getPendingApprovals as ADMIN should not throw AccessDeniedException
         assertDoesNotThrow(() ->
             hitlQueueController.getPendingApprovals()
+        );
+    }
+
+    @Test
+    public void testAdminControllerEndpointsEnforceAdminRole() {
+        // Authenticate as a regular CUSTOMER
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "customer-user", null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+            )
+        );
+
+        // Accessing AdminController.getActiveFaults should throw AccessDeniedException
+        assertThrows(AccessDeniedException.class, () ->
+            adminController.getActiveFaults()
+        );
+
+        // Accessing AdminController.getOnboardingQueue should throw AccessDeniedException
+        assertThrows(AccessDeniedException.class, () ->
+            adminController.getOnboardingQueue()
+        );
+
+        // Authenticate as ADMIN
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "swissadmin", null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+
+        // Accessing as ADMIN should succeed
+        assertDoesNotThrow(() ->
+            adminController.getActiveFaults()
+        );
+        assertDoesNotThrow(() ->
+            adminController.getOnboardingQueue()
         );
     }
 }
