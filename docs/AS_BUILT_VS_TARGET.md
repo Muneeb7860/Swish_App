@@ -24,7 +24,7 @@ Legend: ✅ built · 🟡 partial · 🔴 not yet (roadmap).
 
 | FR | Requirement (target) | As-built today | Status | Converge in |
 | :-- | :--- | :--- | :-: | :-- |
-| FR-01 | Retailer self-service onboarding (sensor provisioning, API keys) | 3-gate onboarding exists for **riders**; no retailer portal / sensor provisioning | 🟡 | R2 |
+| FR-01 | Retailer self-service onboarding (sensor provisioning, API keys) | `retailer` context (V23): public self-signup + 3-gate approval → API-key issuance + auto billing account; sensor provisioning still roadmap | ✅ | **done (R2)** |
 | FR-02 | AI negotiation: outbox → Kafka → **MongoDB** → price negotiation | RFQ reverse auction (`MasterOrchestratorService`) + outbox→Kafka relay; Mongo CDC sink not wired | 🟡 | R3 |
 | FR-03 | Telemetry ingestion (MQTT/HTTPS → **TimescaleDB**) | `TelemetryServiceImpl` cold-chain CQRS on **PostgreSQL**; HTTP not MQTT | 🟡 | R3 |
 | FR-04 | Ledger auditing (SHA-256 hash chain, REST search) | `LedgerServiceImpl` + DB hash-chain & balance triggers + `/ledger` API | ✅ | — |
@@ -72,7 +72,7 @@ target's polyglot pieces in only where they pay off.
 | Phase | Theme | Work |
 | :-- | :--- | :--- |
 | **R1** | Doc reconciliation *(done)* | This file + status banners on BRD/HLD; validated ERD/LLD/C4/sequence set. |
-| **R2** | Close functional gaps | **FR-06 billing engine** ✅ *(done — `billing` context, V22)*; **FR-01 retailer self-service portal** (registration, API-key issuance) reusing the 3-gate onboarding engine ← next. |
+| **R2** ✅ | Close functional gaps | **FR-06 billing engine** ✅ *(`billing` context, V22)*; **FR-01 retailer self-service portal** ✅ *(`retailer` context, V23 — self-signup + 3-gate + API key + billing tie-in)*. Sensor provisioning deferred to R3. |
 | **R3** | Polyglot data path | **FR-02 Mongo CDC sink** for `NegotiationEvent`; **FR-03 TimescaleDB** hypertable for telemetry + optional MQTT ingestion adapter. |
 | **R4** | Selective decomposition | Extract the highest-contention contexts (payment, telemetry) to their own DB/service; introduce Vault + inter-service mTLS where a real service boundary exists. |
 | **R5** | Distributed hybrid agentic | Wire `MasterOrchestratorService` → `homelab-ai-governance` pipeline (the Java↔Python bridge) so support/procurement routes through the governed hybrid router. |
