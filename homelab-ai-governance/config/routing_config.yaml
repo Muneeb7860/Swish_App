@@ -66,3 +66,11 @@ intents:
   - data_analysis
   - system_admin
   - sensitive_query
+
+rag:
+  enabled: true
+  database_url: postgresql://letta:lettapassword@localhost:5434/letta
+  embedding_model: nomic-embed-text:latest
+  embedding_url: http://localhost:11434/api/embeddings
+  similarity_threshold: 0.60
+
