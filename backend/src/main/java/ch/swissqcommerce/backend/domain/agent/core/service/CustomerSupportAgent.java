@@ -13,24 +13,31 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomerSupportAgent {
 
+    public static final String TOOL_ORDER_STATUS = "ORDER_STATUS";
+    public static final String TOOL_DYNAMIC_PRICING = "DYNAMIC_PRICING";
+
     private final LlmGatewayPort llmGateway;
     private final LettaMemoryService lettaMemoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentAnalysis analyze(AgentRequest request) {
         String prompt = "You are a customer support agent. Analyze the customer message: \"" + request.getMessage() + "\".\n" +
-                "Decide if you need to look up ORDER_STATUS. If so, identify the customerId or orderId from the query or context.\n" +
+                "Decide if you need to call a tool: \n" +
+                "  1. " + TOOL_ORDER_STATUS + ": to look up order tracking/status details. Provide customerId or orderId as tool_argument.\n" +
+                "  2. " + TOOL_DYNAMIC_PRICING + ": to retrieve dynamic pricing recommendations, discounts, or surge fees. Provide a semicolon-separated list of parameters (e.g. raining=true;ratio=0.8;expiry=2) as tool_argument if available, or empty string.\n" +
+                "If no tool is needed, set \"tool\" to null.\n" +
                 "Return a JSON object with: \n" +
                 "  \"reply\": a provisional reply,\n" +
                 "  \"confidence\": confidence score (0.0 to 1.0),\n" +
-                "  \"tool\": \"ORDER_STATUS\" or null,\n" +
-                "  \"tool_argument\": the identified customerId or orderId or null.\n" +
+                "  \"tool\": \"" + TOOL_ORDER_STATUS + "\" or \"" + TOOL_DYNAMIC_PRICING + "\" or null,\n" +
+                "  \"tool_argument\": the tool argument string or null.\n" +
                 "Response MUST be a valid JSON only, without any markdown formatting block.";
 
         double[] cost = new double[1];
         String content = callLlmWithLettaFallback(prompt, request.getConversationId(), cost);
         return parseResponse(content, cost[0]);
     }
+
 
     public AgentAnalysis generateFinalResponse(AgentRequest request, String toolResult, double initialCost) {
         String prompt = "You are a customer support agent. The customer asked: \"" + request.getMessage() + "\".\n" +

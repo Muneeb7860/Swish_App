@@ -117,7 +117,9 @@ public class MasterOrchestratorService implements AgentUseCase {
         Order order = null;
 
         if (analysis.tool != null) {
-            String toolResult = agentToolExecutor.executeTool(analysis.tool, analysis.toolArgument);
+            AgentToolExecutor.ToolResult toolResult = agentToolExecutor.executeTool(analysis.tool, analysis.toolArgument);
+            trackUsage(toolResult.cost);
+            accumulatedCost += toolResult.cost;
             
             try {
                 if (analysis.toolArgument != null) {
@@ -126,7 +128,7 @@ public class MasterOrchestratorService implements AgentUseCase {
                 }
             } catch (NumberFormatException ignored) {}
 
-            CustomerSupportAgent.AgentAnalysis finalAnalysis = customerSupportAgent.generateFinalResponse(request, toolResult, accumulatedCost);
+            CustomerSupportAgent.AgentAnalysis finalAnalysis = customerSupportAgent.generateFinalResponse(request, toolResult.content, accumulatedCost);
             trackUsage(finalAnalysis.cost - accumulatedCost);
             accumulatedCost = finalAnalysis.cost;
             finalReply = finalAnalysis.reply;
