@@ -195,6 +195,12 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.5.0</version>
         </dependency>
+        <!-- Temporal Java SDK -->
+        <dependency>
+            <groupId>io.temporal</groupId>
+            <artifactId>temporal-sdk</artifactId>
+            <version>1.23.0</version>
+        </dependency>
 
         <!-- GCP Secret Manager — loads JWT_SECRET (and other secrets) from
              Google Cloud Secret Manager in the prod profile.
