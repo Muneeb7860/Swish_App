@@ -74,7 +74,7 @@ target's polyglot pieces in only where they pay off.
 | **R1** | Doc reconciliation *(done)* | This file + status banners on BRD/HLD; validated ERD/LLD/C4/sequence set. |
 | **R2** ✅ | Close functional gaps | **FR-06 billing engine** ✅ *(`billing` context, V22)*; **FR-01 retailer self-service portal** ✅ *(`retailer` context, V23 — self-signup + 3-gate + API key + billing tie-in)*. Sensor provisioning deferred to R3. |
 | **R3** ✅ | Polyglot data path | Sensor provisioning (`sensor`, V24) ✅; **FR-03 TimescaleDB** `sensor_readings` hypertable (V25, CI image → timescaledb) ✅; **FR-02 Mongo** negotiation-event CDC archive (conditional adapter) ✅. MQTT deferred. Hybrid approach: TimescaleDB CI-verified live; Mongo conditional so CI stays Postgres-only and green. |
-| **R4** | Selective decomposition | Extract the highest-contention contexts (payment, telemetry) to their own DB/service; introduce Vault + inter-service mTLS where a real service boundary exists. |
+| **R4** ✅📐 | Selective decomposition | **Governed architecture delivered** (ADR-005 strangler-fig extraction + ADR-006 Vault/mTLS + [R4 blueprint](./R4_SERVICE_EXTRACTION_BLUEPRINT.md)) with a *measured* readiness baseline (payment = strongest candidate: 0 inbound coupling). **Physical split gated** on a real driver + infra — not runnable in single-node dev; this is the right-sized state. |
 | **R5** | Distributed hybrid agentic | Wire `MasterOrchestratorService` → `homelab-ai-governance` pipeline (the Java↔Python bridge) so support/procurement routes through the governed hybrid router. |
 
 **Sequencing rationale (A before B):** reconciling the docs first (R1) makes the
