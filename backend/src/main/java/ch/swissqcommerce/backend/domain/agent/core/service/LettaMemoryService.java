@@ -36,7 +36,7 @@ public class LettaMemoryService {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer dummy-key");
+            headers.set("Authorization", "Bearer " + lettaConfig.getApiToken());
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("message", messageContent);
@@ -88,7 +88,7 @@ public class LettaMemoryService {
         try {
             String listUrl = lettaConfig.getApiUrl() + "/v1/agents";
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer dummy-key");
+            headers.set("Authorization", "Bearer " + lettaConfig.getApiToken());
             HttpEntity<Void> getEntity = new HttpEntity<>(headers);
             ResponseEntity<Object> listResponse = lettaRestTemplate.exchange(listUrl, org.springframework.http.HttpMethod.GET, getEntity, Object.class);
 
@@ -126,7 +126,7 @@ public class LettaMemoryService {
 
             Map<String, Object> createBody = new HashMap<>();
             createBody.put("name", agentName);
-            createBody.put("model", "openai/gpt-4o");
+            createBody.put("model", lettaConfig.getModel());
 
             HttpEntity<Map<String, Object>> createEntity = new HttpEntity<>(createBody, headers);
             ResponseEntity<Object> createResponse = lettaRestTemplate.postForEntity(createUrl, createEntity, Object.class);

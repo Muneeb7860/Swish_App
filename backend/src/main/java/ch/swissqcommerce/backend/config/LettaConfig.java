@@ -12,6 +12,12 @@ public class LettaConfig {
     @Value("${swish.letta.api.url:http://localhost:8283}")
     private String apiUrl;
 
+    @Value("${swish.letta.api.token:dummy-key}")
+    private String apiToken;
+
+    @Value("${swish.letta.model:openai/gpt-4o}")
+    private String model;
+
     @Bean
     public RestTemplate lettaRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -22,6 +28,14 @@ public class LettaConfig {
 
     public String getApiUrl() {
         return apiUrl;
+    }
+
+    public String getApiToken() {
+        return apiToken;
+    }
+
+    public String getModel() {
+        return model;
     }
 }
 

@@ -7,6 +7,7 @@ import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
+import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,9 @@ public class CustomerSupportDynamicPricingTest {
     @Mock private AgentOutPort agentOutPort;
     @Mock private DynamicPricingAgent dynamicPricingAgent;
     @Mock private EventUseCase eventUseCase;
+    @Mock private B2BProcurementAgent b2BProcurementAgent;
+    @Mock private ProcurementGuardrailsEngine procurementGuardrailsEngine;
+    @Mock private ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort wholesalerPort;
 
     private CustomerSupportAgent customerSupportAgent;
     private AgentToolExecutor agentToolExecutor;
@@ -43,9 +47,9 @@ public class CustomerSupportDynamicPricingTest {
                 agentToolExecutor,
                 agentOutPort,
                 eventUseCase,
-                mock(B2BProcurementAgent.class),
-                mock(ProcurementGuardrailsEngine.class),
-                mock(ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort.class),
+                b2BProcurementAgent,
+                procurementGuardrailsEngine,
+                wholesalerPort,
                 mock(ch.swissqcommerce.backend.repository.DarkStoreRepository.class),
                 mock(ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort.class),
                 mock(ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase.class),
@@ -126,5 +130,106 @@ public class CustomerSupportDynamicPricingTest {
         assertNotNull(response.getTicketId());
 
         verify(agentOutPort, times(1)).saveHitlQueue(any(HitlQueue.class));
+    }
+
+    @Test
+    public void testLettaMemoryCallAccumulatesEstimatedCost() {
+        AgentRequest request = new AgentRequest("Help me", "conv-letta", "cust-1");
+
+        // Mock Letta to return valid JSON
+        String lettaJson = "{\"reply\":\"Hello from Letta!\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
+        when(lettaMemoryService.sendMessage(eq("conv-letta"), anyString()))
+                .thenReturn(lettaJson);
+
+        AgentResponse response = masterOrchestratorService.processMessage(request);
+
+        assertNotNull(response);
+        assertEquals("Hello from Letta!", response.getReply());
+        // Verify cost is mapped to the default Letta cost 0.035
+        assertEquals(0.035, response.getTokenCost(), 0.001);
+    }
+
+    @Test
+    public void testDailyBudgetLimitExceededOnlyTriggersSingleHitl() {
+        AgentRequest request = new AgentRequest("Check cost limit", "conv-budget", "cust-1");
+
+        // 1. First request succeeds but costs $6.0, exceeding daily budget
+        String responseJson = "{\"reply\":\"Okay\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
+        when(llmGateway.callLlm(anyString()))
+                .thenReturn(new LlmResponse(responseJson, 6.0));
+
+        // Letta returns null so it falls back to llmGateway
+        when(lettaMemoryService.sendMessage(anyString(), anyString())).thenReturn(null);
+
+        AgentResponse response1 = masterOrchestratorService.processMessage(request);
+        assertNotNull(response1);
+        assertEquals(6.0, response1.getTokenCost(), 0.001);
+        assertFalse(response1.isHitlStatus());
+
+        // 2. Second request hits the budget breach (> 5.0).
+        // Since dailyBudgetEscalated is false, it must trigger a HITL ticket.
+        AgentResponse response2 = masterOrchestratorService.processMessage(request);
+        assertNotNull(response2);
+        assertTrue(response2.isHitlStatus());
+        assertNotEquals("BUDGET-EXCEEDED-ACTIVE", response2.getTicketId());
+        verify(agentOutPort, times(1)).saveHitlQueue(any(HitlQueue.class));
+
+        // 3. Third request hits the budget breach again.
+        // Since dailyBudgetEscalated is now true, it should return BUDGET-EXCEEDED-ACTIVE and NOT call saveHitlQueue again.
+        AgentResponse response3 = masterOrchestratorService.processMessage(request);
+        assertNotNull(response3);
+        assertTrue(response3.isHitlStatus());
+        assertEquals("BUDGET-EXCEEDED-ACTIVE", response3.getTicketId());
+        
+        // Still times(1) because the second call didn't trigger a new saveHitlQueue
+        verify(agentOutPort, times(1)).saveHitlQueue(any(HitlQueue.class));
+    }
+
+    @Test
+    public void testProcurementBudgetBreachAppliesRuleBasedFallback() {
+        // Mock active wholesalers
+        ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler w1 =
+                ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler.builder()
+                        .wholesalerId("w-1")
+                        .name("Wholesaler One")
+                        .isActive(true)
+                        .trustScore(90)
+                        .build();
+        when(wholesalerPort.findAll()).thenReturn(java.util.Collections.singletonList(w1));
+
+        // Let's stub the guardrail engine to approve
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt()))
+                .thenReturn(new ProcurementGuardrailsEngine.GuardrailResult(true, "Auto-approving"));
+
+        // 1. Trigger a chat request that costs $6.0 to exceed daily budget
+        AgentRequest request = new AgentRequest("Check cost limit", "conv-budget", "cust-1");
+        String responseJson = "{\"reply\":\"Okay\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
+        when(llmGateway.callLlm(anyString())).thenReturn(new LlmResponse(responseJson, 6.0));
+        when(lettaMemoryService.sendMessage(anyString(), anyString())).thenReturn(null);
+
+        AgentResponse response1 = masterOrchestratorService.processMessage(request);
+        assertNotNull(response1);
+        assertEquals(6.0, response1.getTokenCost(), 0.001);
+
+        // 2. Perform a B2B procurement negotiation. Since daily budget is exceeded, it must bypass b2BProcurementAgent.negotiateRestock
+        // and return the rule-based fallback directly.
+        AgentUseCase.NegotiationRequest negotiateRequest = new AgentUseCase.NegotiationRequest();
+        negotiateRequest.setItemId("item-123");
+        negotiateRequest.setItemName("Super Item");
+        negotiateRequest.setBasePrice(100.0);
+        negotiateRequest.setQuantity(10);
+        
+        AgentUseCase.NegotiationResponse negotiateResponse = masterOrchestratorService.negotiateProcurement(negotiateRequest);
+
+        assertNotNull(negotiateResponse);
+        assertTrue(negotiateResponse.isApproved());
+        assertEquals(90.0, negotiateResponse.getProposedPrice(), 0.001); // 10% discount on 100.0 basePrice
+        assertEquals(0.50, negotiateResponse.getConfidence(), 0.001);
+        assertTrue(negotiateResponse.getRationale().contains("Daily budget limit exceeded"));
+        assertEquals("COUNTER_OFFER", negotiateResponse.getWholesalerResponse());
+        assertEquals(0.0, negotiateResponse.getTokenCost(), 0.001); // 0.0 cost accumulated on fallback
+
+        // Verify that B2B procurement agent was NEVER called
+        verify(b2BProcurementAgent, never()).negotiateRestock(anyString(), anyString(), anyDouble(), anyString());
     }
 }

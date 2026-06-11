@@ -66,6 +66,7 @@ public class MasterOrchestratorService implements AgentUseCase {
     // not for enforcement.
     private double dailyCost = 0.0;
     private int hourlyRequestCount = 0;
+    private boolean dailyBudgetEscalated = false;
     private long lastDailyReset = System.currentTimeMillis();
     private long lastHourlyReset = System.currentTimeMillis();
 
@@ -73,6 +74,7 @@ public class MasterOrchestratorService implements AgentUseCase {
         long now = System.currentTimeMillis();
         if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
             dailyCost = 0.0;
+            dailyBudgetEscalated = false;
             lastDailyReset = now;
         }
         if (now - lastHourlyReset > 60 * 60 * 1000) {
@@ -89,6 +91,7 @@ public class MasterOrchestratorService implements AgentUseCase {
         long now = System.currentTimeMillis();
         if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
             dailyCost = 0.0;
+            dailyBudgetEscalated = false;
             lastDailyReset = now;
         }
 
@@ -98,7 +101,17 @@ public class MasterOrchestratorService implements AgentUseCase {
             // Increment Prometheus counter — drives the AgentDailyBudgetExceeded alert.
             // Null-guard: @PostConstruct is not invoked in unit tests (no Spring context).
             if (budgetGuardrailCounter != null) budgetGuardrailCounter.increment();
-            String ticketId = triggerHitl(request, null, null, reason);
+            
+            String ticketId;
+            synchronized (this) {
+                if (!dailyBudgetEscalated) {
+                    ticketId = triggerHitl(request, null, null, reason);
+                    dailyBudgetEscalated = true;
+                } else {
+                    ticketId = "BUDGET-EXCEEDED-ACTIVE";
+                }
+            }
+            
             return AgentResponse.builder()
                     .reply("System limit reached. Your request is routed to a customer support agent.")
                     .confidenceScore(0.0)
@@ -205,6 +218,13 @@ public class MasterOrchestratorService implements AgentUseCase {
 
     @Override
     public NegotiationResponse negotiateProcurement(NegotiationRequest request) {
+        long now = System.currentTimeMillis();
+        if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
+            dailyCost = 0.0;
+            dailyBudgetEscalated = false;
+            lastDailyReset = now;
+        }
+
         List<Wholesaler> activeWholesalers;
         try {
             activeWholesalers = wholesalerPort.findAll();
@@ -233,22 +253,33 @@ public class MasterOrchestratorService implements AgentUseCase {
 
         for (Wholesaler wholesaler : activeWholesalers) {
             B2BProcurementAgent.NegotiationAnalysis analysis;
-            try {
-                analysis = b2BProcurementAgent.negotiateRestock(
-                        request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
-                if (analysis == null) {
-                    throw new NullPointerException("Negotiation analysis returned null");
-                }
-            } catch (Exception e) {
-                log.warn("MasterOrchestratorService: LLM restock negotiation failed for wholesaler {}. Using default fallback bid. Error: {}", wholesaler.getName(), e.getMessage());
-                // Rule-based fallback: 10% discount, 0.50 confidence, 0.0 token cost
+            if (dailyCost >= 5.0) {
                 analysis = new B2BProcurementAgent.NegotiationAnalysis(
                         request.getBasePrice() * 0.90,
                         0.50,
-                        "Rule-based fallback (LLM offline)",
+                        "Rule-based fallback (Daily budget limit exceeded)",
                         "COUNTER_OFFER",
                         0.0
                 );
+            } else {
+                try {
+                    analysis = b2BProcurementAgent.negotiateRestock(
+                            request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
+                    if (analysis == null) {
+                        throw new NullPointerException("Negotiation analysis returned null");
+                    }
+                } catch (Exception e) {
+                    log.warn("MasterOrchestratorService: LLM restock negotiation failed for wholesaler {}. Using default fallback bid. Error: {}", wholesaler.getName(), e.getMessage());
+                    // Rule-based fallback: 10% discount, 0.50 confidence, 0.0 token cost
+                    analysis = new B2BProcurementAgent.NegotiationAnalysis(
+                            request.getBasePrice() * 0.90,
+                            0.50,
+                            "Rule-based fallback (LLM offline)",
+                            "COUNTER_OFFER",
+                            0.0
+                    );
+                }
+                trackUsage(analysis.cost);
             }
 
             if (bestAnalysis == null || analysis.proposedPrice < bestAnalysis.proposedPrice) {

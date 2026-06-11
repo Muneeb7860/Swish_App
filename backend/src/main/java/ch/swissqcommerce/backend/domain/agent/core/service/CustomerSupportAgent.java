@@ -60,7 +60,7 @@ public class CustomerSupportAgent {
             if (lettaMemoryService != null && conversationId != null) {
                 String lettaResponse = lettaMemoryService.sendMessage(conversationId, prompt);
                 if (lettaResponse != null) {
-                    tokenCostOut[0] = 0.0;
+                    tokenCostOut[0] = 0.035; // Default cost estimate for Letta calls to prevent budget bypass
                     return lettaResponse;
                 }
             }

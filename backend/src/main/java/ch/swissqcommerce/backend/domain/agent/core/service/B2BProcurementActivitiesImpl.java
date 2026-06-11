@@ -43,6 +43,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
                 String lettaResponse = lettaMemoryService.sendMessage(sessionKey, prompt);
                 if (lettaResponse != null) {
                     content = lettaResponse;
+                    cost = 0.035; // Default cost estimate for Letta calls to prevent budget bypass
                 } else {
                     LlmResponse response = llmGateway.callLlm(prompt);
                     content = response.getContent();
