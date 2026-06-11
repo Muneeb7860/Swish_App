@@ -8,6 +8,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
@@ -31,7 +32,11 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
     @Value("${swish.governance.api.url:}")
     private String apiUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public PythonGovernanceAdapter(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.build();
+    }
 
     public boolean isConfigured() {
         return apiUrl != null && !apiUrl.trim().isEmpty();

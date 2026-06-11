@@ -3,7 +3,7 @@ package ch.swissqcommerce.backend.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
@@ -19,11 +19,11 @@ public class LettaConfig {
     private String model;
 
     @Bean
-    public RestTemplate lettaRestTemplate() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000); // 5 seconds
-        factory.setReadTimeout(10000);    // 10 seconds
-        return new RestTemplate(factory);
+    public RestTemplate lettaRestTemplate(RestTemplateBuilder builder) {
+        return builder
+                .setConnectTimeout(java.time.Duration.ofMillis(5000))
+                .setReadTimeout(java.time.Duration.ofMillis(10000))
+                .build();
     }
 
     public String getApiUrl() {

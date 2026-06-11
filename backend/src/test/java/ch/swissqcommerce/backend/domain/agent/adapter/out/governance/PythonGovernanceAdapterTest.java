@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -31,12 +32,15 @@ public class PythonGovernanceAdapterTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private RestTemplateBuilder restTemplateBuilder;
+
     private PythonGovernanceAdapter adapter;
 
     @BeforeEach
     public void setUp() {
-        adapter = new PythonGovernanceAdapter();
-        ReflectionTestUtils.setField(adapter, "restTemplate", restTemplate);
+        when(restTemplateBuilder.build()).thenReturn(restTemplate);
+        adapter = new PythonGovernanceAdapter(restTemplateBuilder);
     }
 
     @Test
