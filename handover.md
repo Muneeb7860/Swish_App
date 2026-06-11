@@ -27,12 +27,15 @@ Here is the exact mapping of modified and newly created files in the repository:
 *   **[MasterOrchestratorService.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) [MODIFY]**:
     - Updated the tool invocation call site to handle `ToolResult`.
     - Multi-agent token costs are now accumulated via `trackUsage(toolResult.cost)` and added to `accumulatedCost` before executing the final response. This prevents mesh-hop LLM token leakages from bypassing the $5/day budget guardrail (ADR-007).
+    - Hardened with B2B procurement cost accumulation and a budget breach check: if the daily limit is reached, it bypasses LLM negotiations and falls back to a deterministic 10% discount bid.
 *   **[CustomerSupportDynamicPricingTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) [NEW]**:
     - Verifies the dynamic pricing routing path, cost accumulation across the orchestrator, robust parse-guards with defaults, and Letta non-JSON malformed string fallback to the HITL queue.
+    - Added a test case verifying the B2B procurement daily budget-bypass guardrail.
 
 ### 2. Letta Agent Memory (Phase 4)
 *   **[LettaConfig.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java) [NEW]**:
     Registers properties and maps the `lettaRestTemplate` bean. Configures a **5s connect timeout** and **10s read timeout** via `SimpleClientHttpRequestFactory` to prevent blocking the main Spring threads if the Letta container lags.
+    - Added configurable properties to dynamically resolve API Token and model target overrides.
 *   **[LettaMemoryService.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) [NEW]**:
     The stateful client adapter. Maps the client `conversationId` into a formatted Letta agent identifier (`agent-conv-conversationId`). It handles the following:
     - Lists active agents (`GET /v1/agents`) using `Object.class` to dynamically support both JSON array (`List`) and object wrappers containing `items`, `results`, or `agents`.
@@ -40,12 +43,15 @@ Here is the exact mapping of modified and newly created files in the repository:
     - Sends conversation turns (`POST /v1/agents/{agent_id}/messages`) and parses the response list to extract the final `assistant` response.
 *   **[LettaMemoryServiceTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/LettaMemoryServiceTest.java) [NEW]**:
     Verifies messaging on existing agents, new agent auto-creation, and connection-refused resilient fallback to direct LLM execution.
+    - Added a test case verifying that configurable Letta API Token and model override properties are correctly applied to the outgoing HTTP headers and request bodies.
 *   **[B2BProcurementActivitiesImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementActivitiesImpl.java) [MODIFY]**:
     Wired with `LettaMemoryService`. Maps procurement sessions into unique keys based on the restock item and wholesaler name (`procurement-[itemId]-[wholesalerName]`) to ensure the agent maintains multi-turn context during long-running procurement negotiations.
 *   **[application.properties](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/resources/application.properties) [MODIFY]**:
-    Exposes Letta server URL defaults:
+    Exposes Letta server URL, token, and model defaults:
     ```properties
     swish.letta.api.url=${SWISH_LETTA_API_URL:http://localhost:8283}
+    swish.letta.api.token=${SWISH_LETTA_API_TOKEN:dummy-key}
+    swish.letta.model=${SWISH_LETTA_MODEL:openai/gpt-4o}
     ```
 *   **[docker-compose-local.yml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docker-compose-local.yml) [MODIFY]**:
     Added two local containers to the homelab compose file:
@@ -83,7 +89,7 @@ cd backend
 mvn clean test
 ```
 **Results**:
-- **Tests Run**: 287
+- **Tests Run**: 291
 - **Failures**: 0
 - **Errors**: 0
 - **Skipped**: 0
