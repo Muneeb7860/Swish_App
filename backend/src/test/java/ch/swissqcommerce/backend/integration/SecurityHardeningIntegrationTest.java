@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.integration;
 
+import ch.swissqcommerce.backend.domain.governance.adapter.in.web.HitlQueueController;
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
@@ -8,6 +9,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRe
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import org.springframework.security.access.AccessDeniedException;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.model.HitlQueue;
@@ -53,6 +55,7 @@ public class SecurityHardeningIntegrationTest {
     @Autowired private AdminService adminService;
     @Autowired private GovernanceUseCase governanceUseCase;
     @Autowired private SecurityController securityController;
+    @Autowired private HitlQueueController hitlQueueController;
 
     @Autowired private CustomerRepository customerRepository;
     @Autowired private HitlQueueRepository hitlQueueRepository;
@@ -377,6 +380,48 @@ public class SecurityHardeningIntegrationTest {
         assertTrue(
             events.stream().anyMatch(e -> "security.anomaly".equals(e.getEventType())),
             "Failed onboarding approval must write a security.anomaly event to outbox"
+        );
+    }
+
+    @Test
+    public void testHitlQueueControllerEndpointsEnforceAdminRole() {
+        // Authenticate as a regular CUSTOMER
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "customer-user", null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+            )
+        );
+
+        // Accessing getPendingApprovals should throw AccessDeniedException
+        assertThrows(AccessDeniedException.class, () ->
+            hitlQueueController.getPendingApprovals()
+        );
+
+        // Accessing approve should throw AccessDeniedException
+        HitlQueueController.OverrideRequest req = new HitlQueueController.OverrideRequest();
+        req.setOperator("operator");
+        req.setReason("reason");
+        assertThrows(AccessDeniedException.class, () ->
+            hitlQueueController.approve(1, req)
+        );
+
+        // Accessing reject should throw AccessDeniedException
+        assertThrows(AccessDeniedException.class, () ->
+            hitlQueueController.reject(1, req)
+        );
+
+        // Authenticate as ADMIN
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "swissadmin", null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+
+        // Accessing getPendingApprovals as ADMIN should not throw AccessDeniedException
+        assertDoesNotThrow(() ->
+            hitlQueueController.getPendingApprovals()
         );
     }
 }
