@@ -12,9 +12,32 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
+
+
+class CustomerSupportSchema(BaseModel):
+    reply: str = Field(..., min_length=1)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    tool: Optional[str] = None
+    tool_argument: Optional[str] = None
+
+    @field_validator("tool")
+    @classmethod
+    def validate_tool(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v != "ORDER_STATUS":
+            raise ValueError("tool must be 'ORDER_STATUS' or null")
+        return v
+
+
+class DynamicPricingSchema(BaseModel):
+    surgeMultiplier: float = Field(..., ge=1.0, le=3.0)
+    discountPercent: float = Field(..., ge=0.0, le=50.0)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    rationale: str = Field(..., min_length=1)
+
 
 
 @dataclass
@@ -56,7 +79,7 @@ def evaluate_output(
     w_ccr = w.get("context_conservation", 0.3)
 
     ci, ci_details = compute_completeness_index(candidate, original_prompt)
-    fis, fis_details = compute_format_integrity(candidate, expected_format)
+    fis, fis_details = compute_format_integrity(candidate, expected_format, original_prompt)
     ccr, ccr_details = compute_context_conservation(candidate, context_docs)
 
     # FIS critical failure clamp: corrupt JSON → total < threshold regardless
@@ -156,11 +179,11 @@ def _check_nesting_depth(s: str, max_depth: int = 20) -> bool:
 
 
 def compute_format_integrity(
-    candidate: str, expected_format: str | None
+    candidate: str, expected_format: str | None, original_prompt: str = ""
 ) -> tuple[float, dict[str, Any]]:
     """Validate structural requirements of the candidate output.
 
-    - If expected_format == "json": parse with json.loads()
+    - If expected_format == "json": parse with json.loads() and validate against Pydantic schemas if applicable
     - Otherwise: basic structural checks (non-empty, reasonable length)
     """
     if not candidate or not candidate.strip():
@@ -176,8 +199,39 @@ def compute_format_integrity(
             if not _check_nesting_depth(target_str, max_depth=20):
                 return 0.0, {"valid_json": False, "error": "Exceeded maximum JSON nesting depth of 20"}
 
-            json.loads(target_str)
-            return 1.0, {"valid_json": True, "extracted": bool(json_match)}
+            parsed = json.loads(target_str)
+            
+            # Pydantic schema validation based on the original prompt context
+            prompt_lower = original_prompt.lower()
+            schema_name = "generic"
+            if "customer support agent" in prompt_lower:
+                schema_name = "customer_support"
+                try:
+                    if isinstance(parsed, list):
+                        raise ValueError("Expected JSON object, got JSON array")
+                    CustomerSupportSchema(**parsed)
+                except (ValidationError, ValueError) as val_err:
+                    return 0.0, {
+                        "valid_json": True,
+                        "valid_schema": False,
+                        "schema": schema_name,
+                        "error": f"Schema validation failed: {val_err}"
+                    }
+            elif "dynamic pricing agent" in prompt_lower:
+                schema_name = "dynamic_pricing"
+                try:
+                    if isinstance(parsed, list):
+                        raise ValueError("Expected JSON object, got JSON array")
+                    DynamicPricingSchema(**parsed)
+                except (ValidationError, ValueError) as val_err:
+                    return 0.0, {
+                        "valid_json": True,
+                        "valid_schema": False,
+                        "schema": schema_name,
+                        "error": f"Schema validation failed: {val_err}"
+                    }
+
+            return 1.0, {"valid_json": True, "valid_schema": True, "schema": schema_name, "extracted": bool(json_match)}
         except json.JSONDecodeError as e:
             return 0.0, {"valid_json": False, "error": str(e)}
 
