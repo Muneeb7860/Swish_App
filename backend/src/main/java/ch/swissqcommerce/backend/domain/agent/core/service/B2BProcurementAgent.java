@@ -1,8 +1,5 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
-import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,20 +12,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class B2BProcurementAgent {
 
-    private final PythonGovernanceAdapter pythonGovernanceAdapter;
-    private final GeminiFreeAdapter geminiFreeAdapter;
-    private final MockLlmAdapter mockLlmAdapter;
+    // Depends only on the port (ADR-001). The @Primary ResilientLlmGateway is injected,
+    // which owns the fail-safe fallback chain (ADR-007).
+    private final LlmGatewayPort llmGateway;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    private LlmGatewayPort getLlmGateway() {
-        if (pythonGovernanceAdapter.isConfigured()) {
-            return pythonGovernanceAdapter;
-        }
-        if (geminiFreeAdapter.isConfigured()) {
-            return geminiFreeAdapter;
-        }
-        return mockLlmAdapter;
-    }
 
     public NegotiationAnalysis negotiateRestock(String itemId, String itemName, double basePrice, String wholesalerName) {
         String prompt = "You are a B2B procurement agent for Swish OS. We need to restock Item: \"" + itemName + 
@@ -42,7 +29,7 @@ public class B2BProcurementAgent {
                 "  \"wholesalerResponse\": \"ACCEPTED\" or \"COUNTER_OFFER\" or \"REJECTED\".\n" +
                 "Response MUST be a valid JSON only, without any markdown formatting block.";
 
-        LlmResponse response = getLlmGateway().callLlm(prompt);
+        LlmResponse response = llmGateway.callLlm(prompt);
         return parseResponse(response.getContent(), response.getTokenCost());
     }
 

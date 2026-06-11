@@ -2,9 +2,6 @@ package ch.swissqcommerce.backend.domain.agent.core.service;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 
 
-import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,9 +17,9 @@ import java.util.concurrent.*;
 @Slf4j
 public class DynamicPricingAgent {
 
-    private final PythonGovernanceAdapter pythonGovernanceAdapter;
-    private final GeminiFreeAdapter geminiFreeAdapter;
-    private final MockLlmAdapter mockLlmAdapter;
+    // Depends only on the port (ADR-001). The @Primary ResilientLlmGateway is injected,
+    // which owns the fail-safe fallback chain (ADR-007).
+    private final LlmGatewayPort llmGateway;
     private final PricingGuardrailsEngine pricingGuardrailsEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Executor executor;
@@ -31,26 +28,12 @@ public class DynamicPricingAgent {
     private long slaTimeoutMs;
 
     public DynamicPricingAgent(
-            PythonGovernanceAdapter pythonGovernanceAdapter,
-            GeminiFreeAdapter geminiFreeAdapter,
-            MockLlmAdapter mockLlmAdapter,
+            LlmGatewayPort llmGateway,
             PricingGuardrailsEngine pricingGuardrailsEngine,
             @Qualifier("engineTaskExecutor") Executor executor) {
-        this.pythonGovernanceAdapter = pythonGovernanceAdapter;
-        this.geminiFreeAdapter = geminiFreeAdapter;
-        this.mockLlmAdapter = mockLlmAdapter;
+        this.llmGateway = llmGateway;
         this.pricingGuardrailsEngine = pricingGuardrailsEngine;
         this.executor = executor;
-    }
-
-    private LlmGatewayPort getLlmGateway() {
-        if (pythonGovernanceAdapter.isConfigured()) {
-            return pythonGovernanceAdapter;
-        }
-        if (geminiFreeAdapter.isConfigured()) {
-            return geminiFreeAdapter;
-        }
-        return mockLlmAdapter;
     }
 
     public PricingAnalysis recommendPricing(boolean isRaining, double riderToOrderRatio, double competitorPrice, int daysToExpiry, double vipDensity) {
@@ -73,7 +56,7 @@ public class DynamicPricingAgent {
                 "  \"rationale\": \"explanation\"\n" +
                 "}";
 
-        CompletableFuture<LlmResponse> future = CompletableFuture.supplyAsync(() -> getLlmGateway().callLlm(prompt), executor);
+        CompletableFuture<LlmResponse> future = CompletableFuture.supplyAsync(() -> llmGateway.callLlm(prompt), executor);
 
         LlmResponse response = null;
         try {

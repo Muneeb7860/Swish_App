@@ -1,10 +1,8 @@
 package ch.swissqcommerce.backend.service;
 
-import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
-import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine;
+import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +24,7 @@ import static org.mockito.Mockito.*;
 public class DynamicPricingAgentTest {
 
     @Mock
-    private PythonGovernanceAdapter pythonGovernanceAdapter;
-
-    @Mock
-    private GeminiFreeAdapter geminiFreeAdapter;
-
-    @Mock
-    private MockLlmAdapter mockLlmAdapter;
+    private LlmGatewayPort llmGateway;
 
     @Spy
     private PricingGuardrailsEngine pricingGuardrailsEngine = new PricingGuardrailsEngine();
@@ -44,9 +36,7 @@ public class DynamicPricingAgentTest {
     public void setUp() {
         executorService = Executors.newSingleThreadExecutor();
         dynamicPricingAgent = new DynamicPricingAgent(
-                pythonGovernanceAdapter,
-                geminiFreeAdapter,
-                mockLlmAdapter,
+                llmGateway,
                 pricingGuardrailsEngine,
                 executorService
         );
@@ -69,9 +59,7 @@ public class DynamicPricingAgentTest {
                 "  \"confidence\": 0.92,\n" +
                 "  \"rationale\": \"Optimal adjustments for rain\"\n" +
                 "}";
-        
-        when(geminiFreeAdapter.isConfigured()).thenReturn(true);
-        when(geminiFreeAdapter.callLlm(anyString())).thenReturn(
+        when(llmGateway.callLlm(anyString())).thenReturn(
                 LlmResponse.builder().content(jsonResponse).tokenCost(0.001).build()
         );
 
@@ -95,9 +83,7 @@ public class DynamicPricingAgentTest {
                 "  \"confidence\": 0.50,\n" +
                 "  \"rationale\": \"High volatility pricing\"\n" +
                 "}";
-
-        when(geminiFreeAdapter.isConfigured()).thenReturn(true);
-        when(geminiFreeAdapter.callLlm(anyString())).thenReturn(
+        when(llmGateway.callLlm(anyString())).thenReturn(
                 LlmResponse.builder().content(jsonResponse).tokenCost(0.001).build()
         );
 
@@ -123,9 +109,7 @@ public class DynamicPricingAgentTest {
                 "  \"confidence\": 0.95,\n" +
                 "  \"rationale\": \"Extreme pricing adjustment\"\n" +
                 "}";
-
-        when(geminiFreeAdapter.isConfigured()).thenReturn(true);
-        when(geminiFreeAdapter.callLlm(anyString())).thenReturn(
+        when(llmGateway.callLlm(anyString())).thenReturn(
                 LlmResponse.builder().content(jsonResponse).tokenCost(0.001).build()
         );
 
@@ -143,8 +127,7 @@ public class DynamicPricingAgentTest {
 
     @Test
     public void testRecommendPricing_SlaBreachedTimeoutFallback() {
-        when(geminiFreeAdapter.isConfigured()).thenReturn(true);
-        when(geminiFreeAdapter.callLlm(anyString())).thenAnswer(invocation -> {
+        when(llmGateway.callLlm(anyString())).thenAnswer(invocation -> {
             Thread.sleep(1500); // Exceeds 1000ms SLA timeout
             return LlmResponse.builder().content("{}").build();
         });

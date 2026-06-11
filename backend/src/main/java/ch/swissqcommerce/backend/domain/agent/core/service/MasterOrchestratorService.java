@@ -55,11 +55,15 @@ public class MasterOrchestratorService implements AgentUseCase {
     @PostConstruct
     public void registerMetrics() {
         budgetGuardrailCounter = Counter.builder("agent.budget.guardrail.triggers")
-                .description("Number of times the AI agent daily-budget or hourly-rate limit was reached")
+                .description("Number of times the AI agent daily cost-budget guardrail was reached")
                 .tag("service", "master-orchestrator")
                 .register(meterRegistry);
     }
 
+    // Java orchestration owns the cost-budget guardrail (ADR-007 #1). Request-rate
+    // limiting is owned solely by the Python governance layer, so there is no rate cap
+    // here. hourlyRequestCount is retained for observability only (admin dashboard),
+    // not for enforcement.
     private double dailyCost = 0.0;
     private int hourlyRequestCount = 0;
     private long lastDailyReset = System.currentTimeMillis();
@@ -87,13 +91,10 @@ public class MasterOrchestratorService implements AgentUseCase {
             dailyCost = 0.0;
             lastDailyReset = now;
         }
-        if (now - lastHourlyReset > 60 * 60 * 1000) {
-            hourlyRequestCount = 0;
-            lastHourlyReset = now;
-        }
 
-        if (dailyCost >= 5.0 || hourlyRequestCount >= 100) {
-            String reason = dailyCost >= 5.0 ? "Daily budget limit of $5 exceeded" : "Hourly request limit of 100 exceeded";
+        // Cost-budget guardrail only — rate limiting is the Python layer's responsibility.
+        if (dailyCost >= 5.0) {
+            String reason = "Daily budget limit of $5 exceeded";
             // Increment Prometheus counter — drives the AgentDailyBudgetExceeded alert.
             // Null-guard: @PostConstruct is not invoked in unit tests (no Spring context).
             if (budgetGuardrailCounter != null) budgetGuardrailCounter.increment();
@@ -187,6 +188,9 @@ public class MasterOrchestratorService implements AgentUseCase {
 
     @Override
     public AgentMetrics getMetrics() {
+        // dailyCost / dailyBudgetLimit: the Java-enforced cost guardrail (ADR-007 #1).
+        // hourlyRequestCount / hourlyRequestLimit: observability only — request-rate is
+        // enforced by the Python governance layer (mirrors its hourly_request_limit: 100).
         return AgentMetrics.builder()
                 .dailyCost(dailyCost)
                 .hourlyRequestCount(hourlyRequestCount)
