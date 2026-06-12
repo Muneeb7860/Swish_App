@@ -106,182 +106,218 @@ Provide a highly concise, professional business health assessment, flag any stru
 				className="product-shelf-grid"
 				style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}
 			>
+				{/* Customer Trust Card */}
 				<div
 					className="glass-card"
-					style={{ padding: "0.75rem", textAlign: "center" }}
+					style={{
+						padding: "1rem",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.5rem",
+						borderLeft: "3px solid var(--color-customer)",
+					}}
 				>
-					<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-						CUSTOMER TRUST
-					</span>
-					<h3 style={{ color: "var(--color-customer)", fontWeight: 800 }}>
-						{customerTrustScore}/100
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+							CUSTOMER TRUST
+						</span>
+						<Lucide.UserCheck size={14} style={{ color: "var(--color-customer)" }} />
+					</div>
+					<h3 style={{ color: "var(--color-customer)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+						{customerTrustScore}
+						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
 					</h3>
+					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+						<div
+							style={{
+								height: "100%",
+								background: "var(--color-customer)",
+								width: `${customerTrustScore}%`,
+								transition: "width 0.5s ease",
+							}}
+						/>
+					</div>
 				</div>
+
+				{/* Rider Trust Card */}
 				<div
 					className="glass-card"
-					style={{ padding: "0.75rem", textAlign: "center" }}
+					style={{
+						padding: "1rem",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.5rem",
+						borderLeft: "3px solid var(--color-rider)",
+					}}
 				>
-					<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-						RIDER TRUST
-					</span>
-					<h3 style={{ color: "var(--color-rider)", fontWeight: 800 }}>
-						{riderTrustScore}/100
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+							RIDER TRUST
+						</span>
+						<Lucide.Bike size={14} style={{ color: "var(--color-rider)" }} />
+					</div>
+					<h3 style={{ color: "var(--color-rider)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+						{riderTrustScore}
+						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
 					</h3>
+					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+						<div
+							style={{
+								height: "100%",
+								background: "var(--color-rider)",
+								width: `${riderTrustScore}%`,
+								transition: "width 0.5s ease",
+							}}
+						/>
+					</div>
 				</div>
+
+				{/* Picker Accuracy Card */}
 				<div
 					className="glass-card"
-					style={{ padding: "0.75rem", textAlign: "center" }}
+					style={{
+						padding: "1rem",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.5rem",
+						borderLeft: "3px solid var(--color-inventory)",
+					}}
 				>
-					<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-						PICKER ACCURACY
-					</span>
-					<h3 style={{ color: "var(--color-inventory)", fontWeight: 800 }}>
-						{pickerTrustScore}/100
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+							PICKER ACCURACY
+						</span>
+						<Lucide.ClipboardCheck size={14} style={{ color: "var(--color-inventory)" }} />
+					</div>
+					<h3 style={{ color: "var(--color-inventory)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+						{pickerTrustScore}
+						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
 					</h3>
+					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+						<div
+							style={{
+								height: "100%",
+								background: "var(--color-inventory)",
+								width: `${pickerTrustScore}%`,
+								transition: "width 0.5s ease",
+							}}
+						/>
+					</div>
 				</div>
+
+				{/* Wholesaler Trust Card */}
 				<div
 					className="glass-card"
-					style={{ padding: "0.75rem", textAlign: "center" }}
+					style={{
+						padding: "1rem",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.5rem",
+						borderLeft: "3px solid var(--color-business)",
+					}}
 				>
-					<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-						WHOLESALER TRUST
-					</span>
-					<h3 style={{ color: "var(--color-business)", fontWeight: 800 }}>
-						{wholesalerTrustScore}/100
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+							WHOLESALER TRUST
+						</span>
+						<Lucide.Truck size={14} style={{ color: "var(--color-business)" }} />
+					</div>
+					<h3 style={{ color: "var(--color-business)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+						{wholesalerTrustScore}
+						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
 					</h3>
+					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+						<div
+							style={{
+								height: "100%",
+								background: "var(--color-business)",
+								width: `${wholesalerTrustScore}%`,
+								transition: "width 0.5s ease",
+							}}
+						/>
+					</div>
 				</div>
 			</div>
 
 			{/* Store capacity progress trackers */}
 			<div style={{ display: "flex", gap: "1.25rem" }}>
 				{/* Central Store capacity */}
-				<div className="glass-card" style={{ flex: 1, padding: "1rem" }}>
-					<div
-						style={{
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-						}}
-					>
-						<span style={{ fontWeight: 800 }}>Central MFC Capacity</span>
+				<div className="glass-card bento-card capacity-card" style={{ flex: 1 }}>
+					<div className="capacity-title-row">
+						<span>Central MFC Capacity</span>
 						{centralFillPct > 90 && (
-							<span
-								className="warning-flag"
-								style={{ animation: "pulse 1s infinite" }}
-							>
-								⚠️ STORAGE BOTTLENECK
-							</span>
+							<span className="warning-pill animate-pulse">⚠️ STORAGE BOTTLENECK</span>
 						)}
 					</div>
-					<div
-						style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.5rem 0" }}
-					>
-						{totalStockCentral} / {centralCapacity} Units (
-						{Math.round(centralFillPct)}% Full)
+					<div className="capacity-value">
+						{totalStockCentral} / {centralCapacity} <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Units ({Math.round(centralFillPct)}% Full)</span>
 					</div>
-					<div
-						style={{
-							background: "#020408",
-							height: "8px",
-							borderRadius: "99px",
-							overflow: "hidden",
-							marginBottom: "0.75rem",
-						}}
-					>
+					<div className="capacity-bar-outer">
 						<div
-							style={{
-								background:
-									centralFillPct > 90
-										? "var(--color-admin)"
-										: "var(--color-business)",
-								height: "100%",
-								width: `${centralFillPct}%`,
-							}}
+							className={`capacity-bar-inner ${centralFillPct > 90 ? 'warning' : 'normal'}`}
+							style={{ width: `${centralFillPct}%` }}
 						/>
 					</div>
 					{centralFee !== null ? (
 						<button
+							aria-label="Rent Central Overflow Storage Bay"
 							id="btn-rent-central"
 							className="btn-secondary-glow"
 							style={{
 								width: "100%",
 								fontSize: "0.7rem",
-								padding: "0.3rem",
+								padding: "0.45rem",
 								cursor: "pointer",
+								borderRadius: "6px",
+								marginTop: "0.25rem"
 							}}
 							onClick={() => handleScaleCapacity("Central")}
 						>
-							Rent Central Overflow Storage Bay (Surcharge: $
-							{centralFee.toFixed(2)})
+							Rent Central Overflow Storage Bay (Surcharge: ${centralFee.toFixed(2)})
 						</button>
 					) : (
-						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
 							Central Storage Capacity Max Scaled (+120 bay limit)
 						</span>
 					)}
 				</div>
 
 				{/* East Store capacity */}
-				<div className="glass-card" style={{ flex: 1, padding: "1rem" }}>
-					<div
-						style={{
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-						}}
-					>
-						<span style={{ fontWeight: 800 }}>East MFC Capacity</span>
+				<div className="glass-card bento-card capacity-card" style={{ flex: 1 }}>
+					<div className="capacity-title-row">
+						<span>East MFC Capacity</span>
 						{eastFillPct > 90 && (
-							<span
-								className="warning-flag"
-								style={{ animation: "pulse 1s infinite" }}
-							>
-								⚠️ STORAGE BOTTLENECK
-							</span>
+							<span className="warning-pill animate-pulse">⚠️ STORAGE BOTTLENECK</span>
 						)}
 					</div>
-					<div
-						style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.5rem 0" }}
-					>
-						{totalStockEast} / {eastCapacity} Units ({Math.round(eastFillPct)}%
-						Full)
+					<div className="capacity-value">
+						{totalStockEast} / {eastCapacity} <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Units ({Math.round(eastFillPct)}% Full)</span>
 					</div>
-					<div
-						style={{
-							background: "#020408",
-							height: "8px",
-							borderRadius: "99px",
-							overflow: "hidden",
-							marginBottom: "0.75rem",
-						}}
-					>
+					<div className="capacity-bar-outer">
 						<div
-							style={{
-								background:
-									eastFillPct > 90
-										? "var(--color-admin)"
-										: "var(--color-business)",
-								height: "100%",
-								width: `${eastFillPct}%`,
-							}}
+							className={`capacity-bar-inner ${eastFillPct > 90 ? 'warning' : 'normal'}`}
+							style={{ width: `${eastFillPct}%` }}
 						/>
 					</div>
 					{eastFee !== null ? (
 						<button
+							aria-label="Rent East Overflow Storage Bay"
 							id="btn-rent-east"
 							className="btn-secondary-glow"
 							style={{
 								width: "100%",
 								fontSize: "0.7rem",
-								padding: "0.3rem",
+								padding: "0.45rem",
 								cursor: "pointer",
+								borderRadius: "6px",
+								marginTop: "0.25rem"
 							}}
 							onClick={() => handleScaleCapacity("East")}
 						>
 							Rent East Overflow Storage Bay (Surcharge: ${eastFee.toFixed(2)})
 						</button>
 					) : (
-						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
 							East Storage Capacity Max Scaled (+120 bay limit)
 						</span>
 					)}
@@ -442,28 +478,15 @@ Provide a highly concise, professional business health assessment, flag any stru
 					<h4 style={{ fontWeight: 800, marginBottom: "0.5rem" }}>
 						OLAP Financial Ledger
 					</h4>
-					<table
-						className="ledger-table"
-						style={{
-							width: "100%",
-							borderCollapse: "collapse",
-							fontSize: "0.75rem",
-							textAlign: "left",
-						}}
-					>
+					<table className="ledger-table">
 						<thead>
-							<tr
-								style={{
-									borderBottom: "1px solid var(--border-color)",
-									color: "var(--text-secondary)",
-								}}
-							>
-								<th style={{ padding: "0.4rem" }}>Time</th>
-								<th style={{ padding: "0.4rem" }}>Type</th>
-								<th style={{ padding: "0.4rem" }}>Ref Code</th>
-								<th style={{ padding: "0.4rem" }}>Description</th>
-								<th style={{ padding: "0.4rem" }}>Debit</th>
-								<th style={{ padding: "0.4rem" }}>Credit</th>
+							<tr className="ledger-header-row">
+								<th className="ledger-th">Time</th>
+								<th className="ledger-th">Type</th>
+								<th className="ledger-th">Ref Code</th>
+								<th className="ledger-th">Description</th>
+								<th className="ledger-th">Debit</th>
+								<th className="ledger-th">Credit</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -471,43 +494,15 @@ Provide a highly concise, professional business health assessment, flag any stru
 								.slice()
 								.reverse()
 								.map((l) => (
-									<tr
-										key={l.id}
-										style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}
-									>
-										<td
-											style={{
-												padding: "0.4rem",
-												fontFamily: "var(--font-mono)",
-											}}
-										>
-											{l.time}
-										</td>
-										<td style={{ padding: "0.4rem" }}>{l.type}</td>
-										<td
-											style={{
-												padding: "0.4rem",
-												fontFamily: "var(--font-mono)",
-											}}
-										>
-											{l.ref}
-										</td>
-										<td
-											style={{ padding: "0.4rem", color: "var(--text-muted)" }}
-										>
-											{l.desc}
-										</td>
-										<td
-											style={{ padding: "0.4rem", color: "var(--color-admin)" }}
-										>
+									<tr key={l.id} className="ledger-row">
+										<td className="ledger-td ledger-time">{l.time}</td>
+										<td className="ledger-td">{l.type}</td>
+										<td className="ledger-td ledger-ref">{l.ref}</td>
+										<td className="ledger-td ledger-desc">{l.desc}</td>
+										<td className="ledger-td ledger-debit">
 											{l.debit > 0 ? `$${l.debit.toFixed(2)}` : ""}
 										</td>
-										<td
-											style={{
-												padding: "0.4rem",
-												color: "var(--color-customer)",
-											}}
-										>
+										<td className="ledger-td ledger-credit">
 											{l.credit > 0 ? `$${l.credit.toFixed(2)}` : ""}
 										</td>
 									</tr>

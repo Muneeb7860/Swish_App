@@ -142,45 +142,33 @@ export default function InventoryApp({
 							style={{
 								display: "flex",
 								flexDirection: "column",
-								gap: "0.5rem",
+								gap: "0.6rem",
 								margin: "1rem 0",
 							}}
 						>
 							{orderItems.map((item) => (
 								<div
 									key={item.id}
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: "0.5rem",
-										padding: "0.5rem",
-										background: "rgba(255,255,255,0.01)",
-										border: "1px solid var(--border-color)",
-										borderRadius: "6px",
-									}}
+									className={`picking-item-row ${item.checked ? "checked" : "pending"}`}
 								>
 									<input
 										type="checkbox"
 										id={item.id}
+										className="picking-checkbox"
 										checked={item.checked}
 										onChange={() => handleToggleCheck(item.id)}
-										style={{
-											accentColor: "var(--color-inventory)",
-											cursor: "pointer",
-										}}
 									/>
-									<label
-										htmlFor={item.id}
-										style={{
-											fontSize: "0.8rem",
-											color: item.checked
-												? "var(--text-muted)"
-												: "var(--text-primary)",
-											textDecoration: item.checked ? "line-through" : "none",
-											cursor: "pointer",
-										}}
-									>
-										{item.qty}x {item.name}
+									<label htmlFor={item.id} className="picking-label">
+										<span className="checkbox-custom">
+											{item.checked ? (
+												<Lucide.CheckSquare size={16} className="text-inventory" />
+											) : (
+												<Lucide.Square size={16} />
+											)}
+										</span>
+										<span className="item-text">
+											{item.qty}x {item.name}
+										</span>
 									</label>
 								</div>
 							))}
@@ -192,26 +180,27 @@ export default function InventoryApp({
 								className="btn-primary-glow"
 								style={{
 									background: "var(--color-inventory)",
-									color: "#ffffff",
+									color: "#070a13",
 									border: "none",
-									padding: "0.5rem 1rem",
+									padding: "0.65rem 1rem",
 									width: "100%",
 									cursor: "pointer",
 									fontWeight: "bold",
+									borderRadius: "8px"
 								}}
 								onClick={() => {
 									setCheckedItems({});
 									handlePickerHandover();
 								}}
 							>
-								Handover Cargo to Dispatch Rider
+								🚀 Handover Cargo to Dispatch Rider
 							</button>
 						)}
 					</div>
 				)}
 
 				{/* Store capacity and balancing */}
-				<div className="glass-card" style={{ padding: "1rem" }}>
+				<div className="glass-card" style={{ padding: "1.25rem" }}>
 					<div
 						style={{
 							display: "flex",
@@ -222,8 +211,9 @@ export default function InventoryApp({
 					>
 						<h4 style={{ fontWeight: 800 }}>Dark Store Inventory Imbalances</h4>
 						<button
+							aria-label="Balance Stores Inventory"
 							className="btn-secondary-glow"
-							style={{ fontSize: "0.75rem", cursor: "pointer" }}
+							style={{ fontSize: "0.75rem", cursor: "pointer", padding: "0.35rem 0.75rem" }}
 							onClick={handleBalanceStores}
 						>
 							Balance Stores Inventory
@@ -235,43 +225,23 @@ export default function InventoryApp({
 							style={{
 								display: "flex",
 								flexDirection: "column",
-								gap: "0.5rem",
+								gap: "0.75rem",
 								marginTop: "1rem",
 							}}
 						>
 							{activeStockTransfers.map((tr) => (
-								<div
-									key={tr.id}
-									style={{
-										background: "rgba(255,255,255,0.01)",
-										border: "1px solid var(--border-color)",
-										padding: "0.5rem",
-										borderRadius: "6px",
-									}}
-								>
-									<span
-										style={{
-											fontSize: "0.7rem",
-											color: "var(--text-secondary)",
-										}}
-									>
-										INTER-STORE TRANSFER TRUCK: {tr.itemName}
-									</span>
-									<div
-										style={{
-											background: "#020408",
-											height: "6px",
-											borderRadius: "99px",
-											marginTop: "0.25rem",
-											overflow: "hidden",
-										}}
-									>
+								<div key={tr.id} className="transfer-card">
+									<div className="transfer-header">
+										<div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+											<Lucide.Truck size={14} className="text-inventory" />
+											<span className="transfer-title">INTER-STORE TRANSFER: {tr.itemName}</span>
+										</div>
+										<span className="transfer-progress-pct">{tr.progress}%</span>
+									</div>
+									<div className="transfer-bar-outer">
 										<div
-											style={{
-												background: "var(--color-inventory)",
-												height: "100%",
-												width: `${tr.progress}%`,
-											}}
+											className="transfer-bar-inner"
+											style={{ width: `${tr.progress}%` }}
 										/>
 									</div>
 								</div>
@@ -291,7 +261,7 @@ export default function InventoryApp({
 				}}
 			>
 				{/* Picking Queue Management */}
-				<div className="glass-card" style={{ padding: "1rem" }}>
+				<div className="glass-card" style={{ padding: "1.25rem" }}>
 					<h4 style={{ fontWeight: 800, marginBottom: "0.5rem" }}>
 						Picking Queue Manager
 					</h4>
@@ -300,7 +270,7 @@ export default function InventoryApp({
 							fontSize: "0.75rem",
 							display: "flex",
 							flexDirection: "column",
-							gap: "0.5rem",
+							gap: "0.55rem",
 							margin: "0.75rem 0",
 						}}
 					>
@@ -314,6 +284,7 @@ export default function InventoryApp({
 							Picking Mode:{" "}
 							<span
 								style={{
+									fontWeight: "bold",
 									color: activePickingCongested
 										? "var(--color-admin)"
 										: "var(--color-customer)",
@@ -329,13 +300,15 @@ export default function InventoryApp({
 							className="btn-primary-glow"
 							style={{
 								background: "var(--color-inventory)",
-								color: "#ffffff",
+								color: "#070a13",
 								border: "none",
-								padding: "0.5rem",
+								padding: "0.55rem",
 								width: "100%",
 								fontSize: "0.75rem",
 								cursor: "pointer",
 								fontWeight: "bold",
+								borderRadius: "6px",
+								marginTop: "0.5rem"
 							}}
 							onClick={handleDeployBackupPicker}
 						>
