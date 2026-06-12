@@ -1978,6 +1978,65 @@
         }
       ],
       "description": "Human-in-the-loop items awaiting supervisor review \u2014 unified B2B procurement overrides + agent escalations (Phase 8). Non-zero means decisions are queued for a human."
+    },
+    {
+      "id": 76,
+      "type": "stat",
+      "title": "🔌 RAG Breaker Trips (24h)",
+      "description": "Number of times the RAG circuit breakers (database or embedding) tripped in the last 24 hours.",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 133
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(rag_circuit_breaker_tripped_total{job=\"governance\"}[24h])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }

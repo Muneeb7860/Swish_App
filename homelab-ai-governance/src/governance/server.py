@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from governance.pipeline import execute_pipeline
+from governance.stubs.memory_mesh import MemoryMesh
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -71,3 +73,15 @@ def govern(req: GovernRequest) -> dict[str, Any]:
 def health() -> dict[str, str]:
     """Check service health."""
     return {"status": "UP"}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> str:
+    """Expose Prometheus-formatted metrics."""
+    lines = [
+        "# HELP rag_circuit_breaker_tripped_total Total number of RAG circuit breaker trips.",
+        "# TYPE rag_circuit_breaker_tripped_total counter",
+        f'rag_circuit_breaker_tripped_total{{type="db"}} {MemoryMesh.db_breaker_trips}',
+        f'rag_circuit_breaker_tripped_total{{type="embedding"}} {MemoryMesh.embedding_breaker_trips}',
+    ]
+    return "\n".join(lines) + "\n"

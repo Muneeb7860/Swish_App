@@ -164,3 +164,16 @@ groups:
             MasterOrchestratorService fired the $5/day budget cap on {{ $labels.instance }}.
             Subsequent customer requests are being routed to the HITL queue.
             Check token cost per request and consider increasing the daily budget limit.
+
+      - alert: RagCircuitBreakerTripped
+        expr: |
+          increase(rag_circuit_breaker_tripped_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: ai
+        annotations:
+          summary: "RAG circuit breaker tripped on {{ $labels.job }}"
+          description: >-
+            A RAG circuit breaker tripped (type={{ $labels.type }}) in the AI Governance pipeline.
+            Database or Ollama embedding service is degraded.

@@ -47,6 +47,10 @@ class MemoryMesh:
     _embedding_failed_time: float | None = None
     _cooldown_duration: float = 30.0
 
+    # Expose counters for circuit breaker trips
+    db_breaker_trips: int = 0
+    embedding_breaker_trips: int = 0
+
     def __init__(self):
         try:
             config = load_routing_config()
@@ -147,6 +151,7 @@ class MemoryMesh:
         except Exception as e:
             logger.warning("MemoryMesh: RAG query execution failed (%s). Tripping DB circuit breaker. Falling back to in-memory stubs.", e)
             MemoryMesh._db_failed_time = time.time()
+            MemoryMesh.db_breaker_trips += 1
             return self._retrieve_fallbacks(query)
         finally:
             if conn and MemoryMesh._pool:
@@ -195,9 +200,11 @@ class MemoryMesh:
                 else:
                     logger.error("MemoryMesh: embedding generation response error status %s. Tripping embedding circuit breaker.", res.status_code)
                     MemoryMesh._embedding_failed_time = time.time()
+                    MemoryMesh.embedding_breaker_trips += 1
         except Exception as e:
             logger.error("MemoryMesh: embedding generation error: %s. Tripping embedding circuit breaker.", e)
             MemoryMesh._embedding_failed_time = time.time()
+            MemoryMesh.embedding_breaker_trips += 1
         return None
 
     def _init_db(self, conn: psycopg2.extensions.connection) -> None:
