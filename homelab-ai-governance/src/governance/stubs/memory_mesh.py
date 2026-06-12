@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any
 import httpx
@@ -49,7 +50,7 @@ class MemoryMesh:
             config = load_routing_config()
             rag_config = config.get("rag", {})
             self.enabled = rag_config.get("enabled", False)
-            self.database_url = rag_config.get("database_url", "postgresql://letta:lettapassword@localhost:5434/letta")
+            self.database_url = os.getenv("SWISH_RAG_DATABASE_URL", rag_config.get("database_url", "postgresql://letta:lettapassword@localhost:5434/letta"))
             self.embedding_model = rag_config.get("embedding_model", "nomic-embed-text:latest")
             self.embedding_url = rag_config.get("embedding_url", "http://localhost:11434/api/embeddings")
             self.similarity_threshold = rag_config.get("similarity_threshold", 0.60)
