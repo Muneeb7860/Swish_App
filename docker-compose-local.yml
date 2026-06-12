@@ -180,13 +180,36 @@ services:
         limits:
           memory: 384M
 
+  # OpenTelemetry Collector — single tracing hub (Epic 2.5). Owns the host OTLP
+  # ports (4317/4318); the host-run Java backend and Python governance service
+  # both export here, and it fans out to Zipkin (unified trace) + Phoenix (LLM).
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./infrastructure/otel-collector/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - zipkin
+      - phoenix
+    networks:
+      - hybrid-net
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
   phoenix:
     image: arizephoenix/phoenix:latest
     container_name: phoenix
+    # OTLP ports are no longer host-published — the collector now owns 4317/4318
+    # on the host and forwards to phoenix:4317 over the internal compose network.
+    # 6006 stays exposed for the Phoenix LLM-trace UI.
     ports:
       - "6006:6006"
-      - "4317:4317"
-      - "4318:4318"
     environment:
       PHOENIX_PORT: 6006
       PHOENIX_GRPC_PORT: 4317
