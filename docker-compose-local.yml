@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-adminpassword}
       POSTGRES_DB: ${DB_NAME:-b2b_qcomm}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
@@ -24,10 +24,10 @@ services:
     image: redis/redis-stack:latest
     container_name: redis-stack
     environment:
-      REDIS_ARGS: "--notify-keyspace-events Ex --appendonly yes --appendfsync everysec"
+      REDIS_ARGS: "--notify-keyspace-events Ex --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD:-redissecurepassword}"
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:8001:8001"
     volumes:
       - redisdata:/data
     networks:
@@ -44,9 +44,10 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-adminpassword}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodata:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - hybrid-net
     deploy:
@@ -169,7 +170,7 @@ services:
       POSTGRES_PASSWORD: temporalpassword
       POSTGRES_DB: temporal
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - temporal_pgdata:/var/lib/postgresql/data
     networks:
@@ -209,7 +210,7 @@ services:
       POSTGRES_PASSWORD: lettapassword
       POSTGRES_DB: letta
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - letta_pgdata:/var/lib/postgresql/data
     networks:
