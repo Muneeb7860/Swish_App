@@ -77,7 +77,7 @@ export default function AdminPanel({
 				<div
 					className="glass-card"
 					style={{
-						padding: "1rem",
+						padding: "1.25rem",
 						borderLeft: "3px solid var(--color-admin)",
 					}}
 				>
@@ -88,196 +88,149 @@ export default function AdminPanel({
 							display: "flex",
 							alignItems: "center",
 							gap: "0.4rem",
+							marginBottom: "0.5rem",
 						}}
 					>
 						<Lucide.Flame size={18} />
 						Chaos Engineering Control Desk
 					</h3>
-					<p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+					<p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1rem" }}>
 						Inject database latency spikes, telemetry geofencing mismatches,
 						cold chain warming anomalies, wholesaler fallbacks, or gateway
 						outages.
 					</p>
 
-					<div
-						style={{
-							display: "flex",
-							flexDirection: "column",
-							gap: "0.75rem",
-							marginTop: "1.25rem",
-						}}
-					>
+					<div className="chaos-switches-container">
 						{/* Cold Chain Breakdown Switch */}
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								background: "rgba(255,255,255,0.01)",
-								border: "1px solid var(--border-color)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-							}}
-						>
-							<div>
-								<span style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
 									Simulate Perishable Cold Chain Outage
 								</span>
-								<div
-									style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-								>
+								<div className="chaos-switch-desc">
 									Cargo container warms up by +1.8°C/s in transit.
 								</div>
 							</div>
-							<input
-								type="checkbox"
-								checked={coldChainBreakdownActive}
-								onChange={(e) => setColdChainBreakdownActive(e.target.checked)}
-								style={{
-									accentColor: "var(--color-admin)",
-									scale: "1.2",
-									cursor: "pointer",
-								}}
-							/>
+							<div>
+								<input
+									id="switch-cold-chain"
+									type="checkbox"
+									className="switch-input"
+									checked={coldChainBreakdownActive}
+									onChange={(e) => setColdChainBreakdownActive(e.target.checked)}
+								/>
+								<label htmlFor="switch-cold-chain" className="switch-label"></label>
+							</div>
 						</div>
 
 						{/* Wholesaler Outage Switch */}
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								background: "rgba(255,255,255,0.01)",
-								border: "1px solid var(--border-color)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-							}}
-						>
-							<div>
-								<span style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
 									Simulate Primary Wholesaler Supplier Outage
 								</span>
-								<div
-									style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-								>
-									B2B restocks route to Secondary supplier ($35 surcharge, -20
-									trust).
+								<div className="chaos-switch-desc">
+									B2B restocks route to Secondary supplier ($35 surcharge, -20 trust).
 								</div>
 							</div>
-							<input
-								type="checkbox"
-								checked={wholesalerOutageActive}
-								onChange={(e) => setWholesalerOutageActive(e.target.checked)}
-								style={{
-									accentColor: "var(--color-admin)",
-									scale: "1.2",
-									cursor: "pointer",
-								}}
-							/>
+							<div>
+								<input
+									id="switch-wholesaler-outage"
+									type="checkbox"
+									className="switch-input"
+									checked={wholesalerOutageActive}
+									onChange={(e) => setWholesalerOutageActive(e.target.checked)}
+								/>
+								<label htmlFor="switch-wholesaler-outage" className="switch-label"></label>
+							</div>
 						</div>
 
 						{/* Payment Outage Switch */}
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								background: "rgba(255,255,255,0.01)",
-								border: "1px solid var(--border-color)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-							}}
-						>
-							<div>
-								<span style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
 									Simulate Payment Gateways Down
 								</span>
-								<div
-									style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-								>
-									Triggers gateway failover chain: Swipe ➔ PayPal ➔ Cash on
-									Delivery (COD).
+								<div className="chaos-switch-desc">
+									Triggers gateway failover chain: Swipe ➔ PayPal ➔ COD.
 								</div>
 							</div>
-							<input
-								type="checkbox"
-								checked={paymentOutageActive}
-								onChange={(e) => setPaymentOutageActive(e.target.checked)}
-								style={{
-									accentColor: "var(--color-admin)",
-									scale: "1.2",
-									cursor: "pointer",
-								}}
-							/>
+							<div>
+								<input
+									id="switch-payment-outage"
+									type="checkbox"
+									className="switch-input"
+									checked={paymentOutageActive}
+									onChange={(e) => setPaymentOutageActive(e.target.checked)}
+								/>
+								<label htmlFor="switch-payment-outage" className="switch-label"></label>
+							</div>
 						</div>
 
 						{/* Geotag Fraud Switch */}
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								background: "rgba(255,255,255,0.01)",
-								border: "1px solid var(--border-color)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-							}}
-						>
-							<div>
-								<span style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
 									Simulate GPS Geotag / Proximity Fraud
 								</span>
-								<div
-									style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-								>
+								<div className="chaos-switch-desc">
 									Fails telemetry refund check, blocking refund bot triggers.
 								</div>
 							</div>
-							<input
-								type="checkbox"
-								checked={simulateTelemetryFraud}
-								onChange={(e) => setSimulateTelemetryFraud(e.target.checked)}
-								style={{
-									accentColor: "var(--color-admin)",
-									scale: "1.2",
-									cursor: "pointer",
-								}}
-							/>
+							<div>
+								<input
+									id="switch-telemetry-fraud"
+									type="checkbox"
+									className="switch-input"
+									checked={simulateTelemetryFraud}
+									onChange={(e) => setSimulateTelemetryFraud(e.target.checked)}
+								/>
+								<label htmlFor="switch-telemetry-fraud" className="switch-label"></label>
+							</div>
 						</div>
 
 						{/* DB latency switch */}
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								background: "rgba(255,255,255,0.01)",
-								border: "1px solid var(--border-color)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-							}}
-						>
-							<div>
-								<span style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
 									Inject Database Latency Spike
 								</span>
-								<div
-									style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-								>
-									Simulates BFF database latency. Hystrix circuit breaker caches
-									results.
+								<div className="chaos-switch-desc">
+									Simulates BFF database latency. Circuit breaker caches results.
 								</div>
 							</div>
-							<input
-								type="checkbox"
-								checked={dbLatencyActive}
-								onChange={(e) => setDbLatencyActive(e.target.checked)}
-								style={{
-									accentColor: "var(--color-admin)",
-									scale: "1.2",
-									cursor: "pointer",
-								}}
-							/>
+							<div>
+								<input
+									id="switch-db-latency"
+									type="checkbox"
+									className="switch-input"
+									checked={dbLatencyActive}
+									onChange={(e) => setDbLatencyActive(e.target.checked)}
+								/>
+								<label htmlFor="switch-db-latency" className="switch-label"></label>
+							</div>
+						</div>
+
+						{/* Rider Traffic Congestion Switch */}
+						<div className="chaos-switch-row">
+							<div className="chaos-switch-info">
+								<span className="chaos-switch-label">
+									Simulate Rider Traffic Congestion
+								</span>
+								<div className="chaos-switch-desc">
+									Heavy traffic congestion delays route completions.
+								</div>
+							</div>
+							<div>
+								<input
+									id="switch-rider-traffic"
+									type="checkbox"
+									className="switch-input"
+									checked={riderTrafficActive}
+									onChange={(e) => setRiderTrafficActive(e.target.checked)}
+								/>
+								<label htmlFor="switch-rider-traffic" className="switch-label"></label>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -293,7 +246,7 @@ export default function AdminPanel({
 				}}
 			>
 				{/* Onboarding queue */}
-				<div className="glass-card" style={{ padding: "1rem" }}>
+				<div className="glass-card" style={{ padding: "1.25rem" }}>
 					<h4 style={{ fontWeight: 800, marginBottom: "0.5rem" }}>
 						Onboarding Verification Desk (3-Level Checks)
 					</h4>
@@ -316,8 +269,8 @@ export default function AdminPanel({
 									style={{
 										background: "rgba(255,255,255,0.01)",
 										border: "1px solid var(--border-color)",
-										padding: "0.5rem",
-										borderRadius: "6px",
+										padding: "0.75rem",
+										borderRadius: "10px",
 									}}
 								>
 									<div
@@ -326,73 +279,47 @@ export default function AdminPanel({
 											justifyContent: "space-between",
 											fontSize: "0.75rem",
 											fontWeight: 700,
+											marginBottom: "0.5rem"
 										}}
 									>
 										<span>{app.name}</span>
-										<span style={{ color: "var(--color-admin)" }}>
+										<span style={{ color: "var(--color-admin)", fontFamily: "var(--font-mono)", fontSize: "0.65rem" }}>
 											{app.type.toUpperCase()}
 										</span>
 									</div>
 									<div
 										style={{
 											display: "flex",
-											gap: "0.25rem",
+											gap: "0.35rem",
 											marginTop: "0.5rem",
 										}}
 									>
 										<button
-											className={`btn-secondary-glow`}
-											style={{
-												flex: 1,
-												fontSize: "0.65rem",
-												padding: "0.2rem",
-												background: app.approvals.l1
-													? "rgba(16, 185, 129, 0.1)"
-													: "transparent",
-												color: app.approvals.l1
-													? "var(--color-customer)"
-													: "var(--text-primary)",
-											}}
+											aria-label="Approve L1 ID"
+											className={`onboard-step-btn ${app.approvals.l1 ? 'approved' : 'pending'}`}
 											onClick={() => handleApproveOnboard(app.id, "l1")}
 											disabled={app.approvals.l1}
 										>
-											L1 ID
+											{app.approvals.l1 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											<span>L1 ID</span>
 										</button>
 										<button
-											className={`btn-secondary-glow`}
-											style={{
-												flex: 1,
-												fontSize: "0.65rem",
-												padding: "0.2rem",
-												background: app.approvals.l2
-													? "rgba(16, 185, 129, 0.1)"
-													: "transparent",
-												color: app.approvals.l2
-													? "var(--color-customer)"
-													: "var(--text-primary)",
-											}}
+											aria-label="Approve L2 Vehicle"
+											className={`onboard-step-btn ${app.approvals.l2 ? 'approved' : 'pending'}`}
 											onClick={() => handleApproveOnboard(app.id, "l2")}
 											disabled={app.approvals.l2}
 										>
-											L2 Vehicle
+											{app.approvals.l2 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											<span>L2 Vehicle</span>
 										</button>
 										<button
-											className={`btn-secondary-glow`}
-											style={{
-												flex: 1,
-												fontSize: "0.65rem",
-												padding: "0.2rem",
-												background: app.approvals.l3
-													? "rgba(16, 185, 129, 0.1)"
-													: "transparent",
-												color: app.approvals.l3
-													? "var(--color-customer)"
-													: "var(--text-primary)",
-											}}
+											aria-label="Approve L3 Background"
+											className={`onboard-step-btn ${app.approvals.l3 ? 'approved' : 'pending'}`}
 											onClick={() => handleApproveOnboard(app.id, "l3")}
 											disabled={app.approvals.l3}
 										>
-											L3 Background
+											{app.approvals.l3 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											<span>L3 BG</span>
 										</button>
 									</div>
 								</div>
@@ -405,6 +332,7 @@ export default function AdminPanel({
 									fontSize: "0.7rem",
 									color: "var(--text-muted)",
 									textAlign: "center",
+									padding: "1rem 0"
 								}}
 							>
 								No pending applications
@@ -414,7 +342,7 @@ export default function AdminPanel({
 				</div>
 
 				{/* HITL Queue */}
-				<div className="glass-card" style={{ padding: "1rem" }}>
+				<div className="glass-card" style={{ padding: "1.25rem" }}>
 					<h4 style={{ fontWeight: 800, marginBottom: "0.5rem" }}>
 						Human-in-the-Loop (HITL) Queue
 					</h4>
@@ -422,7 +350,7 @@ export default function AdminPanel({
 						style={{
 							display: "flex",
 							flexDirection: "column",
-							gap: "0.5rem",
+							gap: "0.75rem",
 							marginTop: "0.75rem",
 						}}
 					>
@@ -438,6 +366,7 @@ export default function AdminPanel({
 									fontSize: "0.7rem",
 									color: "var(--text-muted)",
 									textAlign: "center",
+									padding: "1rem 0"
 								}}
 							>
 								No pending approvals
@@ -449,8 +378,8 @@ export default function AdminPanel({
 									style={{
 										background: "rgba(255,255,255,0.01)",
 										border: "1px solid var(--border-color)",
-										padding: "0.5rem",
-										borderRadius: "6px",
+										padding: "0.75rem",
+										borderRadius: "10px",
 										fontSize: "0.75rem",
 									}}
 								>
@@ -459,47 +388,36 @@ export default function AdminPanel({
 											display: "flex",
 											justifyContent: "space-between",
 											fontWeight: 700,
+											marginBottom: "0.25rem"
 										}}
 									>
-										<span>{ticket.type.toUpperCase()}</span>
-										<span>${ticket.amount.toFixed(2)}</span>
+										<span style={{ color: "var(--color-admin)" }}>{ticket.type.toUpperCase()}</span>
+										<span style={{ fontFamily: "var(--font-mono)", color: "var(--color-customer)" }}>${ticket.amount.toFixed(2)}</span>
 									</div>
-									<p style={{ color: "var(--text-muted)", margin: "0.2rem 0" }}>
+									<p style={{ color: "var(--text-muted)", margin: "0.3rem 0 0.6rem 0", fontSize: "0.7rem", lineHeight: "1.4" }}>
 										{ticket.desc}
 									</p>
 									<div
 										style={{
 											display: "flex",
 											gap: "0.5rem",
-											marginTop: "0.4rem",
 										}}
 									>
-										<button type="button"
-											className="btn-primary-glow"
-											style={{
-												flex: 1,
-												padding: "0.25rem",
-												border: "none",
-												background: "var(--color-customer)",
-												color: "#ffffff",
-												cursor: "pointer",
-											}}
+										<button
+											type="button"
+											className="btn-primary-glow hitl-btn-approve"
 											onClick={() => handleReleaseHitl(ticket)}
 										>
-											Approve Release
+											<Lucide.CheckCircle size={13} />
+											<span>Approve Release</span>
 										</button>
-										<button type="button"
-											className="btn-secondary-glow"
-											style={{
-												flex: 1,
-												padding: "0.25rem",
-												color: "var(--color-admin)",
-												borderColor: "var(--color-admin)",
-												cursor: "pointer",
-											}}
+										<button
+											type="button"
+											className="btn-secondary-glow hitl-btn-void"
 											onClick={() => handleVoidHitl(ticket)}
 										>
-											Void Ticket
+											<Lucide.XCircle size={13} />
+											<span>Void Ticket</span>
 										</button>
 									</div>
 								</div>

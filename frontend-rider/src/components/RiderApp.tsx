@@ -72,14 +72,14 @@ export default function RiderApp({
 					>
 						<input
 							type="text"
-							className="search-input"
+							className="rider-form-input"
 							placeholder="Full Legal Name"
 							value="Rider Dave"
 							readOnly
 						/>
 						<input
 							type="text"
-							className="search-input"
+							className="rider-form-input"
 							placeholder="Vehicle Registration"
 							value="Electric Cargo E-Bike (Model S)"
 							readOnly
@@ -131,411 +131,234 @@ export default function RiderApp({
 			)}
 
 			{riderOnboardStatus === "active" && (
-				<div style={{ display: "flex", gap: "1.25rem" }}>
-					{/* Main Rider Console */}
-					<div
-						style={{
-							flex: 2,
-							display: "flex",
-							flexDirection: "column",
-							gap: "1.25rem",
-						}}
-					>
-						<div
-							className="glass-card"
-							style={{
-								padding: "1rem",
-								borderLeft: "3px solid var(--color-rider)",
-							}}
-						>
-							<div
-								style={{
-									display: "flex",
-									justifyContent: "space-between",
-									alignItems: "center",
-								}}
-							>
-								<h3 style={{ fontWeight: 800 }}>Rider Operations Console</h3>
-								<div
-									style={{ display: "flex", gap: "1rem", fontSize: "0.8rem" }}
-								>
-									<span>
-										⭐ Trust Rating:{" "}
-										<strong style={{ color: "var(--color-rider)" }}>
-											{riderTrustScore}/100
-										</strong>
-									</span>
-									<span>
-										Wallet Balance:{" "}
-										<strong style={{ color: "var(--color-rider)" }}>
-											${riderWallet.toFixed(2)}
-										</strong>
-									</span>
+				<div className="rider-bento-grid">
+					{/* Card 1: Operations Header Banner */}
+					<div className="glass-card bento-card span-full rider-header-banner">
+						<div className="banner-content">
+							<div className="banner-badge">OPERATIONS HUB</div>
+							<h3 className="banner-title">Rider Control Console</h3>
+							<p className="banner-subtitle">
+								Active Operator: <strong>Rider Dave</strong> | Node ID: <strong>CH-RIDER-839</strong>
+							</p>
+						</div>
+						<div className="banner-status">
+							<span className="status-pulse-green"></span>
+							<span className="status-text">SYSTEM ONLINE</span>
+						</div>
+					</div>
+
+					{/* Card 2: Wallet Balance Widget */}
+					<div className="glass-card bento-card rider-wallet-card">
+						<div className="card-header-icon text-rider">
+							<Lucide.Wallet size={18} />
+							<span className="card-header-label">WALLET ACCOUNT</span>
+						</div>
+						<div className="wallet-balance-container">
+							<span className="wallet-currency">$</span>
+							<span className="wallet-amount">{riderWallet.toFixed(2)}</span>
+						</div>
+						<div className="wallet-chip-line">
+							<div className="wallet-chip"></div>
+							<div className="wallet-card-brand">SWISH PAY</div>
+						</div>
+						<div className="wallet-footer">
+							<span className="wallet-status-indicator">● Auto-Payout Active</span>
+							<button className="wallet-mini-btn" onClick={() => logKafka && logKafka("rider", "wallet.payout_inquiry", "Rider Dave requested instant payout simulation.")}>Details</button>
+						</div>
+					</div>
+
+					{/* Card 3: Trust Rating Widget */}
+					<div className="glass-card bento-card rider-trust-card">
+						<div className="card-header-icon text-rider">
+							<Lucide.ShieldCheck size={18} />
+							<span className="card-header-label">TRUST INDEX</span>
+						</div>
+						<div className="trust-radial-container">
+							<div className="trust-radial-circle" style={{ '--progress-pct': `${riderTrustScore}%` } as React.CSSProperties}>
+								<div className="trust-radial-inner">
+									<span className="trust-score-num">{riderTrustScore}</span>
+									<span className="trust-score-denom">/100</span>
 								</div>
 							</div>
 						</div>
+						<div className="trust-badge-status">
+							<span className="trust-badge-label">ELITE COURIER</span>
+							<span className="trust-badge-desc">Premium order priority granted</span>
+						</div>
+					</div>
 
-						{/* Active order transit status */}
+					{/* Card 4: Active Dispatch Transit Status (Spans 2 columns if order active, else 1) */}
+					<div className={`glass-card bento-card ${activeOrder ? 'span-2' : 'span-1'} rider-transit-card`}>
+						<div className="card-header-icon text-rider">
+							<Lucide.Bike size={18} />
+							<span className="card-header-label">LIVE DISPATCH</span>
+						</div>
+						
 						{!activeOrder ? (
-							<div
-								className="glass-card"
-								style={{
-									padding: "2rem",
-									textAlign: "center",
-									color: "var(--text-muted)",
-								}}
-							>
-								<Lucide.Bike
-									size={32}
-									style={{ opacity: 0.3, marginBottom: "0.5rem" }}
-								/>
-								<span style={{ fontSize: "0.75rem" }}>
-									Rider Dave is standby in Central Dark Store. Awaiting customer
-									dispatches...
-								</span>
+							<div className="transit-standby-view">
+								<div className="standby-pulse-icon">
+									<Lucide.Bike size={32} className="bike-standby-icon" />
+								</div>
+								<h4 className="standby-title">Central Store Standby</h4>
+								<p className="standby-desc">Awaiting grocery dispatch dispatches from Swiss regional logistics gateway...</p>
 							</div>
 						) : (
-							<div className="glass-card" style={{ padding: "1.25rem" }}>
-								<h4
-									style={{
-										fontWeight: 700,
-										color: "var(--color-rider)",
-										marginBottom: "0.75rem",
-									}}
-								>
-									LIVE TRANSIT DISPATCH: Order #{activeOrder.id} (
-									{activeOrder.status
-										? activeOrder.status.toUpperCase()
-										: "TRANSIT"}
-									)
-								</h4>
+							<div className="transit-active-view">
+								<div className="active-dispatch-header">
+									<span className="dispatch-order-id">ORDER #{activeOrder.id}</span>
+									<span className="dispatch-order-status">{activeOrder.status ? activeOrder.status.toUpperCase() : "TRANSIT"}</span>
+								</div>
 
-								<div
-									style={{
-										display: "flex",
-										gap: "1.25rem",
-										marginTop: "1rem",
-										flexDirection: "column",
-									}}
-								>
-									{activeOrder.status === "arrived" ? (
-										<div
-											className="glass-card"
-											style={{
-												padding: "1rem",
-												background: "rgba(16, 185, 129, 0.05)",
-												border: "1px dashed var(--color-rider)",
-												borderRadius: "8px",
-											}}
-										>
-											<h5
-												style={{
-													fontWeight: 800,
-													color: "var(--color-rider)",
-													display: "flex",
-													alignItems: "center",
-													gap: "0.5rem",
-													marginBottom: "0.5rem",
-												}}
-											>
-												<Lucide.CheckCircle size={18} /> 📍 Arrived at
-												Destination Doorstep!
-											</h5>
-											<p
-												style={{
-													fontSize: "0.7rem",
-													color: "var(--text-secondary)",
-													marginBottom: "1rem",
-												}}
-											>
-												Swiss regulatory compliance requires a cryptographic
-												Proof-of-Delivery (PoD) final handshake. Scan the
-												customer's QR code or upload a doorstep photo.
-											</p>
-
-											<div
-												style={{
-													display: "flex",
-													gap: "0.75rem",
-													marginBottom: "1rem",
-												}}
-											>
-												<button
-													className="btn-secondary-glow"
-													style={{
-														flex: 1,
-														fontSize: "0.75rem",
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "center",
-														gap: "0.25rem",
-														cursor: "pointer",
-														padding: "0.5rem",
-													}}
-													onClick={() => {
-														setProofType("photo");
-														setPodHash(
-															"PHOTO-SHA256-" +
-																Math.random()
-																	.toString(36)
-																	.substring(2, 15)
-																	.toUpperCase(),
-														);
-														if (logKafka)
-															logKafka(
-																"rider",
-																"pod.photo_captured",
-																`Rider Dave captured doorstep delivery verification photo.`,
-															);
-													}}
-												>
-													<Lucide.Camera size={14} /> Doorstep Photo
-												</button>
-												<button
-													className="btn-secondary-glow"
-													style={{
-														flex: 1,
-														fontSize: "0.75rem",
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "center",
-														gap: "0.25rem",
-														cursor: "pointer",
-														padding: "0.5rem",
-													}}
-													onClick={() => {
-														setProofType("qr");
-														setPodHash(
-															"QR-SHA256-" +
-																Math.random()
-																	.toString(36)
-																	.substring(2, 15)
-																	.toUpperCase(),
-														);
-														if (logKafka)
-															logKafka(
-																"rider",
-																"pod.qr_scanned",
-																`Rider Dave scanned customer receipt verification QR code.`,
-															);
-													}}
-												>
-													<Lucide.QrCode size={14} /> Scan QR Code
-												</button>
-											</div>
-
-											{podHash && (
-												<div
-													style={{
-														background: "#020408",
-														padding: "0.5rem",
-														borderRadius: "4px",
-														marginBottom: "1rem",
-														border: "1px solid rgba(255,255,255,0.05)",
-													}}
-												>
-													<div
-														style={{
-															display: "flex",
-															justifyContent: "space-between",
-															fontSize: "0.6rem",
-															color: "var(--text-muted)",
-														}}
-													>
-														<span>PROOF TYPE: {proofType.toUpperCase()}</span>
-														<span>STATUS: GENERATED</span>
-													</div>
-													<div
-														style={{
-															fontFamily: "var(--font-mono)",
-															fontSize: "0.65rem",
-															wordBreak: "break-all",
-															marginTop: "0.25rem",
-															color: "var(--color-rider)",
-														}}
-													>
-														{podHash}
-													</div>
-												</div>
-											)}
-
+								{activeOrder.status === "arrived" ? (
+									<div className="pod-completion-hub">
+										<div className="pod-header">
+											<Lucide.FileSignature size={16} className="text-rider" />
+											<span>Regulatory Handshake Proof Required</span>
+										</div>
+										<p className="pod-description">
+											Deliveries require a cryptographic proof-of-delivery. Scan the customer's QR or upload a doorstep validation photo.
+										</p>
+										<div className="pod-actions-row">
 											<button
-												className="btn-primary-glow"
-												disabled={!podHash}
-												style={{
-													width: "100%",
-													background: podHash
-														? "var(--color-rider)"
-														: "#27293d",
-													color: podHash ? "#070a13" : "var(--text-muted)",
-													border: "none",
-													padding: "0.6rem",
-													cursor: podHash ? "pointer" : "not-allowed",
-													fontWeight: 800,
-													fontSize: "0.75rem",
-												}}
+												aria-label="Button"
+												className="btn-secondary-glow pod-btn"
 												onClick={() => {
-													if (handleCompleteDelivery) {
-														handleCompleteDelivery(activeOrder, podHash);
-														setPodHash("");
-														setProofType("");
-													}
+													setProofType("photo");
+													setPodHash("PHOTO-SHA256-" + Math.random().toString(36).substring(2, 15).toUpperCase());
+													if (logKafka) logKafka("rider", "pod.photo_captured", "Rider Dave captured doorstep delivery verification photo.");
 												}}
 											>
-												🚀 Sign & Complete Delivery Handshake
+												<Lucide.Camera size={14} /> Doorstep Photo
+											</button>
+											<button
+												aria-label="Button"
+												className="btn-secondary-glow pod-btn"
+												onClick={() => {
+													setProofType("qr");
+													setPodHash("QR-SHA256-" + Math.random().toString(36).substring(2, 15).toUpperCase());
+													if (logKafka) logKafka("rider", "pod.qr_scanned", "Rider Dave scanned customer receipt verification QR code.");
+												}}
+											>
+												<Lucide.QrCode size={14} /> Scan QR Code
 											</button>
 										</div>
-									) : (
-										<div style={{ display: "flex", gap: "1.25rem" }}>
-											{/* Transit progress */}
-											<div style={{ flex: 1 }}>
-												<span
-													style={{
-														fontSize: "0.65rem",
-														fontWeight: 700,
-														color: "var(--text-secondary)",
-													}}
-												>
-													DELIVERY TRANSIT PROGRESS
-												</span>
-												<div
-													style={{
-														background: "#020408",
-														height: "10px",
-														borderRadius: "99px",
-														marginTop: "0.25rem",
-														overflow: "hidden",
-													}}
-												>
-													<div
-														style={{
-															background: "var(--color-rider)",
-															height: "100%",
-															width: `${activeOrder.progress || 0}%`,
-															transition: "width 0.5s ease",
-														}}
-													/>
-												</div>
-												<span
-													style={{
-														fontSize: "0.7rem",
-														color: "var(--text-muted)",
-														display: "block",
-														marginTop: "0.25rem",
-													}}
-												>
-													SLA Timer: {activeOrder.slaRemaining || 0}s remaining
-												</span>
-											</div>
 
-											{/* Cold Chain IoT telemetry block */}
-											{isPerishable && (
-												<div
-													style={{
-														flex: 1,
-														background: "rgba(255,255,255,0.01)",
-														border: "1px solid var(--border-color)",
-														borderRadius: "8px",
-														padding: "0.75rem",
-													}}
-												>
-													<div
-														style={{
-															display: "flex",
-															justifyContent: "space-between",
-															alignItems: "center",
-														}}
-													>
-														<span
-															style={{
-																fontSize: "0.65rem",
-																fontWeight: 700,
-																color: "var(--text-secondary)",
-															}}
-														>
-															IoT COLD CHAIN TEMP
-														</span>
-														{temp > 8.0 && (
-															<span
-																className="warning-flag"
-																style={{ animation: "pulse 1s infinite" }}
-															>
-																⚠️ OVERHEATING
-															</span>
-														)}
-													</div>
-													<div
-														style={{
-															fontSize: "1.5rem",
-															fontWeight: 800,
-															color:
-																temp > 8.0
-																	? "var(--color-admin)"
-																	: "var(--color-rider)",
-															fontFamily: "var(--font-mono)",
-															margin: "0.25rem 0",
-														}}
-													>
-														{temp.toFixed(1)} °C
-													</div>
-													{temp > 8.0 && (
-														<button
-															id="btn-inject-dry-ice"
-															className="btn-primary-glow"
-															style={{
-																background: "var(--color-rider)",
-																color: "#070a13",
-																border: "none",
-																padding: "0.3rem 0.5rem",
-																width: "100%",
-																fontSize: "0.7rem",
-																cursor: "pointer",
-																fontWeight: 800,
-															}}
-															onClick={handleInjectDryIce}
-														>
-															❄️ Inject Dry Ice ($2.00 Surcharge)
-														</button>
-													)}
+										{podHash && (
+											<div className="pod-hash-box">
+												<div className="hash-header">
+													<span>PROOF TYPE: {proofType.toUpperCase()}</span>
+													<span className="text-green">SIGNED</span>
 												</div>
-											)}
+												<div className="hash-value">{podHash}</div>
+											</div>
+										)}
+
+										<button
+											aria-label="Button"
+											className="btn-primary-glow pod-submit-btn"
+											disabled={!podHash}
+											style={{
+												background: podHash ? "var(--color-rider)" : "#27293d",
+												color: podHash ? "#070a13" : "var(--text-muted)",
+												cursor: podHash ? "pointer" : "not-allowed"
+											}}
+											onClick={() => {
+												if (handleCompleteDelivery) {
+													handleCompleteDelivery(activeOrder, podHash);
+													setPodHash("");
+													setProofType("");
+												}
+											}}
+										>
+											🚀 Sign & Complete Handshake
+										</button>
+									</div>
+								) : (
+									<div className="transit-progress-hub">
+										<div className="transit-meta-row">
+											<span className="transit-meta-item">ETA: 15 Mins SLA</span>
+											<span className="transit-meta-item">Remaining: {activeOrder.slaRemaining || 0}s</span>
 										</div>
-									)}
-								</div>
+										
+										<div className="transit-bar-outer">
+											<div className="transit-bar-inner" style={{ width: `${activeOrder.progress || 0}%` }}></div>
+										</div>
+										
+										<div className="transit-bar-caption">
+											<span>Route Progress</span>
+											<span>{activeOrder.progress || 0}%</span>
+										</div>
+									</div>
+								)}
 							</div>
 						)}
 					</div>
 
-					{/* Academy Certifications */}
-					<div
-						style={{
-							width: "280px",
-							display: "flex",
-							flexDirection: "column",
-							gap: "1.25rem",
-						}}
-					>
-						<div className="glass-card" style={{ padding: "1rem" }}>
-							<h4 style={{ fontWeight: 800, marginBottom: "0.5rem" }}>
-								Rider Training Hub
-							</h4>
-							<p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-								Complete courses on cargo handling, cold chain sensors, and
-								logistics security to earn certificates and bonuses.
-							</p>
-							<button
-								className="btn-secondary-glow"
-								style={{
-									width: "100%",
-									fontSize: "0.75rem",
-									marginTop: "0.75rem",
-									cursor: "pointer",
-								}}
-								onClick={() => generateCertificate("rider")}
-							>
-								View IoT Logistics Cert
-							</button>
+					{/* Card 5: Cold Chain IoT Telemetry */}
+					{isPerishable && (
+						<div className="glass-card bento-card rider-telemetry-card">
+							<div className="card-header-icon text-rider">
+								<Lucide.Thermometer size={18} />
+								<span className="card-header-label">COLD CHAIN TELEMETRY</span>
+							</div>
+							
+							<div className="telemetry-temp-display">
+								<span className={`temp-value ${temp > 8.0 ? 'text-alert' : 'text-cool'}`}>
+									{temp.toFixed(1)} <span className="temp-unit">°C</span>
+								</span>
+								{temp > 8.0 && (
+									<span className="warning-pill animate-pulse">⚠️ OVERHEATING</span>
+								)}
+							</div>
+
+							<div className="telemetry-sensor-details">
+								<div className="sensor-row">
+									<span className="sensor-label">Sensor Status</span>
+									<span className="sensor-value text-green">Online</span>
+								</div>
+								<div className="sensor-row">
+									<span className="sensor-label">Cargo Class</span>
+									<span className="sensor-value text-rider">Perishable</span>
+								</div>
+							</div>
+
+							{temp > 8.0 && (
+								<button
+									id="btn-inject-dry-ice"
+									className="btn-primary-glow dry-ice-btn"
+									onClick={handleInjectDryIce}
+								>
+									❄️ Inject Dry Ice ($2.00)
+								</button>
+							)}
 						</div>
+					)}
+
+					{/* Card 6: Academy & Certifications Widget */}
+					<div className="glass-card bento-card rider-academy-card">
+						<div className="card-header-icon text-rider">
+							<Lucide.Award size={18} />
+							<span className="card-header-label">TRAINING HUB</span>
+						</div>
+						<div className="academy-badge-display">
+							<div className="badge-hexagon">
+								<Lucide.Zap size={20} className="badge-icon-inner text-rider" />
+							</div>
+							<div className="badge-info">
+								<span className="badge-name">IoT Logistics Cert</span>
+								<span className="badge-status-completed">Active Certificate</span>
+							</div>
+						</div>
+						<p className="academy-desc">
+							Complete cargo safety training to unlock high-priority premium payouts.
+						</p>
+						<button
+							aria-label="Button"
+							className="btn-secondary-glow academy-btn"
+							onClick={() => generateCertificate("rider")}
+						>
+							View Certified Hash
+						</button>
 					</div>
 				</div>
 			)}
