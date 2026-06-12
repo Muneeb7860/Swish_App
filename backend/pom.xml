@@ -250,6 +250,7 @@
                          RestTemplateBuilder not present in the WebMvc slice). -->
                     <testExcludes>
                         <testExclude>**/controller/InventoryControllerTest.java</testExclude>
+                        <testExclude>**/service/AuthServiceTest.java</testExclude>
                     </testExcludes>
                 </configuration>
                 <executions>

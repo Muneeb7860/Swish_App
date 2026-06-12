@@ -192,6 +192,7 @@ jobs:
           SPRING_DATA_REDIS_PORT: "6379"
           ADMIN_EMAIL: ci-admin@swish.local
           ADMIN_PASSWORD: CiAdm1nP@ss!
+          DB_SSL_MODE: disable
         run: |
           mvn spring-boot:run \
             -Dspring-boot.run.jvmArguments="-Dserver.port=8083" \
