@@ -9,7 +9,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -1862,9 +1862,9 @@
       "type": "timeseries",
       "title": "Letta Memory Fallback Rate \u2014 Letta offline \u2192 direct LLM",
       "gridPos": {
-        "x": 0,
+        "x": 12,
         "y": 133,
-        "w": 24,
+        "w": 12,
         "h": 8
       },
       "datasource": {
@@ -1904,6 +1904,80 @@
         }
       ],
       "description": "Rate at which agents bypass Letta stateful memory and call the LLM directly. A spike indicates the Letta container is down \u2014 conversations lose multi-turn memory but stay functional (resilient fallback)."
+    },
+    {
+      "id": 75,
+      "type": "stat",
+      "title": "\ud83e\uddd1\u200d\u2696\ufe0f HITL Pending (supervisor queue)",
+      "gridPos": {
+        "x": 6,
+        "y": 133,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "hitl_pending_count{service=\"governance\"}",
+          "legendFormat": "pending",
+          "refId": "A"
+        }
+      ],
+      "description": "Human-in-the-loop items awaiting supervisor review \u2014 unified B2B procurement overrides + agent escalations (Phase 8). Non-zero means decisions are queued for a human."
     }
   ]
 }

@@ -4,6 +4,7 @@ import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ public class DynamicPricingAgentTest {
     @Mock
     private LlmGatewayPort llmGateway;
 
+    @Mock
+    private AgentOutPort agentOutPort;
+
     @Spy
     private PricingGuardrailsEngine pricingGuardrailsEngine = new PricingGuardrailsEngine();
 
@@ -38,6 +42,7 @@ public class DynamicPricingAgentTest {
         dynamicPricingAgent = new DynamicPricingAgent(
                 llmGateway,
                 pricingGuardrailsEngine,
+                agentOutPort,
                 executorService
         );
         // Inject a default SLA timeout value of 1000ms via reflection to match Spring @Value mapping in tests
