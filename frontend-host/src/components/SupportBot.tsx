@@ -56,6 +56,20 @@ const parseMarkdown = (text) => {
 	});
 };
 
+const isSafeUrl = (url: string | null | undefined): boolean => {
+	if (!url) return false;
+	const cleanUrl = url.trim().toLowerCase();
+	if (cleanUrl.startsWith("/") || cleanUrl.startsWith("./") || cleanUrl.startsWith("../")) {
+		return true;
+	}
+	try {
+		const parsed = new URL(url);
+		return ["http:", "https:"].includes(parsed.protocol);
+	} catch {
+		return false;
+	}
+};
+
 export default function SupportBot({
 	botOpen,
 	setBotOpen,
@@ -146,7 +160,7 @@ export default function SupportBot({
 							className={`ai-message ${msg.sender === "user" ? "ai-message-user" : "ai-message-bot"}`}
 						>
 							{parseMarkdown(msg.text)}
-							{msg.attachmentUrl && (
+							{msg.attachmentUrl && isSafeUrl(msg.attachmentUrl) && (
 								<img
 									src={msg.attachmentUrl}
 									className="ai-message-attachment"

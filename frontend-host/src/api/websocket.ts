@@ -156,6 +156,13 @@ export const useResilientWebSocket = (
 						return;
 					}
 					seenMessageIds.current.add(payload.id);
+					// Evict oldest elements if capacity exceeds 1000 items (sliding window protection)
+					if (seenMessageIds.current.size > 1000) {
+						const firstKey = seenMessageIds.current.keys().next().value;
+						if (firstKey !== undefined) {
+							seenMessageIds.current.delete(firstKey);
+						}
+					}
 				}
 
 				if (payload.type && payload.type !== "WELCOME") {

@@ -40,6 +40,22 @@ const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
 					`Security Exception: Untrusted MFE Remote origin blocked: ${url.origin}`,
 				);
 			}
+		} else {
+			// Hardening: If remote script not explicitly found, scan all DOM scripts to prevent evasion.
+			const untrustedScripts = scriptElements.filter((s) => {
+				if (!s.src) return false;
+				try {
+					const url = new URL(s.src);
+					return !MFE_WHITELIST.includes(url.hostname) && url.origin !== window.location.origin;
+				} catch {
+					return true;
+				}
+			});
+			if (untrustedScripts.length > 0) {
+				throw new Error(
+					`Security Exception: Untrusted scripts detected in DOM: ${untrustedScripts.map((s) => s.src).join(", ")}`,
+				);
+			}
 		}
 		return module;
 	});
@@ -467,6 +483,23 @@ export default function App() {
 	useEffect(() => {
 		// Start real-time Firebase syncing
 		syncProductsFromFirebase().catch(err => console.error("Firebase sync error:", err));
+
+		// Global cursor-tracking glow effect for glass-cards and glow-cards
+		const handleGlobalMouseMove = (e: MouseEvent) => {
+			const cards = document.querySelectorAll(".glow-card, .glass-card, .mfa-card, .auth-glass-form, .auth-bento-card");
+			cards.forEach((card: any) => {
+				const rect = card.getBoundingClientRect();
+				const x = e.clientX - rect.left;
+				const y = e.clientY - rect.top;
+				card.style.setProperty("--mouse-x", `${x}px`);
+				card.style.setProperty("--mouse-y", `${y}px`);
+			});
+		};
+
+		window.addEventListener("mousemove", handleGlobalMouseMove);
+		return () => {
+			window.removeEventListener("mousemove", handleGlobalMouseMove);
+		};
 	}, []);
 
 	useEffect(() => {

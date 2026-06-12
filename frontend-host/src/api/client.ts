@@ -1,7 +1,16 @@
 import { useStore } from "../store";
 
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-const SESSION_ID = "sess-" + Math.random().toString(36).substring(2, 11);
+const generateSecureSessionId = (): string => {
+	try {
+		const array = new Uint8Array(16);
+		window.crypto.getRandomValues(array);
+		return "sess-" + Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+	} catch (e) {
+		return "sess-" + Math.random().toString(36).substring(2, 15);
+	}
+};
+const SESSION_ID = generateSecureSessionId();
 
 interface FetchOptions extends RequestInit {
 	idempotencyKey?: string;
