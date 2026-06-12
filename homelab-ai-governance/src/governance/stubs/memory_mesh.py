@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import ThreadedConnectionPool
 
 from governance.config import load_routing_config
 
@@ -41,6 +42,7 @@ class MemoryMesh:
     Falls back gracefully to in-memory mock stubs if any errors occur.
     """
 
+    _pool: ThreadedConnectionPool | None = None
     _db_failed_time: float | None = None
     _embedding_failed_time: float | None = None
     _cooldown_duration: float = 30.0
@@ -54,6 +56,22 @@ class MemoryMesh:
             self.embedding_model = rag_config.get("embedding_model", "nomic-embed-text:latest")
             self.embedding_url = rag_config.get("embedding_url", "http://localhost:11434/api/embeddings")
             self.similarity_threshold = rag_config.get("similarity_threshold", 0.60)
+
+            # Initialize pool once at class level
+            if self.enabled and MemoryMesh._pool is None:
+                now = time.time()
+                if MemoryMesh._db_failed_time is None or (now - MemoryMesh._db_failed_time) >= self._cooldown_duration:
+                    try:
+                        MemoryMesh._pool = ThreadedConnectionPool(
+                            minconn=1,
+                            maxconn=10,
+                            dsn=self.database_url,
+                            connect_timeout=2
+                        )
+                        logger.info("MemoryMesh: database connection pool initialized successfully (maxconn=10).")
+                    except Exception as pool_err:
+                        logger.error("MemoryMesh: failed to initialize database connection pool: %s", pool_err)
+                        MemoryMesh._db_failed_time = time.time()
         except Exception as e:
             logger.warning("MemoryMesh: failed to load RAG config: %s. RAG disabled.", e)
             self.enabled = False
@@ -78,9 +96,16 @@ class MemoryMesh:
         
         conn = None
         try:
-            # 1. Connect to PG database
-            # We set connect_timeout to 2s to fail fast if DB is offline
-            conn = psycopg2.connect(self.database_url, connect_timeout=2)
+            # 1. Connect to PG database via pool
+            if MemoryMesh._pool is None:
+                # Attempt to initialize pool if it was previously failed/None
+                self.__init__()
+                if MemoryMesh._pool is None:
+                    logger.warning("MemoryMesh: connection pool is unavailable. Falling back to in-memory stubs.")
+                    MemoryMesh._db_failed_time = time.time()
+                    return self._retrieve_fallbacks(query)
+
+            conn = MemoryMesh._pool.getconn()
             self._init_db(conn)
 
             # 2. Get embedding from Ollama
@@ -124,8 +149,11 @@ class MemoryMesh:
             MemoryMesh._db_failed_time = time.time()
             return self._retrieve_fallbacks(query)
         finally:
-            if conn:
-                conn.close()
+            if conn and MemoryMesh._pool:
+                try:
+                    MemoryMesh._pool.putconn(conn)
+                except Exception as put_err:
+                    logger.error("MemoryMesh: failed to put connection back to pool: %s", put_err)
 
     def _retrieve_fallbacks(self, query: str) -> list[dict[str, Any]]:
         """Simple rule-based mock responses for testing / fallback purposes."""

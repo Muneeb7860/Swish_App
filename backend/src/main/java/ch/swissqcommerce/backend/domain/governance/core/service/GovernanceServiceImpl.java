@@ -10,7 +10,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.config.SecurityAudit;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
-import ch.swissqcommerce.backend.exception.RuleViolationException;
+import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -120,7 +120,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
-            throw new RuleViolationException("Ticket is already " + approval.getStatus());
+            throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
         }
 
         approval.setStatus("APPROVED");
@@ -145,7 +145,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
-            throw new RuleViolationException("Ticket is already " + approval.getStatus());
+            throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
         }
 
         approval.setStatus("REJECTED");
