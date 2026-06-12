@@ -6,11 +6,13 @@ on:
       - develop
       - master
       - Mac_Machine
+      - Windows_Machine
   pull_request:
     branches:
       - develop
       - master
       - Mac_Machine
+      - Windows_Machine
 
 jobs:
   backend-quality:
