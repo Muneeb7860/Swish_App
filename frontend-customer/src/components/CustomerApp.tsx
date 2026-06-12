@@ -352,46 +352,15 @@ export default function CustomerApp({
       `}</style>
 			<div className="customer-main-panel">
 				{/* Navigation Tabs */}
-				<div
-					style={{
-						display: "flex",
-						gap: "0.5rem",
-						background: "rgba(255,255,255,0.02)",
-						padding: "0.25rem",
-						borderRadius: "10px",
-						width: "fit-content",
-						border: "1px solid var(--border-color)",
-						marginBottom: "1rem",
-					}}
-				>
+				<div className="customer-navigation-tabs">
 					<button
-						className="btn-secondary-glow"
-						style={{
-							background:
-								customerTab === "catalog"
-									? "rgba(255,255,255,0.08)"
-									: "transparent",
-							border: "none",
-							fontSize: "0.8rem",
-							padding: "0.4rem 1rem",
-							cursor: "pointer",
-						}}
+						className={`customer-tab-btn ${customerTab === "catalog" ? "active" : ""}`}
 						onClick={() => setCustomerTab("catalog")}
 					>
 						Browse Store Catalog
 					</button>
 					<button
-						className="btn-secondary-glow"
-						style={{
-							background:
-								customerTab === "profile"
-									? "rgba(255,255,255,0.08)"
-									: "transparent",
-							border: "none",
-							fontSize: "0.8rem",
-							padding: "0.4rem 1rem",
-							cursor: "pointer",
-						}}
+						className={`customer-tab-btn ${customerTab === "profile" ? "active" : ""}`}
 						onClick={() => setCustomerTab("profile")}
 					>
 						My Profile Hub
@@ -711,66 +680,140 @@ export default function CustomerApp({
 						<div style={{ flex: 1 }}>
 							{profileSubTab === "vip" && (
 								<div
-									className="glass-card"
+									className={vipMember ? "vip-card-glow" : "glass-card"}
 									style={{
-										padding: "1rem",
-										borderLeft: "4px solid var(--color-customer)",
+										padding: "1.5rem",
+										borderLeft: vipMember ? "none" : "4px solid var(--color-customer)",
+										display: "flex",
+										flexDirection: "column",
+										gap: "1.25rem",
 									}}
 								>
-									<h3
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "0.5rem",
-											fontWeight: 800,
-										}}
-									>
-										<Lucide.Crown size={20} style={{ color: "gold" }} />
-										Swiss Q-Commerce VIP Hub
-									</h3>
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: "0.5rem",
-											marginTop: "1rem",
-										}}
-									>
-										<div>
-											<strong>Trust Shield rating:</strong>{" "}
-											<span
-												style={{
-													color:
-														customerTrustScore >= 85
-															? "var(--color-customer)"
-															: "var(--color-admin)",
-												}}
-											>
-												{customerTrustScore}/100
-											</span>
-										</div>
-										{gdprTokenProbation && (
-											<div
-												style={{
-													color: "var(--color-admin)",
-													fontSize: "0.75rem",
-												}}
-											>
-												⚠️ Your account is currently under GDPR probation. Please
-												complete 3 successful orders to restore score.
-											</div>
-										)}
-										<div>
-											<strong>VIP Member status:</strong>{" "}
-											{vipMember
-												? "Active (Free delivery on orders > $15)"
-												: "Inactive"}
-										</div>
-										<div>
-											<strong>Loyalty Points balance:</strong> {customerPoints}{" "}
-											Points
+									<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+										<h3
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "0.5rem",
+												fontWeight: 800,
+												margin: 0,
+											}}
+											className={vipMember ? "vip-gold-text" : ""}
+										>
+											<Lucide.Crown size={20} style={{ color: vipMember ? "gold" : "var(--text-muted)" }} />
+											Swiss Q-Commerce VIP Hub
+										</h3>
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "0.35rem",
+												padding: "0.25rem 0.65rem",
+												background: "rgba(16, 185, 129, 0.12)",
+												border: "1px solid rgba(16, 185, 129, 0.25)",
+												borderRadius: "20px",
+												color: "var(--color-customer)",
+												fontSize: "0.75rem",
+												fontWeight: 700,
+											}}
+										>
+											<Lucide.Award size={13} />
+											<span>{customerPoints} Points</span>
 										</div>
 									</div>
+
+									<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+										{/* Trust Score Bento */}
+										<div
+											className="glass-card"
+											style={{
+												padding: "0.85rem",
+												background: "rgba(255,255,255,0.01)",
+												borderRadius: "12px",
+												display: "flex",
+												flexDirection: "column",
+												gap: "0.4rem",
+											}}
+										>
+											<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+												Trust Shield Rating
+											</span>
+											<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+												{customerTrustScore >= 85 ? (
+													<Lucide.ShieldCheck size={20} style={{ color: "var(--color-customer)" }} />
+												) : (
+													<Lucide.ShieldAlert size={20} style={{ color: "var(--color-admin)" }} />
+												)}
+												<span
+													style={{
+														fontSize: "1.25rem",
+														fontWeight: 800,
+														fontFamily: "var(--font-mono)",
+														color: customerTrustScore >= 85 ? "var(--color-customer)" : "var(--color-admin)",
+													}}
+												>
+													{customerTrustScore}
+													<span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+												</span>
+											</div>
+											{/* Small progress meter */}
+											<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+												<div
+													style={{
+														height: "100%",
+														background: customerTrustScore >= 85 ? "var(--color-customer)" : "var(--color-admin)",
+														width: `${customerTrustScore}%`,
+														transition: "width 0.5s ease",
+													}}
+												/>
+											</div>
+										</div>
+
+										{/* Membership status card */}
+										<div
+											className="glass-card"
+											style={{
+												padding: "0.85rem",
+												background: "rgba(255,255,255,0.01)",
+												borderRadius: "12px",
+												display: "flex",
+												flexDirection: "column",
+												gap: "0.4rem",
+											}}
+										>
+											<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+												Membership Tier
+											</span>
+											<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+												<Lucide.Zap size={18} style={{ color: vipMember ? "gold" : "var(--text-muted)" }} />
+												<span style={{ fontSize: "0.95rem", fontWeight: 800, color: vipMember ? "gold" : "var(--text-primary)" }}>
+													{vipMember ? "VIP Premium" : "Standard Tier"}
+												</span>
+											</div>
+											<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", lineHeight: 1.2 }}>
+												{vipMember ? "✓ Unlimited free delivery on orders above $15" : "Upgrade by earning loyalty points on purchases"}
+											</span>
+										</div>
+									</div>
+
+									{gdprTokenProbation && (
+										<div
+											className="chaos-banner"
+											style={{
+												margin: 0,
+												padding: "0.75rem 1rem",
+												borderRadius: "10px",
+												border: "1px solid rgba(245, 158, 11, 0.3)",
+												background: "rgba(245, 158, 11, 0.08)",
+												color: "var(--color-rider)",
+											}}
+										>
+											<Lucide.AlertTriangle size={16} />
+											<div style={{ fontSize: "0.75rem", lineHeight: 1.3 }}>
+												<strong>GDPR Probation Active:</strong> Your trust rating is temporarily capped. Complete 3 successful deliveries to clear compliance logs.
+											</div>
+										</div>
+									)}
 								</div>
 							)}
 
@@ -857,32 +900,35 @@ export default function CustomerApp({
 							)}
 
 							{profileSubTab === "vouchers" && (
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "0.75rem",
-									}}
-								>
+								<div className="voucher-ticket-row">
 									{vouchers.map((v) => (
-										<div
-											key={v.code}
-											className="glass-card"
-											style={{
-												padding: "0.75rem",
-												borderLeft: "3px solid var(--color-customer)",
-											}}
-										>
-											<strong>{v.code}</strong> (Flat ${v.value.toFixed(2)} Off)
-											<p
-												style={{
-													fontSize: "0.7rem",
-													color: "var(--text-muted)",
-													margin: "0.2rem 0 0 0",
+										<div key={v.code} className="voucher-ticket">
+											<div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+												<div>
+													<span className="voucher-code">{v.code}</span>
+													<span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginLeft: "0.5rem" }}>
+														(Flat ${v.value.toFixed(2)} Off)
+													</span>
+												</div>
+												<p
+													style={{
+														fontSize: "0.7rem",
+														color: "var(--text-muted)",
+														margin: 0,
+													}}
+												>
+													{v.desc}
+												</p>
+											</div>
+											<button
+												className="btn-secondary-glow"
+												style={{ fontSize: "0.7rem", padding: "0.3rem 0.65rem", cursor: "pointer", border: "1px solid var(--border-color)", borderRadius: "6px" }}
+												onClick={() => {
+													if (setVoucherCode) setVoucherCode(v.code);
 												}}
 											>
-												{v.desc}
-											</p>
+												Apply
+											</button>
 										</div>
 									))}
 								</div>
@@ -1058,33 +1104,42 @@ export default function CustomerApp({
 
 							{/* ESG Bag Checkbox */}
 							<div
+								className="chaos-switch-row"
 								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: "0.5rem",
 									marginBottom: "0.75rem",
+									padding: "0.4rem 0",
+									borderBottom: "1px solid rgba(255,255,255,0.03)",
 								}}
 							>
-								<input
-									type="checkbox"
-									id="esg-bags"
-									checked={esgCheckbox}
-									onChange={(e) => setEsgCheckbox(e.target.checked)}
-									style={{
-										accentColor: "var(--color-customer)",
-										cursor: "pointer",
-									}}
-								/>
-								<label
-									htmlFor="esg-bags"
-									style={{
-										fontSize: "0.7rem",
-										color: "var(--text-secondary)",
-										cursor: "pointer",
-									}}
-								>
-									🌳 Return bags for $0.50 cash rebate offset
-								</label>
+								<div className="chaos-switch-info">
+									<label
+										htmlFor="esg-bags"
+										style={{
+											fontSize: "0.75rem",
+											fontWeight: 700,
+											color: "var(--text-secondary)",
+											cursor: "pointer",
+											display: "flex",
+											alignItems: "center",
+											gap: "0.3rem",
+										}}
+									>
+										<span>🌳 Return bags offset rebate</span>
+									</label>
+									<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+										$0.50 cash rebate applied to total cost
+									</span>
+								</div>
+								<div style={{ position: "relative" }}>
+									<input
+										type="checkbox"
+										id="esg-bags"
+										className="switch-input-customer"
+										checked={esgCheckbox}
+										onChange={(e) => setEsgCheckbox(e.target.checked)}
+									/>
+									<label htmlFor="esg-bags" className="switch-label" />
+								</div>
 							</div>
 
 							{/* Invoice calculation summary */}

@@ -70,6 +70,26 @@ const isSafeUrl = (url: string | null | undefined): boolean => {
 	}
 };
 
+const TypewriterText = ({ text, onComplete }) => {
+	const [displayed, setDisplayed] = React.useState("");
+
+	React.useEffect(() => {
+		let i = 0;
+		setDisplayed("");
+		const timer = setInterval(() => {
+			setDisplayed((prev) => prev + text.charAt(i));
+			i++;
+			if (i >= text.length) {
+				clearInterval(timer);
+				if (onComplete) onComplete();
+			}
+		}, 8); // Fast typing speed
+		return () => clearInterval(timer);
+	}, [text, onComplete]);
+
+	return <>{parseMarkdown(displayed)}</>;
+};
+
 export default function SupportBot({
 	botOpen,
 	setBotOpen,
@@ -79,14 +99,16 @@ export default function SupportBot({
 	handleSendBotMessage,
 	triggerToast,
 	activeRole,
+	isBotTyping,
 }) {
 	const messagesEndRef = useRef<any>(null);
+	const [lastStreamedIndex, setLastStreamedIndex] = React.useState(-1);
 
 	useEffect(() => {
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [botMessages, botOpen]);
+	}, [botMessages, botOpen, isBotTyping]);
 
 	if (!botOpen) {
 		return (
@@ -154,21 +176,41 @@ export default function SupportBot({
 				</div>
 
 				<div className="ai-bot-messages">
-					{botMessages.map((msg, idx) => (
-						<div
-							key={idx}
-							className={`ai-message ${msg.sender === "user" ? "ai-message-user" : "ai-message-bot"}`}
-						>
-							{parseMarkdown(msg.text)}
-							{msg.attachmentUrl && isSafeUrl(msg.attachmentUrl) && (
-								<img
-									src={msg.attachmentUrl}
-									className="ai-message-attachment"
-									alt="Simulated vision report upload"
-								/>
-							)}
+					{botMessages.map((msg, idx) => {
+						const isLast = idx === botMessages.length - 1;
+						const isBot = msg.sender === "bot";
+						const shouldStream = isLast && isBot && idx > lastStreamedIndex;
+
+						return (
+							<div
+								key={idx}
+								className={`ai-message ${msg.sender === "user" ? "ai-message-user" : "ai-message-bot"}`}
+							>
+								{shouldStream ? (
+									<TypewriterText
+										text={msg.text}
+										onComplete={() => setLastStreamedIndex(idx)}
+									/>
+								) : (
+									parseMarkdown(msg.text)
+								)}
+								{msg.attachmentUrl && isSafeUrl(msg.attachmentUrl) && (
+									<img
+										src={msg.attachmentUrl}
+										className="ai-message-attachment"
+										alt="Simulated vision report upload"
+									/>
+								)}
+							</div>
+						);
+					})}
+					{isBotTyping && (
+						<div className="ai-message ai-message-bot typing-indicator-bubble">
+							<span className="dot"></span>
+							<span className="dot"></span>
+							<span className="dot"></span>
 						</div>
-					))}
+					)}
 					<div ref={messagesEndRef} />
 				</div>
 
