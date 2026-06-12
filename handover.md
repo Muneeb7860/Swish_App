@@ -167,10 +167,21 @@ We have completed **Phase 9: Recursive AI Governance Alignment & AI Hardening**.
 4. **[Implementation Plan - Phase 9](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/implementation_plan_phase9.md)**: The plan and validation criteria executed for Phase 9 alignment.
 5. **[Security Architecture Audit Report](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/security_architecture_audit_report.md)**: Validates overall Agentic OS security posture against PII privacy, 1s SLAs, method security, and transactional outbox auditing.
 
-### Next Way of Action (Epic 2: Enterprise Observability)
-When you take over, proceed with **Epic 2: Enterprise Observability (The "Day-2 Ops" Epic)**:
-*   **Prometheus & Grafana Integration**: Ensure Prometheus scrapes `/actuator/prometheus` metrics and set up a Grafana dashboard container to track Letta fallbacks and system health.
-*   **Distributed Tracing Alignment**: Verify OTel spans trace from BFF -> Kafka -> Backend -> FastAPI Governance -> Local LLMs.
+### Cycle update (2026-06-13) — Epic 2, Epic 2.5 & Phase 8 (A+B) landed
+
+Since this handover was written, the following shipped on `Mac_Machine` (suite green at 302):
+
+*   **Epic 2 — Enterprise Observability `[DONE, commit 926d136]`**: Prometheus now scrapes the host-run backend at `host.docker.internal:8083/actuator/prometheus` (the canonical config is `infrastructure/prometheus/prometheus.yml` + `alert.rules`; the broken root `prometheus.yml` was removed). Grafana auto-provisions datasources + the "Mission Control" dashboard (`infrastructure/grafana/`), now with an **AI Governance** row (budget-guardrail trips, Letta fallback rate). A Zipkin container was added.
+*   **Epic 2.5 — Unified Tracing `[DONE, commit d686f83]`**: An **OpenTelemetry Collector** (`infrastructure/otel-collector/`) is the single hub — backend (OTLP) + Python governance both export to it; it fans out to **Zipkin** (one correlated BFF→Backend→FastAPI→LLM trace) and **Phoenix** (LLM spans). Verified live: a single traceId spans `application` + `homelab-ai-governance`.
+*   **Phase 8A — HITL Console backend `[DONE, commit d8cc19c]`**: Unified the two previously-disconnected queues (`ProcurementApproval` + `HitlQueue`) into one `HitlItem` read model at `GET /api/governance/hitl` (composite ids `PA-<id>` / `AQ-<ticketId>`); `resolveHitlItem` routes approve/reject to the right source (agent escalations are now resolvable). `PricingGuardrailsEngine` flags surge>2.5 / discount>15% → `DynamicPricingAgent` files a `pricing_review` ticket. **V28** widens the `hitl_queue` type CHECK (`agent_escalation` was violating it on Postgres). New `hitl.pending.count` gauge + Grafana panel.
+*   **Phase 8B — HITL Console frontend `[DONE, commit 5848c9c]`**: `frontend-admin` AdminPanel is wired to the live API (`src/api/governance.ts`, `useHitlConsole` hook, `AdminLogin` gate — it had no auth). Browser-verified: login → live queue → Approve POSTs `.../{id}/approve` (200) and auto-refreshes.
+
+### Next Way of Action — Phase 8C, then Phase 7
+
+Phases 5 (Agent Mesh) and 6 (pgvector RAG) are also complete. The remaining backlog:
+
+*   **Phase 8C — Durable HITL control (the heavy slice)**: add `@SignalMethod` (approve / reject / **adjust bid**) to `B2BProcurementWorkflow` + `Workflow.await` so a guardrail-flagged negotiation **pauses mid-execution** and resumes on the supervisor's decision. The workflow is currently single-shot — this makes it long-running across the human review window. Pair with an "Adjust" action in the 8B console (needs a backend mutate endpoint).
+*   **Phase 7 — Event-driven automation (n8n)**: the outbox→Kafka producer is complete but there are **zero `@KafkaListener` consumers** and no authenticated webhook receiver. Add consumers + an n8n webhook endpoint + rider-check-in / delivery-delay event emission.
 
 ---
 
