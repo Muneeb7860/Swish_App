@@ -124,8 +124,14 @@ services:
     container_name: prometheus
     ports:
       - "9090:9090"
+    # host.docker.internal lets the container scrape the host-run backend (:8083);
+    # the host-gateway mapping makes this portable to Linux (it is implicit on
+    # Docker Desktop for Mac/Windows).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/prometheus/alert.rules:/etc/prometheus/alert.rules:ro
     networks:
       - hybrid-net
     deploy:
@@ -138,12 +144,41 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    # Auto-provision the Prometheus/Zipkin datasources and the Mission Control
+    # dashboard on startup so Grafana is useful with zero manual clicks.
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
     networks:
       - hybrid-net
     deploy:
       resources:
         limits:
           memory: 256M
+
+  # Distributed-tracing backend for the Java services. The backend already has
+  # the opentelemetry-exporter-zipkin dependency and exports spans to
+  # ${ZIPKIN_ENDPOINT:-http://localhost:9411/api/v2/spans}; this container is the
+  # sink, and the Grafana 'Zipkin' datasource (uid swish-zipkin) reads from it.
+  # Phoenix (OTLP, :4318) remains the sink for Python/LLM governance spans.
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - hybrid-net
+    deploy:
+      resources:
+        limits:
+          memory: 384M
 
   phoenix:
     image: arizephoenix/phoenix:latest
@@ -243,6 +278,7 @@ volumes:
   redisdata:
   temporal_pgdata:
   letta_pgdata:
+  grafanadata:
 
 networks:
   hybrid-net:

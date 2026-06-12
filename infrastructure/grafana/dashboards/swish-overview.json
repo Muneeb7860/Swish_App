@@ -9,7 +9,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -1396,7 +1396,7 @@
     {
       "type": "row",
       "id": 60,
-      "title": "🔴 SLA, Resilience & Payment Performance",
+      "title": "\ud83d\udd34 SLA, Resilience & Payment Performance",
       "gridPos": {
         "x": 0,
         "y": 108,
@@ -1651,6 +1651,259 @@
           "placement": "bottom"
         }
       }
+    },
+    {
+      "id": 70,
+      "type": "row",
+      "title": "\ud83e\udd16 AI Governance (Phase R5\u2013R9) \u2014 Budget, Memory & Fallbacks",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 124,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      }
+    },
+    {
+      "id": 71,
+      "type": "stat",
+      "title": "\ud83d\udea8 Budget Guardrail Trips (24h)",
+      "gridPos": {
+        "x": 0,
+        "y": 125,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(agent_budget_guardrail_triggers_total{job=\"backend\"}[24h]))",
+          "legendFormat": "trips",
+          "refId": "A"
+        }
+      ],
+      "description": "Number of times the $5/day AI cost-budget guardrail (ADR-007, MasterOrchestratorService) fired in the last 24h. Each trip routes the request to the HITL queue."
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "\ud83e\udde0 Letta Memory Fallbacks (total)",
+      "gridPos": {
+        "x": 6,
+        "y": 125,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(letta_fallback_triggers_total{job=\"backend\"})",
+          "legendFormat": "fallbacks",
+          "refId": "A"
+        }
+      ],
+      "description": "Total times LettaMemoryService failed (server offline / non-2xx / schema drift) and the agent fell back to the direct LlmGatewayPort. High & rising \u2192 Letta server is unhealthy."
+    },
+    {
+      "id": 73,
+      "type": "timeseries",
+      "title": "AI Budget Guardrail \u2014 Trip Rate",
+      "gridPos": {
+        "x": 12,
+        "y": 125,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(agent_budget_guardrail_triggers_total{job=\"backend\"}[5m]))",
+          "legendFormat": "trips/s",
+          "refId": "A"
+        }
+      ],
+      "description": "Rate of $5/day budget-cap trips. Sustained non-zero means token cost per request is too high or the daily budget is too low."
+    },
+    {
+      "id": 74,
+      "type": "timeseries",
+      "title": "Letta Memory Fallback Rate \u2014 Letta offline \u2192 direct LLM",
+      "gridPos": {
+        "x": 0,
+        "y": 133,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "swish-prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(letta_fallback_triggers_total{job=\"backend\"}[5m]))",
+          "legendFormat": "fallbacks/s",
+          "refId": "A"
+        }
+      ],
+      "description": "Rate at which agents bypass Letta stateful memory and call the LLM directly. A spike indicates the Letta container is down \u2014 conversations lose multi-turn memory but stay functional (resilient fallback)."
     }
   ]
 }
