@@ -27,6 +27,7 @@ public class OutboxEvent {
     private String eventType;
 
     @Column(name = "payload", columnDefinition = "TEXT")
+    @Convert(converter = ch.swissqcommerce.backend.config.AesEncryptionConverter.class)
     private String payload;
 
     @Column(name = "status")

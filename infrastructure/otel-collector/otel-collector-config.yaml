@@ -1,0 +1,49 @@
+# OpenTelemetry Collector — the single tracing hub for Swish (Epic 2.5).
+#
+# Both the Java backend (micrometer-tracing-bridge-otel → OTLP) and the Python
+# governance service (opentelemetry OTLP exporter) send spans here. Because the
+# W3C traceparent header already propagates across the Java→Python call
+# (RestTemplateBuilder, commit d1466b6), spans from both services share one
+# traceId — so a single fan-out below yields one correlated end-to-end trace:
+#   BFF → Backend (HTTP/Kafka) → FastAPI Governance → local LLM.
+#
+# Fan-out:
+#   • zipkin  → full distributed trace, viewed in Grafana's Zipkin datasource.
+#   • phoenix → kept as the PII-safe LLM-observability sink (evals, token cost).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+
+exporters:
+  # Unified distributed-trace store (Java + Python spans, one traceId).
+  zipkin:
+    endpoint: http://zipkin:9411/api/v2/spans
+
+  # LLM-observability store (Arize Phoenix listens OTLP/gRPC on 4317 internally).
+  otlp/phoenix:
+    endpoint: phoenix:4317
+    tls:
+      insecure: true
+
+  # Console echo so `docker logs otel-collector` shows trace throughput.
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers:  [otlp]
+      processors: [batch]
+      exporters:  [zipkin, otlp/phoenix, debug]

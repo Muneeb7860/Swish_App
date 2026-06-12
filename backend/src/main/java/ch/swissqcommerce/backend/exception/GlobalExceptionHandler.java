@@ -150,6 +150,12 @@ public class GlobalExceptionHandler {
                 .body(buildErrorBody(HttpStatus.FORBIDDEN, ex.getMessage()));
     }
 
+    @ExceptionHandler(TicketAlreadyResolvedException.class)
+    public ResponseEntity<Map<String, Object>> handleTicketAlreadyResolved(TicketAlreadyResolvedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorBody(HttpStatus.CONFLICT, ex.getMessage()));
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
