@@ -2044,3 +2044,56 @@ body {
 .app-container .btn-primary-glow:hover {
 	box-shadow: 0 0 15px var(--role-button-hover) !important;
 }
+
+/* Hardened Customer Super App Styling */
+.customer-navigation-tabs {
+	display: flex;
+	gap: 0.5rem;
+	background: rgba(255, 255, 255, 0.02);
+	padding: 0.25rem;
+	border-radius: 10px;
+	width: fit-content;
+	border: 1px solid var(--border-color);
+	margin-bottom: 1rem;
+}
+
+.customer-tab-btn {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	font-family: var(--font-sans);
+	font-weight: 600;
+	font-size: 0.8rem;
+	padding: 0.4rem 1rem;
+	cursor: pointer;
+	border-radius: 8px;
+	transition: var(--transition-smooth);
+}
+
+.customer-tab-btn:hover {
+	color: var(--text-primary);
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.customer-tab-btn.active {
+	background: rgba(16, 185, 129, 0.08) !important;
+	color: var(--color-customer) !important;
+	border: 1px solid rgba(16, 185, 129, 0.2) !important;
+	box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+}
+
+/* Green Neon Toggle Switch for Customer app */
+.switch-input-customer {
+	display: none;
+}
+
+.switch-input-customer:checked + .switch-label {
+	background: var(--color-customer) !important;
+	box-shadow: 0 0 10px var(--color-customer-glow) !important;
+	border-color: var(--color-customer) !important;
+}
+
+.switch-input-customer:checked + .switch-label::after {
+	left: 22px;
+	background: #ffffff;
+}

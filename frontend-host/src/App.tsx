@@ -478,6 +478,7 @@ export default function App() {
 	} = useEnvProfiles();
 	const [catalogLoading, setCatalogLoading] = useState(false);
 	const [hitlLoading, setHitlLoading] = useState(false);
+	const [isBotTyping, setIsBotTyping] = useState(false);
 	// customer, rider, business, inventory, admin
 
 	useEffect(() => {
@@ -1828,6 +1829,7 @@ export default function App() {
 			}
 
 			setBotMessages((prev) => [...prev, { sender: "bot", text: botResponse }]);
+			setIsBotTyping(false);
 		}, 1000);
 	};
 
@@ -1840,6 +1842,7 @@ export default function App() {
 			{ sender: "user", text: text || "Vision Image Uploaded", attachmentUrl },
 		]);
 		setBotInputText("");
+		setIsBotTyping(true);
 
 		if (activeRole === "customer") {
 			// Connect directly to the Spring Boot Agentic backend via the BFF Gateway
@@ -1878,6 +1881,7 @@ export default function App() {
 					return res.json();
 				})
 				.then((data) => {
+					if (!data) return;
 					let reply = data.reply;
 					logKafka(
 						"system",
@@ -1901,7 +1905,7 @@ export default function App() {
 						fetchHitlQueues();
 					}
 					setBotMessages((prev) => [...prev, { sender: "bot", text: reply }]);
-					// useQuery handles metrics automatically now
+					setIsBotTyping(false);
 				})
 
 				.catch(() => {
@@ -2657,6 +2661,7 @@ export default function App() {
 				handleSendBotMessage={handleSendBotMessage}
 				triggerToast={triggerToast}
 				activeRole={activeRole}
+				isBotTyping={isBotTyping}
 			/>
 		</div>
 	);
