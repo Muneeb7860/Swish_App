@@ -192,6 +192,7 @@ jobs:
           JWT_SECRET: ci-e2e-test-secret-32-chars-long!!
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: "6379"
+          SPRING_DATA_REDIS_PASSWORD: ""
           ADMIN_EMAIL: ci-admin@swish.local
           ADMIN_PASSWORD: CiAdm1nP@ss!
           DB_SSL_MODE: disable
