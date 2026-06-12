@@ -9,9 +9,15 @@ from governance.stubs.memory_mesh import MemoryMesh, retrieve_context
 
 @pytest.fixture(autouse=True)
 def reset_circuit_breakers():
-    """Reset circuit breaker states on MemoryMesh class before every test."""
+    """Reset circuit breaker and pool states on MemoryMesh class before every test."""
     MemoryMesh._db_failed_time = None
     MemoryMesh._embedding_failed_time = None
+    if MemoryMesh._pool is not None:
+        try:
+            MemoryMesh._pool.closeall()
+        except Exception:
+            pass
+        MemoryMesh._pool = None
 
 
 def test_memory_mesh_disabled(monkeypatch):
