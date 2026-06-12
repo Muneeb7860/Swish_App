@@ -86,10 +86,12 @@ export default function RiderTrackingPanel({
 
 	return (
 		<div
+			className="glow-card"
+			data-glow-theme="rider"
 			style={{
 				background:
 					"linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%)",
-				border: "1px solid rgba(59,130,246,0.3)",
+				border: "1px solid rgba(59,130,246,0.2)",
 				borderRadius: "16px",
 				padding: "1.25rem",
 				margin: "0 0 1rem 0",
@@ -315,7 +317,7 @@ export default function RiderTrackingPanel({
 							fill="none"
 							stroke="rgba(59,130,246,0.2)"
 							strokeWidth="3"
-							strokeDasharray="6,4"
+							className="animated-route-line"
 						/>
 						{/* Progress overlay */}
 						<path
@@ -324,6 +326,7 @@ export default function RiderTrackingPanel({
 							stroke="#3b82f6"
 							strokeWidth="3"
 							strokeDasharray={`${progress * 2.6},1000`}
+							className="animated-route-line"
 						/>
 						{/* Store pin */}
 						<circle
@@ -379,6 +382,15 @@ export default function RiderTrackingPanel({
 									repeatCount="indefinite"
 								/>
 							</circle>
+							<circle
+								cx={riderX}
+								cy={riderY}
+								r="12"
+								fill="none"
+								stroke="#f59e0b"
+								strokeWidth="1.5"
+								className="ripple-circle"
+							/>
 							<circle
 								cx={riderX}
 								cy={riderY}

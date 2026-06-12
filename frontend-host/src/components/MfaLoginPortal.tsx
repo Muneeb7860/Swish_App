@@ -48,7 +48,7 @@ export default function MfaLoginPortal({
 
 	return (
 		<div className="mfa-overlay" id="mfa-login-portal">
-			<div className="mfa-card">
+			<div className="mfa-card glow-card" data-glow-theme="engine">
 				<div className="mfa-logo-box">
 					<div className="mfa-logo-icon">
 						<Lucide.ShieldCheck size={28} />
