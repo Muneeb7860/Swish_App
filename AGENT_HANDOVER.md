@@ -1,17 +1,76 @@
 # Agent Handover
 
-**Active Epic:** Complete **Phase 8C** (Temporal signal pause/resume for durable B2B workflows) and ensure the E2E Cypress matrix runs cleanly.
+**Active Epic:** Phase 8C complete. Next: Phase 7 Kafka consumer wiring + n8n webhook receiver.
 
-**Active Branch:** `Mac_Machine` or specific feature branches created via `agent/feat/*` 
+**Active Branch:** `Mac_Machine` (always — never create new branches)
 
-### 📚 Historical Documentation
-If you require detailed historical context for past phases, refer to the archived handover documents here:
-- [Phase 8B: Git Security & Automation](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/handovers/archived/handover_v2_git_automation.md)
-- [Phase 9: AI Governance](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/handovers/archived/AI_GOVERNANCE_HANDOVER.md)
-- [Phase 5 & 6: Agent Mesh & Governance](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/handovers/archived/handover.md)
-- [Legacy Context](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/handovers/archived/handoff_context.md)
+---
 
-### 📌 Current Agent Instructions
-1. Always read `CONTRIBUTING.md` for our Agent Git Commit Strategy before branching.
-2. If working on E2E failures, inspect the Cypress runner configurations in `dev/e2e/e2e_all_runner.js`.
-3. Keep this file extremely lightweight! Update only the **Active Epic** when transitioning tasks. Do not append large logs here.
+## ⚡ MANDATORY SESSION START — DO THIS FIRST, NO EXCEPTIONS
+
+```bash
+git fetch origin
+git stash                          # stash ANY local changes before pulling
+git pull origin Mac_Machine        # fast-forward only
+git stash pop                      # reapply; resolve conflicts immediately if any
+git status --short                 # verify clean before touching files
+```
+
+**If stash pop conflicts:** keep BOTH sides (upstream + stash), remove markers, `git add` the file, done. Never discard either side without reading it.
+
+---
+
+## ⚡ MANDATORY COMMIT PROTOCOL
+
+```bash
+# Stage ONLY the files YOU touched — never git add -A or git add .
+git add path/to/file1 path/to/file2
+
+# Verify staged set before committing
+git diff --cached --name-only
+
+# Commit with correct JDK + skip E2E (CI runs E2E; local hook is backend tests only)
+JAVA_HOME=/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home \
+  SKIP_E2E=true git commit -m "type(scope): description"
+
+git push origin Mac_Machine
+```
+
+**Rules:**
+- Never stage files you didn't explicitly modify
+- Always run `git diff --cached --name-only` and read the list before committing
+- Another agent may have unstaged working-tree changes — ignore them, never stage them
+- Homebrew JDK 26 breaks Lombok → always set `JAVA_HOME` to `microsoft-17`
+- `SKIP_E2E=true` always locally — CI handles E2E
+
+---
+
+## ⚡ KNOWN GOTCHAS (save yourself the pain)
+
+| Symptom | Fix |
+|---------|-----|
+| `mvn test` hangs with Kafka broker errors | `spring.kafka.listener.auto-startup=false` in `test/application.properties` — already set |
+| `ExceptionInInitializerError: TypeTag::UNKNOWN` | Wrong JDK — use `JAVA_HOME=.../microsoft-17.jdk/Contents/Home` |
+| Staged 50+ files accidentally | `git reset HEAD` then `git add` only your files |
+| Merge conflict in handover/docs | Keep both sides, remove markers, commit — never discard history |
+| Pre-commit hook fails on first try | Check the hook output for the real error; don't retry blindly |
+
+---
+
+## Current State (2026-06-13)
+
+| Phase | Status |
+|-------|--------|
+| Phase 8A — Unified HITL queue | ✅ Done |
+| Phase 8B — Admin console frontend | ✅ Done |
+| Phase 8C — Temporal signals + Adjust Bid | ✅ Done (`a9155cd`, `fc4061d`) |
+| Phase 6 — RAG / pgvector | ✅ Done |
+| Phase 7 — Kafka consumers + n8n webhook | ✅ Done (`87d2cb0`) |
+| ArchUnit hexagonal enforcement | ✅ Done (`690d81f`) |
+| **Next** | Phase 9 or roadmap item per `task.md` |
+
+---
+
+## Historical Documentation
+
+Deep context in `docs/handovers/archived/` — only read if you hit something genuinely unexplained by the code.
