@@ -18,6 +18,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -43,6 +44,7 @@ public class MasterOrchestratorServiceTest {
     @Mock private EventUseCase eventUseCase;
 
     @Mock private B2BProcurementAgent b2BProcurementAgent;
+    @Mock private B2BProcurementActivities b2BProcurementActivities;
     @Mock private ProcurementGuardrailsEngine procurementGuardrailsEngine;
     @Mock private WholesalerPort wholesalerPort;
     @Mock private DarkStoreRepository darkStoreRepository;
@@ -56,6 +58,12 @@ public class MasterOrchestratorServiceTest {
 
     @InjectMocks
     private MasterOrchestratorService masterOrchestratorService;
+
+    @BeforeEach
+    public void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                masterOrchestratorService, "b2BProcurementActivities", b2BProcurementActivities);
+    }
 
     @Test
     public void testProcessMessage_NormalFlowHighConfidence() {
@@ -188,7 +196,8 @@ public class MasterOrchestratorServiceTest {
         B2BProcurementAgent.NegotiationAnalysis analysis = new B2BProcurementAgent.NegotiationAnalysis(
             1.40, 0.90, "Bulk discount", "Bid matches requirement", 0.02
         );
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any())).thenReturn(analysis);
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any())).thenReturn(analysis);
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt())).thenReturn(analysis);
 
         ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
         when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
@@ -217,7 +226,12 @@ public class MasterOrchestratorServiceTest {
                 .build();
 
         when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any())).thenThrow(new RuntimeException("LLM offline"));
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any())).thenThrow(new RuntimeException("LLM offline"));
+
+        B2BProcurementAgent.NegotiationAnalysis fallbackOutcome = new B2BProcurementAgent.NegotiationAnalysis(
+                9.00, 0.50, "Rule-based fallback (LLM offline)", "COUNTER_OFFER", 0.0
+        );
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt())).thenReturn(fallbackOutcome);
 
         ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
         when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);

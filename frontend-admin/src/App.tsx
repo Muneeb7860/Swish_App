@@ -128,6 +128,7 @@ export default function App() {
 						hitlQueue={hitl.queue}
 						handleReleaseHitl={hitl.approve}
 						handleVoidHitl={hitl.voidTicket}
+						handleAdjustHitl={hitl.adjust}
 						hitlLoading={hitl.loading}
 					/>
 				</>

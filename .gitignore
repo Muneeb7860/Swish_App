@@ -97,6 +97,9 @@ git/
 coverage/
 *.lcov
 .nyc_output/
+# Cypress test artifacts (screenshots, videos) — generated, not source
+frontend-host/cypress/screenshots/
+frontend-host/cypress/videos/
 
 # ─── Misc binaries ───────────────────────────────────────────────────────────
 *.zip

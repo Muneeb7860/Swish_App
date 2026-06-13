@@ -10,7 +10,9 @@ export default defineConfig({
   // Base URL: the customer Vite dev server (npm run dev → port 5173).
   // For CI, start the stack and point CYPRESS_BASE_URL at the served app.
   e2e: {
-    baseUrl: "http://localhost:5173",
+    baseUrl: "http://localhost:3001",
+    viewportWidth: 1280,
+    viewportHeight: 720,
 
     // Platform gateway / backend — all API calls go here.
     // Override via CYPRESS_API_URL env var in CI.

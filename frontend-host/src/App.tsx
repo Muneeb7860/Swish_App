@@ -817,7 +817,7 @@ export default function App() {
 					setCurrentUserSession({ role: mfaRole });
 					setActiveRole(mfaRole);
 					const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-					const tokenToSet = jwtRegex.test(data.token) ? data.token : "";
+					const tokenToSet = (data.token && jwtRegex.test(data.token)) ? data.token : "";
 					setAuthToken(tokenToSet);
 					if (tokenToSet) {
 						localStorage.setItem("jwt_token", tokenToSet);
@@ -851,7 +851,7 @@ export default function App() {
 				setCurrentUserSession({ role: mfaRole });
 				setActiveRole(mfaRole);
 				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-				const tokenToSet = jwtRegex.test(data.token) ? data.token : "";
+				const tokenToSet = (data.token && jwtRegex.test(data.token)) ? data.token : "";
 				setAuthToken(tokenToSet);
 				if (tokenToSet) {
 					localStorage.setItem("jwt_token", tokenToSet);

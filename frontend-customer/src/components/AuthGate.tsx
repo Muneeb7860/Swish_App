@@ -264,7 +264,7 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 						Swish Agentic OS
 					</h2>
 					<p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.5, margin: "0 0 2rem" }}>
-						Decentralized micro-frontends, event-driven hexagonal core, and governed AI agents guaranteeing 15-minute grocery deliveries.
+						Decentralized micro-frontends, event-driven hexagonal core, and governed AI agents guaranteeing 15-minute grocery delivery.
 					</p>
 				</div>
 
@@ -349,7 +349,7 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 								color: mode === "login" ? "#070a13" : "#94a3b8"
 							}}
 						>
-							Log In
+							Log in
 						</button>
 						<button
 							type="button"
@@ -391,13 +391,13 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 						{error && (
 							<p style={{
 								margin: 0,
-								color: error.startsWith("Account") ? "#10b981" : "#ef4444",
+								color: error.startsWith("Account") ? "#10b981" : "#ef5350",
 								fontSize: "0.8rem",
 								fontWeight: 600,
-								background: error.startsWith("Account") ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
+								background: error.startsWith("Account") ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 83, 80, 0.08)",
 								padding: "0.5rem 0.75rem",
 								borderRadius: 8,
-								border: `1px solid ${error.startsWith("Account") ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}`
+								border: `1px solid ${error.startsWith("Account") ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 83, 80, 0.2)"}`
 							}}>
 								{error}
 							</p>
@@ -409,7 +409,7 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 							className="auth-btn-primary"
 							style={{ marginTop: "0.5rem" }}
 						>
-							{loading ? "Please wait…" : mode === "login" ? "Launch Cockpit" : "Establish Profile"}
+							{loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
 						</button>
 					</form>
 				</div>

@@ -48,6 +48,9 @@ public class MasterOrchestratorService implements AgentUseCase {
     private final MeterRegistry meterRegistry;
     private final NegotiationArchivePort negotiationArchivePort;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private B2BProcurementActivities b2BProcurementActivities;
+
     // Prometheus counter — incremented every time the budget/rate guardrail fires.
     // Drives the AgentDailyBudgetExceeded alert in alert.rules.
     private Counter budgetGuardrailCounter;
@@ -263,7 +266,7 @@ public class MasterOrchestratorService implements AgentUseCase {
                 );
             } else {
                 try {
-                    analysis = b2BProcurementAgent.negotiateRestock(
+                    analysis = b2BProcurementActivities.callLlmNegotiation(
                             request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
                     if (analysis == null) {
                         throw new NullPointerException("Negotiation analysis returned null");
@@ -301,28 +304,22 @@ public class MasterOrchestratorService implements AgentUseCase {
             );
         }
 
-        var guardrailResult = procurementGuardrailsEngine.validate(
-                bestAnalysis.proposedPrice, request.getBasePrice(), request.getQuantity());
-
-        if (!guardrailResult.isApproved()) {
-            DarkStore store = darkStoreRepository.findAll().stream().findFirst()
-                    .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
-
-            BigDecimal orderAmount = BigDecimal.valueOf(bestAnalysis.proposedPrice * request.getQuantity());
-
-            B2BRestockOrder restockOrder = B2BRestockOrder.builder()
-                    .store(store)
-                    .wholesaler(bestWholesaler)
-                    .invoiceAmount(orderAmount)
-                    .status("pending")
-                    .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
-                    .build();
-
-            restockOrder = restockOrderPort.save(restockOrder);
-
-            String wholesalerId = bestWholesaler.getWholesalerId() != null ? bestWholesaler.getWholesalerId() : "WHOLESALER-1";
-            governanceUseCase.auditNegotiation(restockOrder.getRestockOrderId(), wholesalerId, orderAmount);
+        // Now start the durable Temporal B2B procurement workflow for the winning wholesaler
+        B2BProcurementAgent.NegotiationAnalysis finalOutcome;
+        if (dailyCost >= 5.0) {
+            finalOutcome = bestAnalysis;
+        } else {
+            try {
+                finalOutcome = b2BProcurementAgent.negotiateRestock(
+                        request.getItemId(), request.getItemName(), request.getBasePrice(), bestWholesaler.getName(), request.getQuantity());
+            } catch (Exception e) {
+                log.error("MasterOrchestratorService: Temporal workflow execution failed for winner: {}", e.getMessage());
+                finalOutcome = bestAnalysis;
+            }
         }
+
+        var guardrailResult = procurementGuardrailsEngine.validate(
+                finalOutcome.proposedPrice, request.getBasePrice(), request.getQuantity());
 
         // FR-02: archive the negotiation outcome to the document store (best-effort).
         try {
@@ -330,7 +327,7 @@ public class MasterOrchestratorService implements AgentUseCase {
                     .eventId(UUID.randomUUID().toString())
                     .wholesalerId(bestWholesaler.getWholesalerId())
                     .itemId(request.getItemId())
-                    .proposedPrice(BigDecimal.valueOf(bestAnalysis.proposedPrice))
+                    .proposedPrice(BigDecimal.valueOf(finalOutcome.proposedPrice))
                     .quantity(request.getQuantity())
                     .approved(guardrailResult.isApproved())
                     .occurredAt(OffsetDateTime.now())
@@ -339,16 +336,16 @@ public class MasterOrchestratorService implements AgentUseCase {
             log.warn("Negotiation archive failed (non-fatal): {}", e.getMessage());
         }
 
-        String winningMessage = "RFQ AUCTION WINNER: " + bestWholesaler.getName() + " (Bid: " + bestAnalysis.proposedPrice + " CHF). " + guardrailResult.getMessage();
+        String winningMessage = "RFQ AUCTION WINNER: " + bestWholesaler.getName() + " (Bid: " + finalOutcome.proposedPrice + " CHF). " + guardrailResult.getMessage();
 
         return new NegotiationResponse(
                 guardrailResult.isApproved(),
                 winningMessage,
-                bestAnalysis.proposedPrice,
-                bestAnalysis.confidence,
-                bestAnalysis.rationale,
-                bestAnalysis.wholesalerResponse,
-                bestAnalysis.cost
+                finalOutcome.proposedPrice,
+                finalOutcome.confidence,
+                finalOutcome.rationale,
+                finalOutcome.wholesalerResponse,
+                finalOutcome.cost
         );
     }
 }

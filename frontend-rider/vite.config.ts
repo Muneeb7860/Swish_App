@@ -26,4 +26,9 @@ export default defineConfig({
 		port: 3002,
 		cors: true,
 	},
+	preview: {
+		port: 3002,
+		host: "127.0.0.1",
+		cors: true,
+	},
 });

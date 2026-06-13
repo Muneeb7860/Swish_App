@@ -180,12 +180,23 @@ export interface OnboardingApproveRequest {
 }
 
 export interface HitlTicket {
-	ticket_id: string;
+	ticket_id?: string;
+	ticketId?: string;
 	type: string;
 	description: string;
 	amount: number;
 	status: string;
 	created_at: string;
+	customer_id?: string;
+	customer?: {
+		customerId?: string;
+		[key: string]: any;
+	};
+	order_id?: number;
+	order?: {
+		orderId?: number;
+		[key: string]: any;
+	};
 }
 
 export interface HitlResolveRequest {

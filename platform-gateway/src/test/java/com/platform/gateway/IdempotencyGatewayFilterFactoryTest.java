@@ -37,11 +37,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-public class IdempotencyFilterFactoryTest {
+public class IdempotencyGatewayFilterFactoryTest {
 
     private ReactiveStringRedisTemplate redisTemplate;
     private ReactiveValueOperations<String, String> valueOps;
-    private IdempotencyFilterFactory factory;
+    private IdempotencyGatewayFilterFactory factory;
     private GatewayFilterChain chain;
     private ServerWebExchange exchange;
     private ServerHttpRequest request;
@@ -58,7 +58,7 @@ public class IdempotencyFilterFactoryTest {
         // Stub default setIfAbsent to prevent NullPointerException in switchIfEmpty blocks
         when(valueOps.setIfAbsent(any(), any(), any(Duration.class))).thenReturn(Mono.just(true));
 
-        factory = new IdempotencyFilterFactory(redisTemplate);
+        factory = new IdempotencyGatewayFilterFactory(redisTemplate);
         chain = mock(GatewayFilterChain.class);
         exchange = mock(ServerWebExchange.class);
         request = mock(ServerHttpRequest.class);
@@ -100,7 +100,7 @@ public class IdempotencyFilterFactoryTest {
         when(chain.filter(exchange)).thenReturn(Mono.empty());
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -116,7 +116,7 @@ public class IdempotencyFilterFactoryTest {
         when(chain.filter(exchange)).thenReturn(Mono.empty());
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -135,7 +135,7 @@ public class IdempotencyFilterFactoryTest {
         when(valueOps.get(redisKey)).thenReturn(Mono.just("PROCESSING"));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -157,13 +157,13 @@ public class IdempotencyFilterFactoryTest {
         cachedHeaders.put("Connection", Collections.singletonList("keep-alive")); // Connection specific header to filter out
         cachedHeaders.put("Transfer-Encoding", Collections.singletonList("chunked")); // Transfer-Encoding specific header to filter out
 
-        IdempotencyFilterFactory.CachedResponse cached = new IdempotencyFilterFactory.CachedResponse(201, cachedHeaders, "{\"data\":\"ok\"}");
+        IdempotencyGatewayFilterFactory.CachedResponse cached = new IdempotencyGatewayFilterFactory.CachedResponse(201, cachedHeaders, "{\"data\":\"ok\"}");
         String cachedJson = new ObjectMapper().writeValueAsString(cached);
 
         when(valueOps.get(redisKey)).thenReturn(Mono.just(cachedJson));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -189,7 +189,7 @@ public class IdempotencyFilterFactoryTest {
         when(valueOps.get(redisKey)).thenReturn(Mono.just(invalidJson));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -235,7 +235,7 @@ public class IdempotencyFilterFactoryTest {
         when(valueOps.set(eq(redisKey), anyString(), any(Duration.class))).thenReturn(Mono.just(true));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -259,7 +259,7 @@ public class IdempotencyFilterFactoryTest {
         when(valueOps.setIfAbsent(eq(redisKey), eq("PROCESSING"), any(Duration.class))).thenReturn(Mono.just(false));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -300,7 +300,7 @@ public class IdempotencyFilterFactoryTest {
         when(redisTemplate.delete(redisKey)).thenReturn(Mono.just(1L));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -341,7 +341,7 @@ public class IdempotencyFilterFactoryTest {
         when(redisTemplate.delete(redisKey)).thenReturn(Mono.just(1L));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -382,7 +382,7 @@ public class IdempotencyFilterFactoryTest {
         when(redisTemplate.delete(redisKey)).thenReturn(Mono.just(1L));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -417,7 +417,7 @@ public class IdempotencyFilterFactoryTest {
         when(redisTemplate.delete(redisKey)).thenReturn(Mono.just(1L));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN
@@ -461,7 +461,7 @@ public class IdempotencyFilterFactoryTest {
         when(valueOps.set(eq(redisKey), anyString(), any(Duration.class))).thenReturn(Mono.just(true));
 
         // WHEN
-        GatewayFilter filter = factory.apply(new IdempotencyFilterFactory.Config());
+        GatewayFilter filter = factory.apply(new IdempotencyGatewayFilterFactory.Config());
         Mono<Void> result = filter.filter(exchange, chain);
 
         // THEN

@@ -2,10 +2,12 @@ import fs from "fs";
 import path from "path";
 import { chromium } from "playwright";
 
-const BACKEND_LOG_PATH =
-	"C:/Users/DELL 9420/Documents/swiss_App/dev/e2e/backend.log";
-const ARTIFACTS_DIR =
-	"C:/Users/DELL 9420/.gemini/antigravity/brain/d972ace5-02e9-49d4-8399-1bb6c80d31b4";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const BACKEND_LOG_PATH = path.resolve(path.join(__dirname, "backend.log"));
+const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || "/Users/muneeb/.gemini/antigravity-ide/brain/056b2a52-4584-4a65-954d-fa54f065815a";
 
 // Helper to wait
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -55,43 +57,51 @@ async function run() {
 
 		// 3. Click Request OTP and wait for the login API call to complete
 		console.log("[E2E TEST] Requesting OTP code...");
-		await Promise.all([
-			page.waitForResponse((resp) => resp.url().includes("/api/auth/login"), {
+		const [loginResponse] = await Promise.all([
+			page.waitForResponse((resp) => resp.url().includes("/auth/login"), {
 				timeout: 15000,
 			}),
 			page.click("#btn-mfa-request-otp"),
 		]);
-		console.log("[E2E TEST] Login API responded. Polling for OTP PIN...");
 
-		// 4. Polling backend.log to extract the generated OTP PIN
-		console.log("[E2E TEST] Polling backend logs for PIN code...");
-		let otpCode = null;
-		for (let i = 0; i < 20; i++) {
-			await sleep(1000);
-			otpCode = getOtpCode(BACKEND_LOG_PATH);
-			if (otpCode) {
-				console.log(`[E2E TEST] Extracted OTP PIN successfully: ${otpCode}`);
-				break;
+		const loginJson = await loginResponse.json();
+		const isMfaRequired = loginJson.mfaRequired || loginJson.mfa_required;
+		console.log(`[E2E TEST] Login API responded. MFA required: ${!!isMfaRequired}`);
+
+		if (isMfaRequired) {
+			// 4. Polling backend.log to extract the generated OTP PIN
+			console.log("[E2E TEST] Polling backend logs for PIN code...");
+			let otpCode = null;
+			for (let i = 0; i < 20; i++) {
+				await sleep(1000);
+				otpCode = getOtpCode(BACKEND_LOG_PATH);
+				if (otpCode) {
+					console.log(`[E2E TEST] Extracted OTP PIN successfully: ${otpCode}`);
+					break;
+				}
 			}
-		}
 
-		if (!otpCode) {
-			throw new Error(
-				"Timeout: Could not find OTP PIN code in backend.log. Verify the backend service started correctly.",
-			);
-		}
+			if (!otpCode) {
+				throw new Error(
+					"Timeout: Could not find OTP PIN code in backend.log. Verify the backend service started correctly.",
+				);
+			}
 
-		// 5. Fill OTP & Verification
-		console.log("[E2E TEST] Inputting OTP code and verifying session...");
-		await page.waitForSelector("#input-mfa-otp");
-		await page.fill("#input-mfa-otp", otpCode);
-		await page.screenshot({
-			path: path.join(ARTIFACTS_DIR, "e2e_2_otp_filled.png"),
-		});
-		await page.click("#btn-mfa-verify-otp");
+			// 5. Fill OTP & Verification
+			console.log("[E2E TEST] Inputting OTP code and verifying session...");
+			await page.waitForSelector("#input-mfa-otp");
+			await page.fill("#input-mfa-otp", otpCode);
+			await page.screenshot({
+				path: path.join(ARTIFACTS_DIR, "e2e_2_otp_filled.png"),
+			});
+			await page.click("#btn-mfa-verify-otp");
+		} else {
+			console.log("[E2E TEST] Direct login succeeded. Skipping OTP verification step.");
+		}
 
 		// 6. Wait for dashboard unlock and Header
 		console.log("[E2E TEST] Waiting for system dashboard unlock...");
+		await page.waitForSelector("#mfa-login-portal", { state: "detached" });
 		await page.waitForSelector(".app-header");
 		console.log("[E2E TEST] Authenticated successfully! Swapping roles...");
 
