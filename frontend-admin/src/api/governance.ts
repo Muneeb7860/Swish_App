@@ -86,3 +86,19 @@ export async function resolveHitl(
 	});
 	if (!res.ok) throw await asError(res);
 }
+
+/** Adjust bid price for a B2B procurement HITL item (PA-* prefix only). */
+export async function adjustHitl(
+	token: string,
+	id: string,
+	newPrice: number,
+	operator: string,
+	reason: string,
+): Promise<void> {
+	const res = await fetch(`${API_BASE}/api/governance/hitl/${encodeURIComponent(id)}/adjust`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+		body: JSON.stringify({ newPrice, operator, reason }),
+	});
+	if (!res.ok) throw await asError(res);
+}

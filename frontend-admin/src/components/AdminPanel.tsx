@@ -1,5 +1,5 @@
 import * as Lucide from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 
 interface OnboardingApp {
 	id: string;
@@ -13,6 +13,7 @@ interface HitlTicket {
 	type: string;
 	amount: number;
 	desc: string;
+	source?: string;
 }
 
 interface AdminPanelProps {
@@ -35,6 +36,7 @@ interface AdminPanelProps {
 	hitlQueue: HitlTicket[];
 	handleReleaseHitl: (ticket: HitlTicket) => void;
 	handleVoidHitl: (ticket: HitlTicket) => void;
+	handleAdjustHitl: (ticket: HitlTicket, newPrice: number) => void;
 	hitlLoading?: boolean;
 }
 
@@ -58,8 +60,13 @@ export default function AdminPanel({
 	hitlQueue,
 	handleReleaseHitl,
 	handleVoidHitl,
+	handleAdjustHitl,
 	hitlLoading = false,
 }: AdminPanelProps) {
+	// Local state for the inline "Adjust Bid" price input. Keyed by ticket id.
+	const [adjustPrices, setAdjustPrices] = useState<Record<string, string>>({});
+	const [adjustOpen, setAdjustOpen] = useState<Record<string, boolean>>({});
+
 	return (
 		<div
 			className="admin-dashboard"
@@ -401,6 +408,7 @@ export default function AdminPanel({
 										style={{
 											display: "flex",
 											gap: "0.5rem",
+											flexWrap: "wrap",
 										}}
 									>
 										<button
@@ -419,7 +427,81 @@ export default function AdminPanel({
 											<Lucide.XCircle size={13} />
 											<span>Void Ticket</span>
 										</button>
+										{ticket.source === "B2B_PROCUREMENT" && (
+											<button
+												type="button"
+												className="btn-secondary-glow hitl-btn-adjust"
+												onClick={() =>
+													setAdjustOpen((prev) => ({
+														...prev,
+														[ticket.id]: !prev[ticket.id],
+													}))
+												}
+											>
+												<Lucide.PencilLine size={13} />
+												<span>Adjust Bid</span>
+											</button>
+										)}
 									</div>
+									{adjustOpen[ticket.id] && (
+										<div
+											style={{
+												display: "flex",
+												gap: "0.4rem",
+												marginTop: "0.5rem",
+												alignItems: "center",
+											}}
+										>
+											<input
+												type="number"
+												min="0"
+												step="0.01"
+												placeholder="New price (CHF)"
+												value={adjustPrices[ticket.id] ?? ""}
+												onChange={(e) =>
+													setAdjustPrices((prev) => ({
+														...prev,
+														[ticket.id]: e.target.value,
+													}))
+												}
+												style={{
+													flex: 1,
+													background: "#020408",
+													border: "1px solid var(--color-admin)",
+													borderRadius: "6px",
+													color: "var(--text-primary)",
+													padding: "0.3rem 0.4rem",
+													fontSize: "0.75rem",
+													fontFamily: "var(--font-mono)",
+												}}
+											/>
+											<button
+												type="button"
+												className="btn-primary-glow hitl-btn-approve"
+												disabled={!adjustPrices[ticket.id] || Number(adjustPrices[ticket.id]) <= 0}
+												onClick={() => {
+													const price = Number(adjustPrices[ticket.id]);
+													if (price > 0) {
+														handleAdjustHitl(ticket, price);
+														setAdjustOpen((prev) => ({ ...prev, [ticket.id]: false }));
+														setAdjustPrices((prev) => ({ ...prev, [ticket.id]: "" }));
+													}
+												}}
+											>
+												<Lucide.Send size={13} />
+												<span>Confirm</span>
+											</button>
+											<button
+												type="button"
+												className="btn-secondary-glow"
+												onClick={() =>
+													setAdjustOpen((prev) => ({ ...prev, [ticket.id]: false }))
+												}
+											>
+												<Lucide.X size={13} />
+											</button>
+										</div>
+									)}
 								</div>
 							))
 						)}

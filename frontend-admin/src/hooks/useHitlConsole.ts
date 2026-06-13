@@ -1,6 +1,7 @@
 // Phase 8B — admin HITL console state: auth token, live queue, and resolve actions.
 import { useCallback, useEffect, useState } from "react";
 import {
+	adjustHitl,
 	fetchHitlQueue,
 	login as apiLogin,
 	mapItemToTicket,
@@ -20,6 +21,7 @@ export interface HitlConsole {
 	refresh: () => Promise<void>;
 	approve: (ticket: HitlTicket) => Promise<void>;
 	voidTicket: (ticket: HitlTicket) => Promise<void>;
+	adjust: (ticket: HitlTicket, newPrice: number) => Promise<void>;
 }
 
 export function useHitlConsole(): HitlConsole {
@@ -85,6 +87,26 @@ export function useHitlConsole(): HitlConsole {
 		[token, refresh],
 	);
 
+	const adjust = useCallback(
+		async (ticket: HitlTicket, newPrice: number) => {
+			if (!token) return;
+			setError(null);
+			try {
+				await adjustHitl(
+					token,
+					ticket.id,
+					newPrice,
+					"admin-console",
+					`Bid adjusted to ${newPrice} CHF via supervisor console`,
+				);
+				await refresh();
+			} catch (e) {
+				setError(e instanceof Error ? e.message : "Adjust failed");
+			}
+		},
+		[token, refresh],
+	);
+
 	return {
 		authed: !!token,
 		queue,
@@ -95,5 +117,6 @@ export function useHitlConsole(): HitlConsole {
 		refresh,
 		approve: (t) => resolve(t, true),
 		voidTicket: (t) => resolve(t, false),
+		adjust,
 	};
 }
