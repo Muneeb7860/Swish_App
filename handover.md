@@ -288,3 +288,16 @@ We successfully implemented and validated the board-mandated compliance and audi
   - **Frontend Build Suite**: All React micro-frontends compile cleanly (`npm run build:all` success).
   - **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](file:///c:/Users/DELL%209420/Documents/swiss_App/docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features.
 
+
+### Cycle Update (2026-06-13) — WebSocket Reconnection Loop Guards & Branching Strategy Alignment [DONE]
+
+* **WebSocket Reconnect Loop Guards**:
+  - Hard-limited websocket reconnect attempts default to 5 in B2B (`useResilientWebSocket.ts`) and Host (`websocket.ts`) clients.
+  - Added attempt counter map tracking in `OrderStatusSocket` to prevent infinite CPU/network-intensive reconnect storms, aborting reconnection loop after exactly 5 failures.
+* **Git Upstream Tracking**:
+  - Configured local environment branches (`Mac_Machine` and `Windows_Machine`) to track the integration developer branch (`origin/develop`) as their upstream.
+* **Verification**:
+  - **Backend Test Suite**: 100% green (`BUILD SUCCESS` with 337 tests), with Kafka integration mocked inside `RewardsAndGovernanceIntegrationTest.java` to prevent connection delays.
+  - **Platform Gateway Clean**: Resolved the `Unable to find a single main class` build failure by cleaning stale duplicate class files in target directories.
+
+
