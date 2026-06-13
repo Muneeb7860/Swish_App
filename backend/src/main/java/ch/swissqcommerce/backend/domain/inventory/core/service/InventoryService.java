@@ -1,11 +1,8 @@
 package ch.swissqcommerce.backend.domain.inventory.core.service;
-import ch.swissqcommerce.backend.model.Inventory;
-
-
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 
 @Service
 public class InventoryService {

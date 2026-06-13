@@ -1,9 +1,9 @@
 package ch.swissqcommerce.backend.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
@@ -20,8 +20,7 @@ public class LettaConfig {
 
     @Bean
     public RestTemplate lettaRestTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(java.time.Duration.ofMillis(5000))
+        return builder.setConnectTimeout(java.time.Duration.ofMillis(5000))
                 .setReadTimeout(java.time.Duration.ofMillis(10000))
                 .build();
     }
@@ -38,4 +37,3 @@ public class LettaConfig {
         return model;
     }
 }
-

@@ -66,10 +66,7 @@ export default function QueueTab({
 					return (
 						<View
 							key={order.orderId}
-							style={[
-								styles.orderCard,
-								isCritical && styles.orderCardCritical,
-							]}
+							style={[styles.orderCard, isCritical && styles.orderCardCritical]}
 						>
 							<View style={styles.orderCardHeader}>
 								<Text style={styles.orderIdText}>Order #{order.orderId}</Text>

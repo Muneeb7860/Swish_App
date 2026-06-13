@@ -2,7 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiClient, BASE_URL } from "./client";
 import { useStore } from "../store";
 
-export type ConnectionStatus = "CONNECTED" | "CONNECTING" | "RECONNECTING" | "DISCONNECTED" | "ERROR";
+export type ConnectionStatus =
+	| "CONNECTED"
+	| "CONNECTING"
+	| "RECONNECTING"
+	| "DISCONNECTED"
+	| "ERROR";
 
 export interface WebSocketOptions {
 	userId: string;
@@ -28,7 +33,7 @@ export interface UseResilientWebSocketResult {
 // -------------------------------------------------------------
 export const useResilientWebSocket = (
 	url: string,
-	options: WebSocketOptions
+	options: WebSocketOptions,
 ): UseResilientWebSocketResult => {
 	const {
 		userId,
@@ -64,7 +69,11 @@ export const useResilientWebSocket = (
 			return;
 		}
 
-		if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+		if (
+			wsRef.current &&
+			(wsRef.current.readyState === WebSocket.OPEN ||
+				wsRef.current.readyState === WebSocket.CONNECTING)
+		) {
 			return;
 		}
 
@@ -173,7 +182,10 @@ export const useResilientWebSocket = (
 					onMessageReceived.current(payload);
 				}
 			} catch (err: any) {
-				console.error("[WebSocket] Failed to validate/parse message:", err.message);
+				console.error(
+					"[WebSocket] Failed to validate/parse message:",
+					err.message,
+				);
 			}
 		};
 
@@ -197,11 +209,19 @@ export const useResilientWebSocket = (
 		};
 
 		wsRef.current = ws;
-	}, [url, userId, accessToken, maxReconnectAttempts, reconnectIntervalMin, reconnectIntervalMax]);
+	}, [
+		url,
+		userId,
+		accessToken,
+		maxReconnectAttempts,
+		reconnectIntervalMin,
+		reconnectIntervalMax,
+	]);
 
 	const handleReconnect = () => {
 		if (reconnectAttemptRef.current < maxReconnectAttempts) {
-			const backoff = reconnectIntervalMin * Math.pow(2, reconnectAttemptRef.current);
+			const backoff =
+				reconnectIntervalMin * Math.pow(2, reconnectAttemptRef.current);
 			const jitter = Math.random() * 500;
 			const delay = Math.min(backoff + jitter, reconnectIntervalMax);
 
@@ -209,7 +229,8 @@ export const useResilientWebSocket = (
 			setReconnectAttempts(reconnectAttemptRef.current);
 			setStatus("RECONNECTING");
 
-			if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+			if (reconnectTimeoutRef.current)
+				clearTimeout(reconnectTimeoutRef.current);
 			reconnectTimeoutRef.current = setTimeout(() => {
 				connect();
 			}, delay);
@@ -250,7 +271,8 @@ export const useResilientWebSocket = (
 	useEffect(() => {
 		connect();
 		return () => {
-			if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+			if (reconnectTimeoutRef.current)
+				clearTimeout(reconnectTimeoutRef.current);
 			if (wsRef.current) {
 				wsRef.current.close(1000, "Component unmounting");
 				wsRef.current = null;
@@ -268,7 +290,7 @@ export const useResilientWebSocket = (
 			seenMessageIds.current.clear();
 			setNotifications([]);
 		},
-		send
+		send,
 	};
 };
 
@@ -282,7 +304,10 @@ export class OrderStatusSocket {
 	private static ws: WebSocket | null = null;
 	private static simulatedTimers: Map<number, any> = new Map();
 
-	public static subscribe(orderId: number, callback: OrderStatusCallback): () => void {
+	public static subscribe(
+		orderId: number,
+		callback: OrderStatusCallback,
+	): () => void {
 		if (!this.listeners.has(orderId)) {
 			this.listeners.set(orderId, new Set());
 		}
@@ -321,7 +346,9 @@ export class OrderStatusSocket {
 		if (ApiClient.isMockMode()) {
 			// Start simulated status update sequence:
 			// pending (10s) -> picking (15s) -> shipped (15s) -> delivered (done)
-			console.log(`[WebSocket Mock] Starting order tracker simulation for #${orderId}`);
+			console.log(
+				`[WebSocket Mock] Starting order tracker simulation for #${orderId}`,
+			);
 			if (this.simulatedTimers.has(orderId)) return;
 
 			this.trigger(orderId, "pending");
@@ -332,7 +359,7 @@ export class OrderStatusSocket {
 					this.trigger(orderId, "shipped", {
 						temperature: 4.2,
 						riderCoords: { lat: 12.971, lng: 77.594 },
-						riderName: "Rider Dave"
+						riderName: "Rider Dave",
 					});
 					const t3 = setTimeout(() => {
 						this.trigger(orderId, "delivered");
@@ -364,7 +391,10 @@ export class OrderStatusSocket {
 					setTimeout(() => this.initForOrder(orderId), 3000);
 				};
 			} catch (e) {
-				console.error("[WebSocket] Failed to connect to real-time order service", e);
+				console.error(
+					"[WebSocket] Failed to connect to real-time order service",
+					e,
+				);
 			}
 		}
 	}
@@ -373,7 +403,9 @@ export class OrderStatusSocket {
 		if (this.simulatedTimers.has(orderId)) {
 			clearTimeout(this.simulatedTimers.get(orderId));
 			this.simulatedTimers.delete(orderId);
-			console.log(`[WebSocket Mock] Cleaned up order simulation for #${orderId}`);
+			console.log(
+				`[WebSocket Mock] Cleaned up order simulation for #${orderId}`,
+			);
 		}
 		if (this.listeners.size === 0 && this.ws) {
 			this.ws.close();

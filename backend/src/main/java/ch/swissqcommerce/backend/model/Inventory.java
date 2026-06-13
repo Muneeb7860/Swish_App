@@ -2,9 +2,9 @@ package ch.swissqcommerce.backend.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "inventory", schema = "oltp")
@@ -53,8 +53,7 @@ public class Inventory {
     @Builder.Default
     private Boolean perishable = false;
 
-    @Version
-    private Long version;
+    @Version private Long version;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private OffsetDateTime updatedAt;

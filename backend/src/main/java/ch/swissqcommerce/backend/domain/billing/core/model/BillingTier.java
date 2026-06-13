@@ -3,8 +3,8 @@ package ch.swissqcommerce.backend.domain.billing.core.model;
 import java.math.BigDecimal;
 
 /**
- * Flat-tier subscription plans (BRD FR-06). Each tier carries a flat monthly fee
- * that becomes the invoice amount for a billing period, independent of usage.
+ * Flat-tier subscription plans (BRD FR-06). Each tier carries a flat monthly fee that becomes the
+ * invoice amount for a billing period, independent of usage.
  */
 public enum BillingTier {
     BASIC(new BigDecimal("99.00")),

@@ -100,6 +100,8 @@ coverage/
 # Cypress test artifacts (screenshots, videos) — generated, not source
 frontend-host/cypress/screenshots/
 frontend-host/cypress/videos/
+frontend-customer/cypress/screenshots/
+frontend-customer/cypress/videos/
 
 # ─── Misc binaries ───────────────────────────────────────────────────────────
 *.zip

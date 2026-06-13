@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface GeospatialPort {
     DeliveryZone save(DeliveryZone zone);
+
     Optional<DeliveryZone> findById(String zoneId);
 }

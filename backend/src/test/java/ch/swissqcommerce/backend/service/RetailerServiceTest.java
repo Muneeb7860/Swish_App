@@ -1,5 +1,10 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingAccount;
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingTier;
 import ch.swissqcommerce.backend.domain.billing.port.in.BillingUseCase;
@@ -7,18 +12,12 @@ import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
 import ch.swissqcommerce.backend.domain.retailer.core.service.RetailerServiceImpl;
 import ch.swissqcommerce.backend.domain.retailer.port.in.RetailerUseCase;
 import ch.swissqcommerce.backend.domain.retailer.port.out.RetailerPort;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RetailerServiceTest {
@@ -43,9 +42,15 @@ class RetailerServiceTest {
 
     @Test
     void register_invalidInputs_rejected() {
-        assertThrows(IllegalArgumentException.class, () -> service.register("", "a@b.com", "s1", BillingTier.BASIC));
-        assertThrows(IllegalArgumentException.class, () -> service.register("X", "no-at-sign", "s1", BillingTier.BASIC));
-        assertThrows(IllegalArgumentException.class, () -> service.register("X", "a@b.com", " ", BillingTier.BASIC));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.register("", "a@b.com", "s1", BillingTier.BASIC));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.register("X", "no-at-sign", "s1", BillingTier.BASIC));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.register("X", "a@b.com", " ", BillingTier.BASIC));
         verify(port, never()).save(any());
     }
 
@@ -83,7 +88,8 @@ class RetailerServiceTest {
     @Test
     void approveGate_missingRetailer_notFound() {
         when(port.findById("nope")).thenReturn(Optional.empty());
-        assertThrows(java.util.NoSuchElementException.class, () -> service.approveGate("nope", "ops"));
+        assertThrows(
+                java.util.NoSuchElementException.class, () -> service.approveGate("nope", "ops"));
     }
 
     @Test
@@ -105,9 +111,15 @@ class RetailerServiceTest {
 
     private Retailer pending(String id) {
         return Retailer.builder()
-                .retailerId(id).name("Acme").contactEmail("a@b.com")
-                .storeId("store-1").tier(BillingTier.PRO).status("PENDING")
-                .approvalOps(false).approvalCompliance(false).approvalAdmin(false)
+                .retailerId(id)
+                .name("Acme")
+                .contactEmail("a@b.com")
+                .storeId("store-1")
+                .tier(BillingTier.PRO)
+                .status("PENDING")
+                .approvalOps(false)
+                .approvalCompliance(false)
+                .approvalAdmin(false)
                 .build();
     }
 }

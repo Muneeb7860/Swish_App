@@ -16,14 +16,78 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 		cy.intercept("GET", "/api/customer/catalog", {
 			statusCode: 200,
 			body: [
-				{ item_id: "p1", name: "Organic Fresh Milk",       price: 3.49, stock: 12, category: "Dairy & Eggs",    emoji: "🥛", perishable: true  },
-				{ item_id: "p2", name: "Chiquita Bananas (1kg)",   price: 1.99, stock: 18, category: "Fruits & Veggies",emoji: "🍌", perishable: false },
-				{ item_id: "p3", name: "Fresh Hass Avocado (Pair)",price: 2.99, stock: 8,  category: "Fruits & Veggies",emoji: "🥑", perishable: false },
-				{ item_id: "p4", name: "Coca Cola Zero 6-Pack",    price: 5.49, stock: 15, category: "Snacks & Drinks", emoji: "🥤", perishable: false },
-				{ item_id: "p5", name: "Whole Wheat Sourdough",    price: 4.29, stock: 6,  category: "Bakery",          emoji: "🍞", perishable: false },
-				{ item_id: "p6", name: "Double Chocolate Muffins", price: 3.89, stock: 2,  category: "Bakery",          emoji: "🧁", perishable: false },
-				{ item_id: "p7", name: "Free Range Eggs (Dozen)",  price: 4.99, stock: 10, category: "Dairy & Eggs",    emoji: "🥚", perishable: true  },
-				{ item_id: "p8", name: "Potato Chips (Sea Salt)",  price: 2.49, stock: 25, category: "Snacks & Drinks", emoji: "🥔", perishable: false },
+				{
+					item_id: "p1",
+					name: "Organic Fresh Milk",
+					price: 3.49,
+					stock: 12,
+					category: "Dairy & Eggs",
+					emoji: "🥛",
+					perishable: true,
+				},
+				{
+					item_id: "p2",
+					name: "Chiquita Bananas (1kg)",
+					price: 1.99,
+					stock: 18,
+					category: "Fruits & Veggies",
+					emoji: "🍌",
+					perishable: false,
+				},
+				{
+					item_id: "p3",
+					name: "Fresh Hass Avocado (Pair)",
+					price: 2.99,
+					stock: 8,
+					category: "Fruits & Veggies",
+					emoji: "🥑",
+					perishable: false,
+				},
+				{
+					item_id: "p4",
+					name: "Coca Cola Zero 6-Pack",
+					price: 5.49,
+					stock: 15,
+					category: "Snacks & Drinks",
+					emoji: "🥤",
+					perishable: false,
+				},
+				{
+					item_id: "p5",
+					name: "Whole Wheat Sourdough",
+					price: 4.29,
+					stock: 6,
+					category: "Bakery",
+					emoji: "🍞",
+					perishable: false,
+				},
+				{
+					item_id: "p6",
+					name: "Double Chocolate Muffins",
+					price: 3.89,
+					stock: 2,
+					category: "Bakery",
+					emoji: "🧁",
+					perishable: false,
+				},
+				{
+					item_id: "p7",
+					name: "Free Range Eggs (Dozen)",
+					price: 4.99,
+					stock: 10,
+					category: "Dairy & Eggs",
+					emoji: "🥚",
+					perishable: true,
+				},
+				{
+					item_id: "p8",
+					name: "Potato Chips (Sea Salt)",
+					price: 2.49,
+					stock: 25,
+					category: "Snacks & Drinks",
+					emoji: "🥔",
+					perishable: false,
+				},
 			],
 		}).as("catalogRequest");
 
@@ -113,7 +177,9 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 			});
 
 		// Cart drawer should now show the added item
-		cy.get(".customer-cart-drawer").contains("Organic Fresh Milk").should("exist");
+		cy.get(".customer-cart-drawer")
+			.contains("Organic Fresh Milk")
+			.should("exist");
 		cy.get(".customer-cart-drawer").contains("1x $3.49").should("exist");
 
 		// Select $2 Rider Tip
@@ -131,7 +197,9 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 		cy.get("#esg-bags").click({ force: true });
 
 		// Assert paper bag rebate applied
-		cy.get(".customer-cart-drawer").contains("Paper Bag Rebate:").should("exist");
+		cy.get(".customer-cart-drawer")
+			.contains("Paper Bag Rebate:")
+			.should("exist");
 		cy.get(".customer-cart-drawer").contains("-$0.50").should("exist");
 
 		// Validate total: $3.49 + $2.99 + $2.00 - $0.50 = $7.98
@@ -147,9 +215,13 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 		cy.contains("My Discount Vouchers").click();
 
 		cy.contains("SWISSWELCOME5").should("exist");
-		cy.contains("Get $5.00 cash voucher on your first grocery basket!").should("exist");
+		cy.contains("Get $5.00 cash voucher on your first grocery basket!").should(
+			"exist",
+		);
 		cy.contains("FRESH10").should("exist");
-		cy.contains("Flat $10.00 discount coupon on organic dairy orders.").should("exist");
+		cy.contains("Flat $10.00 discount coupon on organic dairy orders.").should(
+			"exist",
+		);
 
 		// ─── 5. MOCK INVENTORY DEPLETION STOCKOUT & SUBSTITUTION FLOW ───
 		cy.contains("Browse Store Catalog").click();
@@ -172,7 +244,9 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 
 		// Modal closes; Sourdough appears in cart
 		cy.get(".cert-modal-overlay").should("not.exist");
-		cy.get(".customer-cart-drawer").contains("Whole Wheat Sourdough").should("exist");
+		cy.get(".customer-cart-drawer")
+			.contains("Whole Wheat Sourdough")
+			.should("exist");
 
 		// ─── 6. E2E CHECKOUT PERSISTENCE & SLA LIFECYCLE ───
 		cy.get("#btn-checkout-wallet").click();

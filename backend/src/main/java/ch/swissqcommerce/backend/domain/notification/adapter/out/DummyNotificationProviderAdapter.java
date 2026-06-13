@@ -8,7 +8,12 @@ import org.springframework.stereotype.Component;
 public class DummyNotificationProviderAdapter implements NotificationProviderPort {
     @Override
     public void send(Notification notification) {
-        System.out.println("Sending " + notification.getChannel() + " to user " + notification.getRecipientId() + ": " + notification.getBody());
+        System.out.println(
+                "Sending "
+                        + notification.getChannel()
+                        + " to user "
+                        + notification.getRecipientId()
+                        + ": "
+                        + notification.getBody());
     }
 }
-

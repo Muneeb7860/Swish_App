@@ -1,23 +1,19 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
+
+import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
+import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.DarkStore;
-
-
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
-import ch.swissqcommerce.backend.model.*;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "orders", schema = "oltp")

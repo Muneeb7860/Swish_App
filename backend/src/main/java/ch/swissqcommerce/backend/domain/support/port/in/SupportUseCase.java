@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface SupportUseCase {
     SupportTicket createTicket(SupportTicket ticket);
+
     Optional<SupportTicket> getTicket(String ticketId);
 }

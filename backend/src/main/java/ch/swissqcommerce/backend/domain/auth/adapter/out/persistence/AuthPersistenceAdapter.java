@@ -5,10 +5,9 @@ import ch.swissqcommerce.backend.domain.auth.core.model.EmailAddress;
 import ch.swissqcommerce.backend.domain.auth.core.model.PasswordHash;
 import ch.swissqcommerce.backend.domain.auth.core.model.UserAccount;
 import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -38,7 +37,10 @@ public class AuthPersistenceAdapter implements UserRepositoryPort {
                 .userId(user.getId())
                 .email(user.getEmailAddress().getValue())
                 .passwordHash(user.getPasswordHash().getValue())
-                .status(user.getStatus() != null ? user.getStatus().name() : AccountStatus.ACTIVE.name())
+                .status(
+                        user.getStatus() != null
+                                ? user.getStatus().name()
+                                : AccountStatus.ACTIVE.name())
                 .role(user.getRole() != null ? user.getRole() : "CUSTOMER")
                 .build();
     }

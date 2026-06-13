@@ -4,11 +4,10 @@ import ch.swissqcommerce.backend.domain.sensor.core.model.Sensor;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorReading;
 import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.port.out.SensorPort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -19,16 +18,17 @@ public class SensorPersistenceAdapter implements SensorPort {
 
     @Override
     public Sensor save(Sensor sensor) {
-        SensorEntity entity = SensorEntity.builder()
-                .sensorId(sensor.getSensorId())
-                .retailerId(sensor.getRetailerId())
-                .storeId(sensor.getStoreId())
-                .sensorType(sensor.getSensorType().name())
-                .status(sensor.getStatus())
-                .deviceKeyHash(sensor.getDeviceKeyHash())
-                .lastCalibratedAt(sensor.getLastCalibratedAt())
-                .calibrationStatus(sensor.getCalibrationStatus())
-                .build();
+        SensorEntity entity =
+                SensorEntity.builder()
+                        .sensorId(sensor.getSensorId())
+                        .retailerId(sensor.getRetailerId())
+                        .storeId(sensor.getStoreId())
+                        .sensorType(sensor.getSensorType().name())
+                        .status(sensor.getStatus())
+                        .deviceKeyHash(sensor.getDeviceKeyHash())
+                        .lastCalibratedAt(sensor.getLastCalibratedAt())
+                        .calibrationStatus(sensor.getCalibrationStatus())
+                        .build();
         return toDomain(repository.save(entity));
     }
 
@@ -44,33 +44,35 @@ public class SensorPersistenceAdapter implements SensorPort {
 
     @Override
     public List<Sensor> findByRetailerId(String retailerId) {
-        return repository.findByRetailerIdOrderByCreatedAtDesc(retailerId)
-                .stream().map(this::toDomain).toList();
+        return repository.findByRetailerIdOrderByCreatedAtDesc(retailerId).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
     public List<Sensor> findByStoreId(String storeId) {
-        return repository.findByStoreId(storeId)
-                .stream().map(this::toDomain).toList();
+        return repository.findByStoreId(storeId).stream().map(this::toDomain).toList();
     }
 
     @Override
     public SensorReading saveReading(SensorReading reading) {
-        SensorReadingEntity entity = SensorReadingEntity.builder()
-                .sensorId(reading.getSensorId())
-                .recordedAt(reading.getRecordedAt())
-                .metricType(reading.getMetricType())
-                .readingValue(reading.getValue())
-                .previousReadingHash(reading.getPreviousReadingHash())
-                .readingHash(reading.getReadingHash())
-                .build();
+        SensorReadingEntity entity =
+                SensorReadingEntity.builder()
+                        .sensorId(reading.getSensorId())
+                        .recordedAt(reading.getRecordedAt())
+                        .metricType(reading.getMetricType())
+                        .readingValue(reading.getValue())
+                        .previousReadingHash(reading.getPreviousReadingHash())
+                        .readingHash(reading.getReadingHash())
+                        .build();
         return toDomain(readingRepository.save(entity));
     }
 
     @Override
     public List<SensorReading> recentReadings(String sensorId) {
-        return readingRepository.findTop100BySensorIdOrderByRecordedAtDesc(sensorId)
-                .stream().map(this::toDomain).toList();
+        return readingRepository.findTop100BySensorIdOrderByRecordedAtDesc(sensorId).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     private SensorReading toDomain(SensorReadingEntity e) {

@@ -9,11 +9,14 @@ public interface B2BProcurementActivities {
 
     boolean checkGuardrail(double proposedPrice, double basePrice, int quantity);
 
-    int createPendingOrder(String itemId, String wholesalerName, double proposedPrice, int quantity);
+    int createPendingOrder(
+            String itemId, String wholesalerName, double proposedPrice, int quantity);
 
-    int createFulfilledOrder(String itemId, String wholesalerName, double proposedPrice, int quantity);
+    int createFulfilledOrder(
+            String itemId, String wholesalerName, double proposedPrice, int quantity);
 
-    void auditNegotiation(int restockOrderId, String wholesalerName, double proposedPrice, int quantity);
+    void auditNegotiation(
+            int restockOrderId, String wholesalerName, double proposedPrice, int quantity);
 
     void updateOrderStatus(int restockOrderId, String status);
 

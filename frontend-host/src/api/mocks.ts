@@ -13,7 +13,7 @@ import {
 	HitlTicket,
 	LedgerLine,
 	AuditLogEntry,
-	ComplianceReport
+	ComplianceReport,
 } from "./types";
 
 export const MOCK_PRODUCTS: CatalogItem[] = [
@@ -117,13 +117,16 @@ export const MOCK_ORDERS: Order[] = [
 		sla_countdown_sec: 0,
 		bags_returned: 0,
 		created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-	}
+	},
 ];
 
 export const MOCK_COURSES: RiderCourse[] = [
 	{ course_id: "c-cold-1", course_name: "IoT Cold Chain Cargo Handling V2" },
 	{ course_id: "c-safety-2", course_name: "Urban E-Bike Defensive Navigation" },
-	{ course_id: "c-customer-3", course_name: "High-Empathy Delivery Touchpoints" }
+	{
+		course_id: "c-customer-3",
+		course_name: "High-Empathy Delivery Touchpoints",
+	},
 ];
 
 export const MOCK_ONBOARDING: OnboardingApplication[] = [
@@ -134,7 +137,7 @@ export const MOCK_ONBOARDING: OnboardingApplication[] = [
 		approval_ops: false,
 		approval_compliance: false,
 		approval_admin: false,
-		created_at: new Date().toISOString()
+		created_at: new Date().toISOString(),
 	},
 	{
 		application_id: "mer-1",
@@ -143,8 +146,8 @@ export const MOCK_ONBOARDING: OnboardingApplication[] = [
 		approval_ops: false,
 		approval_compliance: false,
 		approval_admin: false,
-		created_at: new Date().toISOString()
-	}
+		created_at: new Date().toISOString(),
+	},
 ];
 
 export const MOCK_HITL_TICKETS: HitlTicket[] = [
@@ -154,16 +157,16 @@ export const MOCK_HITL_TICKETS: HitlTicket[] = [
 		description: "Refund request for spoiled milk claims by Dave",
 		amount: 8.97,
 		status: "pending",
-		created_at: new Date().toISOString()
+		created_at: new Date().toISOString(),
 	},
 	{
 		ticket_id: "HITL-102",
 		type: "rider_emergency",
 		description: "Rider reported mechanical failure of transit vehicle",
-		amount: 15.00,
+		amount: 15.0,
 		status: "pending",
-		created_at: new Date().toISOString()
-	}
+		created_at: new Date().toISOString(),
+	},
 ];
 
 export const MOCK_LEDGER: LedgerLine[] = [
@@ -172,15 +175,15 @@ export const MOCK_LEDGER: LedgerLine[] = [
 		entry_id: 100,
 		account_type: "ASSETS",
 		debit: 100.0,
-		credit: 0
+		credit: 0,
 	},
 	{
 		line_id: 2,
 		entry_id: 101,
 		account_type: "REVENUE",
 		debit: 0,
-		credit: 8.97
-	}
+		credit: 8.97,
+	},
 ];
 
 export const MOCK_AUDIT_LOGS: AuditLogEntry[] = [
@@ -188,21 +191,21 @@ export const MOCK_AUDIT_LOGS: AuditLogEntry[] = [
 		timestamp: new Date().toISOString(),
 		actor: "system",
 		action: "INITIALIZE",
-		details: "Security and compliance guardrails active"
+		details: "Security and compliance guardrails active",
 	},
 	{
 		timestamp: new Date().toISOString(),
 		actor: "admin",
 		action: "CONFIG_UPDATE",
-		details: "Rotated Vault keys for token signature verification"
-	}
+		details: "Rotated Vault keys for token signature verification",
+	},
 ];
 
 export const MOCK_COMPLIANCE: ComplianceReport = {
 	gdpr_status: "COMPLIANT",
 	pci_status: "COMPLIANT",
 	last_audited: new Date().toISOString(),
-	issues_found: 0
+	issues_found: 0,
 };
 
 export const MOCK_RESTOCKS: B2BRestockOrder[] = [
@@ -210,20 +213,20 @@ export const MOCK_RESTOCKS: B2BRestockOrder[] = [
 		restock_order_id: 3001,
 		store_id: "store-central",
 		wholesaler_id: "wholesaler-zuri",
-		invoice_amount: 150.00,
+		invoice_amount: 150.0,
 		is_fallback: false,
 		status: "pending",
-		created_at: new Date().toISOString()
+		created_at: new Date().toISOString(),
 	},
 	{
 		restock_order_id: 3002,
 		store_id: "store-east",
 		wholesaler_id: "wholesaler-basel",
-		invoice_amount: 45.00,
+		invoice_amount: 45.0,
 		is_fallback: true,
 		status: "fulfilled",
-		created_at: new Date(Date.now() - 3600000).toISOString()
-	}
+		created_at: new Date(Date.now() - 3600000).toISOString(),
+	},
 ];
 
 export const MOCK_INVOICES: B2BInvoice[] = [
@@ -231,8 +234,8 @@ export const MOCK_INVOICES: B2BInvoice[] = [
 		invoice_id: 4001,
 		restock_order_id: 3002,
 		wholesaler_id: "wholesaler-basel",
-		amount: 45.00,
+		amount: 45.0,
 		status: "paid",
-		created_at: new Date(Date.now() - 3600000).toISOString()
-	}
+		created_at: new Date(Date.now() - 3600000).toISOString(),
+	},
 ];

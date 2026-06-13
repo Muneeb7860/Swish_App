@@ -3,10 +3,10 @@ package ch.swissqcommerce.backend.domain.catalog.core.service;
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.port.in.CatalogUseCase;
 import ch.swissqcommerce.backend.domain.catalog.port.out.CatalogPort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

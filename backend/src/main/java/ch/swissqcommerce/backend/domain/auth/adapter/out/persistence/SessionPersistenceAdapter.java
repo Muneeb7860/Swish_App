@@ -4,10 +4,9 @@ import ch.swissqcommerce.backend.domain.auth.core.model.DeviceFingerprint;
 import ch.swissqcommerce.backend.domain.auth.core.model.IPAddress;
 import ch.swissqcommerce.backend.domain.auth.core.model.Session;
 import ch.swissqcommerce.backend.domain.auth.port.out.SessionRepositoryPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +29,10 @@ public class SessionPersistenceAdapter implements SessionRepositoryPort {
         return SessionEntity.builder()
                 .sessionId(s.getId())
                 .userId(s.getUserId())
-                .deviceFingerprint(s.getDeviceFingerprint() != null ? s.getDeviceFingerprint().getValue() : null)
+                .deviceFingerprint(
+                        s.getDeviceFingerprint() != null
+                                ? s.getDeviceFingerprint().getValue()
+                                : null)
                 .ipAddress(s.getIpAddress() != null ? s.getIpAddress().getValue() : null)
                 .expiresAt(s.getExpiresAt())
                 .active(s.isActive())
@@ -41,7 +43,10 @@ public class SessionPersistenceAdapter implements SessionRepositoryPort {
         return Session.builder()
                 .id(e.getSessionId())
                 .userId(e.getUserId())
-                .deviceFingerprint(e.getDeviceFingerprint() != null ? new DeviceFingerprint(e.getDeviceFingerprint()) : null)
+                .deviceFingerprint(
+                        e.getDeviceFingerprint() != null
+                                ? new DeviceFingerprint(e.getDeviceFingerprint())
+                                : null)
                 .ipAddress(e.getIpAddress() != null ? new IPAddress(e.getIpAddress()) : null)
                 .expiresAt(e.getExpiresAt())
                 .active(e.isActive())

@@ -3,41 +3,48 @@ package ch.swissqcommerce.backend.domain.telemetry.adapter.in.web;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 @RestController
 @RequestMapping("/api/telemetry")
 public class TelemetryController {
 
-    @Autowired
-    private TelemetryUseCase telemetryService;
+    @Autowired private TelemetryUseCase telemetryService;
 
-    private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<SseEmitter>> emitters =
+            new ConcurrentHashMap<>();
 
     public static class TelemetryTickRequest {
         @jakarta.validation.constraints.NotNull(message = "Order ID is required")
         private Integer orderId;
 
         @jakarta.validation.constraints.NotNull(message = "Latitude is required")
-        @jakarta.validation.constraints.DecimalMin(value = "-90.0", message = "Latitude must be >= -90.0")
-        @jakarta.validation.constraints.DecimalMax(value = "90.0", message = "Latitude must be <= 90.0")
+        @jakarta.validation.constraints.DecimalMin(
+                value = "-90.0",
+                message = "Latitude must be >= -90.0")
+        @jakarta.validation.constraints.DecimalMax(
+                value = "90.0",
+                message = "Latitude must be <= 90.0")
         private BigDecimal latitude;
 
         @jakarta.validation.constraints.NotNull(message = "Longitude is required")
-        @jakarta.validation.constraints.DecimalMin(value = "-180.0", message = "Longitude must be >= -180.0")
-        @jakarta.validation.constraints.DecimalMax(value = "180.0", message = "Longitude must be <= 180.0")
+        @jakarta.validation.constraints.DecimalMin(
+                value = "-180.0",
+                message = "Longitude must be >= -180.0")
+        @jakarta.validation.constraints.DecimalMax(
+                value = "180.0",
+                message = "Longitude must be <= 180.0")
         private BigDecimal longitude;
 
         @jakarta.validation.constraints.NotNull(message = "Temperature is required")
@@ -45,21 +52,56 @@ public class TelemetryController {
 
         private boolean dryIceInjected;
 
-        public Integer getOrderId() { return orderId; }
-        public void setOrderId(Integer orderId) { this.orderId = orderId; }
-        public BigDecimal getLatitude() { return latitude; }
-        public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
-        public BigDecimal getLongitude() { return longitude; }
-        public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
-        public BigDecimal getTemperature() { return temperature; }
-        public void setTemperature(BigDecimal temperature) { this.temperature = temperature; }
-        public boolean isDryIceInjected() { return dryIceInjected; }
-        public void setDryIceInjected(boolean dryIceInjected) { this.dryIceInjected = dryIceInjected; }
+        public Integer getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(Integer orderId) {
+            this.orderId = orderId;
+        }
+
+        public BigDecimal getLatitude() {
+            return latitude;
+        }
+
+        public void setLatitude(BigDecimal latitude) {
+            this.latitude = latitude;
+        }
+
+        public BigDecimal getLongitude() {
+            return longitude;
+        }
+
+        public void setLongitude(BigDecimal longitude) {
+            this.longitude = longitude;
+        }
+
+        public BigDecimal getTemperature() {
+            return temperature;
+        }
+
+        public void setTemperature(BigDecimal temperature) {
+            this.temperature = temperature;
+        }
+
+        public boolean isDryIceInjected() {
+            return dryIceInjected;
+        }
+
+        public void setDryIceInjected(boolean dryIceInjected) {
+            this.dryIceInjected = dryIceInjected;
+        }
     }
 
     @PostMapping("/tick")
-    public ResponseEntity<Map<String, Object>> ingestTick(@jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
-        boolean valid = telemetryService.updateLocation(request.getOrderId(), request.getLatitude(), request.getLongitude(), request.getTemperature());
+    public ResponseEntity<Map<String, Object>> ingestTick(
+            @jakarta.validation.Valid @RequestBody TelemetryTickRequest request) {
+        boolean valid =
+                telemetryService.updateLocation(
+                        request.getOrderId(),
+                        request.getLatitude(),
+                        request.getLongitude(),
+                        request.getTemperature());
 
         if (!valid) {
             Map<String, Object> payload = new HashMap<>();
@@ -75,24 +117,25 @@ public class TelemetryController {
 
         OrderTelemetryLog savedDbLog = null;
         if (thresholdBreached || dryIceInjected) {
-            savedDbLog = telemetryService.recordTelemetry(
-                    request.getOrderId(),
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getTemperature(),
-                    request.isDryIceInjected()
-            );
+            savedDbLog =
+                    telemetryService.recordTelemetry(
+                            request.getOrderId(),
+                            request.getLatitude(),
+                            request.getLongitude(),
+                            request.getTemperature(),
+                            request.isDryIceInjected());
         } else {
             telemetryService.queueTick(
                     request.getOrderId(),
                     request.getLatitude(),
                     request.getLongitude(),
                     request.getTemperature(),
-                    request.isDryIceInjected()
-            );
+                    request.isDryIceInjected());
         }
 
-        boolean thermalBreachActive = telemetryService.isThermalBreachActive(request.getOrderId(), request.getTemperature());
+        boolean thermalBreachActive =
+                telemetryService.isThermalBreachActive(
+                        request.getOrderId(), request.getTemperature());
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", request.getOrderId());
@@ -114,8 +157,9 @@ public class TelemetryController {
     @GetMapping(value = "/stream/{orderId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamTelemetry(@PathVariable Integer orderId) {
         SseEmitter emitter = new SseEmitter(180_000L);
-        
-        CopyOnWriteArrayList<SseEmitter> list = emitters.computeIfAbsent(orderId, k -> new CopyOnWriteArrayList<>());
+
+        CopyOnWriteArrayList<SseEmitter> list =
+                emitters.computeIfAbsent(orderId, k -> new CopyOnWriteArrayList<>());
         list.add(emitter);
 
         emitter.onCompletion(() -> removeEmitter(orderId, emitter));
@@ -125,7 +169,9 @@ public class TelemetryController {
         GeoLocationPort.RiderLocation currentLoc = telemetryService.getLatestLocation(orderId);
         if (currentLoc != null) {
             try {
-                boolean thermalBreachActive = telemetryService.isThermalBreachActive(orderId, currentLoc.getTemperature());
+                boolean thermalBreachActive =
+                        telemetryService.isThermalBreachActive(
+                                orderId, currentLoc.getTemperature());
                 Map<String, Object> payload = new HashMap<>();
                 payload.put("orderId", orderId);
                 payload.put("latitude", currentLoc.getLatitude());
@@ -135,7 +181,8 @@ public class TelemetryController {
                 payload.put("thermalBreachActive", thermalBreachActive);
                 payload.put("initial", true);
                 emitter.send(SseEmitter.event().name("telemetry-update").data(payload));
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
 
         return emitter;
@@ -144,13 +191,13 @@ public class TelemetryController {
     @PostMapping("/{orderId}/dry-ice")
     public ResponseEntity<Map<String, Object>> injectDryIce(@PathVariable Integer orderId) {
         telemetryService.injectDryIce(orderId);
-        
+
         GeoLocationPort.RiderLocation currentLoc = telemetryService.getLatestLocation(orderId);
         BigDecimal lat = currentLoc != null ? currentLoc.getLatitude() : new BigDecimal("47.3769");
         BigDecimal lng = currentLoc != null ? currentLoc.getLongitude() : new BigDecimal("8.5417");
-        
+
         telemetryService.updateLocation(orderId, lat, lng, new BigDecimal("4.0"));
-        
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", orderId);
         payload.put("latitude", lat);
@@ -160,9 +207,9 @@ public class TelemetryController {
         payload.put("thermalBreachActive", false);
         payload.put("timestamp", OffsetDateTime.now().toString());
         payload.put("message", "Dry ice cargo cooling completed.");
-        
+
         pushToSubscribers(orderId, payload);
-        
+
         return ResponseEntity.ok(payload);
     }
 

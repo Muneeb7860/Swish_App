@@ -50,8 +50,16 @@ export default function AdminLogin({ onLogin }: Props) {
 				borderRadius: 10,
 			}}
 		>
-			<h3 style={{ margin: "0 0 0.25rem", fontWeight: 800 }}>🔐 Supervisor Sign-in</h3>
-			<p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", marginBottom: "1rem" }}>
+			<h3 style={{ margin: "0 0 0.25rem", fontWeight: 800 }}>
+				🔐 Supervisor Sign-in
+			</h3>
+			<p
+				style={{
+					fontSize: "0.72rem",
+					color: "rgba(255,255,255,0.5)",
+					marginBottom: "1rem",
+				}}
+			>
 				ADMIN credentials required to view and action the HITL governance queue.
 			</p>
 
@@ -67,7 +75,14 @@ export default function AdminLogin({ onLogin }: Props) {
 				/>
 			</label>
 
-			<label style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.7)", display: "block", marginTop: "0.75rem" }}>
+			<label
+				style={{
+					fontSize: "0.72rem",
+					color: "rgba(255,255,255,0.7)",
+					display: "block",
+					marginTop: "0.75rem",
+				}}
+			>
 				Password
 				<input
 					type="password"
@@ -80,7 +95,15 @@ export default function AdminLogin({ onLogin }: Props) {
 			</label>
 
 			{err && (
-				<div style={{ marginTop: "0.75rem", color: "#f87171", fontSize: "0.75rem" }}>⚠ {err}</div>
+				<div
+					style={{
+						marginTop: "0.75rem",
+						color: "#f87171",
+						fontSize: "0.75rem",
+					}}
+				>
+					⚠ {err}
+				</div>
 			)}
 
 			<button

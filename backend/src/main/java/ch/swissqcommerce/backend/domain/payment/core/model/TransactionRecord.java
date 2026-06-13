@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.domain.payment.core.model;
 
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Getter;
-import java.time.Instant;
 
 @Getter
 @Builder
@@ -28,7 +28,7 @@ public class TransactionRecord {
         this.status = TransactionStatus.FAILED;
         this.processedAt = Instant.now();
     }
-    
+
     public void markRefunded() {
         if (this.status != TransactionStatus.SETTLED) {
             throw new IllegalStateException("Cannot refund an unsettled transaction");

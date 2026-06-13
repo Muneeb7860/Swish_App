@@ -1,28 +1,27 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.event.adapter.in.web.WebhookController;
 import ch.swissqcommerce.backend.domain.event.adapter.out.persistence.DomainEventEntity;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
+import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.util.HexFormat;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
 /**
- * Unit tests for {@link WebhookController}.
- * Verifies HMAC validation, payload parsing, and event persistence.
+ * Unit tests for {@link WebhookController}. Verifies HMAC validation, payload parsing, and event
+ * persistence.
  */
 class WebhookControllerTest {
 
@@ -42,7 +41,8 @@ class WebhookControllerTest {
 
     private String computeHmac(String body) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
-        SecretKeySpec keySpec = new SecretKeySpec(TEST_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        SecretKeySpec keySpec =
+                new SecretKeySpec(TEST_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         mac.init(keySpec);
         byte[] hash = mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
         return HexFormat.of().formatHex(hash);
@@ -50,17 +50,20 @@ class WebhookControllerTest {
 
     @Test
     void shouldAcceptValidWebhookWithCorrectSignature() throws Exception {
-        String body = "{\"eventType\":\"order.placed\",\"aggregateId\":\"order-123\",\"payload\":{\"item\":\"coffee\"}}";
+        String body =
+                "{\"eventType\":\"order.placed\",\"aggregateId\":\"order-123\",\"payload\":{\"item\":\"coffee\"}}";
         String signature = computeHmac(body);
 
-        DomainEventEntity savedEvent = DomainEventEntity.builder()
-                .eventId("evt-001")
-                .eventType("order.placed")
-                .status("PENDING")
-                .build();
+        DomainEventEntity savedEvent =
+                DomainEventEntity.builder()
+                        .eventId("evt-001")
+                        .eventType("order.placed")
+                        .status("PENDING")
+                        .build();
         when(eventUseCase.publishEvent(anyString(), anyString())).thenReturn(savedEvent);
 
-        ResponseEntity<Map<String, String>> response = controller.receiveN8nWebhook(signature, body);
+        ResponseEntity<Map<String, String>> response =
+                controller.receiveN8nWebhook(signature, body);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("accepted", response.getBody().get("status"));
@@ -94,7 +97,8 @@ class WebhookControllerTest {
         String body = "{\"eventType\":\"order.placed\"}";
         String invalidSignature = "deadbeef1234567890abcdef";
 
-        ResponseEntity<Map<String, String>> response = controller.receiveN8nWebhook(invalidSignature, body);
+        ResponseEntity<Map<String, String>> response =
+                controller.receiveN8nWebhook(invalidSignature, body);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertTrue(response.getBody().get("error").contains("Invalid"));
@@ -106,7 +110,8 @@ class WebhookControllerTest {
         String body = "{\"aggregateId\":\"order-123\",\"payload\":{}}";
         String signature = computeHmac(body);
 
-        ResponseEntity<Map<String, String>> response = controller.receiveN8nWebhook(signature, body);
+        ResponseEntity<Map<String, String>> response =
+                controller.receiveN8nWebhook(signature, body);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertTrue(response.getBody().get("error").contains("eventType"));
@@ -118,14 +123,16 @@ class WebhookControllerTest {
         String body = "{\"eventType\":\"enrollment.state_change\",\"aggregateId\":\"rider-001\"}";
         String signature = computeHmac(body);
 
-        DomainEventEntity savedEvent = DomainEventEntity.builder()
-                .eventId("evt-002")
-                .eventType("enrollment.state_change")
-                .status("PENDING")
-                .build();
+        DomainEventEntity savedEvent =
+                DomainEventEntity.builder()
+                        .eventId("evt-002")
+                        .eventType("enrollment.state_change")
+                        .status("PENDING")
+                        .build();
         when(eventUseCase.publishEvent(anyString(), anyString())).thenReturn(savedEvent);
 
-        ResponseEntity<Map<String, String>> response = controller.receiveN8nWebhook(signature, body);
+        ResponseEntity<Map<String, String>> response =
+                controller.receiveN8nWebhook(signature, body);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         // When payload is missing, it should default to "{}"
@@ -137,11 +144,12 @@ class WebhookControllerTest {
         String body = "{\"eventType\":\"test.event\",\"aggregateId\":\"agg-1\",\"payload\":{}}";
         String signature = computeHmac(body);
 
-        DomainEventEntity savedEvent = DomainEventEntity.builder()
-                .eventId("evt-003")
-                .eventType("test.event")
-                .status("PENDING")
-                .build();
+        DomainEventEntity savedEvent =
+                DomainEventEntity.builder()
+                        .eventId("evt-003")
+                        .eventType("test.event")
+                        .status("PENDING")
+                        .build();
         when(eventUseCase.publishEvent(anyString(), anyString())).thenReturn(savedEvent);
 
         controller.receiveN8nWebhook(signature, body);
@@ -157,7 +165,10 @@ class WebhookControllerTest {
         controller.receiveN8nWebhook("invalid-sig", body);
 
         double rejected = meterRegistry.counter("webhook_events_rejected_total").count();
-        assertEquals(2.0, rejected, "Both missing and invalid signatures should increment rejected counter");
+        assertEquals(
+                2.0,
+                rejected,
+                "Both missing and invalid signatures should increment rejected counter");
     }
 
     @Test

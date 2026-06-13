@@ -11,11 +11,21 @@ public class Preferences {
         this.defaultCurrency = defaultCurrency;
     }
 
-    public boolean isMarketingOptIn() { return marketingOptIn; }
-    public void setMarketingOptIn(boolean marketingOptIn) { this.marketingOptIn = marketingOptIn; }
+    public boolean isMarketingOptIn() {
+        return marketingOptIn;
+    }
 
-    public String getDefaultCurrency() { return defaultCurrency; }
-    public void setDefaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; }
+    public void setMarketingOptIn(boolean marketingOptIn) {
+        this.marketingOptIn = marketingOptIn;
+    }
+
+    public String getDefaultCurrency() {
+        return defaultCurrency;
+    }
+
+    public void setDefaultCurrency(String defaultCurrency) {
+        this.defaultCurrency = defaultCurrency;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -25,8 +35,15 @@ public class Preferences {
         private boolean marketingOptIn;
         private String defaultCurrency;
 
-        public Builder marketingOptIn(boolean marketingOptIn) { this.marketingOptIn = marketingOptIn; return this; }
-        public Builder defaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; return this; }
+        public Builder marketingOptIn(boolean marketingOptIn) {
+            this.marketingOptIn = marketingOptIn;
+            return this;
+        }
+
+        public Builder defaultCurrency(String defaultCurrency) {
+            this.defaultCurrency = defaultCurrency;
+            return this;
+        }
 
         public Preferences build() {
             return new Preferences(marketingOptIn, defaultCurrency);

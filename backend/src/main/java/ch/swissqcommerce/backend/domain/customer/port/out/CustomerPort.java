@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface CustomerPort {
     Optional<Customer> findCustomerById(String customerId);
+
     Customer saveCustomer(Customer customer);
 }

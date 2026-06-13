@@ -2,9 +2,9 @@ package ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "riders", schema = "oltp")

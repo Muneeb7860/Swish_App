@@ -1,26 +1,25 @@
 package ch.swissqcommerce.backend.service;
 
-import ch.swissqcommerce.backend.domain.telemetry.core.service.TelemetryServiceImpl;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.repository.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.core.service.TelemetryServiceImpl;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
+import ch.swissqcommerce.backend.repository.*;
+import java.math.BigDecimal;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.Optional;
-import java.util.NoSuchElementException;
-
-import java.math.BigDecimal;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TelemetryServiceTest {
@@ -32,8 +31,7 @@ public class TelemetryServiceTest {
     @Mock private LedgerUseCase ledgerUseCase;
     @Mock private GeoLocationPort geoLocationPort;
 
-    @InjectMocks
-    private TelemetryServiceImpl telemetryService;
+    @InjectMocks private TelemetryServiceImpl telemetryService;
 
     @Test
     public void testIsThermalBreachActive_NotBreached() {
@@ -51,33 +49,59 @@ public class TelemetryServiceTest {
 
     @Test
     public void testUpdateLocation_Success() {
-        boolean result = telemetryService.updateLocation(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+        boolean result =
+                telemetryService.updateLocation(
+                        1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
         assertTrue(result);
-        verify(geoLocationPort).updateLocation(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+        verify(geoLocationPort)
+                .updateLocation(
+                        1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
     }
 
     @Test
     public void testUpdateLocation_OutlierGPSDiscarded() throws InterruptedException {
         // First location update is successful
-        boolean firstResult = telemetryService.updateLocation(2, new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0"));
+        boolean firstResult =
+                telemetryService.updateLocation(
+                        2,
+                        new BigDecimal("47.3769"),
+                        new BigDecimal("8.5417"),
+                        new BigDecimal("5.0"));
         assertTrue(firstResult);
-        verify(geoLocationPort).updateLocation(2, new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0"));
+        verify(geoLocationPort)
+                .updateLocation(
+                        2,
+                        new BigDecimal("47.3769"),
+                        new BigDecimal("8.5417"),
+                        new BigDecimal("5.0"));
 
         // Wait to trigger distance/speed filter
         Thread.sleep(600);
 
         // Send coordinate 1 degree away (approx 130 km) -> impossible speed for 600ms
-        boolean secondResult = telemetryService.updateLocation(2, new BigDecimal("48.3769"), new BigDecimal("9.5417"), new BigDecimal("5.0"));
-        
+        boolean secondResult =
+                telemetryService.updateLocation(
+                        2,
+                        new BigDecimal("48.3769"),
+                        new BigDecimal("9.5417"),
+                        new BigDecimal("5.0"));
+
         // Assert that the outlier was detected and discarded (returned false)
         assertFalse(secondResult);
         // Verify thatgeoLocationPort was NEVER called with the second coordinate
-        verify(geoLocationPort, never()).updateLocation(2, new BigDecimal("48.3769"), new BigDecimal("9.5417"), new BigDecimal("5.0"));
+        verify(geoLocationPort, never())
+                .updateLocation(
+                        2,
+                        new BigDecimal("48.3769"),
+                        new BigDecimal("9.5417"),
+                        new BigDecimal("5.0"));
     }
 
     @Test
     public void testGetLatestLocation() {
-        GeoLocationPort.RiderLocation mockLoc = new GeoLocationPort.RiderLocation(new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
+        GeoLocationPort.RiderLocation mockLoc =
+                new GeoLocationPort.RiderLocation(
+                        new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"));
         when(geoLocationPort.getLatestLocation(1)).thenReturn(mockLoc);
 
         GeoLocationPort.RiderLocation result = telemetryService.getLatestLocation(1);
@@ -96,7 +120,13 @@ public class TelemetryServiceTest {
         when(telemetryPort.findOrderById(1)).thenReturn(Optional.of(order));
         when(telemetryPort.save(any(OrderTelemetryLog.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        OrderTelemetryLog log = telemetryService.recordTelemetry(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"), false);
+        OrderTelemetryLog log =
+                telemetryService.recordTelemetry(
+                        1,
+                        new BigDecimal("47.0"),
+                        new BigDecimal("8.0"),
+                        new BigDecimal("5.0"),
+                        false);
 
         assertNotNull(log);
         assertEquals(order, log.getOrder());
@@ -113,7 +143,13 @@ public class TelemetryServiceTest {
         when(telemetryPort.findOrderById(1)).thenReturn(Optional.of(order));
         when(telemetryPort.save(any(OrderTelemetryLog.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        OrderTelemetryLog log = telemetryService.recordTelemetry(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("9.0"), false);
+        OrderTelemetryLog log =
+                telemetryService.recordTelemetry(
+                        1,
+                        new BigDecimal("47.0"),
+                        new BigDecimal("8.0"),
+                        new BigDecimal("9.0"),
+                        false);
 
         assertNotNull(log);
         assertTrue(log.getAlertTriggered());
@@ -134,7 +170,13 @@ public class TelemetryServiceTest {
         when(telemetryPort.findOrderById(1)).thenReturn(Optional.of(order));
         when(telemetryPort.save(any(OrderTelemetryLog.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        OrderTelemetryLog log = telemetryService.recordTelemetry(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("13.0"), false);
+        OrderTelemetryLog log =
+                telemetryService.recordTelemetry(
+                        1,
+                        new BigDecimal("47.0"),
+                        new BigDecimal("8.0"),
+                        new BigDecimal("13.0"),
+                        false);
 
         assertNotNull(log);
         assertEquals("spoiled", order.getStatus());
@@ -149,9 +191,16 @@ public class TelemetryServiceTest {
     public void testRecordTelemetry_OrderNotFound() {
         when(telemetryPort.findOrderById(999)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> {
-            telemetryService.recordTelemetry(999, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"), false);
-        });
+        assertThrows(
+                NoSuchElementException.class,
+                () -> {
+                    telemetryService.recordTelemetry(
+                            999,
+                            new BigDecimal("47.0"),
+                            new BigDecimal("8.0"),
+                            new BigDecimal("5.0"),
+                            false);
+                });
     }
 
     @Test
@@ -184,9 +233,11 @@ public class TelemetryServiceTest {
 
         when(telemetryPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        assertThrows(IllegalStateException.class, () -> {
-            telemetryService.injectDryIce(1);
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    telemetryService.injectDryIce(1);
+                });
     }
 
     @Test
@@ -196,7 +247,8 @@ public class TelemetryServiceTest {
 
         when(telemetryPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        telemetryService.queueTick(1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"), false);
+        telemetryService.queueTick(
+                1, new BigDecimal("47.0"), new BigDecimal("8.0"), new BigDecimal("5.0"), false);
         telemetryService.flushTickBuffer();
 
         verify(telemetryPort).save(any(OrderTelemetryLog.class));

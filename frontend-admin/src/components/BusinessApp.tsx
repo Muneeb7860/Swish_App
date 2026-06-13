@@ -117,17 +117,56 @@ Provide a highly concise, professional business health assessment, flag any stru
 						borderLeft: "3px solid var(--color-customer)",
 					}}
 				>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+						}}
+					>
+						<span
+							style={{
+								fontSize: "0.6rem",
+								color: "var(--text-muted)",
+								fontWeight: 700,
+								letterSpacing: "0.05em",
+							}}
+						>
 							CUSTOMER TRUST
 						</span>
-						<Lucide.UserCheck size={14} style={{ color: "var(--color-customer)" }} />
+						<Lucide.UserCheck
+							size={14}
+							style={{ color: "var(--color-customer)" }}
+						/>
 					</div>
-					<h3 style={{ color: "var(--color-customer)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+					<h3
+						style={{
+							color: "var(--color-customer)",
+							fontWeight: 800,
+							margin: 0,
+							fontSize: "1.25rem",
+							fontFamily: "var(--font-mono)",
+						}}
+					>
 						{customerTrustScore}
-						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+						<span
+							style={{
+								fontSize: "0.75rem",
+								color: "var(--text-muted)",
+								fontWeight: 500,
+							}}
+						>
+							/100
+						</span>
 					</h3>
-					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+					<div
+						style={{
+							height: "4px",
+							background: "rgba(255,255,255,0.05)",
+							borderRadius: "2px",
+							overflow: "hidden",
+						}}
+					>
 						<div
 							style={{
 								height: "100%",
@@ -150,17 +189,53 @@ Provide a highly concise, professional business health assessment, flag any stru
 						borderLeft: "3px solid var(--color-rider)",
 					}}
 				>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+						}}
+					>
+						<span
+							style={{
+								fontSize: "0.6rem",
+								color: "var(--text-muted)",
+								fontWeight: 700,
+								letterSpacing: "0.05em",
+							}}
+						>
 							RIDER TRUST
 						</span>
 						<Lucide.Bike size={14} style={{ color: "var(--color-rider)" }} />
 					</div>
-					<h3 style={{ color: "var(--color-rider)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+					<h3
+						style={{
+							color: "var(--color-rider)",
+							fontWeight: 800,
+							margin: 0,
+							fontSize: "1.25rem",
+							fontFamily: "var(--font-mono)",
+						}}
+					>
 						{riderTrustScore}
-						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+						<span
+							style={{
+								fontSize: "0.75rem",
+								color: "var(--text-muted)",
+								fontWeight: 500,
+							}}
+						>
+							/100
+						</span>
 					</h3>
-					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+					<div
+						style={{
+							height: "4px",
+							background: "rgba(255,255,255,0.05)",
+							borderRadius: "2px",
+							overflow: "hidden",
+						}}
+					>
 						<div
 							style={{
 								height: "100%",
@@ -183,17 +258,56 @@ Provide a highly concise, professional business health assessment, flag any stru
 						borderLeft: "3px solid var(--color-inventory)",
 					}}
 				>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+						}}
+					>
+						<span
+							style={{
+								fontSize: "0.6rem",
+								color: "var(--text-muted)",
+								fontWeight: 700,
+								letterSpacing: "0.05em",
+							}}
+						>
 							PICKER ACCURACY
 						</span>
-						<Lucide.ClipboardCheck size={14} style={{ color: "var(--color-inventory)" }} />
+						<Lucide.ClipboardCheck
+							size={14}
+							style={{ color: "var(--color-inventory)" }}
+						/>
 					</div>
-					<h3 style={{ color: "var(--color-inventory)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+					<h3
+						style={{
+							color: "var(--color-inventory)",
+							fontWeight: 800,
+							margin: 0,
+							fontSize: "1.25rem",
+							fontFamily: "var(--font-mono)",
+						}}
+					>
 						{pickerTrustScore}
-						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+						<span
+							style={{
+								fontSize: "0.75rem",
+								color: "var(--text-muted)",
+								fontWeight: 500,
+							}}
+						>
+							/100
+						</span>
 					</h3>
-					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+					<div
+						style={{
+							height: "4px",
+							background: "rgba(255,255,255,0.05)",
+							borderRadius: "2px",
+							overflow: "hidden",
+						}}
+					>
 						<div
 							style={{
 								height: "100%",
@@ -216,17 +330,56 @@ Provide a highly concise, professional business health assessment, flag any stru
 						borderLeft: "3px solid var(--color-business)",
 					}}
 				>
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, letterSpacing: "0.05em" }}>
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+						}}
+					>
+						<span
+							style={{
+								fontSize: "0.6rem",
+								color: "var(--text-muted)",
+								fontWeight: 700,
+								letterSpacing: "0.05em",
+							}}
+						>
 							WHOLESALER TRUST
 						</span>
-						<Lucide.Truck size={14} style={{ color: "var(--color-business)" }} />
+						<Lucide.Truck
+							size={14}
+							style={{ color: "var(--color-business)" }}
+						/>
 					</div>
-					<h3 style={{ color: "var(--color-business)", fontWeight: 800, margin: 0, fontSize: "1.25rem", fontFamily: "var(--font-mono)" }}>
+					<h3
+						style={{
+							color: "var(--color-business)",
+							fontWeight: 800,
+							margin: 0,
+							fontSize: "1.25rem",
+							fontFamily: "var(--font-mono)",
+						}}
+					>
 						{wholesalerTrustScore}
-						<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+						<span
+							style={{
+								fontSize: "0.75rem",
+								color: "var(--text-muted)",
+								fontWeight: 500,
+							}}
+						>
+							/100
+						</span>
 					</h3>
-					<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+					<div
+						style={{
+							height: "4px",
+							background: "rgba(255,255,255,0.05)",
+							borderRadius: "2px",
+							overflow: "hidden",
+						}}
+					>
 						<div
 							style={{
 								height: "100%",
@@ -242,19 +395,29 @@ Provide a highly concise, professional business health assessment, flag any stru
 			{/* Store capacity progress trackers */}
 			<div style={{ display: "flex", gap: "1.25rem" }}>
 				{/* Central Store capacity */}
-				<div className="glass-card bento-card capacity-card" style={{ flex: 1 }}>
+				<div
+					className="glass-card bento-card capacity-card"
+					style={{ flex: 1 }}
+				>
 					<div className="capacity-title-row">
 						<span>Central MFC Capacity</span>
 						{centralFillPct > 90 && (
-							<span className="warning-pill animate-pulse">⚠️ STORAGE BOTTLENECK</span>
+							<span className="warning-pill animate-pulse">
+								⚠️ STORAGE BOTTLENECK
+							</span>
 						)}
 					</div>
 					<div className="capacity-value">
-						{totalStockCentral} / {centralCapacity} <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Units ({Math.round(centralFillPct)}% Full)</span>
+						{totalStockCentral} / {centralCapacity}{" "}
+						<span
+							style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}
+						>
+							Units ({Math.round(centralFillPct)}% Full)
+						</span>
 					</div>
 					<div className="capacity-bar-outer">
 						<div
-							className={`capacity-bar-inner ${centralFillPct > 90 ? 'warning' : 'normal'}`}
+							className={`capacity-bar-inner ${centralFillPct > 90 ? "warning" : "normal"}`}
 							style={{ width: `${centralFillPct}%` }}
 						/>
 					</div>
@@ -269,33 +432,50 @@ Provide a highly concise, professional business health assessment, flag any stru
 								padding: "0.45rem",
 								cursor: "pointer",
 								borderRadius: "6px",
-								marginTop: "0.25rem"
+								marginTop: "0.25rem",
 							}}
 							onClick={() => handleScaleCapacity("Central")}
 						>
-							Rent Central Overflow Storage Bay (Surcharge: ${centralFee.toFixed(2)})
+							Rent Central Overflow Storage Bay (Surcharge: $
+							{centralFee.toFixed(2)})
 						</button>
 					) : (
-						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+						<span
+							style={{
+								fontSize: "0.65rem",
+								color: "var(--text-muted)",
+								marginTop: "0.25rem",
+							}}
+						>
 							Central Storage Capacity Max Scaled (+120 bay limit)
 						</span>
 					)}
 				</div>
 
 				{/* East Store capacity */}
-				<div className="glass-card bento-card capacity-card" style={{ flex: 1 }}>
+				<div
+					className="glass-card bento-card capacity-card"
+					style={{ flex: 1 }}
+				>
 					<div className="capacity-title-row">
 						<span>East MFC Capacity</span>
 						{eastFillPct > 90 && (
-							<span className="warning-pill animate-pulse">⚠️ STORAGE BOTTLENECK</span>
+							<span className="warning-pill animate-pulse">
+								⚠️ STORAGE BOTTLENECK
+							</span>
 						)}
 					</div>
 					<div className="capacity-value">
-						{totalStockEast} / {eastCapacity} <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Units ({Math.round(eastFillPct)}% Full)</span>
+						{totalStockEast} / {eastCapacity}{" "}
+						<span
+							style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}
+						>
+							Units ({Math.round(eastFillPct)}% Full)
+						</span>
 					</div>
 					<div className="capacity-bar-outer">
 						<div
-							className={`capacity-bar-inner ${eastFillPct > 90 ? 'warning' : 'normal'}`}
+							className={`capacity-bar-inner ${eastFillPct > 90 ? "warning" : "normal"}`}
 							style={{ width: `${eastFillPct}%` }}
 						/>
 					</div>
@@ -310,14 +490,20 @@ Provide a highly concise, professional business health assessment, flag any stru
 								padding: "0.45rem",
 								cursor: "pointer",
 								borderRadius: "6px",
-								marginTop: "0.25rem"
+								marginTop: "0.25rem",
 							}}
 							onClick={() => handleScaleCapacity("East")}
 						>
 							Rent East Overflow Storage Bay (Surcharge: ${eastFee.toFixed(2)})
 						</button>
 					) : (
-						<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+						<span
+							style={{
+								fontSize: "0.65rem",
+								color: "var(--text-muted)",
+								marginTop: "0.25rem",
+							}}
+						>
 							East Storage Capacity Max Scaled (+120 bay limit)
 						</span>
 					)}

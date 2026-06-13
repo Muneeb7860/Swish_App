@@ -3,8 +3,8 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
-  projectId: "demo-swish-app",
-  apiKey: "demo-api-key",
+	projectId: "demo-swish-app",
+	apiKey: "demo-api-key",
 };
 
 const app = initializeApp(firebaseConfig);

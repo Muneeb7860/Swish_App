@@ -1,20 +1,19 @@
 package ch.swissqcommerce.backend.domain.sensor.adapter.out.persistence;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-
 /**
- * Maps the {@code oltp.sensor_readings} TimescaleDB hypertable. Hibernate's
- * single-column @Id (reading_id) validates fine against the table's composite
- * PK (reading_id, recorded_at) — the validator checks column presence, not PK
- * shape — so the same entity works on H2 (tests) and TimescaleDB (prod/CI).
+ * Maps the {@code oltp.sensor_readings} TimescaleDB hypertable. Hibernate's single-column @Id
+ * (reading_id) validates fine against the table's composite PK (reading_id, recorded_at) — the
+ * validator checks column presence, not PK shape — so the same entity works on H2 (tests) and
+ * TimescaleDB (prod/CI).
  */
 @Entity
 @Table(name = "sensor_readings", schema = "oltp")

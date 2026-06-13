@@ -25,7 +25,9 @@ export interface HitlConsole {
 }
 
 export function useHitlConsole(): HitlConsole {
-	const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+	const [token, setToken] = useState<string | null>(() =>
+		localStorage.getItem(TOKEN_KEY),
+	);
 	const [queue, setQueue] = useState<HitlTicket[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -77,7 +79,9 @@ export function useHitlConsole(): HitlConsole {
 					ticket.id,
 					approve,
 					"admin-console",
-					approve ? "Approved via supervisor console" : "Voided via supervisor console",
+					approve
+						? "Approved via supervisor console"
+						: "Voided via supervisor console",
 				);
 				await refresh();
 			} catch (e) {

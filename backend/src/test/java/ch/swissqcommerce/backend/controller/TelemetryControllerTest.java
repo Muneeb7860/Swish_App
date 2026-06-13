@@ -1,20 +1,5 @@
 package ch.swissqcommerce.backend.controller;
 
-import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.math.BigDecimal;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -23,22 +8,34 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swissqcommerce.backend.domain.telemetry.adapter.in.web.TelemetryController;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
 @WebMvcTest(TelemetryController.class)
 @AutoConfigureMockMvc(addFilters = false)
 public class TelemetryControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private TelemetryUseCase telemetryService;
+    @MockBean private TelemetryUseCase telemetryService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
     @Test
     public void testIngestTick() throws Exception {
-        TelemetryController.TelemetryTickRequest req = new TelemetryController.TelemetryTickRequest();
+        TelemetryController.TelemetryTickRequest req =
+                new TelemetryController.TelemetryTickRequest();
         req.setOrderId(1);
         req.setLatitude(new BigDecimal("47.3769"));
         req.setLongitude(new BigDecimal("8.5417"));
@@ -49,12 +46,14 @@ public class TelemetryControllerTest {
         log.setLogId(10);
 
         when(telemetryService.updateLocation(eq(1), any(), any(), any())).thenReturn(true);
-        when(telemetryService.recordTelemetry(eq(1), any(), any(), any(), eq(false))).thenReturn(log);
+        when(telemetryService.recordTelemetry(eq(1), any(), any(), any(), eq(false)))
+                .thenReturn(log);
         when(telemetryService.isThermalBreachActive(eq(1), any())).thenReturn(true);
 
-        mockMvc.perform(post("/api/telemetry/tick")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/telemetry/tick")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(1))
                 .andExpect(jsonPath("$.persisted").value(true))
@@ -64,7 +63,8 @@ public class TelemetryControllerTest {
 
     @Test
     public void testIngestTick_Outlier() throws Exception {
-        TelemetryController.TelemetryTickRequest req = new TelemetryController.TelemetryTickRequest();
+        TelemetryController.TelemetryTickRequest req =
+                new TelemetryController.TelemetryTickRequest();
         req.setOrderId(1);
         req.setLatitude(new BigDecimal("47.3769"));
         req.setLongitude(new BigDecimal("8.5417"));
@@ -73,26 +73,29 @@ public class TelemetryControllerTest {
 
         when(telemetryService.updateLocation(eq(1), any(), any(), any())).thenReturn(false);
 
-        mockMvc.perform(post("/api/telemetry/tick")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/telemetry/tick")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(1))
-                .andExpect(jsonPath("$.message").value("Discarded telemetry update (GPS outlier detected)."))
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Discarded telemetry update (GPS outlier detected)."))
                 .andExpect(jsonPath("$.persisted").value(false))
                 .andExpect(jsonPath("$.queued").value(false));
     }
 
     @Test
     public void testStreamTelemetry() throws Exception {
-        when(telemetryService.getLatestLocation(1)).thenReturn(
-            new GeoLocationPort.RiderLocation(
-                new BigDecimal("47.3769"), new BigDecimal("8.5417"), new BigDecimal("5.0")
-            )
-        );
+        when(telemetryService.getLatestLocation(1))
+                .thenReturn(
+                        new GeoLocationPort.RiderLocation(
+                                new BigDecimal("47.3769"),
+                                new BigDecimal("8.5417"),
+                                new BigDecimal("5.0")));
 
-        mockMvc.perform(get("/api/telemetry/stream/1"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/telemetry/stream/1")).andExpect(status().isOk());
     }
 
     @Test

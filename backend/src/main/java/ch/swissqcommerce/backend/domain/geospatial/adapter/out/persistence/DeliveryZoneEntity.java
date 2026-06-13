@@ -15,8 +15,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeliveryZoneEntity {
-    @Id
-    private String zoneId;
+    @Id private String zoneId;
     private String name;
     private String geoPolygonWkt;
     private String status;

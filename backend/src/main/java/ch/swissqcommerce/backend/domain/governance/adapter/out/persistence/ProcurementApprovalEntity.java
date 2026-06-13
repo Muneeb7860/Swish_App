@@ -1,9 +1,9 @@
 package ch.swissqcommerce.backend.domain.governance.adapter.out.persistence;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "procurement_approvals", schema = "oltp")

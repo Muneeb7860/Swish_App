@@ -1,9 +1,9 @@
 package ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "order_telemetry_logs", schema = "oltp")

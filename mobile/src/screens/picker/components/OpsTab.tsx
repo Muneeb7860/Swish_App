@@ -43,8 +43,9 @@ export default function OpsTab({
 					Dark Store Capacity & Virtual Scaling
 				</Text>
 				<Text style={styles.cardDescription}>
-					Monitor physical storage occupancy. Deploy manual-scale virtual overflow
-					warehouse bays to avoid order checkouts rejecting due to congestion.
+					Monitor physical storage occupancy. Deploy manual-scale virtual
+					overflow warehouse bays to avoid order checkouts rejecting due to
+					congestion.
 				</Text>
 
 				<View style={styles.occupancyGaugeContainer}>
@@ -99,12 +100,17 @@ export default function OpsTab({
 							style={{ marginRight: 8 }}
 						/>
 						<View style={{ flex: 1 }}>
-							<Text style={styles.overflowSuccessTitle}>VIRTUAL BAY ACTIVE</Text>
+							<Text style={styles.overflowSuccessTitle}>
+								VIRTUAL BAY ACTIVE
+							</Text>
 							<Text style={styles.overflowSuccessSub}>
 								+300 sq meters added. Congestion mitigated.
 							</Text>
 						</View>
-						<TouchableOpacity style={styles.resetScaleBtn} onPress={onResetScale}>
+						<TouchableOpacity
+							style={styles.resetScaleBtn}
+							onPress={onResetScale}
+						>
 							<Text style={styles.resetScaleBtnText}>RESET</Text>
 						</TouchableOpacity>
 					</View>
@@ -147,8 +153,8 @@ export default function OpsTab({
 					<View style={{ flex: 1 }}>
 						<Text style={styles.cardTitle}>Auto-Deploy Backup Pickers</Text>
 						<Text style={styles.cardDescription}>
-							Trigger backup picker daemons automatically when order backlog rises
-							above 4 pending tickets to maintain 4-minute SLA.
+							Trigger backup picker daemons automatically when order backlog
+							rises above 4 pending tickets to maintain 4-minute SLA.
 						</Text>
 					</View>
 					<Switch

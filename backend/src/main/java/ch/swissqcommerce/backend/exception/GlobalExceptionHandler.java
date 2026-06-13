@@ -1,7 +1,16 @@
 package ch.swissqcommerce.backend.exception;
 
+import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,65 +18,49 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-
-import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
-
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Centralised exception handler for all REST controllers.
- * Converts exceptions to standardised JSON error responses with
- * ISO-8601 timestamps, HTTP status codes, and descriptive messages.
+ * Centralised exception handler for all REST controllers. Converts exceptions to standardised JSON
+ * error responses with ISO-8601 timestamps, HTTP status codes, and descriptive messages.
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Handles Jakarta Bean Validation failures (e.g. @NotBlank, @Size).
-     */
+    /** Handles Jakarta Bean Validation failures (e.g. @NotBlank, @Size). */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(
-                        FieldError::getField,
-                        fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid value",
-                        (a, b) -> a
-                ));
+    public ResponseEntity<Map<String, Object>> handleValidation(
+            MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors =
+                ex.getBindingResult().getFieldErrors().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        FieldError::getField,
+                                        fe ->
+                                                fe.getDefaultMessage() != null
+                                                        ? fe.getDefaultMessage()
+                                                        : "Invalid value",
+                                        (a, b) -> a));
 
         Map<String, Object> body = buildErrorBody(HttpStatus.BAD_REQUEST, "Validation failed");
         body.put("fieldErrors", fieldErrors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    /**
-     * Handles missing entity lookups.
-     */
+    /** Handles missing entity lookups. */
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(buildErrorBody(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
-    /**
-     * Handles illegal argument errors (e.g. bad credentials, invalid MFA codes).
-     */
+    /** Handles illegal argument errors (e.g. bad credentials, invalid MFA codes). */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorBody(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
-    /**
-     * Handles illegal state errors (e.g. insufficient stock, unbalanced ledger).
-     */
+    /** Handles illegal state errors (e.g. insufficient stock, unbalanced ledger). */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -75,29 +68,34 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
-    public ResponseEntity<Map<String, Object>> handleOptimisticLocking(OptimisticLockingFailureException ex) {
+    public ResponseEntity<Map<String, Object>> handleOptimisticLocking(
+            OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(buildErrorBody(HttpStatus.CONFLICT, "Concurrent modification detected. Please retry your request."));
+                .body(
+                        buildErrorBody(
+                                HttpStatus.CONFLICT,
+                                "Concurrent modification detected. Please retry your request."));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(buildErrorBody(HttpStatus.CONFLICT, "Database constraint violation."));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleNotReadable(HttpMessageNotReadableException ex) {
+    public ResponseEntity<Map<String, Object>> handleNotReadable(
+            HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorBody(HttpStatus.BAD_REQUEST, "Malformed JSON request."));
     }
 
     /**
-     * Handles Spring Security authorization failures — returns 403 instead of falling
-     * through to the 500 catch-all.  Must be declared here because
-     * AccessDeniedException is NOT a RuntimeException so the catch-all wouldn't
-     * normally intercept it, but having an explicit handler is clearer and ensures
-     * the standardised error envelope is returned.
+     * Handles Spring Security authorization failures — returns 403 instead of falling through to
+     * the 500 catch-all. Must be declared here because AccessDeniedException is NOT a
+     * RuntimeException so the catch-all wouldn't normally intercept it, but having an explicit
+     * handler is clearer and ensures the standardised error envelope is returned.
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
@@ -105,41 +103,48 @@ public class GlobalExceptionHandler {
                 .body(buildErrorBody(HttpStatus.FORBIDDEN, "Access denied."));
     }
 
-    /**
-     * Handles missing required query/path parameters.
-     */
+    /** Handles missing required query/path parameters. */
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex) {
+    public ResponseEntity<Map<String, Object>> handleMissingParam(
+            MissingServletRequestParameterException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(buildErrorBody(HttpStatus.BAD_REQUEST,
-                        "Required parameter '" + ex.getParameterName() + "' is missing."));
+                .body(
+                        buildErrorBody(
+                                HttpStatus.BAD_REQUEST,
+                                "Required parameter '" + ex.getParameterName() + "' is missing."));
     }
 
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<Map<String, Object>> handleNPE(NullPointerException ex) {
         log.error("Null pointer exception encountered: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildErrorBody(HttpStatus.INTERNAL_SERVER_ERROR, "A null reference was encountered."));
+                .body(
+                        buildErrorBody(
+                                HttpStatus.INTERNAL_SERVER_ERROR,
+                                "A null reference was encountered."));
     }
 
-    /**
-     * Catch-all for unhandled runtime exceptions.
-     */
+    /** Catch-all for unhandled runtime exceptions. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         log.error("Unhandled exception: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildErrorBody(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please contact support."));
+                .body(
+                        buildErrorBody(
+                                HttpStatus.INTERNAL_SERVER_ERROR,
+                                "An unexpected error occurred. Please contact support."));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
+    public ResponseEntity<Map<String, Object>> handleResourceNotFound(
+            ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(buildErrorBody(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(InsufficientStockException.class)
-    public ResponseEntity<Map<String, Object>> handleInsufficientStock(InsufficientStockException ex) {
+    public ResponseEntity<Map<String, Object>> handleInsufficientStock(
+            InsufficientStockException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(buildErrorBody(HttpStatus.CONFLICT, ex.getMessage()));
     }
@@ -151,7 +156,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(TicketAlreadyResolvedException.class)
-    public ResponseEntity<Map<String, Object>> handleTicketAlreadyResolved(TicketAlreadyResolvedException ex) {
+    public ResponseEntity<Map<String, Object>> handleTicketAlreadyResolved(
+            TicketAlreadyResolvedException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(buildErrorBody(HttpStatus.CONFLICT, ex.getMessage()));
     }
@@ -168,12 +174,12 @@ public class GlobalExceptionHandler {
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
-        
+
         String correlationId = org.slf4j.MDC.get("correlationId");
         if (correlationId != null) {
             body.put("correlationId", correlationId);
         }
-        
+
         return body;
     }
 }

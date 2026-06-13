@@ -1,15 +1,9 @@
 package ch.swissqcommerce.backend.domain.dispatch.core.model;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
-import lombok.Value;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 @Builder

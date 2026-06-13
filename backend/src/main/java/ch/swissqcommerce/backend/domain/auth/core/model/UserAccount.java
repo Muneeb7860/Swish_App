@@ -1,12 +1,10 @@
 package ch.swissqcommerce.backend.domain.auth.core.model;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-
-
+import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
@@ -18,9 +16,9 @@ public class UserAccount {
     private EmailAddress emailAddress;
     private PasswordHash passwordHash;
     private AccountStatus status;
+
     /** JWT role claim — "CUSTOMER", "ADMIN", "RIDER", or "WHOLESALER". */
-    @Builder.Default
-    private String role = "CUSTOMER";
+    @Builder.Default private String role = "CUSTOMER";
 
     public void lockAccount() {
         this.status = AccountStatus.LOCKED;

@@ -1,19 +1,16 @@
 package ch.swissqcommerce.backend.domain;
 
-import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
+import org.junit.jupiter.api.Test;
 
 class RewardPointsTest {
 
     @Test
     void shouldCreateNewRewardPoints() {
-        RewardPoints rp = RewardPoints.builder()
-            .customerId("CUST-999")
-            .loyaltyPoints(500)
-            .build();
+        RewardPoints rp = RewardPoints.builder().customerId("CUST-999").loyaltyPoints(500).build();
 
         assertNotNull(rp);
         assertEquals("CUST-999", rp.getCustomerId());

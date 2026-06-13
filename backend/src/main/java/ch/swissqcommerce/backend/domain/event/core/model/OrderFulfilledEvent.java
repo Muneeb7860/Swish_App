@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.event.core.model;
 
 public class OrderFulfilledEvent extends BaseDomainEvent {
-    
+
     private final String customerId;
     private final String orderId;
     private final int rewardPoints;

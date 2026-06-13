@@ -1,9 +1,8 @@
 package ch.swissqcommerce.backend.domain.wholesaler.core.model;
+
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.ArrayList;
-
-
+import java.util.List;
 import lombok.*;
 
 @Getter
@@ -30,13 +29,13 @@ public class PurchaseOrder {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
-    
+
     protected void onCreate() {
         if (updatedAt == null) {
             updatedAt = OffsetDateTime.now();
         }
     }
-    
+
     protected void onUpdate() {
         updatedAt = OffsetDateTime.now();
     }

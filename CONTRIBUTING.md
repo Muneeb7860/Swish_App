@@ -17,3 +17,13 @@ We use a standard branching strategy.
 - Write tests for your changes.
 - Update the documentation if necessary.
 - Your PR must pass all CI checks before it can be merged.
+
+## Agent Git & Development Strategy
+Autonomous Agents working on this repository MUST strictly follow this operational protocol to prevent messy Git trees and merge conflicts:
+1. **Branching Model**: Do not commit directly to `develop` or `Mac_Machine` for complex features. Create a task-specific branch first:
+   ```bash
+   git checkout -b agent/feat/<task-name> Mac_Machine
+   ```
+2. **Conventional Commits**: Agents must use granular, atomic commits adhering to conventional commits (e.g. `feat(backend):`, `fix(frontend):`, `chore(docs):`).
+3. **Rebase Over Merge**: Always execute `git pull --rebase` to integrate upstream changes smoothly before pushing.
+4. **Lightweight Handovers**: When finishing a task, do NOT append massive logs to the root-level handover documents. Only update the "Active Epic" section in `AGENT_HANDOVER.md`. Preserve tokens!

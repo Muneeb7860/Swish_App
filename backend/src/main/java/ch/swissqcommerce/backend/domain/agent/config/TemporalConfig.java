@@ -8,13 +8,12 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 @Configuration
 @Slf4j
@@ -29,16 +28,13 @@ public class TemporalConfig {
     public WorkflowServiceStubs workflowServiceStubs() {
         log.info("Initializing Temporal WorkflowServiceStubs connecting to {}", serviceAddress);
         return WorkflowServiceStubs.newInstance(
-                WorkflowServiceStubsOptions.newBuilder()
-                        .setTarget(serviceAddress)
-                        .build());
+                WorkflowServiceStubsOptions.newBuilder().setTarget(serviceAddress).build());
     }
 
     @Bean
     public WorkflowClient workflowClient(WorkflowServiceStubs serviceStubs) {
         log.info("Initializing Temporal WorkflowClient");
-        return WorkflowClient.newInstance(serviceStubs,
-                WorkflowClientOptions.newBuilder().build());
+        return WorkflowClient.newInstance(serviceStubs, WorkflowClientOptions.newBuilder().build());
     }
 
     @Bean
@@ -65,7 +61,9 @@ public class TemporalConfig {
                 log.info("Temporal Worker Factory started successfully.");
             }
         } catch (Exception e) {
-            log.error("Failed to start Temporal Worker Factory (Temporal server offline?): {}", e.getMessage());
+            log.error(
+                    "Failed to start Temporal Worker Factory (Temporal server offline?): {}",
+                    e.getMessage());
         }
     }
 

@@ -1,25 +1,24 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertificate;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
 import ch.swissqcommerce.backend.domain.enrollment.core.service.RiderServiceImpl;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Map;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class RiderServiceTest {
@@ -53,7 +52,7 @@ public class RiderServiceTest {
         assertEquals(93, customer.getTrustScore());
         assertEquals(3, customer.getConsecutiveOrdersCompleted());
         assertFalse(customer.getIsOnProbation());
-        
+
         verify(outPort, times(1)).saveOrder(order);
         verify(outPort, times(1)).saveRider(rider);
         verify(outPort, times(1)).saveCustomer(customer);
@@ -78,11 +77,12 @@ public class RiderServiceTest {
 
         when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        Map<String, Object> result = riderService.confirmDelivery(1, "9999", "http://proof.photo/url");
+        Map<String, Object> result =
+                riderService.confirmDelivery(1, "9999", "http://proof.photo/url");
 
         assertEquals("delivered", order.getStatus());
         assertEquals("http://proof.photo/url", order.getProofOfDeliveryPhotoUrl());
-        
+
         verify(outPort, times(1)).saveOrder(order);
     }
 
@@ -94,9 +94,11 @@ public class RiderServiceTest {
 
         when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            riderService.confirmDelivery(1, "9999", null);
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    riderService.confirmDelivery(1, "9999", null);
+                });
     }
 
     @Test
@@ -111,7 +113,8 @@ public class RiderServiceTest {
 
         when(outPort.findOrderById(1)).thenReturn(Optional.of(order));
 
-        Map<String, Object> result = riderService.rejectDelivery(1, "Damaged perishables", "http://reject.photo/url");
+        Map<String, Object> result =
+                riderService.rejectDelivery(1, "Damaged perishables", "http://reject.photo/url");
 
         assertEquals("rejected_at_door", order.getStatus());
         assertEquals("Damaged perishables", order.getRejectionReason());
@@ -130,9 +133,9 @@ public class RiderServiceTest {
         rider.setTrustScore(50);
 
         when(outPort.findRiderById("R1")).thenReturn(Optional.of(rider));
-        
+
         Map<String, Object> result = riderService.completeAcademyCourse("R1", "COURSE_001");
-        
+
         assertEquals("course_completed", result.get("status"));
         assertEquals(60, result.get("new_trust_score"));
         verify(outPort, times(1)).saveRiderAcademyCertificate(any(RiderAcademyCertificate.class));
@@ -141,14 +144,15 @@ public class RiderServiceTest {
 
     @Test
     public void testApproveOnboarding_Success() {
-        OnboardingApplication app = OnboardingApplication.builder()
-                .applicationId("APP1")
-                .name("Rider One")
-                .applicantType("rider")
-                .approvalOps(false)
-                .approvalCompliance(false)
-                .approvalAdmin(false)
-                .build();
+        OnboardingApplication app =
+                OnboardingApplication.builder()
+                        .applicationId("APP1")
+                        .name("Rider One")
+                        .applicantType("rider")
+                        .approvalOps(false)
+                        .approvalCompliance(false)
+                        .approvalAdmin(false)
+                        .build();
 
         when(outPort.findOnboardingApplicationById("APP1")).thenReturn(Optional.of(app));
 
@@ -165,20 +169,22 @@ public class RiderServiceTest {
 
     @Test
     public void testApproveOnboarding_FullyApproved() {
-        OnboardingApplication app = OnboardingApplication.builder()
-                .applicationId("APP1")
-                .name("Rider One")
-                .applicantType("rider")
-                .approvalOps(true)
-                .approvalCompliance(true)
-                .approvalAdmin(false)
-                .build();
+        OnboardingApplication app =
+                OnboardingApplication.builder()
+                        .applicationId("APP1")
+                        .name("Rider One")
+                        .applicantType("rider")
+                        .approvalOps(true)
+                        .approvalCompliance(true)
+                        .approvalAdmin(false)
+                        .build();
 
-        Rider rider = Rider.builder()
-                .riderId("R1")
-                .fullName("Rider One")
-                .onboardingStatus("pending_review")
-                .build();
+        Rider rider =
+                Rider.builder()
+                        .riderId("R1")
+                        .fullName("Rider One")
+                        .onboardingStatus("pending_review")
+                        .build();
 
         when(outPort.findOnboardingApplicationById("APP1")).thenReturn(Optional.of(app));
         when(outPort.findRiderByFullName("Rider One")).thenReturn(Optional.of(rider));

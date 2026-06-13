@@ -1,24 +1,22 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationRepository;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Map;
-import java.util.Optional;
-import java.math.BigDecimal;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class AdminServiceTest {
@@ -39,7 +37,7 @@ public class AdminServiceTest {
     public void testInjectFault_Success() {
         ChaosFaultLog fault = new ChaosFaultLog();
         fault.setFaultType("LATENCY_SPIKE");
-        
+
         when(chaosFaultLogRepository.save(any())).thenReturn(fault);
 
         ChaosFaultLog result = adminService.injectFault("LATENCY_SPIKE", "Test");

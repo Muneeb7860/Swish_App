@@ -41,10 +41,13 @@ export default function DispatchTab({
 	return (
 		<View style={styles.tabContent}>
 			<View style={styles.card}>
-				<Text style={styles.cardTitle}>Inter-Store Stock Balance Dispatcher</Text>
+				<Text style={styles.cardTitle}>
+					Inter-Store Stock Balance Dispatcher
+				</Text>
 				<Text style={styles.cardDescription}>
-					Dispatch autonomous trucks to rebalance product items from surplus zones
-					to target fulfillment centers (PostgreSQL serializable ledger sync).
+					Dispatch autonomous trucks to rebalance product items from surplus
+					zones to target fulfillment centers (PostgreSQL serializable ledger
+					sync).
 				</Text>
 
 				{/* Source Store */}
@@ -171,7 +174,9 @@ export default function DispatchTab({
 						<Text style={[styles.resultTitle, { color: THEME.customer }]}>
 							STOCK DISPATCH LOGGED
 						</Text>
-						<Text style={styles.resultTime}>{lastDispatchResult.timestamp}</Text>
+						<Text style={styles.resultTime}>
+							{lastDispatchResult.timestamp}
+						</Text>
 					</View>
 					<View style={styles.resultGrid}>
 						<View style={styles.resultRow}>

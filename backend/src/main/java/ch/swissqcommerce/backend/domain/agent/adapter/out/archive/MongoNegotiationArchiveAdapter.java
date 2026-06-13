@@ -9,10 +9,9 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * MongoDB CDC sink for negotiation events (BRD FR-02). Active only when
- * {@code swish.mongo.archive.enabled=true} (production), so dev/CI run without a
- * MongoDB instance. Writes are best-effort at the call site — an archive failure
- * never blocks the negotiation.
+ * MongoDB CDC sink for negotiation events (BRD FR-02). Active only when {@code
+ * swish.mongo.archive.enabled=true} (production), so dev/CI run without a MongoDB instance. Writes
+ * are best-effort at the call site — an archive failure never blocks the negotiation.
  */
 @Component
 @ConditionalOnProperty(name = "swish.mongo.archive.enabled", havingValue = "true")
@@ -27,6 +26,9 @@ public class MongoNegotiationArchiveAdapter implements NegotiationArchivePort {
     @Override
     public void archive(NegotiationEvent event) {
         mongoTemplate.save(event, COLLECTION);
-        log.info("Negotiation archived to MongoDB: eventId={}, collection={}", event.getEventId(), COLLECTION);
+        log.info(
+                "Negotiation archived to MongoDB: eventId={}, collection={}",
+                event.getEventId(),
+                COLLECTION);
     }
 }

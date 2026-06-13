@@ -6,21 +6,19 @@ import ch.swissqcommerce.backend.domain.sensor.core.model.SensorType;
 import ch.swissqcommerce.backend.domain.sensor.port.in.SensorUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
 /**
- * Sensor (device) provisioning API (BRD FR-01 sensor provisioning). Operator-
- * gated. The device-key hash is never exposed; the plaintext key is returned
- * exactly once, at provisioning.
+ * Sensor (device) provisioning API (BRD FR-01 sensor provisioning). Operator- gated. The device-key
+ * hash is never exposed; the plaintext key is returned exactly once, at provisioning.
  */
 @RestController
 @RequestMapping("/api/v1/sensors")
@@ -32,12 +30,23 @@ public class SensorController {
 
     public record ProvisionRequest(String retailerId, String storeId, SensorType type) {}
 
-    public record SensorView(String sensorId, String retailerId, String storeId,
-                             SensorType sensorType, String status,
-                             java.time.OffsetDateTime lastCalibratedAt, String calibrationStatus) {
+    public record SensorView(
+            String sensorId,
+            String retailerId,
+            String storeId,
+            SensorType sensorType,
+            String status,
+            java.time.OffsetDateTime lastCalibratedAt,
+            String calibrationStatus) {
         static SensorView of(Sensor s) {
-            return new SensorView(s.getSensorId(), s.getRetailerId(), s.getStoreId(),
-                    s.getSensorType(), s.getStatus(), s.getLastCalibratedAt(), s.getCalibrationStatus());
+            return new SensorView(
+                    s.getSensorId(),
+                    s.getRetailerId(),
+                    s.getStoreId(),
+                    s.getSensorType(),
+                    s.getStatus(),
+                    s.getLastCalibratedAt(),
+                    s.getCalibrationStatus());
         }
     }
 
@@ -46,7 +55,8 @@ public class SensorController {
     @PostMapping
     public ResponseEntity<?> provision(@RequestBody ProvisionRequest req) {
         try {
-            SensorUseCase.ProvisionResult result = sensors.provision(req.retailerId(), req.storeId(), req.type());
+            SensorUseCase.ProvisionResult result =
+                    sensors.provision(req.retailerId(), req.storeId(), req.type());
             Map<String, Object> body = new java.util.HashMap<>();
             body.put("sensor", SensorView.of(result.sensor()));
             body.put("deviceKey", result.deviceKey());
@@ -74,7 +84,8 @@ public class SensorController {
     @Operation(summary = "Submit sensor calibration status")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{sensorId}/calibrate")
-    public ResponseEntity<?> calibrate(@PathVariable String sensorId, @RequestParam boolean success) {
+    public ResponseEntity<?> calibrate(
+            @PathVariable String sensorId, @RequestParam boolean success) {
         try {
             Sensor s = sensors.calibrateSensor(sensorId, success);
             return ResponseEntity.ok(SensorView.of(s));
@@ -87,7 +98,8 @@ public class SensorController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<SensorView>> listByRetailer(@RequestParam String retailerId) {
-        return ResponseEntity.ok(sensors.listByRetailer(retailerId).stream().map(SensorView::of).toList());
+        return ResponseEntity.ok(
+                sensors.listByRetailer(retailerId).stream().map(SensorView::of).toList());
     }
 
     public record ReadingRequest(String deviceKey, String metricType, BigDecimal value) {}
@@ -97,8 +109,15 @@ public class SensorController {
     public ResponseEntity<?> recordReading(@RequestBody ReadingRequest req) {
         try {
             SensorReading r = sensors.recordReading(req.deviceKey(), req.metricType(), req.value());
-            return ResponseEntity.status(201).body(Map.of(
-                    "readingId", r.getReadingId(), "sensorId", r.getSensorId(), "recordedAt", r.getRecordedAt()));
+            return ResponseEntity.status(201)
+                    .body(
+                            Map.of(
+                                    "readingId",
+                                    r.getReadingId(),
+                                    "sensorId",
+                                    r.getSensorId(),
+                                    "recordedAt",
+                                    r.getRecordedAt()));
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {

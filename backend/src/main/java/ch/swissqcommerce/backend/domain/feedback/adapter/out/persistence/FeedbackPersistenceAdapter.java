@@ -1,7 +1,6 @@
 package ch.swissqcommerce.backend.domain.feedback.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.feedback.core.model.Feedback;
-import ch.swissqcommerce.backend.domain.feedback.adapter.out.persistence.FeedbackEntity;
 import ch.swissqcommerce.backend.domain.feedback.port.out.FeedbackOutPort;
 import org.springframework.stereotype.Component;
 
@@ -17,18 +16,19 @@ public class FeedbackPersistenceAdapter implements FeedbackOutPort {
     @Override
     public Feedback saveFeedback(Feedback feedback) {
         if (feedback == null) return null;
-        FeedbackEntity entity = FeedbackEntity.builder()
-                .id(feedback.getId())
-                .orderId(feedback.getOrderId())
-                .riderRating(feedback.getRiderRating())
-                .storeRating(feedback.getStoreRating())
-                .productRating(feedback.getProductRating())
-                .comments(feedback.getComments())
-                .createdAt(feedback.getCreatedAt())
-                .build();
-        
+        FeedbackEntity entity =
+                FeedbackEntity.builder()
+                        .id(feedback.getId())
+                        .orderId(feedback.getOrderId())
+                        .riderRating(feedback.getRiderRating())
+                        .storeRating(feedback.getStoreRating())
+                        .productRating(feedback.getProductRating())
+                        .comments(feedback.getComments())
+                        .createdAt(feedback.getCreatedAt())
+                        .build();
+
         FeedbackEntity saved = repository.save(entity);
-        
+
         return Feedback.builder()
                 .id(saved.getId())
                 .orderId(saved.getOrderId())

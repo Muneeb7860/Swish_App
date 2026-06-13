@@ -15,13 +15,15 @@ public class RewardController {
     }
 
     @PostMapping("/{customerId}/add")
-    public ResponseEntity<Void> addPoints(@PathVariable String customerId, @RequestParam int amount) {
+    public ResponseEntity<Void> addPoints(
+            @PathVariable String customerId, @RequestParam int amount) {
         rewardUseCase.addPoints(customerId, amount);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{customerId}/redeem")
-    public ResponseEntity<Void> redeemPoints(@PathVariable String customerId, @RequestParam int amount) {
+    public ResponseEntity<Void> redeemPoints(
+            @PathVariable String customerId, @RequestParam int amount) {
         rewardUseCase.redeemPoints(customerId, amount);
         return ResponseEntity.ok().build();
     }

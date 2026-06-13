@@ -1,33 +1,28 @@
 package ch.swissqcommerce.backend.domain.transaction.core.service;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.UUID;
+
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.transaction.core.model.*;
+import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
+import ch.swissqcommerce.backend.domain.transaction.port.out.*;
+import ch.swissqcommerce.backend.domain.transaction.port.out.HitlQueuePort;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
+import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.model.Inventory;
-
-
-import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
-import ch.swissqcommerce.backend.domain.transaction.port.out.*;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
-import ch.swissqcommerce.backend.domain.transaction.port.out.HitlQueuePort;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.*;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Hardened core Order Processing Service.
- * Leverages transactional boundaries, optimistic lock retries,
- * hexagonal ports for decoupling, and unique key database idempotency protection.
+ * Hardened core Order Processing Service. Leverages transactional boundaries, optimistic lock
+ * retries, hexagonal ports for decoupling, and unique key database idempotency protection.
  */
 public class OrderServiceImpl implements OrderUseCase {
 
@@ -42,16 +37,17 @@ public class OrderServiceImpl implements OrderUseCase {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final HitlQueuePort hitlQueuePort;
 
-    public OrderServiceImpl(OrderPort orderPort,
-                            CustomerPort customerPort,
-                            DarkStorePort darkStorePort,
-                            RiderPort riderPort,
-                            InventoryPort inventoryPort,
-                            SystemConfigPort systemConfigPort,
-                            ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase,
-                            OutboxEventPort outboxEventPort,
-                            org.springframework.context.ApplicationEventPublisher eventPublisher,
-                            HitlQueuePort hitlQueuePort) {
+    public OrderServiceImpl(
+            OrderPort orderPort,
+            CustomerPort customerPort,
+            DarkStorePort darkStorePort,
+            RiderPort riderPort,
+            InventoryPort inventoryPort,
+            SystemConfigPort systemConfigPort,
+            ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase ledgerUseCase,
+            OutboxEventPort outboxEventPort,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            HitlQueuePort hitlQueuePort) {
         this.orderPort = orderPort;
         this.customerPort = customerPort;
         this.darkStorePort = darkStorePort;
@@ -68,9 +64,14 @@ public class OrderServiceImpl implements OrderUseCase {
     @Transactional
     @ch.swissqcommerce.backend.config.TransactionalRetry(maxRetries = 3, backoffMs = 150)
     @CacheEvict(value = "customer-orders", key = "#customerId")
-    public Order checkout(String customerId, List<CartItem> items, String paymentMethod,
-                           BigDecimal tip, Integer bagsReturned, String idempotencyKey) {
-        
+    public Order checkout(
+            String customerId,
+            List<CartItem> items,
+            String paymentMethod,
+            BigDecimal tip,
+            Integer bagsReturned,
+            String idempotencyKey) {
+
         if (customerId == null || customerId.isBlank()) {
             throw new IllegalArgumentException("Customer ID cannot be null or blank");
         }
@@ -83,12 +84,15 @@ public class OrderServiceImpl implements OrderUseCase {
         for (CartItem cartItem : items) {
             if (cartItem.quantity() <= 0) {
                 throw new IllegalArgumentException(
-                        "Cart item quantity must be greater than zero, got: " + cartItem.quantity()
-                                + " for item: " + cartItem.itemId());
+                        "Cart item quantity must be greater than zero, got: "
+                                + cartItem.quantity()
+                                + " for item: "
+                                + cartItem.itemId());
             }
             if (!seenItemIds.add(cartItem.itemId())) {
                 throw new IllegalArgumentException(
-                        "Duplicate item in cart: " + cartItem.itemId()
+                        "Duplicate item in cart: "
+                                + cartItem.itemId()
                                 + ". Consolidate quantities into a single line item.");
             }
         }
@@ -101,35 +105,52 @@ public class OrderServiceImpl implements OrderUseCase {
             }
         }
 
-        Customer customer = customerPort.findCustomerById(customerId)
-                .orElseThrow(() -> new NoSuchElementException("Customer not found: " + customerId));
+        Customer customer =
+                customerPort
+                        .findCustomerById(customerId)
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Customer not found: " + customerId));
 
         String storeId = evaluateCheckoutRouting(items);
-        DarkStore store = darkStorePort.findDarkStoreById(storeId)
-                .orElseThrow(() -> new NoSuchElementException("Dark Store not found: " + storeId));
+        DarkStore store =
+                darkStorePort
+                        .findDarkStoreById(storeId)
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Dark Store not found: " + storeId));
 
         BigDecimal cartSubtotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
-        
+
         String generatedPin = String.format("%04d", new java.util.Random().nextInt(10000));
-        
-        Order order = Order.builder()
-                .customer(customer)
-                .store(store)
-                .paymentMethod(paymentMethod)
-                .bagsReturned(bagsReturned)
-                .idempotencyKey(idempotencyKey)
-                .tipAmount(tip)
-                .deliveryPin(generatedPin)
-                .build();
+
+        Order order =
+                Order.builder()
+                        .customer(customer)
+                        .store(store)
+                        .paymentMethod(paymentMethod)
+                        .bagsReturned(bagsReturned)
+                        .idempotencyKey(idempotencyKey)
+                        .tipAmount(tip)
+                        .deliveryPin(generatedPin)
+                        .build();
 
         boolean containsPerishable = false;
         for (CartItem cartItem : items) {
-            Inventory inventory = inventoryPort.findInventoryById(cartItem.itemId())
-                    .orElseThrow(() -> new NoSuchElementException("Item not found: " + cartItem.itemId()));
+            Inventory inventory =
+                    inventoryPort
+                            .findInventoryById(cartItem.itemId())
+                            .orElseThrow(
+                                    () ->
+                                            new NoSuchElementException(
+                                                    "Item not found: " + cartItem.itemId()));
 
             if (inventory.getStock() < cartItem.quantity()) {
-                throw new IllegalStateException("Insufficient stock for item: " + inventory.getName());
+                throw new IllegalStateException(
+                        "Insufficient stock for item: " + inventory.getName());
             }
 
             inventory.setStock(inventory.getStock() - cartItem.quantity());
@@ -139,15 +160,17 @@ public class OrderServiceImpl implements OrderUseCase {
                 containsPerishable = true;
             }
 
-            BigDecimal itemCost = inventory.getPrice().multiply(BigDecimal.valueOf(cartItem.quantity()));
+            BigDecimal itemCost =
+                    inventory.getPrice().multiply(BigDecimal.valueOf(cartItem.quantity()));
             cartSubtotal = cartSubtotal.add(itemCost);
 
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .item(inventory)
-                    .quantity(cartItem.quantity())
-                    .price(inventory.getPrice())
-                    .build();
+            OrderItem orderItem =
+                    OrderItem.builder()
+                            .order(order)
+                            .item(inventory)
+                            .quantity(cartItem.quantity())
+                            .price(inventory.getPrice())
+                            .build();
             orderItems.add(orderItem);
         }
         order.setOrderItems(orderItems);
@@ -161,7 +184,7 @@ public class OrderServiceImpl implements OrderUseCase {
 
         BigDecimal totalCheckoutCost = cartSubtotal.add(weatherSurcharge);
         BigDecimal customerTotalDebit = totalCheckoutCost.add(tip);
-        
+
         BigDecimal esgRebate = BigDecimal.ZERO;
         if (bagsReturned > 0) {
             esgRebate = new BigDecimal("0.50").multiply(BigDecimal.valueOf(bagsReturned));
@@ -197,26 +220,42 @@ public class OrderServiceImpl implements OrderUseCase {
             orderPort.flush(); // Flush immediately to trigger unique constraint check
         } catch (DataIntegrityViolationException e) {
             if (idempotencyKey != null) {
-                return orderPort.findByIdempotencyKey(idempotencyKey)
-                        .orElseThrow(() -> new IllegalStateException("Idempotency key violation occurred, but safe lookup failed.", e));
+                return orderPort
+                        .findByIdempotencyKey(idempotencyKey)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Idempotency key violation occurred, but safe"
+                                                        + " lookup failed.",
+                                                e));
             }
             throw e;
         }
 
-        List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = new ArrayList<>();
-        legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("customer", customerId, customerTotalDebit, BigDecimal.ZERO));
-        legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, totalCheckoutCost));
-        
+        List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs =
+                new ArrayList<>();
+        legs.add(
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg(
+                        "customer", customerId, customerTotalDebit, BigDecimal.ZERO));
+        legs.add(
+                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg(
+                        "system", null, BigDecimal.ZERO, totalCheckoutCost));
+
         if (tip.compareTo(BigDecimal.ZERO) > 0 && rider != null) {
-            legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("rider", rider.getRiderId(), BigDecimal.ZERO, tip));
+            legs.add(
+                    new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase
+                            .LedgerLeg("rider", rider.getRiderId(), BigDecimal.ZERO, tip));
         }
 
         if (esgRebate.compareTo(BigDecimal.ZERO) > 0) {
-            legs.add(new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, esgRebate, BigDecimal.ZERO));
+            legs.add(
+                    new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase
+                            .LedgerLeg("system", null, esgRebate, BigDecimal.ZERO));
         }
 
         // Ledger writes (will fail and roll back transaction if customer has insufficient funds)
-        ledgerUseCase.recordTransaction("ORDER-PAY", "Order checkout payments and tip release", legs);
+        ledgerUseCase.recordTransaction(
+                "ORDER-PAY", "Order checkout payments and tip release", legs);
 
         int itemsCount = items.stream().mapToInt(CartItem::quantity).sum();
         int points = itemsCount * 10;
@@ -224,23 +263,41 @@ public class OrderServiceImpl implements OrderUseCase {
         customerPort.save(customer);
 
         // Publish Spring domain event (now handled safely downstream)
-        eventPublisher.publishEvent(new ch.swissqcommerce.backend.domain.event.core.model.OrderFulfilledEvent(customerId, savedOrder.getOrderId().toString(), points));
+        eventPublisher.publishEvent(
+                new ch.swissqcommerce.backend.domain.event.core.model.OrderFulfilledEvent(
+                        customerId, savedOrder.getOrderId().toString(), points));
 
         // Persistent transactional outbox save (Eventual Consistency outbox pattern)
-        OutboxEvent event = OutboxEvent.builder()
-                .aggregateType("Order")
-                .aggregateId(savedOrder.getOrderId().toString())
-                .eventType("order.placed")
-                .payload("{\"orderId\": " + savedOrder.getOrderId() + ", \"totalAmount\": " + savedOrder.getTotalAmount() + "}")
-                .build();
+        OutboxEvent event =
+                OutboxEvent.builder()
+                        .aggregateType("Order")
+                        .aggregateId(savedOrder.getOrderId().toString())
+                        .eventType("order.placed")
+                        .payload(
+                                "{\"orderId\": "
+                                        + savedOrder.getOrderId()
+                                        + ", \"totalAmount\": "
+                                        + savedOrder.getTotalAmount()
+                                        + "}")
+                        .build();
         outboxEventPort.save(event);
 
         return savedOrder;
     }
 
-    public Order checkoutFallback(String customerId, List<CartItem> items, String paymentMethod, 
-                           BigDecimal tip, Integer bagsReturned, String idempotencyKey, Throwable t) {
-        throw new IllegalStateException("Checkout service is temporarily unavailable due to high load or database latency. Please try again later. Root cause: " + t.getMessage(), t);
+    public Order checkoutFallback(
+            String customerId,
+            List<CartItem> items,
+            String paymentMethod,
+            BigDecimal tip,
+            Integer bagsReturned,
+            String idempotencyKey,
+            Throwable t) {
+        throw new IllegalStateException(
+                "Checkout service is temporarily unavailable due to high load or database latency."
+                        + " Please try again later. Root cause: "
+                        + t.getMessage(),
+                t);
     }
 
     private String evaluateCheckoutRouting(List<CartItem> items) {
@@ -262,9 +319,10 @@ public class OrderServiceImpl implements OrderUseCase {
     }
 
     private Rider findOptimalRider(boolean containsPerishable) {
-        List<Rider> activeRiders = riderPort.findAll().stream()
-                .filter(r -> "active".equalsIgnoreCase(r.getOnboardingStatus()))
-                .toList();
+        List<Rider> activeRiders =
+                riderPort.findAll().stream()
+                        .filter(r -> "active".equalsIgnoreCase(r.getOnboardingStatus()))
+                        .toList();
 
         if (activeRiders.isEmpty()) {
             return null;
@@ -273,24 +331,28 @@ public class OrderServiceImpl implements OrderUseCase {
         if (containsPerishable) {
             // Prioritize Scooter (1) -> E-Bike (2) -> Van / other (3)
             return activeRiders.stream()
-                    .min(Comparator.comparingInt(r -> {
-                        if (r.getVehicleType() == null) return 3;
-                        String type = r.getVehicleType().toLowerCase();
-                        if (type.contains("scooter")) return 1;
-                        if (type.contains("bike")) return 2;
-                        return 3;
-                    }))
+                    .min(
+                            Comparator.comparingInt(
+                                    r -> {
+                                        if (r.getVehicleType() == null) return 3;
+                                        String type = r.getVehicleType().toLowerCase();
+                                        if (type.contains("scooter")) return 1;
+                                        if (type.contains("bike")) return 2;
+                                        return 3;
+                                    }))
                     .orElse(activeRiders.get(0));
         } else {
             // Prioritize Van (1) -> Scooter (2) -> E-Bike (3)
             return activeRiders.stream()
-                    .min(Comparator.comparingInt(r -> {
-                        if (r.getVehicleType() == null) return 3;
-                        String type = r.getVehicleType().toLowerCase();
-                        if (type.contains("van")) return 1;
-                        if (type.contains("scooter")) return 2;
-                        return 3;
-                    }))
+                    .min(
+                            Comparator.comparingInt(
+                                    r -> {
+                                        if (r.getVehicleType() == null) return 3;
+                                        String type = r.getVehicleType().toLowerCase();
+                                        if (type.contains("van")) return 1;
+                                        if (type.contains("scooter")) return 2;
+                                        return 3;
+                                    }))
                     .orElse(activeRiders.get(0));
         }
     }
@@ -302,50 +364,63 @@ public class OrderServiceImpl implements OrderUseCase {
     @Override
     @Transactional
     @CacheEvict(value = "orders", key = "#orderId")
-    public Map<String, Object> requestRefund(Integer orderId, String claimReason, BigDecimal customerLatitude, BigDecimal customerLongitude) {
-        Order order = orderPort.findById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found."));
-        
+    public Map<String, Object> requestRefund(
+            Integer orderId,
+            String claimReason,
+            BigDecimal customerLatitude,
+            BigDecimal customerLongitude) {
+        Order order =
+                orderPort
+                        .findById(orderId)
+                        .orElseThrow(() -> new NoSuchElementException("Order not found."));
+
         Customer customer = order.getCustomer();
-        
+
         if (customer.getTrustScore() < 65) {
             return Map.of(
-                "status", "rejected",
-                "message", "REFUND REFUSED: Your account trust rating has fallen below safety thresholds."
-            );
+                    "status",
+                    "rejected",
+                    "message",
+                    "REFUND REFUSED: Your account trust rating has fallen below safety"
+                            + " thresholds.");
         }
-        
+
         if (customerLatitude != null && order.getRider() != null) {
             BigDecimal distLat = customerLatitude.subtract(order.getRider().getActiveLat()).abs();
             if (distLat.compareTo(new BigDecimal("0.05")) > 0) {
                 customer.setTrustScore(Math.max(0, customer.getTrustScore() - 25));
                 customerPort.save(customer);
                 return Map.of(
-                    "status", "rejected",
-                    "message", "REFUND BLOCKED: Telemetry Correlation GPS audit failed."
-                );
+                        "status", "rejected",
+                        "message", "REFUND BLOCKED: Telemetry Correlation GPS audit failed.");
             }
         }
 
-        boolean isLateClaim = claimReason != null && (
-            claimReason.toLowerCase().contains("late") || 
-            claimReason.toLowerCase().contains("delay") || 
-            claimReason.toLowerCase().contains("sla") || 
-            claimReason.toLowerCase().contains("slow")
-        );
+        boolean isLateClaim =
+                claimReason != null
+                        && (claimReason.toLowerCase().contains("late")
+                                || claimReason.toLowerCase().contains("delay")
+                                || claimReason.toLowerCase().contains("sla")
+                                || claimReason.toLowerCase().contains("slow"));
 
         if (isLateClaim && order.getSlaCountdownSec() <= 0) {
             // AI-Autopilot Auto-Approval Path
             String ticketId = "AUTO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            HitlQueue ticket = HitlQueue.builder()
-                    .ticketId(ticketId)
-                    .type("refund_customer")
-                    .customer(customer)
-                    .orderId(order.getOrderId())
-                    .description("AI-AUTOPILOT: Refund request auto-approved due to verified SLA breach for order " + orderId + ". Override By: ai-autopilot. Reason: Verified SLA countdown breach (countdown <= 0)")
-                    .amount(order.getTotalAmount())
-                    .status("approved")
-                    .build();
+            HitlQueue ticket =
+                    HitlQueue.builder()
+                            .ticketId(ticketId)
+                            .type("refund_customer")
+                            .customer(customer)
+                            .orderId(order.getOrderId())
+                            .description(
+                                    "AI-AUTOPILOT: Refund request auto-approved due to verified SLA"
+                                            + " breach for order "
+                                            + orderId
+                                            + ". Override By: ai-autopilot. Reason: Verified SLA"
+                                            + " countdown breach (countdown <= 0)")
+                            .amount(order.getTotalAmount())
+                            .status("approved")
+                            .build();
             hitlQueuePort.save(ticket);
 
             // Refund Customer Wallet
@@ -353,39 +428,55 @@ public class OrderServiceImpl implements OrderUseCase {
             customerPort.save(customer);
 
             // Double-entry Ledger Entry
-            List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg> legs = List.of(
-                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("system", null, order.getTotalAmount(), BigDecimal.ZERO),
-                new ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg("customer", customer.getCustomerId(), BigDecimal.ZERO, order.getTotalAmount())
-            );
-            ledgerUseCase.recordTransaction("REFUND-AUTO", "AI-Autopilot SLA breach refund for order " + orderId, legs);
+            List<ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase.LedgerLeg>
+                    legs =
+                            List.of(
+                                    new ch.swissqcommerce.backend.domain.transaction.port.in
+                                            .LedgerUseCase.LedgerLeg(
+                                            "system",
+                                            null,
+                                            order.getTotalAmount(),
+                                            BigDecimal.ZERO),
+                                    new ch.swissqcommerce.backend.domain.transaction.port.in
+                                            .LedgerUseCase.LedgerLeg(
+                                            "customer",
+                                            customer.getCustomerId(),
+                                            BigDecimal.ZERO,
+                                            order.getTotalAmount()));
+            ledgerUseCase.recordTransaction(
+                    "REFUND-AUTO", "AI-Autopilot SLA breach refund for order " + orderId, legs);
 
             return Map.of(
-                "status", "approved",
-                "message", "AI-AUTOPILOT: Delivery SLA breach verified. Refund of $" + order.getTotalAmount() + " automatically approved and credited to your wallet.",
-                "ticket_id", ticketId
-            );
+                    "status",
+                    "approved",
+                    "message",
+                    "AI-AUTOPILOT: Delivery SLA breach verified. Refund of $"
+                            + order.getTotalAmount()
+                            + " automatically approved and credited to your wallet.",
+                    "ticket_id",
+                    ticketId);
         }
-        
+
         // Manual Admin HITL Path
         String ticketId = "HITL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        HitlQueue ticket = HitlQueue.builder()
-                .ticketId(ticketId)
-                .type("refund_customer")
-                .customer(customer)
-                .orderId(order.getOrderId())
-                .description("Refund request for order " + orderId + ". Reason: " + claimReason)
-                .amount(order.getTotalAmount())
-                .status("pending")
-                .build();
+        HitlQueue ticket =
+                HitlQueue.builder()
+                        .ticketId(ticketId)
+                        .type("refund_customer")
+                        .customer(customer)
+                        .orderId(order.getOrderId())
+                        .description(
+                                "Refund request for order " + orderId + ". Reason: " + claimReason)
+                        .amount(order.getTotalAmount())
+                        .status("pending")
+                        .build();
         hitlQueuePort.save(ticket);
-        
-        return Map.of(
-            "status", "pending_admin_approval",
-            "message", "Refund filed. Awaiting manual Admin approval.",
-            "ticket_id", ticketId
-        );
-    }
 
+        return Map.of(
+                "status", "pending_admin_approval",
+                "message", "Refund filed. Awaiting manual Admin approval.",
+                "ticket_id", ticketId);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -398,8 +489,9 @@ public class OrderServiceImpl implements OrderUseCase {
     @Transactional(readOnly = true)
     @Cacheable(value = "orders", key = "#orderId")
     public Order getOrderById(Integer orderId) {
-        return orderPort.findById(orderId)
-                .orElseThrow(() -> new java.util.NoSuchElementException("Order not found: " + orderId));
+        return orderPort
+                .findById(orderId)
+                .orElseThrow(
+                        () -> new java.util.NoSuchElementException("Order not found: " + orderId));
     }
-
 }

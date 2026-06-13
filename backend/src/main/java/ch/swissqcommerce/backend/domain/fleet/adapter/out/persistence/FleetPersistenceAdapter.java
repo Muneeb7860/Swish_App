@@ -13,13 +13,14 @@ public class FleetPersistenceAdapter implements FleetPort {
 
     @Override
     public RiderShift saveShift(RiderShift shift) {
-        RiderShiftEntity entity = RiderShiftEntity.builder()
-                .shiftId(shift.getShiftId())
-                .riderId(shift.getRiderId())
-                .startTime(shift.getStartTime())
-                .endTime(shift.getEndTime())
-                .status(shift.getStatus())
-                .build();
+        RiderShiftEntity entity =
+                RiderShiftEntity.builder()
+                        .shiftId(shift.getShiftId())
+                        .riderId(shift.getRiderId())
+                        .startTime(shift.getStartTime())
+                        .endTime(shift.getEndTime())
+                        .status(shift.getStatus())
+                        .build();
         shiftRepository.save(entity);
         return shift;
     }

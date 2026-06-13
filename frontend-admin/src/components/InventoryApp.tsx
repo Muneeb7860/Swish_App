@@ -161,7 +161,10 @@ export default function InventoryApp({
 									<label htmlFor={item.id} className="picking-label">
 										<span className="checkbox-custom">
 											{item.checked ? (
-												<Lucide.CheckSquare size={16} className="text-inventory" />
+												<Lucide.CheckSquare
+													size={16}
+													className="text-inventory"
+												/>
 											) : (
 												<Lucide.Square size={16} />
 											)}
@@ -186,7 +189,7 @@ export default function InventoryApp({
 									width: "100%",
 									cursor: "pointer",
 									fontWeight: "bold",
-									borderRadius: "8px"
+									borderRadius: "8px",
 								}}
 								onClick={() => {
 									setCheckedItems({});
@@ -213,7 +216,11 @@ export default function InventoryApp({
 						<button
 							aria-label="Balance Stores Inventory"
 							className="btn-secondary-glow"
-							style={{ fontSize: "0.75rem", cursor: "pointer", padding: "0.35rem 0.75rem" }}
+							style={{
+								fontSize: "0.75rem",
+								cursor: "pointer",
+								padding: "0.35rem 0.75rem",
+							}}
 							onClick={handleBalanceStores}
 						>
 							Balance Stores Inventory
@@ -232,11 +239,21 @@ export default function InventoryApp({
 							{activeStockTransfers.map((tr) => (
 								<div key={tr.id} className="transfer-card">
 									<div className="transfer-header">
-										<div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "0.4rem",
+											}}
+										>
 											<Lucide.Truck size={14} className="text-inventory" />
-											<span className="transfer-title">INTER-STORE TRANSFER: {tr.itemName}</span>
+											<span className="transfer-title">
+												INTER-STORE TRANSFER: {tr.itemName}
+											</span>
 										</div>
-										<span className="transfer-progress-pct">{tr.progress}%</span>
+										<span className="transfer-progress-pct">
+											{tr.progress}%
+										</span>
 									</div>
 									<div className="transfer-bar-outer">
 										<div
@@ -308,7 +325,7 @@ export default function InventoryApp({
 								cursor: "pointer",
 								fontWeight: "bold",
 								borderRadius: "6px",
-								marginTop: "0.5rem"
+								marginTop: "0.5rem",
 							}}
 							onClick={handleDeployBackupPicker}
 						>

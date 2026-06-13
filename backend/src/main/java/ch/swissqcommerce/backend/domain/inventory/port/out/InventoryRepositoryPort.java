@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface InventoryRepositoryPort {
     InventoryItem save(InventoryItem item);
+
     Optional<InventoryItem> findBySku(SKU sku);
 }

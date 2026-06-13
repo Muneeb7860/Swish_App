@@ -26,22 +26,30 @@ public class PricingGuardrailsEngine {
         if (surgeMultiplier < MIN_SURGE_MULTIPLIER) {
             finalSurge = MIN_SURGE_MULTIPLIER;
             adjusted = true;
-            message.append(" Surge multiplier raised to minimum ").append(MIN_SURGE_MULTIPLIER).append(".");
+            message.append(" Surge multiplier raised to minimum ")
+                    .append(MIN_SURGE_MULTIPLIER)
+                    .append(".");
         } else if (surgeMultiplier > MAX_SURGE_MULTIPLIER) {
             finalSurge = MAX_SURGE_MULTIPLIER;
             adjusted = true;
-            message.append(" Surge multiplier clamped to maximum ").append(MAX_SURGE_MULTIPLIER).append(".");
+            message.append(" Surge multiplier clamped to maximum ")
+                    .append(MAX_SURGE_MULTIPLIER)
+                    .append(".");
         }
 
         // 2. Validate and clamp Discount Percent
         if (discountPercent < MIN_DISCOUNT_PERCENT) {
             finalDiscount = MIN_DISCOUNT_PERCENT;
             adjusted = true;
-            message.append(" Perishable discount raised to minimum ").append(MIN_DISCOUNT_PERCENT).append("%.");
+            message.append(" Perishable discount raised to minimum ")
+                    .append(MIN_DISCOUNT_PERCENT)
+                    .append("%.");
         } else if (discountPercent > MAX_DISCOUNT_PERCENT) {
             finalDiscount = MAX_DISCOUNT_PERCENT;
             adjusted = true;
-            message.append(" Perishable discount clamped to maximum ").append(MAX_DISCOUNT_PERCENT).append("%.");
+            message.append(" Perishable discount clamped to maximum ")
+                    .append(MAX_DISCOUNT_PERCENT)
+                    .append("%.");
         }
 
         // 3. Flag aggressive (but in-range) values for human review. Evaluated on the
@@ -50,17 +58,27 @@ public class PricingGuardrailsEngine {
         StringBuilder review = new StringBuilder();
         if (surgeMultiplier > REVIEW_SURGE_THRESHOLD) {
             needsReview = true;
-            review.append(String.format("Surge %.2fx exceeds review threshold %.1fx. ",
-                    surgeMultiplier, REVIEW_SURGE_THRESHOLD));
+            review.append(
+                    String.format(
+                            "Surge %.2fx exceeds review threshold %.1fx. ",
+                            surgeMultiplier, REVIEW_SURGE_THRESHOLD));
         }
         if (discountPercent > REVIEW_DISCOUNT_THRESHOLD) {
             needsReview = true;
-            review.append(String.format("Discount %.1f%% exceeds review threshold %.1f%%. ",
-                    discountPercent, REVIEW_DISCOUNT_THRESHOLD));
+            review.append(
+                    String.format(
+                            "Discount %.1f%% exceeds review threshold %.1f%%. ",
+                            discountPercent, REVIEW_DISCOUNT_THRESHOLD));
         }
 
-        return new GuardrailResult(true, adjusted, finalSurge, finalDiscount, message.toString().trim(),
-                needsReview, review.toString().trim());
+        return new GuardrailResult(
+                true,
+                adjusted,
+                finalSurge,
+                finalDiscount,
+                message.toString().trim(),
+                needsReview,
+                review.toString().trim());
     }
 
     public static class GuardrailResult {
@@ -72,12 +90,30 @@ public class PricingGuardrailsEngine {
         private final boolean needsReview;
         private final String reviewReason;
 
-        public GuardrailResult(boolean approved, boolean adjusted, double validatedSurgeMultiplier, double validatedDiscountPercent, String message) {
-            this(approved, adjusted, validatedSurgeMultiplier, validatedDiscountPercent, message, false, "");
+        public GuardrailResult(
+                boolean approved,
+                boolean adjusted,
+                double validatedSurgeMultiplier,
+                double validatedDiscountPercent,
+                String message) {
+            this(
+                    approved,
+                    adjusted,
+                    validatedSurgeMultiplier,
+                    validatedDiscountPercent,
+                    message,
+                    false,
+                    "");
         }
 
-        public GuardrailResult(boolean approved, boolean adjusted, double validatedSurgeMultiplier, double validatedDiscountPercent, String message,
-                               boolean needsReview, String reviewReason) {
+        public GuardrailResult(
+                boolean approved,
+                boolean adjusted,
+                double validatedSurgeMultiplier,
+                double validatedDiscountPercent,
+                String message,
+                boolean needsReview,
+                String reviewReason) {
             this.approved = approved;
             this.adjusted = adjusted;
             this.validatedSurgeMultiplier = validatedSurgeMultiplier;
@@ -87,12 +123,32 @@ public class PricingGuardrailsEngine {
             this.reviewReason = reviewReason;
         }
 
-        public boolean isApproved() { return approved; }
-        public boolean isAdjusted() { return adjusted; }
-        public double getValidatedSurgeMultiplier() { return validatedSurgeMultiplier; }
-        public double getValidatedDiscountPercent() { return validatedDiscountPercent; }
-        public String getMessage() { return message; }
-        public boolean isNeedsReview() { return needsReview; }
-        public String getReviewReason() { return reviewReason; }
+        public boolean isApproved() {
+            return approved;
+        }
+
+        public boolean isAdjusted() {
+            return adjusted;
+        }
+
+        public double getValidatedSurgeMultiplier() {
+            return validatedSurgeMultiplier;
+        }
+
+        public double getValidatedDiscountPercent() {
+            return validatedDiscountPercent;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public boolean isNeedsReview() {
+            return needsReview;
+        }
+
+        public String getReviewReason() {
+            return reviewReason;
+        }
     }
 }

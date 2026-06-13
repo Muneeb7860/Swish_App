@@ -6,8 +6,14 @@ export const ProductCardSkeleton: React.FC = () => {
 			<div className="skeleton-image skeleton-shimmer" />
 			<div className="skeleton-text medium skeleton-shimmer" />
 			<div className="product-info-row" style={{ marginTop: "1rem" }}>
-				<div className="skeleton-text short skeleton-shimmer" style={{ margin: 0, height: 16 }} />
-				<div className="skeleton-shimmer" style={{ width: 60, height: 28, borderRadius: 8 }} />
+				<div
+					className="skeleton-text short skeleton-shimmer"
+					style={{ margin: 0, height: 16 }}
+				/>
+				<div
+					className="skeleton-shimmer"
+					style={{ width: 60, height: 28, borderRadius: 8 }}
+				/>
 			</div>
 		</div>
 	);
@@ -17,7 +23,9 @@ interface ProductGridSkeletonProps {
 	count?: number;
 }
 
-export const ProductGridSkeleton: React.FC<ProductGridSkeletonProps> = ({ count = 8 }) => {
+export const ProductGridSkeleton: React.FC<ProductGridSkeletonProps> = ({
+	count = 8,
+}) => {
 	return (
 		<div className="products-grid">
 			{Array.from({ length: count }).map((_, i) => (
@@ -32,9 +40,19 @@ interface TableRowsSkeletonProps {
 	cols?: number;
 }
 
-export const TableRowsSkeleton: React.FC<TableRowsSkeletonProps> = ({ rows = 5, cols = 4 }) => {
+export const TableRowsSkeleton: React.FC<TableRowsSkeletonProps> = ({
+	rows = 5,
+	cols = 4,
+}) => {
 	return (
-		<div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "100%" }}>
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				gap: "1rem",
+				width: "100%",
+			}}
+		>
 			{Array.from({ length: rows }).map((_, r) => (
 				<div
 					key={r}
@@ -45,7 +63,7 @@ export const TableRowsSkeleton: React.FC<TableRowsSkeletonProps> = ({ rows = 5, 
 						background: "rgba(255, 255, 255, 0.02)",
 						border: "1px solid rgba(255, 255, 255, 0.05)",
 						borderRadius: 12,
-						alignItems: "center"
+						alignItems: "center",
 					}}
 				>
 					{Array.from({ length: cols }).map((_, c) => (
@@ -55,7 +73,7 @@ export const TableRowsSkeleton: React.FC<TableRowsSkeletonProps> = ({ rows = 5, 
 							style={{
 								flex: c === 0 ? 2 : 1,
 								margin: 0,
-								height: 14
+								height: 14,
 							}}
 						/>
 					))}
@@ -67,8 +85,19 @@ export const TableRowsSkeleton: React.FC<TableRowsSkeletonProps> = ({ rows = 5, 
 
 export const GenericCardSkeleton: React.FC = () => {
 	return (
-		<div className="glass-card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-			<div className="skeleton-text medium skeleton-shimmer" style={{ height: 18 }} />
+		<div
+			className="glass-card"
+			style={{
+				padding: "1.5rem",
+				display: "flex",
+				flexDirection: "column",
+				gap: "0.8rem",
+			}}
+		>
+			<div
+				className="skeleton-text medium skeleton-shimmer"
+				style={{ height: 18 }}
+			/>
 			<div className="skeleton-text skeleton-shimmer" />
 			<div className="skeleton-text skeleton-shimmer" />
 			<div className="skeleton-text short skeleton-shimmer" />

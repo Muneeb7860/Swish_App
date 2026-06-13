@@ -1,17 +1,16 @@
 package ch.swissqcommerce.backend.domain.agent.core.model;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-
 /**
- * Event-sourced record of a B2B RFQ negotiation outcome (BRD FR-02). Archived to
- * the document store (MongoDB) as an immutable CDC sink alongside the relational
- * b2b_restock_orders / procurement_approvals tables.
+ * Event-sourced record of a B2B RFQ negotiation outcome (BRD FR-02). Archived to the document store
+ * (MongoDB) as an immutable CDC sink alongside the relational b2b_restock_orders /
+ * procurement_approvals tables.
  */
 @Data
 @Builder

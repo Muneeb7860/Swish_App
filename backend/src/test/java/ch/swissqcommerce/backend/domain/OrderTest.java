@@ -1,14 +1,13 @@
 package ch.swissqcommerce.backend.domain;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import org.junit.jupiter.api.Test;
-
-import java.math.BigDecimal;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.model.Customer;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
 
 class OrderTest {
 
@@ -53,10 +52,10 @@ class OrderTest {
         // Given
         int baseScore = 100;
         int penalty = 20;
-        
+
         // When
         int currentScore = baseScore - penalty;
-        
+
         // Then
         assertEquals(80, currentScore);
     }

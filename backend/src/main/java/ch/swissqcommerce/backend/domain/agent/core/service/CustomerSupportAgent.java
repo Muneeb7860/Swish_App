@@ -4,10 +4,9 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,50 +20,75 @@ public class CustomerSupportAgent {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentAnalysis analyze(AgentRequest request) {
-        String prompt = "You are a customer support agent. Analyze the customer message: \"" + request.getMessage() + "\".\n" +
-                "Decide if you need to call a tool: \n" +
-                "  1. " + TOOL_ORDER_STATUS + ": to look up order tracking/status details. Provide customerId or orderId as tool_argument.\n" +
-                "  2. " + TOOL_DYNAMIC_PRICING + ": to retrieve dynamic pricing recommendations, discounts, or surge fees. Provide a semicolon-separated list of parameters (e.g. raining=true;ratio=0.8;expiry=2) as tool_argument if available, or empty string.\n" +
-                "If no tool is needed, set \"tool\" to null.\n" +
-                "Return a JSON object with: \n" +
-                "  \"reply\": a provisional reply,\n" +
-                "  \"confidence\": confidence score (0.0 to 1.0),\n" +
-                "  \"tool\": \"" + TOOL_ORDER_STATUS + "\" or \"" + TOOL_DYNAMIC_PRICING + "\" or null,\n" +
-                "  \"tool_argument\": the tool argument string or null.\n" +
-                "Response MUST be a valid JSON only, without any markdown formatting block.";
+        String prompt =
+                "You are a customer support agent. Analyze the customer message: \""
+                        + request.getMessage()
+                        + "\".\n"
+                        + "Decide if you need to call a tool: \n"
+                        + "  1. "
+                        + TOOL_ORDER_STATUS
+                        + ": to look up order tracking/status details. Provide customerId or"
+                        + " orderId as tool_argument.\n"
+                        + "  2. "
+                        + TOOL_DYNAMIC_PRICING
+                        + ": to retrieve dynamic pricing recommendations, discounts, or surge fees."
+                        + " Provide a semicolon-separated list of parameters (e.g."
+                        + " raining=true;ratio=0.8;expiry=2) as tool_argument if available, or"
+                        + " empty string.\n"
+                        + "If no tool is needed, set \"tool\" to null.\n"
+                        + "Return a JSON object with: \n"
+                        + "  \"reply\": a provisional reply,\n"
+                        + "  \"confidence\": confidence score (0.0 to 1.0),\n"
+                        + "  \"tool\": \""
+                        + TOOL_ORDER_STATUS
+                        + "\" or \""
+                        + TOOL_DYNAMIC_PRICING
+                        + "\" or null,\n"
+                        + "  \"tool_argument\": the tool argument string or null.\n"
+                        + "Response MUST be a valid JSON only, without any markdown formatting"
+                        + " block.";
 
         double[] cost = new double[1];
         String content = callLlmWithLettaFallback(prompt, request.getConversationId(), cost);
         return parseResponse(content, cost[0]);
     }
 
-
-    public AgentAnalysis generateFinalResponse(AgentRequest request, String toolResult, double initialCost) {
-        String prompt = "You are a customer support agent. The customer asked: \"" + request.getMessage() + "\".\n" +
-                "We executed the tool and got this data: \"" + toolResult + "\".\n" +
-                "Now, formulate the final reply to the customer.\n" +
-                "Return a JSON object with: \n" +
-                "  \"reply\": your final helpful reply,\n" +
-                "  \"confidence\": confidence score (0.0 to 1.0),\n" +
-                "  \"tool\": null,\n" +
-                "  \"tool_argument\": null\n" +
-                "Response MUST be a valid JSON only, without any markdown formatting block.";
+    public AgentAnalysis generateFinalResponse(
+            AgentRequest request, String toolResult, double initialCost) {
+        String prompt =
+                "You are a customer support agent. The customer asked: \""
+                        + request.getMessage()
+                        + "\".\n"
+                        + "We executed the tool and got this data: \""
+                        + toolResult
+                        + "\".\n"
+                        + "Now, formulate the final reply to the customer.\n"
+                        + "Return a JSON object with: \n"
+                        + "  \"reply\": your final helpful reply,\n"
+                        + "  \"confidence\": confidence score (0.0 to 1.0),\n"
+                        + "  \"tool\": null,\n"
+                        + "  \"tool_argument\": null\n"
+                        + "Response MUST be a valid JSON only, without any markdown formatting"
+                        + " block.";
 
         double[] cost = new double[1];
         String content = callLlmWithLettaFallback(prompt, request.getConversationId(), cost);
         return parseResponse(content, cost[0] + initialCost);
     }
 
-    private String callLlmWithLettaFallback(String prompt, String conversationId, double[] tokenCostOut) {
+    private String callLlmWithLettaFallback(
+            String prompt, String conversationId, double[] tokenCostOut) {
         try {
             if (lettaMemoryService != null && conversationId != null) {
                 String lettaResponse = lettaMemoryService.sendMessage(conversationId, prompt);
                 if (lettaResponse != null) {
-                    tokenCostOut[0] = 0.035; // Default cost estimate for Letta calls to prevent budget bypass
+                    tokenCostOut[0] =
+                            0.035; // Default cost estimate for Letta calls to prevent budget bypass
                     return lettaResponse;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         LlmResponse response = llmGateway.callLlm(prompt);
         tokenCostOut[0] = response.getTokenCost();
         return response.getContent();
@@ -93,7 +117,8 @@ public class CustomerSupportAgent {
 
             return new AgentAnalysis(reply, confidence, tool, toolArgument, cost);
         } catch (Exception e) {
-            return new AgentAnalysis("Unable to process request, passing to a human agent.", 0.0, null, null, cost);
+            return new AgentAnalysis(
+                    "Unable to process request, passing to a human agent.", 0.0, null, null, cost);
         }
     }
 
@@ -104,7 +129,8 @@ public class CustomerSupportAgent {
         public String toolArgument;
         public double cost;
 
-        public AgentAnalysis(String reply, double confidence, String tool, String toolArgument, double cost) {
+        public AgentAnalysis(
+                String reply, double confidence, String tool, String toolArgument, double cost) {
             this.reply = reply;
             this.confidence = confidence;
             this.tool = tool;

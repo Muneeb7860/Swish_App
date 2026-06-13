@@ -4,20 +4,19 @@ import ch.swissqcommerce.backend.domain.auth.port.out.TokenServicePort;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import javax.crypto.SecretKey;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * HMAC-SHA-256 JWT generator/validator.
  *
- * The signing key, expiration, and claim shape must stay in lock-step with
- * {@link ch.swissqcommerce.backend.config.JwtAuthenticationFilter} — that
- * filter also reads {@code jwt.secret} and expects {@code sub} + {@code role}
- * claims, so any change here needs a matching change there.
+ * <p>The signing key, expiration, and claim shape must stay in lock-step with {@link
+ * ch.swissqcommerce.backend.config.JwtAuthenticationFilter} — that filter also reads {@code
+ * jwt.secret} and expects {@code sub} + {@code role} claims, so any change here needs a matching
+ * change there.
  */
 @Component
 public class TokenServiceAdapter implements TokenServicePort {
@@ -55,11 +54,12 @@ public class TokenServiceAdapter implements TokenServicePort {
             return false;
         }
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            Claims claims =
+                    Jwts.parser()
+                            .verifyWith(signingKey)
+                            .build()
+                            .parseSignedClaims(token)
+                            .getPayload();
             return claims.getExpiration() == null || claims.getExpiration().after(new Date());
         } catch (Exception e) {
             return false;

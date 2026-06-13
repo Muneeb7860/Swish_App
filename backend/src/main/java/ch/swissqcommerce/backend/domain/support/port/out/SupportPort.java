@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface SupportPort {
     SupportTicket save(SupportTicket ticket);
+
     Optional<SupportTicket> findById(String ticketId);
 }

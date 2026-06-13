@@ -4,15 +4,14 @@ import ch.swissqcommerce.backend.domain.inventory.core.model.InventoryItem;
 import ch.swissqcommerce.backend.domain.inventory.core.model.Quantity;
 import ch.swissqcommerce.backend.domain.inventory.core.model.SKU;
 import ch.swissqcommerce.backend.domain.inventory.port.out.InventoryRepositoryPort;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
-import java.util.UUID;
-
 /**
- * JPA-backed implementation of InventoryRepositoryPort.
- * Replaces the previous no-op stub that silently discarded all writes.
+ * JPA-backed implementation of InventoryRepositoryPort. Replaces the previous no-op stub that
+ * silently discarded all writes.
  */
 @Component
 @RequiredArgsConstructor
@@ -22,13 +21,20 @@ public class InventoryPersistenceAdapter implements InventoryRepositoryPort {
 
     @Override
     public InventoryItem save(InventoryItem item) {
-        InventoryItemEntity entity = repository.findBySku(item.getSku().getValue())
-                .orElseGet(() -> InventoryItemEntity.builder()
-                        .id(item.getId() != null ? item.getId() : UUID.randomUUID().toString())
-                        .sku(item.getSku().getValue())
-                        .availableAmount(0)
-                        .reservedAmount(0)
-                        .build());
+        InventoryItemEntity entity =
+                repository
+                        .findBySku(item.getSku().getValue())
+                        .orElseGet(
+                                () ->
+                                        InventoryItemEntity.builder()
+                                                .id(
+                                                        item.getId() != null
+                                                                ? item.getId()
+                                                                : UUID.randomUUID().toString())
+                                                .sku(item.getSku().getValue())
+                                                .availableAmount(0)
+                                                .reservedAmount(0)
+                                                .build());
 
         entity.setAvailableAmount(item.getAvailableQuantity().getValue());
         entity.setReservedAmount(item.getReservedQuantity().getValue());
@@ -39,8 +45,7 @@ public class InventoryPersistenceAdapter implements InventoryRepositoryPort {
 
     @Override
     public Optional<InventoryItem> findBySku(SKU sku) {
-        return repository.findBySku(sku.getValue())
-                .map(this::toDomain);
+        return repository.findBySku(sku.getValue()).map(this::toDomain);
     }
 
     // ── Mapping ──────────────────────────────────────────────────────────────

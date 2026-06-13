@@ -54,7 +54,9 @@ async function waitForPorts(ports, timeoutMs = 60000) {
 
 // Helper to spawn background processes
 function runService(name, command, args, cwd, logFile, envOverrides = {}) {
-	console.log(`[CYPRESS RUNNER] Starting service [${name}] in directory: ${cwd}...`);
+	console.log(
+		`[CYPRESS RUNNER] Starting service [${name}] in directory: ${cwd}...`,
+	);
 	const logStream = fs.createWriteStream(logFile);
 
 	const proc = spawn(command, args, {
@@ -62,8 +64,8 @@ function runService(name, command, args, cwd, logFile, envOverrides = {}) {
 		shell: true,
 		env: {
 			...process.env,
-			...envOverrides
-		}
+			...envOverrides,
+		},
 	});
 	proc.stdout.pipe(logStream);
 	proc.stderr.pipe(logStream);
@@ -87,7 +89,10 @@ async function cleanUp() {
 					proc.kill("SIGTERM");
 				}
 			} catch (err) {
-				console.error(`[CYPRESS RUNNER] Error killing process ${proc.pid}:`, err.message);
+				console.error(
+					`[CYPRESS RUNNER] Error killing process ${proc.pid}:`,
+					err.message,
+				);
 			}
 		}
 	}
@@ -113,9 +118,10 @@ async function run() {
 		const npmCmd = isWin ? "npm.cmd" : "npm";
 
 		const commonEnv = {
-			JWT_SECRET: "my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
+			JWT_SECRET:
+				"my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
 			ADMIN_EMAIL: "admin@swish.local",
-			ADMIN_PASSWORD: "swiss-secure-password"
+			ADMIN_PASSWORD: "swiss-secure-password",
 		};
 
 		// 1. Boot Backend Monolith
@@ -125,7 +131,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "backend"),
 			path.join(LOGS_DIR, "backend_cy.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 2. Boot Platform Gateway (port 8080)
@@ -135,7 +141,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "platform-gateway"),
 			path.join(LOGS_DIR, "bff_cy.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 3. Boot frontend Customer MFE dev server on port 3001
@@ -167,10 +173,13 @@ async function run() {
 							method: "GET",
 							timeout: 2000,
 						},
-						(res) => resolve(res.statusCode)
+						(res) => resolve(res.statusCode),
 					);
 					req.on("error", reject);
-					req.on("timeout", () => { req.destroy(); reject(new Error("timeout")); });
+					req.on("timeout", () => {
+						req.destroy();
+						reject(new Error("timeout"));
+					});
 					req.end();
 				});
 				apiReady = true;
@@ -181,7 +190,9 @@ async function run() {
 			}
 		}
 		if (!apiReady) {
-			console.warn("[CYPRESS RUNNER] Backend API health check did not pass. Proceeding anyway...");
+			console.warn(
+				"[CYPRESS RUNNER] Backend API health check did not pass. Proceeding anyway...",
+			);
 		}
 
 		await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -194,8 +205,8 @@ async function run() {
 			stdio: "inherit",
 			env: {
 				...process.env,
-				CYPRESS_adminToken: "" // If we have a way to generate a token, we can supply it here, but let's test regular flow first.
-			}
+				CYPRESS_adminToken: "", // If we have a way to generate a token, we can supply it here, but let's test regular flow first.
+			},
 		});
 
 		await new Promise((resolve, reject) => {
@@ -204,7 +215,9 @@ async function run() {
 					console.log("[CYPRESS RUNNER] Cypress E2E finished successfully!");
 					resolve();
 				} else {
-					reject(new Error(`Cypress E2E exited with non-zero exit code: ${code}`));
+					reject(
+						new Error(`Cypress E2E exited with non-zero exit code: ${code}`),
+					);
 				}
 			});
 		});

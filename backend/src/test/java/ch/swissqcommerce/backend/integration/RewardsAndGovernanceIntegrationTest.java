@@ -1,30 +1,33 @@
 package ch.swissqcommerce.backend.integration;
 
-import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
-import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
-import ch.swissqcommerce.backend.domain.reward.core.model.CustomerLoyalty;
-import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
-import ch.swissqcommerce.backend.domain.reward.port.in.RewardUseCase;
-import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
-import ch.swissqcommerce.backend.domain.reward.core.service.RiderLeaderboardService;
-import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyRepository;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderEntity;
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
-import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
-import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
-import ch.swissqcommerce.backend.repository.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.agent.adapter.in.web.AgentController;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
-import org.springframework.http.ResponseEntity;
+import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
+import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalRepository;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
+import ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyRepository;
+import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
+import ch.swissqcommerce.backend.domain.reward.core.service.RiderLeaderboardService;
+import ch.swissqcommerce.backend.domain.reward.port.in.RewardUseCase;
+import ch.swissqcommerce.backend.domain.reward.port.out.RewardOutPort;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogEntity;
+import ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence.OrderTelemetryLogRepository;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderEntity;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
+import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.model.*;
+import ch.swissqcommerce.backend.repository.*;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.Base64;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -33,69 +36,50 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.Base64;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
 public class RewardsAndGovernanceIntegrationTest {
 
-    @Autowired
-    private RewardUseCase rewardUseCase;
+    @Autowired private RewardUseCase rewardUseCase;
 
-    @Autowired
-    private GovernanceUseCase governanceUseCase;
+    @Autowired private GovernanceUseCase governanceUseCase;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    @Autowired private CustomerRepository customerRepository;
 
-    @Autowired
-    private WholesalerRepository wholesalerRepository;
+    @Autowired private WholesalerRepository wholesalerRepository;
 
-    @Autowired
-    private B2BRestockOrderRepository restockOrderRepository;
+    @Autowired private B2BRestockOrderRepository restockOrderRepository;
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @Autowired private OrderRepository orderRepository;
 
-    @Autowired
-    private OrderPort orderPort;
+    @Autowired private OrderPort orderPort;
 
-    @Autowired
-    private OrderTelemetryLogRepository telemetryLogRepository;
+    @Autowired private OrderTelemetryLogRepository telemetryLogRepository;
 
-    @Autowired
-    private ProcurementApprovalRepository approvalsRepository;
+    @Autowired private ProcurementApprovalRepository approvalsRepository;
 
-    @Autowired
-    private CustomerLoyaltyRepository loyaltyRepository;
+    @Autowired private CustomerLoyaltyRepository loyaltyRepository;
 
-    @Autowired
-    private RewardOutPort rewardOutPort;
+    @Autowired private RewardOutPort rewardOutPort;
 
-    @Autowired
-    private RiderLeaderboardService leaderboardService;
+    @Autowired private RiderLeaderboardService leaderboardService;
 
-    @Autowired
-    private DarkStoreRepository darkStoreRepository;
+    @Autowired private DarkStoreRepository darkStoreRepository;
 
-    @Autowired
-    private AgentController agentController;
+    @Autowired private AgentController agentController;
 
     @MockBean
-    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent b2BProcurementAgent;
+    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+            b2BProcurementAgent;
 
     @MockBean
-    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementActivities b2BProcurementActivities;
+    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementActivities
+            b2BProcurementActivities;
 
-    @MockBean
-    private StringRedisTemplate redisTemplate;
+    @MockBean private StringRedisTemplate redisTemplate;
 
     private Customer customer;
     private Wholesaler wholesaler;
@@ -110,73 +94,86 @@ public class RewardsAndGovernanceIntegrationTest {
 
         // Seed DarkStore if not exists
         if (darkStoreRepository.count() == 0) {
-            DarkStore store = DarkStore.builder()
-                    .storeId("store-1")
-                    .storeName("Zurich Hub")
-                    .address("Bahnhofstrasse")
-                    .latitude(BigDecimal.valueOf(47.3769))
-                    .longitude(BigDecimal.valueOf(8.5417))
-                    .build();
+            DarkStore store =
+                    DarkStore.builder()
+                            .storeId("store-1")
+                            .storeName("Zurich Hub")
+                            .address("Bahnhofstrasse")
+                            .latitude(BigDecimal.valueOf(47.3769))
+                            .longitude(BigDecimal.valueOf(8.5417))
+                            .build();
             darkStoreRepository.save(store);
         }
 
         // Seed Customer
-        customer = Customer.builder()
-                .customerId("CUST-999")
-                .fullName("Hikaru Sulu")
-                .email("sulu@starfleet.org")
-                .hashedEmail("sulu_hash_999")
-                .walletBalance(new BigDecimal("100.00"))
-                .loyaltyPoints(0)
-                .build();
+        customer =
+                Customer.builder()
+                        .customerId("CUST-999")
+                        .fullName("Hikaru Sulu")
+                        .email("sulu@starfleet.org")
+                        .hashedEmail("sulu_hash_999")
+                        .walletBalance(new BigDecimal("100.00"))
+                        .loyaltyPoints(0)
+                        .build();
         customerRepository.save(customer);
 
         // Seed Wholesaler
-        WholesalerEntity wholesalerEntity = WholesalerEntity.builder()
-                .wholesalerId("WHOLE-999")
-                .name("Starfleet Supplies")
-                .baseInvoiceAmount(new BigDecimal("1000.00"))
-                .fallbackInvoiceAmount(new BigDecimal("2000.00"))
-                .build();
+        WholesalerEntity wholesalerEntity =
+                WholesalerEntity.builder()
+                        .wholesalerId("WHOLE-999")
+                        .name("Starfleet Supplies")
+                        .baseInvoiceAmount(new BigDecimal("1000.00"))
+                        .fallbackInvoiceAmount(new BigDecimal("2000.00"))
+                        .build();
         wholesalerRepository.save(wholesalerEntity);
-        wholesaler = Wholesaler.builder().wholesalerId("WHOLE-999").name("Starfleet Supplies").build();
+        wholesaler =
+                Wholesaler.builder().wholesalerId("WHOLE-999").name("Starfleet Supplies").build();
 
         // Seed Restock Order
-        B2BRestockOrderEntity restockOrderEntity = B2BRestockOrderEntity.builder()
-                .wholesaler(wholesalerEntity)
-                .invoiceAmount(new BigDecimal("5200.00"))
-                .isFallback(false)
-                .status("pending")
-                .idempotencyKey("KEY-HITL-1")
-                .build();
+        B2BRestockOrderEntity restockOrderEntity =
+                B2BRestockOrderEntity.builder()
+                        .wholesaler(wholesalerEntity)
+                        .invoiceAmount(new BigDecimal("5200.00"))
+                        .isFallback(false)
+                        .status("pending")
+                        .idempotencyKey("KEY-HITL-1")
+                        .build();
         restockOrderRepository.save(restockOrderEntity);
-        restockOrder = B2BRestockOrder.builder().restockOrderId(restockOrderEntity.getRestockOrderId()).wholesaler(wholesaler).invoiceAmount(new BigDecimal("5200.00")).build();
+        restockOrder =
+                B2BRestockOrder.builder()
+                        .restockOrderId(restockOrderEntity.getRestockOrderId())
+                        .wholesaler(wholesaler)
+                        .invoiceAmount(new BigDecimal("5200.00"))
+                        .build();
 
         // Seed Order
-        order = Order.builder()
-                .customer(customer)
-                .totalAmount(new BigDecimal("25.00"))
-                .paymentMethod("Wallet")
-                .status("picked")
-                .idempotencyKey("KEY-ORDER-1")
-                .build();
+        order =
+                Order.builder()
+                        .customer(customer)
+                        .totalAmount(new BigDecimal("25.00"))
+                        .paymentMethod("Wallet")
+                        .status("picked")
+                        .idempotencyKey("KEY-ORDER-1")
+                        .build();
         order = orderPort.save(order);
 
         // Seed Telemetry logs for order
-        OrderTelemetryLogEntity log1 = OrderTelemetryLogEntity.builder()
-                .orderId(order.getOrderId())
-                .deviceTimestamp(OffsetDateTime.now())
-                .latitude(new BigDecimal("47.3769"))
-                .longitude(new BigDecimal("8.5417"))
-                .temperature(new BigDecimal("5.2"))
-                .build();
-        OrderTelemetryLogEntity log2 = OrderTelemetryLogEntity.builder()
-                .orderId(order.getOrderId())
-                .deviceTimestamp(OffsetDateTime.now().plusSeconds(5))
-                .latitude(new BigDecimal("47.3770"))
-                .longitude(new BigDecimal("8.5418"))
-                .temperature(new BigDecimal("5.8"))
-                .build();
+        OrderTelemetryLogEntity log1 =
+                OrderTelemetryLogEntity.builder()
+                        .orderId(order.getOrderId())
+                        .deviceTimestamp(OffsetDateTime.now())
+                        .latitude(new BigDecimal("47.3769"))
+                        .longitude(new BigDecimal("8.5417"))
+                        .temperature(new BigDecimal("5.2"))
+                        .build();
+        OrderTelemetryLogEntity log2 =
+                OrderTelemetryLogEntity.builder()
+                        .orderId(order.getOrderId())
+                        .deviceTimestamp(OffsetDateTime.now().plusSeconds(5))
+                        .latitude(new BigDecimal("47.3770"))
+                        .longitude(new BigDecimal("8.5418"))
+                        .temperature(new BigDecimal("5.8"))
+                        .build();
         telemetryLogRepository.save(log1);
         telemetryLogRepository.save(log2);
     }
@@ -193,7 +190,8 @@ public class RewardsAndGovernanceIntegrationTest {
         RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId).orElseThrow();
         assertEquals(50, points.getLoyaltyPoints());
 
-        List<ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyEntity> logs = loyaltyRepository.findByCustomerId(customerId);
+        List<ch.swissqcommerce.backend.domain.reward.adapter.out.persistence.CustomerLoyaltyEntity>
+                logs = loyaltyRepository.findByCustomerId(customerId);
         assertEquals(1, logs.size());
         assertEquals(50, logs.get(0).getPointsChanged());
         assertEquals("Points added via UseCase", logs.get(0).getDescription());
@@ -205,7 +203,8 @@ public class RewardsAndGovernanceIntegrationTest {
         leaderboardService.updateRiderScore("rider-1", 10.0);
 
         // Then
-        Mockito.verify(redisTemplate.opsForZSet()).incrementScore("rewards:rider:leaderboard", "rider-1", 10.0);
+        Mockito.verify(redisTemplate.opsForZSet())
+                .incrementScore("rewards:rider:leaderboard", "rider-1", 10.0);
     }
 
     @Test
@@ -225,15 +224,18 @@ public class RewardsAndGovernanceIntegrationTest {
         assertEquals(amount, approval.getAmount());
 
         // When - Approve override
-        governanceUseCase.approveOverride(approval.getId(), "operator-admin", "Urgent restock approved");
+        governanceUseCase.approveOverride(
+                approval.getId(), "operator-admin", "Urgent restock approved");
 
         // Then - Verify approved and restock order released
-        ProcurementApprovalEntity updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
+        ProcurementApprovalEntity updatedApproval =
+                approvalsRepository.findById(approval.getId()).orElseThrow();
         assertEquals("APPROVED", updatedApproval.getStatus());
         assertEquals("operator-admin", updatedApproval.getOverrideBy());
         assertEquals("Urgent restock approved", updatedApproval.getOverrideReason());
 
-        B2BRestockOrderEntity updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
+        B2BRestockOrderEntity updatedRestock =
+                restockOrderRepository.findById(restockOrderId).orElseThrow();
         assertEquals("fulfilled", updatedRestock.getStatus());
     }
 
@@ -247,13 +249,16 @@ public class RewardsAndGovernanceIntegrationTest {
         ProcurementApprovalEntity approval = approvalsRepository.findAll().get(0);
 
         // When - Reject override
-        governanceUseCase.rejectOverride(approval.getId(), "operator-admin", "Too expensive, reject");
+        governanceUseCase.rejectOverride(
+                approval.getId(), "operator-admin", "Too expensive, reject");
 
         // Then - Verify rejected and restock order failed
-        ProcurementApprovalEntity updatedApproval = approvalsRepository.findById(approval.getId()).orElseThrow();
+        ProcurementApprovalEntity updatedApproval =
+                approvalsRepository.findById(approval.getId()).orElseThrow();
         assertEquals("REJECTED", updatedApproval.getStatus());
 
-        B2BRestockOrderEntity updatedRestock = restockOrderRepository.findById(restockOrderId).orElseThrow();
+        B2BRestockOrderEntity updatedRestock =
+                restockOrderRepository.findById(restockOrderId).orElseThrow();
         assertEquals("failed", updatedRestock.getStatus());
     }
 
@@ -285,43 +290,73 @@ public class RewardsAndGovernanceIntegrationTest {
         request.setQuantity(3000); // 3000 * 2.50 = 7500 CHF (exceeds 5000 CHF limit)
         request.setCustomerId("CUST-999");
 
-        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.anyString()))
-                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                        2.50, 0.95, "Good price", "ACCEPTED", 0.00005));
+        Mockito.when(
+                        b2BProcurementActivities.callLlmNegotiation(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.anyString()))
+                .thenReturn(
+                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+                                .NegotiationAnalysis(
+                                2.50, 0.95, "Good price", "ACCEPTED", 0.00005));
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.anyString(), Mockito.anyInt()))
-                .thenAnswer(invocation -> {
-                    String itemId = invocation.getArgument(0);
-                    String itemName = invocation.getArgument(1);
-                    double basePrice = invocation.getArgument(2);
-                    String wholesalerName = invocation.getArgument(3);
-                    int quantity = invocation.getArgument(4);
+        Mockito.when(
+                        b2BProcurementAgent.negotiateRestock(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.anyString(),
+                                Mockito.anyInt()))
+                .thenAnswer(
+                        invocation -> {
+                            String itemId = invocation.getArgument(0);
+                            String itemName = invocation.getArgument(1);
+                            double basePrice = invocation.getArgument(2);
+                            String wholesalerName = invocation.getArgument(3);
+                            int quantity = invocation.getArgument(4);
 
-                    DarkStore store = darkStoreRepository.findAll().stream().findFirst().orElse(null);
-                    WholesalerEntity wholesalerEntity = wholesalerRepository.findAll().stream()
-                            .filter(w -> w.getName() != null && w.getName().equalsIgnoreCase(wholesalerName))
-                            .findFirst()
-                            .orElse(null);
+                            DarkStore store =
+                                    darkStoreRepository.findAll().stream().findFirst().orElse(null);
+                            WholesalerEntity wholesalerEntity =
+                                    wholesalerRepository.findAll().stream()
+                                            .filter(
+                                                    w ->
+                                                            w.getName() != null
+                                                                    && w.getName()
+                                                                            .equalsIgnoreCase(
+                                                                                    wholesalerName))
+                                            .findFirst()
+                                            .orElse(null);
 
-                    B2BRestockOrderEntity orderEntity = B2BRestockOrderEntity.builder()
-                            .store(store)
-                            .wholesaler(wholesalerEntity)
-                            .invoiceAmount(BigDecimal.valueOf(2.50 * quantity))
-                            .status("pending")
-                            .idempotencyKey("RESTOCK-" + java.util.UUID.randomUUID().toString())
-                            .build();
-                    orderEntity = restockOrderRepository.save(orderEntity);
+                            B2BRestockOrderEntity orderEntity =
+                                    B2BRestockOrderEntity.builder()
+                                            .store(store)
+                                            .wholesaler(wholesalerEntity)
+                                            .invoiceAmount(BigDecimal.valueOf(2.50 * quantity))
+                                            .status("pending")
+                                            .idempotencyKey(
+                                                    "RESTOCK-"
+                                                            + java.util
+                                                                    .UUID
+                                                                    .randomUUID()
+                                                                    .toString())
+                                            .build();
+                            orderEntity = restockOrderRepository.save(orderEntity);
 
-                    governanceUseCase.auditNegotiation(orderEntity.getRestockOrderId(), wholesalerEntity.getWholesalerId(), orderEntity.getInvoiceAmount());
+                            governanceUseCase.auditNegotiation(
+                                    orderEntity.getRestockOrderId(),
+                                    wholesalerEntity.getWholesalerId(),
+                                    orderEntity.getInvoiceAmount());
 
-                    return new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                            2.50, 0.95, "Good price", "ACCEPTED", 0.00005);
-                });
+                            return new ch.swissqcommerce.backend.domain.agent.core.service
+                                    .B2BProcurementAgent.NegotiationAnalysis(
+                                    2.50, 0.95, "Good price", "ACCEPTED", 0.00005);
+                        });
 
         // When
-        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity = agentController.negotiate(request);
+        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity =
+                agentController.negotiate(request);
 
         // Then
         assertNotNull(responseEntity);
@@ -331,19 +366,21 @@ public class RewardsAndGovernanceIntegrationTest {
         // Verify that B2BRestockOrder was created in pending state
         List<B2BRestockOrderEntity> restockOrders = restockOrderRepository.findAll();
         // The one seeded in setUp is "KEY-HITL-1", we find the new one
-        B2BRestockOrderEntity pendingOrder = restockOrders.stream()
-                .filter(o -> !"KEY-HITL-1".equals(o.getIdempotencyKey()))
-                .findFirst()
-                .orElseThrow();
+        B2BRestockOrderEntity pendingOrder =
+                restockOrders.stream()
+                        .filter(o -> !"KEY-HITL-1".equals(o.getIdempotencyKey()))
+                        .findFirst()
+                        .orElseThrow();
         assertEquals("pending", pendingOrder.getStatus());
         assertEquals(0, pendingOrder.getInvoiceAmount().compareTo(BigDecimal.valueOf(7500.00)));
 
         // Verify that ProcurementApproval request was created pointing to the restock order
         List<ProcurementApprovalEntity> approvals = approvalsRepository.findAll();
-        ProcurementApprovalEntity pendingApproval = approvals.stream()
-                .filter(a -> pendingOrder.getRestockOrderId().equals(a.getRestockOrderId()))
-                .findFirst()
-                .orElseThrow();
+        ProcurementApprovalEntity pendingApproval =
+                approvals.stream()
+                        .filter(a -> pendingOrder.getRestockOrderId().equals(a.getRestockOrderId()))
+                        .findFirst()
+                        .orElseThrow();
         assertEquals("PENDING", pendingApproval.getStatus());
         assertEquals(0, pendingApproval.getAmount().compareTo(BigDecimal.valueOf(7500.00)));
     }
@@ -351,45 +388,73 @@ public class RewardsAndGovernanceIntegrationTest {
     @Test
     public void testMultiWholesalerRfqAuction() {
         // Given
-        WholesalerEntity otherWholesaler = WholesalerEntity.builder()
-                .wholesalerId("WHOLE-888")
-                .name("Galactic Supplies")
-                .isActive(true)
-                .baseInvoiceAmount(new BigDecimal("1000.00"))
-                .fallbackInvoiceAmount(new BigDecimal("2000.00"))
-                .build();
+        WholesalerEntity otherWholesaler =
+                WholesalerEntity.builder()
+                        .wholesalerId("WHOLE-888")
+                        .name("Galactic Supplies")
+                        .isActive(true)
+                        .baseInvoiceAmount(new BigDecimal("1000.00"))
+                        .fallbackInvoiceAmount(new BigDecimal("2000.00"))
+                        .build();
         wholesalerRepository.save(otherWholesaler);
 
         AgentUseCase.NegotiationRequest request = new AgentUseCase.NegotiationRequest();
         request.setItemId("item-1");
         request.setItemName("Swiss Milk Premium");
         request.setBasePrice(2.50);
-        request.setWholesalerName("WHOLE-999"); 
-        request.setQuantity(100); 
+        request.setWholesalerName("WHOLE-999");
+        request.setQuantity(100);
         request.setCustomerId("CUST-999");
 
-        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Starfleet Supplies")))
-                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                        2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
+        Mockito.when(
+                        b2BProcurementActivities.callLlmNegotiation(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.eq("Starfleet Supplies")))
+                .thenReturn(
+                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+                                .NegotiationAnalysis(
+                                2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
 
-        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Galactic Supplies")))
-                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                        2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
+        Mockito.when(
+                        b2BProcurementActivities.callLlmNegotiation(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.eq("Galactic Supplies")))
+                .thenReturn(
+                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+                                .NegotiationAnalysis(
+                                2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Starfleet Supplies"), Mockito.anyInt()))
-                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                        2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
+        Mockito.when(
+                        b2BProcurementAgent.negotiateRestock(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.eq("Starfleet Supplies"),
+                                Mockito.anyInt()))
+                .thenReturn(
+                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+                                .NegotiationAnalysis(
+                                2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Galactic Supplies"), Mockito.anyInt()))
-                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
-                        2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
+        Mockito.when(
+                        b2BProcurementAgent.negotiateRestock(
+                                Mockito.anyString(),
+                                Mockito.anyString(),
+                                Mockito.anyDouble(),
+                                Mockito.eq("Galactic Supplies"),
+                                Mockito.anyInt()))
+                .thenReturn(
+                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
+                                .NegotiationAnalysis(
+                                2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
 
         // When
-        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity = agentController.negotiate(request);
+        ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity =
+                agentController.negotiate(request);
 
         // Then
         assertNotNull(responseEntity);

@@ -1,13 +1,11 @@
 package ch.swissqcommerce.backend.controller;
 
 import ch.swissqcommerce.backend.service.AiOrchestrationService;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")

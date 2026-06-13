@@ -2,8 +2,8 @@ package ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "rider_academy_certificates", schema = "oltp")

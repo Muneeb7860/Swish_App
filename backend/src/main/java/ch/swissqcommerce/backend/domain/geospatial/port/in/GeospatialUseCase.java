@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface GeospatialUseCase {
     DeliveryZone createZone(DeliveryZone zone);
+
     Optional<DeliveryZone> getZone(String zoneId);
 }

@@ -1,23 +1,22 @@
 package ch.swissqcommerce.backend.config;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
-import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
-
-import org.springframework.beans.factory.annotation.Value;
-import java.util.HashMap;
-import java.util.Map;
 
 @EnableKafka
 @Configuration
@@ -33,6 +32,9 @@ public class KafkaConfig {
 
     @Value("${spring.kafka.consumer.auto-offset-reset:earliest}")
     private String autoOffsetReset;
+
+    @Value("${spring.kafka.listener.auto-startup:true}")
+    private boolean listenerAutoStartup;
 
     @Bean
     public ProducerFactory<String, String> producerFactory() {
@@ -61,22 +63,23 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
 
         // Dead Letter Topic (DLT) error handling: retry 3 times with 1s backoff,
         // then forward to <original-topic>.DLT for manual inspection.
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
-                new DeadLetterPublishingRecoverer(kafkaTemplate()),
-                new FixedBackOff(1000L, 3L)
-        );
-        errorHandler.addNotRetryableExceptions(
-                com.fasterxml.jackson.core.JsonParseException.class
-        );
+        DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler(
+                        new DeadLetterPublishingRecoverer(kafkaTemplate()),
+                        new FixedBackOff(1000L, 3L));
+        errorHandler.addNotRetryableExceptions(com.fasterxml.jackson.core.JsonParseException.class);
         factory.setCommonErrorHandler(errorHandler);
 
-        log.info("KafkaConfig: Consumer factory configured with DLT error handler (3 retries, 1s backoff).");
+        log.info(
+                "KafkaConfig: Consumer factory configured with DLT error handler (3 retries, 1s"
+                        + " backoff).");
         return factory;
     }
 }
-

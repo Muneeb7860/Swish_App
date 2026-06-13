@@ -1,9 +1,18 @@
 package ch.swissqcommerce.backend.controller;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import ch.swissqcommerce.backend.model.ChaosFaultLog;
-import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.service.AdminService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -12,30 +21,15 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-import java.util.Map;
-import java.time.OffsetDateTime;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @WebMvcTest(AdminController.class)
 @AutoConfigureMockMvc(addFilters = false)
 public class AdminControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private AdminService adminService;
+    @MockBean private AdminService adminService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
     @Test
     public void testInjectFault() throws Exception {
@@ -47,11 +41,13 @@ public class AdminControllerTest {
         log.setFaultId(1);
         log.setFaultType("API_DELAY");
 
-        when(adminService.injectFault(eq("API_DELAY"), eq("Delaying inventory APIs"))).thenReturn(log);
+        when(adminService.injectFault(eq("API_DELAY"), eq("Delaying inventory APIs")))
+                .thenReturn(log);
 
-        mockMvc.perform(post("/api/admin/chaos/faults")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/admin/chaos/faults")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.faultId").value(1))
                 .andExpect(jsonPath("$.faultType").value("API_DELAY"));
@@ -74,21 +70,22 @@ public class AdminControllerTest {
     public void testGetActiveFaults() throws Exception {
         when(adminService.getActiveFaults()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/admin/chaos/active"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/chaos/active")).andExpect(status().isOk());
     }
 
     @Test
     public void testApproveOnboarding() throws Exception {
-        AdminController.OnboardingApprovalRequest req = new AdminController.OnboardingApprovalRequest();
+        AdminController.OnboardingApprovalRequest req =
+                new AdminController.OnboardingApprovalRequest();
         req.setGate("BACKGROUND_CHECK");
 
         when(adminService.approveOnboarding("APP_1", "BACKGROUND_CHECK"))
                 .thenReturn(Map.of("status", "approved"));
 
-        mockMvc.perform(post("/api/admin/onboard/queue/APP_1/approve")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/admin/onboard/queue/APP_1/approve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("approved"));
     }
@@ -97,8 +94,7 @@ public class AdminControllerTest {
     public void testGetPendingHitlTickets() throws Exception {
         when(adminService.getPendingHitlTickets()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/admin/hitl/queue"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/hitl/queue")).andExpect(status().isOk());
     }
 
     @Test
@@ -110,9 +106,10 @@ public class AdminControllerTest {
         when(adminService.resolveHitlTicket("T1", "approve", "Looks good"))
                 .thenReturn(Map.of("status", "resolved"));
 
-        mockMvc.perform(post("/api/admin/hitl/queue/T1/resolve")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/admin/hitl/queue/T1/resolve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("resolved"));
     }

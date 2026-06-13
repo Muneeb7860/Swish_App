@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
 
+import java.util.Set;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import java.util.Set;
 
 @Service
 public class RiderLeaderboardService {
