@@ -6,11 +6,33 @@ First off, thank you for considering contributing to SwissQ Commerce! It's peopl
 
 If you've noticed a bug or have a feature request, make sure to check our Issues to see if someone else has already created a ticket. If not, go ahead and make one!
 
-## Branching Strategy
-We use a standard branching strategy. 
-1. Create a `feature/<feature-name>` branch off `develop`.
-2. Commit your changes and open a Pull Request against `develop`.
-3. Wait for reviews.
+## Branching Strategy (MANDATED — do not deviate)
+
+This project uses a fixed, per-machine branching model. There are **exactly four branches** and **no others are ever created**:
+
+```
+Mac_Machine ─────┐
+                 ├──> develop ──> master
+Windows_Machine ─┘
+```
+
+- **`master`** — single source of truth for the whole project.
+- **`develop`** — the integration branch. It is the **ONLY** branch permitted to merge into `master`.
+- **`Mac_Machine`** — all work done on the Mac machine commits here.
+- **`Windows_Machine`** — all work done on the Windows machine commits here.
+
+### Rules
+1. **Commit only to your machine's branch.** On the Mac machine, every agent commits to `Mac_Machine`. On Windows, every agent commits to `Windows_Machine`. Never cross machine branches.
+2. **Machine branches pull from and push to `develop` only.** `develop` is where the two machines converge.
+3. **A machine branch must NEVER open a PR directly to `master`.** The only PR that targets `master` is `develop → master`.
+4. **Never create new branches.** No `feature/*`, no `agent/feat/*`, no `fix/*`. The four branches above are the complete set. Never recreate a lowercase `mac-machine`.
+
+### PR base rule
+| Head branch | PR base |
+|-------------|---------|
+| `Mac_Machine` | `develop` |
+| `Windows_Machine` | `develop` |
+| `develop` | `master` |
 
 ## Pull Request Guidelines
 - Ensure your code adheres to our coding standards.
@@ -19,11 +41,9 @@ We use a standard branching strategy.
 - Your PR must pass all CI checks before it can be merged.
 
 ## Agent Git & Development Strategy
-Autonomous Agents working on this repository MUST strictly follow this operational protocol to prevent messy Git trees and merge conflicts:
-1. **Branching Model**: Do not commit directly to `develop` or `Mac_Machine` for complex features. Create a task-specific branch first:
-   ```bash
-   git checkout -b agent/feat/<task-name> Mac_Machine
-   ```
-2. **Conventional Commits**: Agents must use granular, atomic commits adhering to conventional commits (e.g. `feat(backend):`, `fix(frontend):`, `chore(docs):`).
-3. **Rebase Over Merge**: Always execute `git pull --rebase` to integrate upstream changes smoothly before pushing.
-4. **Lightweight Handovers**: When finishing a task, do NOT append massive logs to the root-level handover documents. Only update the "Active Epic" section in `AGENT_HANDOVER.md`. Preserve tokens!
+Autonomous Agents working on this repository MUST strictly follow this operational protocol:
+1. **Branching Model**: Follow the mandated strategy above. Commit to your machine branch (`Mac_Machine` here), never create task branches, never PR a machine branch to `master`.
+2. **Conventional Commits**: Use granular, atomic commits adhering to conventional commits (e.g. `feat(backend):`, `fix(frontend):`, `chore(docs):`). Use `security:` not `sec:`.
+3. **Stage only your own files**: Never `git add -A`. Stage explicit paths and verify with `git diff --cached --name-only` before committing — another agent may have unstaged work in the tree.
+4. **Correct JDK**: Backend builds require `JAVA_HOME=/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home` (Homebrew JDK 26 breaks Lombok).
+5. **Lightweight Handovers**: Do NOT append massive logs to root handover documents. Update only the "Active Epic" section in `AGENT_HANDOVER.md`.
