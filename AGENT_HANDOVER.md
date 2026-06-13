@@ -6,6 +6,23 @@
 
 ---
 
+## ⚡ MANDATED BRANCHING — NON-NEGOTIABLE, NEVER ASK AGAIN
+
+```
+Mac_Machine ─────┐
+                 ├──> develop ──> master
+Windows_Machine ─┘
+```
+
+- **This is the Mac machine → every agent here commits ONLY to `Mac_Machine`.** The Windows machine commits ONLY to `Windows_Machine`. Never cross them.
+- **Machine branches pull from / push to `develop` ONLY.** `develop` is where both machines integrate.
+- **`develop` is the ONLY branch that may merge into `master`.** A machine branch must NEVER open a PR to `master`.
+- **`master` is the single source of truth.**
+- **PR base rule:** `Mac_Machine → develop`, `Windows_Machine → develop`, `develop → master`. A machine branch targeting `master` is always wrong.
+- **EXACTLY four branches exist:** `master`, `develop`, `Mac_Machine`, `Windows_Machine`. Never create others. Never recreate lowercase `mac-machine`.
+
+---
+
 ## ⚡ MANDATORY SESSION START — DO THIS FIRST, NO EXCEPTIONS
 
 ```bash
