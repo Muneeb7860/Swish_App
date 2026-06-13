@@ -8,5 +8,8 @@ export default defineConfig({
 		baseUrl: "http://127.0.0.1:3000",
 		supportFile: false,
 		chromeWebSecurity: false,
+		defaultCommandTimeout: 10000,
+		pageLoadTimeout: 30000,
+		responseTimeout: 15000,
 	},
 });
