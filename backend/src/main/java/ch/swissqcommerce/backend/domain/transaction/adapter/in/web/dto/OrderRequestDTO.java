@@ -9,7 +9,10 @@ import lombok.Data;
 
 @Data
 public class OrderRequestDTO {
-    @NotBlank(message = "Customer ID is required")
+    // Optional in the request body: when omitted, the controller resolves the
+    // customer from the authenticated JWT subject (a caller checks out for
+    // themselves). An explicit value is still honored for admin-on-behalf flows,
+    // subject to the controller's ownership/IDOR guard.
     private String customerId;
 
     @NotEmpty(message = "Cart items cannot be empty")
