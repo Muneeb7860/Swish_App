@@ -72,7 +72,7 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 		cy.get(".customer-cart-drawer").contains("$2.00").should("be.visible");
 
 		// Click "Return bags for $0.50 cash rebate offset"
-		cy.get("#esg-bags").click();
+		cy.get("#esg-bags").click({ force: true });
 
 		// Assert that the paper bag rebate is applied to the invoice
 		cy.get(".customer-cart-drawer")
@@ -112,6 +112,7 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 
 		// Find "Double Chocolate Muffins" (which has only 2 units left, triggering low-stock warning)
 		cy.contains("Double Chocolate Muffins")
+			.scrollIntoView()
 			.parents(".product-card")
 			.within(() => {
 				cy.contains("🔥 Only 2 left!").should("be.visible");

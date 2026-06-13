@@ -34,13 +34,13 @@ import java.util.Map;
  * and replays cached responses on identical idempotency keys.
  */
 @Component
-public class IdempotencyFilterFactory extends AbstractGatewayFilterFactory<IdempotencyFilterFactory.Config> {
+public class IdempotencyGatewayFilterFactory extends AbstractGatewayFilterFactory<IdempotencyGatewayFilterFactory.Config> {
 
-    private static final Logger log = LoggerFactory.getLogger(IdempotencyFilterFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(IdempotencyGatewayFilterFactory.class);
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public IdempotencyFilterFactory(ReactiveStringRedisTemplate redisTemplate) {
+    public IdempotencyGatewayFilterFactory(ReactiveStringRedisTemplate redisTemplate) {
         super(Config.class);
         this.redisTemplate = redisTemplate;
     }

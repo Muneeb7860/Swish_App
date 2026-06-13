@@ -121,6 +121,7 @@ export default function CustomerApp({
 	activeOrder,
 	generateCertificate,
 	catalogLoading = false,
+	setVoucherCode,
 }: CustomerAppProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
