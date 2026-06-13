@@ -4,12 +4,11 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.core.annotation.Order;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.stereotype.Component;
 
 /**
- * Aspect handling automatic transaction retries on Optimistic Locking failures.
+ * Aspect handling automatic transaction retries on Concurrency (Optimistic or Pessimistic/Locking) failures.
  * Sets high precedence Order(99) to run outside the standard Spring Transaction manager,
  * allowing target transaction boundaries to roll back and retry cleanly from a fresh state.
  */
@@ -28,7 +27,7 @@ public class TransactionalRetryAspect {
         while (attempts < maxRetries) {
             try {
                 return joinPoint.proceed();
-            } catch (OptimisticLockingFailureException e) {
+            } catch (ConcurrencyFailureException e) {
                 attempts++;
                 lastException = e;
                 if (attempts >= maxRetries) {
