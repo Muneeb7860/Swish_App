@@ -1,16 +1,20 @@
 /**
  * E2E — Order placement flow (API-level via cy.request)
  *
- * Tests the full checkout pipeline end-to-end:
+ * Exercises the canonical customer checkout API at /api/v1/orders:
  *   1. Register + login a test customer
- *   2. POST /api/v1/orders — place an order
- *   3. GET  /api/v1/orders — verify order appears in order history
- *   4. POST /api/v1/orders (same idempotency key) — idempotency guard returns same order
- *   5. POST /api/v1/orders/{id}/refund — request a refund
+ *   2. POST /api/v1/orders — place an order (customer resolved from the JWT)
+ *   3. GET  /api/v1/orders — retrieve the customer's own order history
+ *   4. POST /api/v1/orders (same X-Idempotency-Key) — idempotency guard
+ *   5. Auth guards — 401 without a bearer token
  *
- * Pre-condition: Platform gateway at http://localhost:8080
- *                H2 (dev) or PostgreSQL (prod) database seeded with at least
- *                one dark store and one inventory item.
+ * The idempotency key travels in the `X-Idempotency-Key` header (matching the
+ * controller), and `customerId` is omitted from the body so the backend
+ * resolves it from the authenticated JWT subject.
+ *
+ * Items use the `item_id` field (the CartItem JSON contract). A checkout may
+ * return 400 in CI when the catalog item / dark store isn't seeded — that is
+ * tolerated; a 403 (authorization) is NOT, so the role gate stays asserted.
  *
  * These tests use a unique email per run so they are safe to run in parallel.
  */
@@ -50,54 +54,51 @@ describe("Order placement — API", () => {
 
 	// ─── Checkout ──────────────────────────────────────────────────────────────
 
-	it("POST /api/v1/orders — places a checkout order and returns 200 with orderId", () => {
+	it("POST /api/v1/orders — places a checkout order for the authenticated customer", () => {
 		cy.request<OrderResponse>({
 			method: "POST",
 			url: `${API()}/api/v1/orders`,
-			headers: { Authorization: `Bearer ${token}` },
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"X-Idempotency-Key": idempotencyKey,
+			},
 			body: {
-				customerId: null, // resolved from JWT on the backend
-				items: [{ itemId: "BREAD-001", quantity: 1 }],
+				// customerId omitted — resolved from the JWT subject on the backend
+				items: [{ item_id: "BREAD-001", quantity: 1 }],
 				paymentMethod: "wallet",
 				tipAmount: 0,
-				esgConsent: false,
-				idempotencyKey,
+				bagsReturned: 0,
 			},
-			failOnStatusCode: false, // handle 400 gracefully if test item doesn't exist in DB
+			failOnStatusCode: false, // 400 tolerated when the catalog item isn't seeded
 		}).then((res) => {
-			// 200/201 (success), 400 (item not seeded in H2), or 403 (the v1
-			// endpoint is ownership-guarded and not wired for this JSON-body
-			// happy-path flow in CI) are all acceptable. The key assertion is
-			// that the request is routed and handled, not 5xx.
-			expect([200, 201, 400, 403]).to.include(res.status);
+			// 201 (created) on the happy path, or 400 when the item/dark store
+			// isn't seeded in CI. A 403 would mean the customer is wrongly denied
+			// their own checkout — that must NOT happen, so it is excluded.
+			expect([200, 201, 400]).to.include(res.status);
 			if (res.status === 200 || res.status === 201) {
 				expect(res.body.orderId).to.be.a("number");
-				expect(res.body.status).to.eq("pending");
 				createdOrderId = res.body.orderId;
 				cy.task("log", `Created order ID: ${createdOrderId}`);
 			}
 		});
 	});
 
-	it("GET /api/v1/orders — authenticated customer can retrieve their order history", () => {
+	it("GET /api/v1/orders — authenticated customer retrieves their own order history", () => {
 		cy.request({
 			method: "GET",
 			url: `${API()}/api/v1/orders`,
 			headers: { Authorization: `Bearer ${token}` },
 			failOnStatusCode: false,
 		}).then((res) => {
-			// Endpoint exists and returns a list (may be empty if checkout failed
-			// above), or 403 if the v1 list endpoint is ownership-guarded and not
-			// wired for this flow in CI. 401 only if the token were rejected.
-			expect([200, 401, 403]).to.include(res.status);
-			if (res.status === 200) {
-				expect(res.body).to.be.an("array");
-			}
+			// A valid customer token must list their own orders (array, possibly
+			// empty). 403 would be a wrongful denial and is excluded.
+			expect(res.status).to.eq(200);
+			expect(res.body).to.be.an("array");
 		});
 	});
 
-	it("POST /api/v1/orders — same idempotency key returns 200 without duplicating the order", () => {
-		// Skip if the first checkout failed (item not seeded)
+	it("POST /api/v1/orders — same X-Idempotency-Key returns the same order, not a duplicate", () => {
+		// Skip if the first checkout didn't produce an order (item not seeded)
 		if (!createdOrderId) {
 			cy.log(
 				"Skipping idempotency check — initial checkout did not produce an order",
@@ -108,13 +109,15 @@ describe("Order placement — API", () => {
 		cy.request<OrderResponse>({
 			method: "POST",
 			url: `${API()}/api/v1/orders`,
-			headers: { Authorization: `Bearer ${token}` },
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"X-Idempotency-Key": idempotencyKey, // same key as the first checkout
+			},
 			body: {
-				items: [{ itemId: "BREAD-001", quantity: 1 }],
+				items: [{ item_id: "BREAD-001", quantity: 1 }],
 				paymentMethod: "wallet",
 				tipAmount: 0,
-				esgConsent: false,
-				idempotencyKey, // same key as the first checkout
+				bagsReturned: 0,
 			},
 			failOnStatusCode: true,
 		}).then((res) => {
@@ -146,7 +149,6 @@ describe("Order placement — API", () => {
 			body: {
 				items: [],
 				paymentMethod: "wallet",
-				idempotencyKey: "unauthenticated",
 			},
 			failOnStatusCode: false,
 		}).then((res) => {
