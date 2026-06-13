@@ -84,6 +84,7 @@ git push origin Mac_Machine
 | Phase 6 — RAG / pgvector | ✅ Done |
 | Phase 7 — Kafka consumers + n8n webhook | ✅ Done (`87d2cb0`) |
 | ArchUnit hexagonal enforcement | ✅ Done (`690d81f`) |
+| WebSocket Reconnect Guard (max 5) | ✅ Done (`4e025b6`) |
 | **Next** | Phase 9 or roadmap item per `task.md` |
 
 ---
