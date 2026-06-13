@@ -101,6 +101,7 @@ async function run() {
 
 		// 6. Wait for dashboard unlock and Header
 		console.log("[E2E TEST] Waiting for system dashboard unlock...");
+		await page.waitForSelector("#mfa-login-portal", { state: "detached" });
 		await page.waitForSelector(".app-header");
 		console.log("[E2E TEST] Authenticated successfully! Swapping roles...");
 

@@ -71,6 +71,7 @@ public class AgentEvalIntegrationTest {
     // ─── Mocked LLM + outbound ports ─────────────────────────────────────────
     @MockBean private CustomerSupportAgent customerSupportAgent;
     @MockBean private B2BProcurementAgent b2BProcurementAgent;
+    @MockBean private B2BProcurementActivities b2BProcurementActivities;
     @MockBean private ProcurementGuardrailsEngine procurementGuardrailsEngine;
     @MockBean private AgentOutPort agentOutPort;
     @MockBean private EventUseCase eventUseCase;
@@ -197,10 +198,19 @@ public class AgentEvalIntegrationTest {
                 .isActive(true).trustScore(90).build();
 
         when(wholesalerPort.findAll()).thenReturn(Arrays.asList(cheapWholesaler, expensiveWholesaler));
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("BestPrice Supplier")))
-                .thenReturn(new B2BProcurementAgent.NegotiationAnalysis(1.60, 0.88, "Volume discount", "ACCEPTED", 0.01));
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("PremiumSupply AG")))
-                .thenReturn(new B2BProcurementAgent.NegotiationAnalysis(1.85, 0.95, "Premium quality", "ACCEPTED", 0.01));
+        
+        B2BProcurementAgent.NegotiationAnalysis cheapAnalysis = new B2BProcurementAgent.NegotiationAnalysis(1.60, 0.88, "Volume discount", "ACCEPTED", 0.01);
+        B2BProcurementAgent.NegotiationAnalysis expensiveAnalysis = new B2BProcurementAgent.NegotiationAnalysis(1.85, 0.95, "Premium quality", "ACCEPTED", 0.01);
+
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), eq("BestPrice Supplier")))
+                .thenReturn(cheapAnalysis);
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), eq("PremiumSupply AG")))
+                .thenReturn(expensiveAnalysis);
+
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("BestPrice Supplier"), anyInt()))
+                .thenReturn(cheapAnalysis);
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("PremiumSupply AG"), anyInt()))
+                .thenReturn(expensiveAnalysis);
 
         AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
         req.setItemId("item-milk");
@@ -226,11 +236,20 @@ public class AgentEvalIntegrationTest {
                 .isActive(true).trustScore(90).build();
 
         when(wholesalerPort.findAll()).thenReturn(Arrays.asList(lowTrust, highTrust));
+        
+        B2BProcurementAgent.NegotiationAnalysis lowTrustAnalysis = new B2BProcurementAgent.NegotiationAnalysis(4.50, 0.80, "Stable supply", "ACCEPTED", 0.01);
+        B2BProcurementAgent.NegotiationAnalysis highTrustAnalysis = new B2BProcurementAgent.NegotiationAnalysis(4.50, 0.85, "Premium reliability", "ACCEPTED", 0.01);
+
         // Both quote the same price — tiebreak by trust score
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("LowTrust Corp")))
-                .thenReturn(new B2BProcurementAgent.NegotiationAnalysis(4.50, 0.80, "Stable supply", "ACCEPTED", 0.01));
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("HighTrust AG")))
-                .thenReturn(new B2BProcurementAgent.NegotiationAnalysis(4.50, 0.85, "Premium reliability", "ACCEPTED", 0.01));
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), eq("LowTrust Corp")))
+                .thenReturn(lowTrustAnalysis);
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), eq("HighTrust AG")))
+                .thenReturn(highTrustAnalysis);
+
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("LowTrust Corp"), anyInt()))
+                .thenReturn(lowTrustAnalysis);
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), eq("HighTrust AG"), anyInt()))
+                .thenReturn(highTrustAnalysis);
 
         AgentUseCase.NegotiationRequest req = new AgentUseCase.NegotiationRequest();
         req.setItemId("item-eggs");

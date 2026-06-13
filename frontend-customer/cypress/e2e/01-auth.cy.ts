@@ -25,6 +25,10 @@ describe("Auth flow — UI", () => {
     testEmail = uniqueEmail();
   });
 
+  beforeEach(() => {
+    cy.viewport(1280, 720);
+  });
+
   // ─── Register ──────────────────────────────────────────────────────────────
 
   it("shows the AuthGate login form on first load", () => {

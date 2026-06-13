@@ -24,4 +24,6 @@ public interface GovernanceUseCase {
      * resolving an already-resolved item throws {@code TicketAlreadyResolvedException}.
      */
     void resolveHitlItem(String compositeId, boolean approve, String operator, String reason);
+    void adjustHitlItem(String compositeId, double newPrice, String operator, String reason);
+    void adjustOverride(Integer approvalId, double newPrice, String operator, String reason);
 }

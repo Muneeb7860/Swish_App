@@ -9,11 +9,34 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfiguration;
+
 import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedOrigin("http://localhost:3001");
+        config.addAllowedOrigin("http://localhost:3002");
+        config.addAllowedOrigin("http://localhost:3003");
+        config.addAllowedOrigin("http://127.0.0.1:3000");
+        config.addAllowedOrigin("http://127.0.0.1:3001");
+        config.addAllowedOrigin("http://127.0.0.1:3002");
+        config.addAllowedOrigin("http://127.0.0.1:3003");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
     @Value("${jwt.secret:my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long}")
     private String jwtSecret;
@@ -34,6 +57,7 @@ public class SecurityConfig {
 
         http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers("/api/auth/**", "/api/v1/auth/**").permitAll()

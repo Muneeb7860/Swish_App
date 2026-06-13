@@ -33,6 +33,55 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 			body: { dailyCost: 0.15, totalTokens: 12000, requestsCount: 42 },
 		}).as("metricsRequest");
 
+		// Intercept B2C checkout and payment endpoints to avoid 401 on mock tokens
+		cy.intercept("POST", "/api/customer/orders", {
+			statusCode: 200,
+			body: {
+				order_id: 1001,
+				customer_id: "CUST-Dave",
+				store_id: "store-central",
+				rider_id: "rid-1",
+				total_amount: 7.98,
+				weather_surcharge: 0.0,
+				payment_method: "Wallet",
+				status: "pending",
+				sla_countdown_sec: 180,
+				bags_returned: 0,
+				created_at: new Date().toISOString(),
+			},
+		}).as("placeOrderRequest");
+
+		cy.intercept("POST", "/api/payments", {
+			statusCode: 200,
+			body: {
+				payment_id: 10001,
+				order_id: 1001,
+				customer_id: "CUST-Dave",
+				amount: 7.98,
+				currency: "CHF",
+				payment_method: "Wallet",
+				status: "authorized",
+				idempotency_key: "idem-123",
+				created_at: new Date().toISOString(),
+			},
+		}).as("createPaymentRequest");
+
+		cy.intercept("POST", "/api/payments/*/capture", {
+			statusCode: 200,
+			body: {
+				payment_id: 10001,
+				order_id: 1001,
+				customer_id: "CUST-Dave",
+				amount: 7.98,
+				currency: "CHF",
+				payment_method: "Wallet",
+				status: "captured",
+				idempotency_key: "idem-123",
+				created_at: new Date().toISOString(),
+				captured_at: new Date().toISOString(),
+			},
+		}).as("capturePaymentRequest");
+
 		cy.visit("/");
 	});
 
