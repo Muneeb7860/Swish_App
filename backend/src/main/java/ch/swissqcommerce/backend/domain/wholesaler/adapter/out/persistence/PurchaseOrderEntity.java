@@ -1,16 +1,14 @@
 package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
 import jakarta.persistence.*;
-import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "purchase_orders", schema = "wholesaler")
@@ -49,14 +47,14 @@ public class PurchaseOrderEntity {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
-    
+
     @PrePersist
     protected void onCreate() {
         if (updatedAt == null) {
             updatedAt = OffsetDateTime.now();
         }
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = OffsetDateTime.now();

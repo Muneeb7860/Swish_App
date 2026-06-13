@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface CustomerProfileUseCase {
     CustomerProfile createProfile(CustomerProfile profile);
+
     Optional<CustomerProfile> getProfile(String profileId);
 }

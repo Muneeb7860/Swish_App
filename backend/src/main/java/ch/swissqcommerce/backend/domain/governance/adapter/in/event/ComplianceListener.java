@@ -21,13 +21,16 @@ public class ComplianceListener {
     @Async
     @EventListener
     public void handleOrderFulfilled(OrderFulfilledEvent event) {
-        log.info("ComplianceListener: Received OrderFulfilledEvent for order id={}, generating signed GDP telemetry summary.", 
+        log.info(
+                "ComplianceListener: Received OrderFulfilledEvent for order id={}, generating"
+                        + " signed GDP telemetry summary.",
                 event.getOrderId());
         try {
             // Simulate generating / retrieving doorstep photo scan proof SHA-256 hash
             String rawProofData = "doorstep-photo-raw-pixels-order-" + event.getOrderId();
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawProofData.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] hashBytes =
+                    digest.digest(rawProofData.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             StringBuilder hexString = new StringBuilder();
             for (byte b : hashBytes) {
                 String hex = Integer.toHexString(0xff & b);
@@ -37,11 +40,19 @@ public class ComplianceListener {
             String podHash = hexString.toString();
 
             String signature = governanceUseCase.signDeliverySummary(event.getOrderId(), podHash);
-            log.info("ComplianceListener: Successfully generated digital signature for order {} with PoD hash {}: {}", 
-                    event.getOrderId(), podHash, signature);
+            log.info(
+                    "ComplianceListener: Successfully generated digital signature for order {} with"
+                            + " PoD hash {}: {}",
+                    event.getOrderId(),
+                    podHash,
+                    signature);
         } catch (Exception e) {
-            log.error("ComplianceListener: Failed to generate signed telemetry summary for order {}. Error: {}", 
-                    event.getOrderId(), e.getMessage(), e);
+            log.error(
+                    "ComplianceListener: Failed to generate signed telemetry summary for order {}."
+                            + " Error: {}",
+                    event.getOrderId(),
+                    e.getMessage(),
+                    e);
         }
     }
 }

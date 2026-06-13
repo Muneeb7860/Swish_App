@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import ch.swissqcommerce.backend.config.LettaConfig;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -10,8 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -23,14 +22,16 @@ public class LettaMemoryService {
     private final MeterRegistry meterRegistry;
 
     /**
-     * Sends a message to a stateful Letta agent associated with the conversationId.
-     * If the agent does not exist, it will be created.
+     * Sends a message to a stateful Letta agent associated with the conversationId. If the agent
+     * does not exist, it will be created.
      */
     public String sendMessage(String conversationId, String messageContent) {
         try {
             String agentId = getOrCreateAgent(conversationId);
             if (agentId == null) {
-                log.warn("Could not retrieve or create Letta agent for conversationId: {}", conversationId);
+                log.warn(
+                        "Could not retrieve or create Letta agent for conversationId: {}",
+                        conversationId);
                 incrementFallbackCounter();
                 return null;
             }
@@ -48,7 +49,8 @@ public class LettaMemoryService {
             requestBody.put("streaming", false);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<Object> response = lettaRestTemplate.postForEntity(url, entity, Object.class);
+            ResponseEntity<Object> response =
+                    lettaRestTemplate.postForEntity(url, entity, Object.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Object body = response.getBody();
@@ -73,7 +75,9 @@ public class LettaMemoryService {
                             Map<?, ?> msg = (Map<?, ?>) msgObj;
                             String role = (String) msg.get("role");
                             String text = (String) msg.get("content");
-                            if ("assistant".equalsIgnoreCase(role) && text != null && !text.trim().isEmpty()) {
+                            if ("assistant".equalsIgnoreCase(role)
+                                    && text != null
+                                    && !text.trim().isEmpty()) {
                                 return text;
                             }
                         }
@@ -102,7 +106,12 @@ public class LettaMemoryService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + lettaConfig.getApiToken());
             HttpEntity<Void> getEntity = new HttpEntity<>(headers);
-            ResponseEntity<Object> listResponse = lettaRestTemplate.exchange(listUrl, org.springframework.http.HttpMethod.GET, getEntity, Object.class);
+            ResponseEntity<Object> listResponse =
+                    lettaRestTemplate.exchange(
+                            listUrl,
+                            org.springframework.http.HttpMethod.GET,
+                            getEntity,
+                            Object.class);
 
             if (listResponse.getStatusCode().is2xxSuccessful() && listResponse.getBody() != null) {
                 Object body = listResponse.getBody();
@@ -141,9 +150,11 @@ public class LettaMemoryService {
             createBody.put("model", lettaConfig.getModel());
 
             HttpEntity<Map<String, Object>> createEntity = new HttpEntity<>(createBody, headers);
-            ResponseEntity<Object> createResponse = lettaRestTemplate.postForEntity(createUrl, createEntity, Object.class);
+            ResponseEntity<Object> createResponse =
+                    lettaRestTemplate.postForEntity(createUrl, createEntity, Object.class);
 
-            if (createResponse.getStatusCode().is2xxSuccessful() && createResponse.getBody() != null) {
+            if (createResponse.getStatusCode().is2xxSuccessful()
+                    && createResponse.getBody() != null) {
                 Object body = createResponse.getBody();
                 if (body instanceof Map) {
                     return (String) ((Map<?, ?>) body).get("id");
@@ -155,4 +166,3 @@ public class LettaMemoryService {
         return null;
     }
 }
-

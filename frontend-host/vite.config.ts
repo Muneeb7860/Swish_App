@@ -5,7 +5,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	define: {
-		"import.meta.env.VITE_MOCK_MODE": JSON.stringify(process.env.VITE_MOCK_MODE || "false"),
+		"import.meta.env.VITE_MOCK_MODE": JSON.stringify(
+			process.env.VITE_MOCK_MODE || "false",
+		),
 	},
 	plugins: [
 		react(),

@@ -15,6 +15,11 @@ public class DeliveryZone {
     private String geoPolygonWkt;
     private String status;
 
-    public void suspend() { this.status = "SUSPENDED"; }
-    public void activate() { this.status = "ACTIVE"; }
+    public void suspend() {
+        this.status = "SUSPENDED";
+    }
+
+    public void activate() {
+        this.status = "ACTIVE";
+    }
 }

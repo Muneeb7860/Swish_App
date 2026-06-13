@@ -9,7 +9,8 @@ public class SupportTicket {
 
     public SupportTicket() {}
 
-    public SupportTicket(String ticketId, String customerId, String orderId, String priority, String status) {
+    public SupportTicket(
+            String ticketId, String customerId, String orderId, String priority, String status) {
         this.ticketId = ticketId;
         this.customerId = customerId;
         this.orderId = orderId;
@@ -17,23 +18,53 @@ public class SupportTicket {
         this.status = status;
     }
 
-    public String getTicketId() { return ticketId; }
-    public void setTicketId(String ticketId) { this.ticketId = ticketId; }
+    public String getTicketId() {
+        return ticketId;
+    }
 
-    public String getCustomerId() { return customerId; }
-    public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public void setTicketId(String ticketId) {
+        this.ticketId = ticketId;
+    }
 
-    public String getOrderId() { return orderId; }
-    public void setOrderId(String orderId) { this.orderId = orderId; }
+    public String getCustomerId() {
+        return customerId;
+    }
 
-    public String getPriority() { return priority; }
-    public void setPriority(String priority) { this.priority = priority; }
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getOrderId() {
+        return orderId;
+    }
 
-    public void escalate() { this.priority = "HIGH"; }
-    public void resolve() { this.status = "RESOLVED"; }
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void escalate() {
+        this.priority = "HIGH";
+    }
+
+    public void resolve() {
+        this.status = "RESOLVED";
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -46,11 +77,30 @@ public class SupportTicket {
         private String priority;
         private String status;
 
-        public Builder ticketId(String ticketId) { this.ticketId = ticketId; return this; }
-        public Builder customerId(String customerId) { this.customerId = customerId; return this; }
-        public Builder orderId(String orderId) { this.orderId = orderId; return this; }
-        public Builder priority(String priority) { this.priority = priority; return this; }
-        public Builder status(String status) { this.status = status; return this; }
+        public Builder ticketId(String ticketId) {
+            this.ticketId = ticketId;
+            return this;
+        }
+
+        public Builder customerId(String customerId) {
+            this.customerId = customerId;
+            return this;
+        }
+
+        public Builder orderId(String orderId) {
+            this.orderId = orderId;
+            return this;
+        }
+
+        public Builder priority(String priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
 
         public SupportTicket build() {
             return new SupportTicket(ticketId, customerId, orderId, priority, status);

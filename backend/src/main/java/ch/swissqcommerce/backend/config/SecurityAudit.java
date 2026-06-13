@@ -6,8 +6,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation to flag methods that require automated security audit trails
- * written to the transactional outbox.
+ * Annotation to flag methods that require automated security audit trails written to the
+ * transactional outbox.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

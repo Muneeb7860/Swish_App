@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface SessionRepositoryPort {
     Session save(Session session);
+
     Optional<Session> findById(String id);
 }

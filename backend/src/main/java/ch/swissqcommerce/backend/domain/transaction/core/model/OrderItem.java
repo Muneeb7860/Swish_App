@@ -1,8 +1,7 @@
 package ch.swissqcommerce.backend.domain.transaction.core.model;
-import java.math.BigDecimal;
+
 import ch.swissqcommerce.backend.model.Inventory;
-
-
+import java.math.BigDecimal;
 import lombok.*;
 
 @Getter

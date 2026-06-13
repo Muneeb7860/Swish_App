@@ -1,52 +1,39 @@
 package ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
-
 import ch.swissqcommerce.backend.domain.enrollment.core.model.OnboardingApplication;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.OnboardingApplicationEntity;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.RiderAcademyCertificate;
-import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderAcademyCertificateEntity;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
+import ch.swissqcommerce.backend.domain.transaction.core.model.*;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
+import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
-import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
 import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
-import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 @Component
 public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
 
-    @Autowired
-    private OnboardingApplicationRepository onboardingRepository;
+    @Autowired private OnboardingApplicationRepository onboardingRepository;
 
-    @Autowired
-    private RiderRepository riderRepository;
+    @Autowired private RiderRepository riderRepository;
 
-    @Autowired
-    private RiderAcademyCertificateRepository certificateRepository;
+    @Autowired private RiderAcademyCertificateRepository certificateRepository;
 
-    @Autowired
-    private OrderPort orderPort;
+    @Autowired private OrderPort orderPort;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    @Autowired private CustomerRepository customerRepository;
 
-    @Autowired
-    private SecurityTrustLedgerRepository trustLedgerRepository;
+    @Autowired private SecurityTrustLedgerRepository trustLedgerRepository;
 
-    @Autowired
-    @org.springframework.context.annotation.Lazy
+    @Autowired @org.springframework.context.annotation.Lazy
     private TelemetryUseCase telemetryService;
 
     private OnboardingApplicationEntity toEntity(OnboardingApplication app) {
@@ -191,7 +178,8 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
     }
 
     @Override
-    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public OrderTelemetryLog recordTelemetry(
+            Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
         return telemetryService.recordTelemetry(orderId, lat, lng, temp, false);
     }
 
@@ -200,4 +188,3 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
         telemetryService.cleanupOrder(orderId);
     }
 }
-

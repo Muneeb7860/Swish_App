@@ -1,22 +1,17 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
-import ch.swissqcommerce.backend.model.Inventory;
-
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.OrderItemId;
-
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
 import ch.swissqcommerce.backend.model.*;
-
+import ch.swissqcommerce.backend.model.Inventory;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "order_items", schema = "oltp")

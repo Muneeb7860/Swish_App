@@ -46,7 +46,10 @@ const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
 				if (!s.src) return false;
 				try {
 					const url = new URL(s.src);
-					return !MFE_WHITELIST.includes(url.hostname) && url.origin !== window.location.origin;
+					return (
+						!MFE_WHITELIST.includes(url.hostname) &&
+						url.origin !== window.location.origin
+					);
 				} catch {
 					return true;
 				}
@@ -168,7 +171,15 @@ class LocalErrorBoundary extends React.Component<
 							and checkout capabilities remain operational.
 						</p>
 						{this.state.error && (
-							<code style={{ fontSize: "0.75rem", color: "#f87171", background: "rgba(0,0,0,0.2)", padding: "0.25rem 0.5rem", borderRadius: "4px" }}>
+							<code
+								style={{
+									fontSize: "0.75rem",
+									color: "#f87171",
+									background: "rgba(0,0,0,0.2)",
+									padding: "0.25rem 0.5rem",
+									borderRadius: "4px",
+								}}
+							>
 								{this.state.error.toString()}
 							</code>
 						)}
@@ -187,7 +198,7 @@ class LocalErrorBoundary extends React.Component<
 								fontSize: "0.8rem",
 								fontWeight: 600,
 								cursor: "pointer",
-								transition: "all 0.2s ease"
+								transition: "all 0.2s ease",
 							}}
 							onMouseOver={(e) => {
 								e.currentTarget.style.background = "#ef4444";
@@ -482,12 +493,39 @@ export default function App() {
 	// customer, rider, business, inventory, admin
 
 	useEffect(() => {
+		// Programmatic preloading of all Micro-Frontends remote entries in the background
+		// to warm up cache and reduce tabs switching latency.
+		const preloadMfes = async () => {
+			try {
+				await Promise.allSettled([
+					verifyMfeOrigin(import("customer/CustomerApp"), "customer"),
+					verifyMfeOrigin(import("rider/RiderApp"), "rider"),
+					verifyMfeOrigin(import("admin/AdminPanel"), "admin"),
+					verifyMfeOrigin(import("admin/BusinessApp"), "admin"),
+					verifyMfeOrigin(import("admin/InventoryApp"), "admin"),
+					verifyMfeOrigin(import("admin/SystemEngineRoom"), "admin"),
+				]);
+				console.log("Preloading of Micro-Frontends complete.");
+			} catch (e) {
+				console.warn("Failed to preload MFEs in background:", e);
+			}
+		};
+		// Delay slightly to prioritize the initial mount and load of the host page
+		const timer = setTimeout(preloadMfes, 1500);
+		return () => clearTimeout(timer);
+	}, []);
+
+	useEffect(() => {
 		// Start real-time Firebase syncing
-		syncProductsFromFirebase().catch(err => console.error("Firebase sync error:", err));
+		syncProductsFromFirebase().catch((err) =>
+			console.error("Firebase sync error:", err),
+		);
 
 		// Global cursor-tracking glow effect for glass-cards and glow-cards
 		const handleGlobalMouseMove = (e: MouseEvent) => {
-			const cards = document.querySelectorAll(".glow-card, .glass-card, .mfa-card, .auth-glass-form, .auth-bento-card");
+			const cards = document.querySelectorAll(
+				".glow-card, .glass-card, .mfa-card, .auth-glass-form, .auth-bento-card",
+			);
 			cards.forEach((card: any) => {
 				const rect = card.getBoundingClientRect();
 				const x = e.clientX - rect.left;
@@ -506,7 +544,8 @@ export default function App() {
 	useEffect(() => {
 		if (isAuthenticated) {
 			setCatalogLoading(true);
-			api.getCatalog()
+			api
+				.getCatalog()
 				.then((items) => {
 					const mapped = items.map((item) => ({
 						id: item.item_id,
@@ -545,7 +584,7 @@ export default function App() {
 			update: () => {
 				setActiveRole(newRole);
 			},
-			types: [direction]
+			types: [direction],
 		});
 	};
 
@@ -797,7 +836,8 @@ export default function App() {
 			password: mfaPassword,
 		};
 
-		api.login(payload)
+		api
+			.login(payload)
 			.then((data) => {
 				if (data.mfaRequired) {
 					setSessionToken(data.sessionToken);
@@ -816,8 +856,10 @@ export default function App() {
 					setIsAuthenticated(true);
 					setCurrentUserSession({ role: mfaRole });
 					setActiveRole(mfaRole);
-					const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-					const tokenToSet = (data.token && jwtRegex.test(data.token)) ? data.token : "";
+					const jwtRegex =
+						/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+					const tokenToSet =
+						data.token && jwtRegex.test(data.token) ? data.token : "";
 					setAuthToken(tokenToSet);
 					if (tokenToSet) {
 						localStorage.setItem("jwt_token", tokenToSet);
@@ -842,16 +884,18 @@ export default function App() {
 	};
 
 	const handleMfaVerify = () => {
-		api.verifyMfa({
-			session_token: sessionToken,
-			code: mfaOtpInput,
-		})
+		api
+			.verifyMfa({
+				session_token: sessionToken,
+				code: mfaOtpInput,
+			})
 			.then((data) => {
 				setIsAuthenticated(true);
 				setCurrentUserSession({ role: mfaRole });
 				setActiveRole(mfaRole);
 				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-				const tokenToSet = (data.token && jwtRegex.test(data.token)) ? data.token : "";
+				const tokenToSet =
+					data.token && jwtRegex.test(data.token) ? data.token : "";
 				setAuthToken(tokenToSet);
 				if (tokenToSet) {
 					localStorage.setItem("jwt_token", tokenToSet);
@@ -895,21 +939,24 @@ export default function App() {
 
 	// Onboarding Handlers
 	const handleApplyOnboard = (type, name) => {
-		api.submitOnboard({
-			full_name: name,
-			vehicle_type: "E-Bike",
-			driver_license_base64: "demo-license-data-base64"
-		})
+		api
+			.submitOnboard({
+				full_name: name,
+				vehicle_type: "E-Bike",
+				driver_license_base64: "demo-license-data-base64",
+			})
 			.then((res) => {
-				const id = res.application_id || `app-${Math.random().toString(36).substring(2, 7)}`;
+				const id =
+					res.application_id ||
+					`app-${Math.random().toString(36).substring(2, 7)}`;
 				setOnboardingQueue((prev) => [
 					...prev,
 					{
 						id,
 						name,
 						type,
-						approvals: { l1: false, l2: false, l3: false }
-					}
+						approvals: { l1: false, l2: false, l3: false },
+					},
 				]);
 				logKafka(
 					"admin",
@@ -926,11 +973,12 @@ export default function App() {
 		const roleMap: Record<string, "Ops" | "Compliance" | "Admin"> = {
 			l1: "Ops",
 			l2: "Compliance",
-			l3: "Admin"
+			l3: "Admin",
 		};
 		const validatorRole = roleMap[level] || "Ops";
 
-		api.approveOnboard(appId, { approve: true, validator_role: validatorRole })
+		api
+			.approveOnboard(appId, { approve: true, validator_role: validatorRole })
 			.then(() => {
 				setOnboardingQueue((prev) =>
 					prev.map((app) => {
@@ -1003,29 +1051,31 @@ export default function App() {
 			`Checkout requested for ${cart.length} items. Total: $${finalAmount.toFixed(2)}.`,
 		);
 
-		const orderItems = cart.map(item => ({
+		const orderItems = cart.map((item) => ({
 			item_id: item.id,
-			quantity: item.qty
+			quantity: item.qty,
 		}));
 
 		const orderRequest = {
 			items: orderItems,
 			payment_method: paymentMethod,
 			tip_amount: tipAmount,
-			bags_returned: 0
+			bags_returned: 0,
 		};
 
-		api.placeOrder(orderRequest)
+		api
+			.placeOrder(orderRequest)
 			.then((orderResponse) => {
 				const orderId = orderResponse.order_id;
 				const paymentRequest = {
 					order_id: orderId,
 					customer_id: "CUST-Dave",
 					amount: finalAmount,
-					payment_method: paymentMethod
+					payment_method: paymentMethod,
 				};
 
-				return api.createPayment(paymentRequest)
+				return api
+					.createPayment(paymentRequest)
 					.then((paymentResponse) => {
 						return api.capturePayment(paymentResponse.payment_id);
 					})
@@ -1085,7 +1135,10 @@ export default function App() {
 							"order.received",
 							`Order #${nextOrder.id} dispatched to picker queue.`,
 						);
-						triggerToast(`Order #${nextOrder.id} placed successfully!`, "customer");
+						triggerToast(
+							`Order #${nextOrder.id} placed successfully!`,
+							"customer",
+						);
 					});
 			})
 			.catch((err) => {
@@ -1096,7 +1149,10 @@ export default function App() {
 						"gateway.outage",
 						"Swipe gateway timeout! Initiating fallback chain Swipe ➔ PayPal...",
 					);
-					triggerToast("Swipe down! Falling back to PayPal gateway...", "system");
+					triggerToast(
+						"Swipe down! Falling back to PayPal gateway...",
+						"system",
+					);
 					logLedger(
 						"customer",
 						"GATEWAY-FAILOVER",
@@ -1140,21 +1196,32 @@ export default function App() {
 					let depth = 0;
 					for (let i = 0; i < dataStr.length; i++) {
 						const char = dataStr[i];
-						if (char === '{' || char === '[') {
+						if (char === "{" || char === "[") {
 							depth++;
 							if (depth > 20) {
-								throw new Error("Telemetry payload nesting depth limit exceeded");
+								throw new Error(
+									"Telemetry payload nesting depth limit exceeded",
+								);
 							}
-						} else if (char === '}' || char === ']') {
+						} else if (char === "}" || char === "]") {
 							depth--;
 						}
 					}
 
 					const tick = JSON.parse(dataStr);
-					const latVal = typeof tick.latitude === "number" ? tick.latitude : parseFloat(tick.latitude);
-					const lngVal = typeof tick.longitude === "number" ? tick.longitude : parseFloat(tick.longitude);
-					const tempVal = typeof tick.temperature === "number" ? tick.temperature : parseFloat(tick.temperature);
-					
+					const latVal =
+						typeof tick.latitude === "number"
+							? tick.latitude
+							: parseFloat(tick.latitude);
+					const lngVal =
+						typeof tick.longitude === "number"
+							? tick.longitude
+							: parseFloat(tick.longitude);
+					const tempVal =
+						typeof tick.temperature === "number"
+							? tick.temperature
+							: parseFloat(tick.temperature);
+
 					if (isNaN(latVal) || isNaN(lngVal) || isNaN(tempVal)) {
 						throw new Error("Invalid numeric value in telemetry update");
 					}
@@ -1175,7 +1242,10 @@ export default function App() {
 						`Lat ${latVal.toFixed(4)} Lng ${lngVal.toFixed(4)} Temp ${tempVal.toFixed(1)}°C (Breach: ${!!tick.thermalBreachActive})`,
 					);
 				} catch (parseErr: any) {
-					console.warn("[SSE] Telemetry tick validation/parse error:", parseErr.message);
+					console.warn(
+						"[SSE] Telemetry tick validation/parse error:",
+						parseErr.message,
+					);
 				}
 			});
 
@@ -1231,13 +1301,14 @@ export default function App() {
 				// Fetch-based telemetry ingestion (push to BFF gateway)
 				const lat = 47.3769 + nextProgress * 0.0001;
 				const lng = 8.5417 + nextProgress * 0.0001;
-				api.ingestTelemetryTick({
-					orderId: prev.id,
-					latitude: lat,
-					longitude: lng,
-					temperature: nextTemp || 0.0,
-					dryIceInjected: false,
-				})
+				api
+					.ingestTelemetryTick({
+						orderId: prev.id,
+						latitude: lat,
+						longitude: lng,
+						temperature: nextTemp || 0.0,
+						dryIceInjected: false,
+					})
 					.then((res) => {
 						if (res && res.alertTriggered) {
 							// Handle potential circuit breaker state if simulated
@@ -1263,13 +1334,16 @@ export default function App() {
 		const orderId = activeOrder.id;
 		const duration = pickerSlaDuration;
 
-		api.handoverItem({
-			order_id: orderId,
-			duration_seconds: duration,
-			contains_packing_error: false
-		})
+		api
+			.handoverItem({
+				order_id: orderId,
+				duration_seconds: duration,
+				contains_packing_error: false,
+			})
 			.then((res) => {
-				setActiveOrder((prev) => prev ? { ...prev, status: "transit" } : null);
+				setActiveOrder((prev) =>
+					prev ? { ...prev, status: "transit" } : null,
+				);
 				logKafka(
 					"rider",
 					"order.dispatched",
@@ -1315,7 +1389,8 @@ export default function App() {
 		closeSseStream();
 		setRiderCoords(null);
 
-		api.confirmDelivery(order.id, { pin: "1234", photoUrl: "mock-pod-photo" })
+		api
+			.confirmDelivery(order.id, { pin: "1234", photoUrl: "mock-pod-photo" })
 			.then(() => {
 				const tipPaid = tipAmount;
 				if (tipPaid > 0) {
@@ -1407,7 +1482,8 @@ export default function App() {
 			0,
 		);
 
-		api.injectDryIce(id)
+		api
+			.injectDryIce(id)
 			.then((res) => {
 				if (res && res.status === 503) {
 					setCircuitBreakerTripped(true);
@@ -1572,7 +1648,8 @@ export default function App() {
 
 	const fetchHitlQueues = useCallback(() => {
 		setHitlLoading(true);
-		const fetchB2b = api.getB2bHitlQueue()
+		const fetchB2b = api
+			.getB2bHitlQueue()
 			.then((data) => {
 				if (!Array.isArray(data)) return [];
 				return data.map((item) => ({
@@ -1589,7 +1666,8 @@ export default function App() {
 			})
 			.catch(() => []);
 
-		const fetchGeneral = api.getHitlQueue()
+		const fetchGeneral = api
+			.getHitlQueue()
 			.then((data) => {
 				if (!Array.isArray(data)) return [];
 				return data.map((item) => ({
@@ -1628,10 +1706,11 @@ export default function App() {
 	const handleReleaseHitl = (ticket) => {
 		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
-			api.approveB2bOverride(realId, {
-				operator: "swissadmin",
-				reason: "B2B Restock approved via Admin console",
-			})
+			api
+				.approveB2bOverride(realId, {
+					operator: "swissadmin",
+					reason: "B2B Restock approved via Admin console",
+				})
 				.then(() => {
 					triggerToast("B2B Restock order approved and released!", "admin");
 					setMerchantWallet((w) => w - ticket.amount);
@@ -1650,13 +1729,11 @@ export default function App() {
 					fetchHitlQueues();
 				})
 				.catch(() =>
-					triggerToast(
-						"Failed to approve B2B restock override.",
-						"admin",
-					),
+					triggerToast("Failed to approve B2B restock override.", "admin"),
 				);
 		} else {
-			api.resolveHitl(ticket.id, { action: "approve" })
+			api
+				.resolveHitl(ticket.id, { action: "approve" })
 				.then(() => {
 					triggerToast("HITL ticket approved successfully.", "admin");
 					setCustomerWallet((w) => w + ticket.amount);
@@ -1687,10 +1764,11 @@ export default function App() {
 	const handleVoidHitl = (ticket) => {
 		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
-			api.rejectB2bOverride(realId, {
-				operator: "swissadmin",
-				reason: "B2B Restock rejected via Admin console",
-			})
+			api
+				.rejectB2bOverride(realId, {
+					operator: "swissadmin",
+					reason: "B2B Restock rejected via Admin console",
+				})
 				.then(() => {
 					triggerToast("B2B Restock order rejected and canceled.", "admin");
 					logKafka(
@@ -1701,13 +1779,11 @@ export default function App() {
 					fetchHitlQueues();
 				})
 				.catch(() =>
-					triggerToast(
-						"Failed to reject B2B restock override.",
-						"admin",
-					),
+					triggerToast("Failed to reject B2B restock override.", "admin"),
 				);
 		} else {
-			api.resolveHitl(ticket.id, { action: "void" })
+			api
+				.resolveHitl(ticket.id, { action: "void" })
 				.then(() => {
 					triggerToast("HITL ticket rejected successfully.", "admin");
 					logKafka(
@@ -1718,10 +1794,7 @@ export default function App() {
 					fetchHitlQueues();
 				})
 				.catch((err) =>
-					triggerToast(
-						`Failed to reject HITL ticket: ${err.message}`,
-						"admin",
-					),
+					triggerToast(`Failed to reject HITL ticket: ${err.message}`, "admin"),
 				);
 		}
 	};

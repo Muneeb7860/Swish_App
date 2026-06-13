@@ -1,19 +1,15 @@
 package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
-
-
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 
 import ch.swissqcommerce.backend.model.DarkStore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "b2b_restock_orders", schema = "oltp")

@@ -1,33 +1,30 @@
 package ch.swissqcommerce.backend.integration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.inventory.adapter.out.persistence.InventoryItemEntity;
 import ch.swissqcommerce.backend.domain.inventory.adapter.out.persistence.InventoryItemRepository;
 import ch.swissqcommerce.backend.domain.inventory.core.model.InventoryItem;
 import ch.swissqcommerce.backend.domain.inventory.port.in.StockManagementUseCase;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 /**
- * Integration tests for the hexagonal inventory domain (StockManagementUseCase).
- * Verifies that reserveStock / releaseStock / fulfillStock / addStock operations
- * correctly persist to the inventory_items table via InventoryPersistenceAdapter.
+ * Integration tests for the hexagonal inventory domain (StockManagementUseCase). Verifies that
+ * reserveStock / releaseStock / fulfillStock / addStock operations correctly persist to the
+ * inventory_items table via InventoryPersistenceAdapter.
  */
 @SpringBootTest
 @Transactional
 public class InventoryDomainIntegrationTest {
 
-    @Autowired
-    private StockManagementUseCase stockManagementUseCase;
+    @Autowired private StockManagementUseCase stockManagementUseCase;
 
-    @Autowired
-    private InventoryItemRepository inventoryItemRepository;
+    @Autowired private InventoryItemRepository inventoryItemRepository;
 
     private static final String TEST_SKU = "SKU-MILK-HEX-001";
 
@@ -36,12 +33,13 @@ public class InventoryDomainIntegrationTest {
         inventoryItemRepository.deleteAll();
 
         // Seed one item with 20 available, 0 reserved
-        InventoryItemEntity seed = InventoryItemEntity.builder()
-                .id(UUID.randomUUID().toString())
-                .sku(TEST_SKU)
-                .availableAmount(20)
-                .reservedAmount(0)
-                .build();
+        InventoryItemEntity seed =
+                InventoryItemEntity.builder()
+                        .id(UUID.randomUUID().toString())
+                        .sku(TEST_SKU)
+                        .availableAmount(20)
+                        .reservedAmount(0)
+                        .build();
         inventoryItemRepository.save(seed);
     }
 
@@ -70,7 +68,7 @@ public class InventoryDomainIntegrationTest {
 
         InventoryItemEntity entity = inventoryItemRepository.findBySku(TEST_SKU).orElseThrow();
         assertEquals(16, entity.getAvailableAmount()); // 20 - 8 + 4
-        assertEquals(4, entity.getReservedAmount());   // 8 - 4
+        assertEquals(4, entity.getReservedAmount()); // 8 - 4
     }
 
     @Test
@@ -111,16 +109,20 @@ public class InventoryDomainIntegrationTest {
 
     @Test
     void testReserveStock_throwsWhenQuantityExceedsAvailable() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> stockManagementUseCase.reserveStock(TEST_SKU, 999));
+        IllegalArgumentException ex =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> stockManagementUseCase.reserveStock(TEST_SKU, 999));
 
-        assertTrue(ex.getMessage().toLowerCase().contains("insufficient"),
+        assertTrue(
+                ex.getMessage().toLowerCase().contains("insufficient"),
                 "Expected 'insufficient' in error message but got: " + ex.getMessage());
     }
 
     @Test
     void testReserveStock_throwsForUnknownSku() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> stockManagementUseCase.reserveStock("NONEXISTENT-SKU", 1));
     }
 
@@ -128,13 +130,15 @@ public class InventoryDomainIntegrationTest {
     void testReleaseStock_throwsWhenReleasingMoreThanReserved() {
         stockManagementUseCase.reserveStock(TEST_SKU, 3);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> stockManagementUseCase.releaseStock(TEST_SKU, 10));
     }
 
     @Test
     void testReserveStock_rejectsZeroQuantity() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> stockManagementUseCase.reserveStock(TEST_SKU, 0));
     }
 }

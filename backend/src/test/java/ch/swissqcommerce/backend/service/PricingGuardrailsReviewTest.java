@@ -1,15 +1,15 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine;
 import ch.swissqcommerce.backend.domain.agent.core.service.PricingGuardrailsEngine.GuardrailResult;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 /**
- * Phase 8: the pricing engine flags aggressive (but in-range) recommendations for
- * supervisor review — surge &gt; 2.5x or discount &gt; 15% — while still returning a
- * clamped, safe recommendation. Below those thresholds nothing is flagged.
+ * Phase 8: the pricing engine flags aggressive (but in-range) recommendations for supervisor review
+ * — surge &gt; 2.5x or discount &gt; 15% — while still returning a clamped, safe recommendation.
+ * Below those thresholds nothing is flagged.
  */
 class PricingGuardrailsReviewTest {
 

@@ -14,7 +14,15 @@ public class Notification {
 
     public Notification() {}
 
-    public Notification(String notificationId, String recipientId, String channel, String subject, String body, String status, OffsetDateTime scheduledAt, OffsetDateTime sentAt) {
+    public Notification(
+            String notificationId,
+            String recipientId,
+            String channel,
+            String subject,
+            String body,
+            String status,
+            OffsetDateTime scheduledAt,
+            OffsetDateTime sentAt) {
         this.notificationId = notificationId;
         this.recipientId = recipientId;
         this.channel = channel;
@@ -25,29 +33,69 @@ public class Notification {
         this.sentAt = sentAt;
     }
 
-    public String getNotificationId() { return notificationId; }
-    public void setNotificationId(String notificationId) { this.notificationId = notificationId; }
+    public String getNotificationId() {
+        return notificationId;
+    }
 
-    public String getRecipientId() { return recipientId; }
-    public void setRecipientId(String recipientId) { this.recipientId = recipientId; }
+    public void setNotificationId(String notificationId) {
+        this.notificationId = notificationId;
+    }
 
-    public String getChannel() { return channel; }
-    public void setChannel(String channel) { this.channel = channel; }
+    public String getRecipientId() {
+        return recipientId;
+    }
 
-    public String getSubject() { return subject; }
-    public void setSubject(String subject) { this.subject = subject; }
+    public void setRecipientId(String recipientId) {
+        this.recipientId = recipientId;
+    }
 
-    public String getBody() { return body; }
-    public void setBody(String body) { this.body = body; }
+    public String getChannel() {
+        return channel;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
 
-    public OffsetDateTime getScheduledAt() { return scheduledAt; }
-    public void setScheduledAt(OffsetDateTime scheduledAt) { this.scheduledAt = scheduledAt; }
+    public String getSubject() {
+        return subject;
+    }
 
-    public OffsetDateTime getSentAt() { return sentAt; }
-    public void setSentAt(OffsetDateTime sentAt) { this.sentAt = sentAt; }
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public OffsetDateTime getScheduledAt() {
+        return scheduledAt;
+    }
+
+    public void setScheduledAt(OffsetDateTime scheduledAt) {
+        this.scheduledAt = scheduledAt;
+    }
+
+    public OffsetDateTime getSentAt() {
+        return sentAt;
+    }
+
+    public void setSentAt(OffsetDateTime sentAt) {
+        this.sentAt = sentAt;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -63,17 +111,56 @@ public class Notification {
         private OffsetDateTime scheduledAt;
         private OffsetDateTime sentAt;
 
-        public Builder notificationId(String notificationId) { this.notificationId = notificationId; return this; }
-        public Builder recipientId(String recipientId) { this.recipientId = recipientId; return this; }
-        public Builder channel(String channel) { this.channel = channel; return this; }
-        public Builder subject(String subject) { this.subject = subject; return this; }
-        public Builder body(String body) { this.body = body; return this; }
-        public Builder status(String status) { this.status = status; return this; }
-        public Builder scheduledAt(OffsetDateTime scheduledAt) { this.scheduledAt = scheduledAt; return this; }
-        public Builder sentAt(OffsetDateTime sentAt) { this.sentAt = sentAt; return this; }
+        public Builder notificationId(String notificationId) {
+            this.notificationId = notificationId;
+            return this;
+        }
+
+        public Builder recipientId(String recipientId) {
+            this.recipientId = recipientId;
+            return this;
+        }
+
+        public Builder channel(String channel) {
+            this.channel = channel;
+            return this;
+        }
+
+        public Builder subject(String subject) {
+            this.subject = subject;
+            return this;
+        }
+
+        public Builder body(String body) {
+            this.body = body;
+            return this;
+        }
+
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
+
+        public Builder scheduledAt(OffsetDateTime scheduledAt) {
+            this.scheduledAt = scheduledAt;
+            return this;
+        }
+
+        public Builder sentAt(OffsetDateTime sentAt) {
+            this.sentAt = sentAt;
+            return this;
+        }
 
         public Notification build() {
-            return new Notification(notificationId, recipientId, channel, subject, body, status, scheduledAt, sentAt);
+            return new Notification(
+                    notificationId,
+                    recipientId,
+                    channel,
+                    subject,
+                    body,
+                    status,
+                    scheduledAt,
+                    sentAt);
         }
     }
 }

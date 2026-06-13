@@ -1,34 +1,30 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
+import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
-import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
+import ch.swissqcommerce.backend.domain.agent.core.model.NegotiationEvent;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
+import ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
-import ch.swissqcommerce.backend.model.DarkStore;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
-import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort;
-import ch.swissqcommerce.backend.domain.agent.core.model.NegotiationEvent;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -57,10 +53,13 @@ public class MasterOrchestratorService implements AgentUseCase {
 
     @PostConstruct
     public void registerMetrics() {
-        budgetGuardrailCounter = Counter.builder("agent.budget.guardrail.triggers")
-                .description("Number of times the AI agent daily cost-budget guardrail was reached")
-                .tag("service", "master-orchestrator")
-                .register(meterRegistry);
+        budgetGuardrailCounter =
+                Counter.builder("agent.budget.guardrail.triggers")
+                        .description(
+                                "Number of times the AI agent daily cost-budget guardrail was"
+                                        + " reached")
+                        .tag("service", "master-orchestrator")
+                        .register(meterRegistry);
     }
 
     // Java orchestration owns the cost-budget guardrail (ADR-007 #1). Request-rate
@@ -104,7 +103,7 @@ public class MasterOrchestratorService implements AgentUseCase {
             // Increment Prometheus counter — drives the AgentDailyBudgetExceeded alert.
             // Null-guard: @PostConstruct is not invoked in unit tests (no Spring context).
             if (budgetGuardrailCounter != null) budgetGuardrailCounter.increment();
-            
+
             String ticketId;
             synchronized (this) {
                 if (!dailyBudgetEscalated) {
@@ -114,9 +113,11 @@ public class MasterOrchestratorService implements AgentUseCase {
                     ticketId = "BUDGET-EXCEEDED-ACTIVE";
                 }
             }
-            
+
             return AgentResponse.builder()
-                    .reply("System limit reached. Your request is routed to a customer support agent.")
+                    .reply(
+                            "System limit reached. Your request is routed to a customer support"
+                                    + " agent.")
                     .confidenceScore(0.0)
                     .tokenCost(0.0)
                     .hitlStatus(true)
@@ -133,18 +134,22 @@ public class MasterOrchestratorService implements AgentUseCase {
         Order order = null;
 
         if (analysis.tool != null) {
-            AgentToolExecutor.ToolResult toolResult = agentToolExecutor.executeTool(analysis.tool, analysis.toolArgument);
+            AgentToolExecutor.ToolResult toolResult =
+                    agentToolExecutor.executeTool(analysis.tool, analysis.toolArgument);
             trackUsage(toolResult.cost);
             accumulatedCost += toolResult.cost;
-            
+
             try {
                 if (analysis.toolArgument != null) {
                     int orderId = Integer.parseInt(analysis.toolArgument.trim());
                     order = agentOutPort.findOrderById(orderId).orElse(null);
                 }
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
 
-            CustomerSupportAgent.AgentAnalysis finalAnalysis = customerSupportAgent.generateFinalResponse(request, toolResult.content, accumulatedCost);
+            CustomerSupportAgent.AgentAnalysis finalAnalysis =
+                    customerSupportAgent.generateFinalResponse(
+                            request, toolResult.content, accumulatedCost);
             trackUsage(finalAnalysis.cost - accumulatedCost);
             accumulatedCost = finalAnalysis.cost;
             finalReply = finalAnalysis.reply;
@@ -156,14 +161,22 @@ public class MasterOrchestratorService implements AgentUseCase {
 
         if (finalConfidence < 0.70) {
             hitlStatus = true;
-            ticketId = triggerHitl(request, order, finalConfidence, "Low confidence score: " + finalConfidence);
+            ticketId =
+                    triggerHitl(
+                            request,
+                            order,
+                            finalConfidence,
+                            "Low confidence score: " + finalConfidence);
         }
 
         try {
-            String eventPayload = String.format("{\"conversationId\":\"%s\",\"hitl\":%b,\"cost\":%f}",
-                    request.getConversationId(), hitlStatus, accumulatedCost);
+            String eventPayload =
+                    String.format(
+                            "{\"conversationId\":\"%s\",\"hitl\":%b,\"cost\":%f}",
+                            request.getConversationId(), hitlStatus, accumulatedCost);
             eventUseCase.publishEvent("agent.message_processed", eventPayload);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         return AgentResponse.builder()
                 .reply(finalReply)
@@ -174,9 +187,10 @@ public class MasterOrchestratorService implements AgentUseCase {
                 .build();
     }
 
-    private String triggerHitl(AgentRequest request, Order order, Double confidence, String reason) {
+    private String triggerHitl(
+            AgentRequest request, Order order, Double confidence, String reason) {
         String ticketId = "HITL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        
+
         Customer customer = null;
         if (request.getCustomerId() != null) {
             customer = agentOutPort.findCustomerById(request.getCustomerId()).orElse(null);
@@ -185,21 +199,28 @@ public class MasterOrchestratorService implements AgentUseCase {
             customer = order.getCustomer();
         }
 
-        HitlQueue ticket = HitlQueue.builder()
-                .ticketId(ticketId)
-                .type("agent_escalation")
-                .customer(customer)
-                .orderId(order != null ? order.getOrderId() : null)
-                .description(String.format("Agent escalation due to: %s. Message: %s", reason, request.getMessage()))
-                .amount(order != null ? order.getTotalAmount() : BigDecimal.ZERO)
-                .status("pending")
-                .build();
+        HitlQueue ticket =
+                HitlQueue.builder()
+                        .ticketId(ticketId)
+                        .type("agent_escalation")
+                        .customer(customer)
+                        .orderId(order != null ? order.getOrderId() : null)
+                        .description(
+                                String.format(
+                                        "Agent escalation due to: %s. Message: %s",
+                                        reason, request.getMessage()))
+                        .amount(order != null ? order.getTotalAmount() : BigDecimal.ZERO)
+                        .status("pending")
+                        .build();
 
         agentOutPort.saveHitlQueue(ticket);
 
         try {
-            eventUseCase.publishEvent("agent.hitl_escalated", String.format("{\"ticketId\":\"%s\",\"reason\":\"%s\"}", ticketId, reason));
-        } catch (Exception ignored) {}
+            eventUseCase.publishEvent(
+                    "agent.hitl_escalated",
+                    String.format("{\"ticketId\":\"%s\",\"reason\":\"%s\"}", ticketId, reason));
+        } catch (Exception ignored) {
+        }
 
         return ticketId;
     }
@@ -217,7 +238,8 @@ public class MasterOrchestratorService implements AgentUseCase {
                 .build();
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MasterOrchestratorService.class);
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(MasterOrchestratorService.class);
 
     @Override
     public NegotiationResponse negotiateProcurement(NegotiationRequest request) {
@@ -235,20 +257,21 @@ public class MasterOrchestratorService implements AgentUseCase {
                 activeWholesalers = java.util.Collections.emptyList();
             }
         } catch (Exception e) {
-            log.error("MasterOrchestratorService: Failed to retrieve active wholesalers from database", e);
+            log.error(
+                    "MasterOrchestratorService: Failed to retrieve active wholesalers from"
+                            + " database",
+                    e);
             activeWholesalers = java.util.Collections.emptyList();
         }
 
-        activeWholesalers = activeWholesalers.stream()
-                .filter(w -> w != null && Boolean.TRUE.equals(w.getIsActive()))
-                .toList();
+        activeWholesalers =
+                activeWholesalers.stream()
+                        .filter(w -> w != null && Boolean.TRUE.equals(w.getIsActive()))
+                        .toList();
 
         if (activeWholesalers.isEmpty()) {
             return new NegotiationResponse(
-                    false,
-                    "No active wholesalers found.",
-                    0.0, 0.0, "N/A", "REJECTED", 0.0
-            );
+                    false, "No active wholesalers found.", 0.0, 0.0, "N/A", "REJECTED", 0.0);
         }
 
         B2BProcurementAgent.NegotiationAnalysis bestAnalysis = null;
@@ -257,30 +280,38 @@ public class MasterOrchestratorService implements AgentUseCase {
         for (Wholesaler wholesaler : activeWholesalers) {
             B2BProcurementAgent.NegotiationAnalysis analysis;
             if (dailyCost >= 5.0) {
-                analysis = new B2BProcurementAgent.NegotiationAnalysis(
-                        request.getBasePrice() * 0.90,
-                        0.50,
-                        "Rule-based fallback (Daily budget limit exceeded)",
-                        "COUNTER_OFFER",
-                        0.0
-                );
+                analysis =
+                        new B2BProcurementAgent.NegotiationAnalysis(
+                                request.getBasePrice() * 0.90,
+                                0.50,
+                                "Rule-based fallback (Daily budget limit exceeded)",
+                                "COUNTER_OFFER",
+                                0.0);
             } else {
                 try {
-                    analysis = b2BProcurementActivities.callLlmNegotiation(
-                            request.getItemId(), request.getItemName(), request.getBasePrice(), wholesaler.getName());
+                    analysis =
+                            b2BProcurementActivities.callLlmNegotiation(
+                                    request.getItemId(),
+                                    request.getItemName(),
+                                    request.getBasePrice(),
+                                    wholesaler.getName());
                     if (analysis == null) {
                         throw new NullPointerException("Negotiation analysis returned null");
                     }
                 } catch (Exception e) {
-                    log.warn("MasterOrchestratorService: LLM restock negotiation failed for wholesaler {}. Using default fallback bid. Error: {}", wholesaler.getName(), e.getMessage());
+                    log.warn(
+                            "MasterOrchestratorService: LLM restock negotiation failed for"
+                                    + " wholesaler {}. Using default fallback bid. Error: {}",
+                            wholesaler.getName(),
+                            e.getMessage());
                     // Rule-based fallback: 10% discount, 0.50 confidence, 0.0 token cost
-                    analysis = new B2BProcurementAgent.NegotiationAnalysis(
-                            request.getBasePrice() * 0.90,
-                            0.50,
-                            "Rule-based fallback (LLM offline)",
-                            "COUNTER_OFFER",
-                            0.0
-                    );
+                    analysis =
+                            new B2BProcurementAgent.NegotiationAnalysis(
+                                    request.getBasePrice() * 0.90,
+                                    0.50,
+                                    "Rule-based fallback (LLM offline)",
+                                    "COUNTER_OFFER",
+                                    0.0);
                 }
                 trackUsage(analysis.cost);
             }
@@ -289,7 +320,8 @@ public class MasterOrchestratorService implements AgentUseCase {
                 bestAnalysis = analysis;
                 bestWholesaler = wholesaler;
             } else if (analysis.proposedPrice == bestAnalysis.proposedPrice) {
-                if (bestWholesaler != null && wholesaler.getTrustScore() > bestWholesaler.getTrustScore()) {
+                if (bestWholesaler != null
+                        && wholesaler.getTrustScore() > bestWholesaler.getTrustScore()) {
                     bestAnalysis = analysis;
                     bestWholesaler = wholesaler;
                 }
@@ -300,8 +332,11 @@ public class MasterOrchestratorService implements AgentUseCase {
             return new NegotiationResponse(
                     false,
                     "Failed to negotiate with any active wholesalers.",
-                    0.0, 0.0, "N/A", "REJECTED", 0.0
-            );
+                    0.0,
+                    0.0,
+                    "N/A",
+                    "REJECTED",
+                    0.0);
         }
 
         // Now start the durable Temporal B2B procurement workflow for the winning wholesaler
@@ -310,33 +345,49 @@ public class MasterOrchestratorService implements AgentUseCase {
             finalOutcome = bestAnalysis;
         } else {
             try {
-                finalOutcome = b2BProcurementAgent.negotiateRestock(
-                        request.getItemId(), request.getItemName(), request.getBasePrice(), bestWholesaler.getName(), request.getQuantity());
+                finalOutcome =
+                        b2BProcurementAgent.negotiateRestock(
+                                request.getItemId(),
+                                request.getItemName(),
+                                request.getBasePrice(),
+                                bestWholesaler.getName(),
+                                request.getQuantity());
             } catch (Exception e) {
-                log.error("MasterOrchestratorService: Temporal workflow execution failed for winner: {}", e.getMessage());
+                log.error(
+                        "MasterOrchestratorService: Temporal workflow execution failed for winner:"
+                                + " {}",
+                        e.getMessage());
                 finalOutcome = bestAnalysis;
             }
         }
 
-        var guardrailResult = procurementGuardrailsEngine.validate(
-                finalOutcome.proposedPrice, request.getBasePrice(), request.getQuantity());
+        var guardrailResult =
+                procurementGuardrailsEngine.validate(
+                        finalOutcome.proposedPrice, request.getBasePrice(), request.getQuantity());
 
         // FR-02: archive the negotiation outcome to the document store (best-effort).
         try {
-            negotiationArchivePort.archive(NegotiationEvent.builder()
-                    .eventId(UUID.randomUUID().toString())
-                    .wholesalerId(bestWholesaler.getWholesalerId())
-                    .itemId(request.getItemId())
-                    .proposedPrice(BigDecimal.valueOf(finalOutcome.proposedPrice))
-                    .quantity(request.getQuantity())
-                    .approved(guardrailResult.isApproved())
-                    .occurredAt(OffsetDateTime.now())
-                    .build());
+            negotiationArchivePort.archive(
+                    NegotiationEvent.builder()
+                            .eventId(UUID.randomUUID().toString())
+                            .wholesalerId(bestWholesaler.getWholesalerId())
+                            .itemId(request.getItemId())
+                            .proposedPrice(BigDecimal.valueOf(finalOutcome.proposedPrice))
+                            .quantity(request.getQuantity())
+                            .approved(guardrailResult.isApproved())
+                            .occurredAt(OffsetDateTime.now())
+                            .build());
         } catch (Exception e) {
             log.warn("Negotiation archive failed (non-fatal): {}", e.getMessage());
         }
 
-        String winningMessage = "RFQ AUCTION WINNER: " + bestWholesaler.getName() + " (Bid: " + finalOutcome.proposedPrice + " CHF). " + guardrailResult.getMessage();
+        String winningMessage =
+                "RFQ AUCTION WINNER: "
+                        + bestWholesaler.getName()
+                        + " (Bid: "
+                        + finalOutcome.proposedPrice
+                        + " CHF). "
+                        + guardrailResult.getMessage();
 
         return new NegotiationResponse(
                 guardrailResult.isApproved(),
@@ -345,7 +396,6 @@ public class MasterOrchestratorService implements AgentUseCase {
                 finalOutcome.confidence,
                 finalOutcome.rationale,
                 finalOutcome.wholesalerResponse,
-                finalOutcome.cost
-        );
+                finalOutcome.cost);
     }
 }

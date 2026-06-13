@@ -2,10 +2,10 @@ package ch.swissqcommerce.backend.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import lombok.*;
 
 @Entity
 @Table(name = "customers", schema = "oltp")
@@ -70,8 +70,7 @@ public class Customer {
     @Builder.Default
     private Integer consecutiveOrdersCompleted = 0;
 
-    @Version
-    private Long version;
+    @Version private Long version;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -82,11 +81,27 @@ public class Customer {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerPaymentCard> paymentCards;
 
-    public Integer getTrustScore() { return this.trustScore; }
-    public void setTrustScore(Integer trustScore) { this.trustScore = trustScore; }
-    public Integer getConsecutiveOrdersCompleted() { return this.consecutiveOrdersCompleted; }
-    public void setConsecutiveOrdersCompleted(Integer count) { this.consecutiveOrdersCompleted = count; }
-    public Boolean getVipStatus() { return this.vipStatus; }
-    public void setVipStatus(Boolean vipStatus) { this.vipStatus = vipStatus; }
-}
+    public Integer getTrustScore() {
+        return this.trustScore;
+    }
 
+    public void setTrustScore(Integer trustScore) {
+        this.trustScore = trustScore;
+    }
+
+    public Integer getConsecutiveOrdersCompleted() {
+        return this.consecutiveOrdersCompleted;
+    }
+
+    public void setConsecutiveOrdersCompleted(Integer count) {
+        this.consecutiveOrdersCompleted = count;
+    }
+
+    public Boolean getVipStatus() {
+        return this.vipStatus;
+    }
+
+    public void setVipStatus(Boolean vipStatus) {
+        this.vipStatus = vipStatus;
+    }
+}

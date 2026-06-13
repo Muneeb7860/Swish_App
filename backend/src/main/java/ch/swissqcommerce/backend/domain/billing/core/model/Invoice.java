@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.billing.core.model;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 
 /** A flat-tier invoice for one billing period of a {@link BillingAccount}. */
 @Data
@@ -21,8 +20,10 @@ public class Invoice {
     private LocalDate periodEnd;
     private BigDecimal amount;
     private String currency;
+
     /** DRAFT, ISSUED, PAID, or VOID. */
     private String status;
+
     private OffsetDateTime issuedAt;
     private OffsetDateTime paidAt;
 }

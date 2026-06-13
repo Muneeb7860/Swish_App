@@ -3,9 +3,9 @@ package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrder;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.WastageLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.PurchaseOrderPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -28,16 +28,20 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
 
     @Override
     public WastageLog saveWastageLog(WastageLog log) {
-        WastageLogEntity entity = WastageLogEntity.builder()
-                .logId(log.getLogId() != null ? log.getLogId() : java.util.UUID.randomUUID().toString())
-                .storeId(log.getStoreId())
-                .productId(log.getProductId())
-                .batchId(log.getBatchId())
-                .qtyWasted(log.getQtyWasted())
-                .reason(log.getReason())
-                .loggedBy(log.getLoggedBy())
-                .timestamp(log.getTimestamp())
-                .build();
+        WastageLogEntity entity =
+                WastageLogEntity.builder()
+                        .logId(
+                                log.getLogId() != null
+                                        ? log.getLogId()
+                                        : java.util.UUID.randomUUID().toString())
+                        .storeId(log.getStoreId())
+                        .productId(log.getProductId())
+                        .batchId(log.getBatchId())
+                        .qtyWasted(log.getQtyWasted())
+                        .reason(log.getReason())
+                        .loggedBy(log.getLoggedBy())
+                        .timestamp(log.getTimestamp())
+                        .build();
         WastageLogEntity saved = wastageLogRepository.save(entity);
         return WastageLog.builder()
                 .logId(saved.getLogId())
@@ -52,49 +56,76 @@ public class PurchaseOrderPersistenceAdapter implements PurchaseOrderPort {
     }
 
     private PurchaseOrder toDomain(PurchaseOrderEntity entity) {
-        PurchaseOrder domain = PurchaseOrder.builder()
-                .poId(entity.getPoId())
-                .storeId(entity.getStoreId())
-                .vendorName(entity.getVendorName())
-                .status(entity.getStatus())
-                .inboundDate(entity.getInboundDate())
-                .grnVerificationFileUrl(entity.getGrnVerificationFileUrl())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .build();
-                
+        PurchaseOrder domain =
+                PurchaseOrder.builder()
+                        .poId(entity.getPoId())
+                        .storeId(entity.getStoreId())
+                        .vendorName(entity.getVendorName())
+                        .status(entity.getStatus())
+                        .inboundDate(entity.getInboundDate())
+                        .grnVerificationFileUrl(entity.getGrnVerificationFileUrl())
+                        .createdAt(entity.getCreatedAt())
+                        .updatedAt(entity.getUpdatedAt())
+                        .build();
+
         if (entity.getItems() != null) {
-            domain.setItems(new java.util.ArrayList<>(entity.getItems().stream().map(itemEntity -> ch.swissqcommerce.backend.domain.wholesaler.core.model.PurchaseOrderItem.builder()
-                    .itemId(itemEntity.getItemId())
-                    .productId(itemEntity.getProductId())
-                    .requestedQty(itemEntity.getRequestedQty())
-                    .receivedQty(itemEntity.getReceivedQty())
-                    .purchaseOrder(domain)
-                    .build()).toList()));
+            domain.setItems(
+                    new java.util.ArrayList<>(
+                            entity.getItems().stream()
+                                    .map(
+                                            itemEntity ->
+                                                    ch.swissqcommerce.backend.domain.wholesaler.core
+                                                            .model.PurchaseOrderItem.builder()
+                                                            .itemId(itemEntity.getItemId())
+                                                            .productId(itemEntity.getProductId())
+                                                            .requestedQty(
+                                                                    itemEntity.getRequestedQty())
+                                                            .receivedQty(
+                                                                    itemEntity.getReceivedQty())
+                                                            .purchaseOrder(domain)
+                                                            .build())
+                                    .toList()));
         }
         return domain;
     }
 
     private PurchaseOrderEntity toEntity(PurchaseOrder domain) {
-        PurchaseOrderEntity entity = PurchaseOrderEntity.builder()
-                .poId(domain.getPoId())
-                .storeId(domain.getStoreId())
-                .vendorName(domain.getVendorName())
-                .status(domain.getStatus())
-                .inboundDate(domain.getInboundDate())
-                .grnVerificationFileUrl(domain.getGrnVerificationFileUrl())
-                .createdAt(domain.getCreatedAt())
-                .updatedAt(domain.getUpdatedAt())
-                .build();
-                
+        PurchaseOrderEntity entity =
+                PurchaseOrderEntity.builder()
+                        .poId(domain.getPoId())
+                        .storeId(domain.getStoreId())
+                        .vendorName(domain.getVendorName())
+                        .status(domain.getStatus())
+                        .inboundDate(domain.getInboundDate())
+                        .grnVerificationFileUrl(domain.getGrnVerificationFileUrl())
+                        .createdAt(domain.getCreatedAt())
+                        .updatedAt(domain.getUpdatedAt())
+                        .build();
+
         if (domain.getItems() != null) {
-            entity.setItems(new java.util.ArrayList<>(domain.getItems().stream().map(itemDomain -> ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.PurchaseOrderItemEntity.builder()
-                    .itemId(itemDomain.getItemId() != null ? itemDomain.getItemId() : java.util.UUID.randomUUID().toString())
-                    .productId(itemDomain.getProductId())
-                    .requestedQty(itemDomain.getRequestedQty())
-                    .receivedQty(itemDomain.getReceivedQty())
-                    .purchaseOrder(entity)
-                    .build()).toList()));
+            entity.setItems(
+                    new java.util.ArrayList<>(
+                            domain.getItems().stream()
+                                    .map(
+                                            itemDomain ->
+                                                    ch.swissqcommerce.backend.domain.wholesaler
+                                                            .adapter.out.persistence
+                                                            .PurchaseOrderItemEntity.builder()
+                                                            .itemId(
+                                                                    itemDomain.getItemId() != null
+                                                                            ? itemDomain.getItemId()
+                                                                            : java.util
+                                                                                    .UUID
+                                                                                    .randomUUID()
+                                                                                    .toString())
+                                                            .productId(itemDomain.getProductId())
+                                                            .requestedQty(
+                                                                    itemDomain.getRequestedQty())
+                                                            .receivedQty(
+                                                                    itemDomain.getReceivedQty())
+                                                            .purchaseOrder(entity)
+                                                            .build())
+                                    .toList()));
         }
         return entity;
     }

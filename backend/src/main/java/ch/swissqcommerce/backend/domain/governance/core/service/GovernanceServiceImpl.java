@@ -1,31 +1,24 @@
 package ch.swissqcommerce.backend.domain.governance.core.service;
 
-import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
-import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
-import ch.swissqcommerce.backend.domain.governance.port.out.HitlQueuePort;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.config.SecurityAudit;
+import ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementWorkflow;
 import ch.swissqcommerce.backend.domain.governance.core.model.HitlItem;
+import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
+import ch.swissqcommerce.backend.domain.governance.port.out.HitlQueuePort;
+import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
+import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
+import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
-import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import ch.swissqcommerce.backend.config.SecurityAudit;
-import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
-import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.client.WorkflowClient;
-import ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementWorkflow;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -36,6 +29,11 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -45,7 +43,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     // Composite-id prefixes that route a unified HITL item back to its source queue.
     private static final String PREFIX_PROCUREMENT = "PA-";
-    private static final String PREFIX_AGENT       = "AQ-";
+    private static final String PREFIX_AGENT = "AQ-";
 
     private final ProcurementApprovalPort approvalsPort;
     private final B2BRestockOrderPort restockOrderPort;
@@ -59,12 +57,13 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
-                                 B2BRestockOrderPort restockOrderPort,
-                                 TelemetryPort telemetryPort,
-                                 HitlQueuePort hitlQueuePort,
-                                 SecurityTrustLedgerRepository trustLedgerRepository,
-                                 MeterRegistry meterRegistry) {
+    public GovernanceServiceImpl(
+            ProcurementApprovalPort approvalsPort,
+            B2BRestockOrderPort restockOrderPort,
+            TelemetryPort telemetryPort,
+            HitlQueuePort hitlQueuePort,
+            SecurityTrustLedgerRepository trustLedgerRepository,
+            MeterRegistry meterRegistry) {
         this.approvalsPort = approvalsPort;
         this.restockOrderPort = restockOrderPort;
         this.telemetryPort = telemetryPort;
@@ -74,7 +73,9 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         // Pending-HITL gauge for the Mission Control dashboard (Epic 2.5 row).
         if (meterRegistry != null) {
             Gauge.builder("hitl.pending.count", this, GovernanceServiceImpl::countPendingHitl)
-                    .description("HITL items awaiting supervisor review (B2B overrides + agent escalations)")
+                    .description(
+                            "HITL items awaiting supervisor review (B2B overrides + agent"
+                                    + " escalations)")
                     .tag("service", "governance")
                     .register(meterRegistry);
         }
@@ -83,9 +84,10 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     /** Best-effort count for the gauge — never throws on a scrape if the DB hiccups. */
     private double countPendingHitl() {
         try {
-            long procurement = approvalsPort.findAll().stream()
-                    .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
-                    .count();
+            long procurement =
+                    approvalsPort.findAll().stream()
+                            .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
+                            .count();
             long agent = hitlQueuePort.countByStatus("pending");
             return procurement + agent;
         } catch (Exception e) {
@@ -108,14 +110,16 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 byte[] pubKeyBytes = java.nio.file.Files.readAllBytes(pubKeyFile.toPath());
 
                 KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-                
+
                 PKCS8EncodedKeySpec privSpec = new PKCS8EncodedKeySpec(privKeyBytes);
                 this.privateKey = keyFactory.generatePrivate(privSpec);
 
                 X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(pubKeyBytes);
                 this.publicKey = keyFactory.generatePublic(pubSpec);
 
-                log.info("GovernanceServiceImpl: Loaded persistent RSA KeyPair successfully from config/keys.");
+                log.info(
+                        "GovernanceServiceImpl: Loaded persistent RSA KeyPair successfully from"
+                                + " config/keys.");
             } else {
                 KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
                 keyGen.initialize(2048);
@@ -126,10 +130,15 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 java.nio.file.Files.write(privKeyFile.toPath(), this.privateKey.getEncoded());
                 java.nio.file.Files.write(pubKeyFile.toPath(), this.publicKey.getEncoded());
 
-                log.info("GovernanceServiceImpl: Generated and saved new persistent RSA KeyPair in config/keys.");
+                log.info(
+                        "GovernanceServiceImpl: Generated and saved new persistent RSA KeyPair in"
+                                + " config/keys.");
             }
         } catch (Exception e) {
-            log.error("GovernanceServiceImpl: Failed to initialize/load RSA KeyPair, falling back to in-memory key generation", e);
+            log.error(
+                    "GovernanceServiceImpl: Failed to initialize/load RSA KeyPair, falling back to"
+                            + " in-memory key generation",
+                    e);
             try {
                 KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
                 keyGen.initialize(2048);
@@ -138,25 +147,33 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 this.publicKey = pair.getPublic();
                 log.warn("GovernanceServiceImpl: Fell back to in-memory transient RSA KeyPair.");
             } catch (Exception ex) {
-                log.error("GovernanceServiceImpl: Fallback in-memory KeyPair generation failed", ex);
+                log.error(
+                        "GovernanceServiceImpl: Fallback in-memory KeyPair generation failed", ex);
             }
         }
     }
 
     @Override
     public void auditNegotiation(Integer restockOrderId, String wholesalerId, BigDecimal amount) {
-        B2BRestockOrder restockOrder = restockOrderPort.findById(restockOrderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
+        B2BRestockOrder restockOrder =
+                restockOrderPort
+                        .findById(restockOrderId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Restock order not found"));
 
-        ProcurementApproval approval = ProcurementApproval.builder()
-                .restockOrderId(restockOrderId)
-                .wholesalerId(wholesalerId)
-                .amount(amount)
-                .status("PENDING")
-                .build();
+        ProcurementApproval approval =
+                ProcurementApproval.builder()
+                        .restockOrderId(restockOrderId)
+                        .wholesalerId(wholesalerId)
+                        .amount(amount)
+                        .status("PENDING")
+                        .build();
         approvalsPort.save(approval);
-        log.info("GovernanceServiceImpl: Created pending override request for restock order id={}, amount={}", 
-                restockOrderId, amount);
+        log.info(
+                "GovernanceServiceImpl: Created pending override request for restock order id={},"
+                        + " amount={}",
+                restockOrderId,
+                amount);
     }
 
     private String sha256(String value) {
@@ -182,8 +199,11 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             throw new IllegalArgumentException("Override justification reason is required");
         }
 
-        ProcurementApproval approval = approvalsPort.findById(approvalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
+        ProcurementApproval approval =
+                approvalsPort
+                        .findById(approvalId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
             throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
@@ -192,24 +212,33 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         boolean signaled = false;
         if (workflowClient != null && approval.getRestockOrderId() != null) {
             try {
-                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
-                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                B2BProcurementWorkflow workflow =
+                        workflowClient.newWorkflowStub(
+                                B2BProcurementWorkflow.class,
+                                "restock-order-" + approval.getRestockOrderId());
                 workflow.approve(operator, reason);
                 signaled = true;
-                log.info("GovernanceServiceImpl: Sent approve signal to Temporal workflow restock-order-{}", approval.getRestockOrderId());
+                log.info(
+                        "GovernanceServiceImpl: Sent approve signal to Temporal workflow"
+                                + " restock-order-{}",
+                        approval.getRestockOrderId());
             } catch (Exception e) {
-                log.warn("GovernanceServiceImpl: Failed to signal workflow, falling back to direct db update: {}", e.getMessage());
+                log.warn(
+                        "GovernanceServiceImpl: Failed to signal workflow, falling back to direct"
+                                + " db update: {}",
+                        e.getMessage());
             }
         }
 
         if (trustLedgerRepository != null) {
-            SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                    .actorType("system")
-                    .actorId(operator != null ? operator : "admin")
-                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
-                    .delta(0)
-                    .currentValue(100)
-                    .build();
+            SecurityTrustLedger audit =
+                    SecurityTrustLedger.builder()
+                            .actorType("system")
+                            .actorId(operator != null ? operator : "admin")
+                            .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                            .delta(0)
+                            .currentValue(100)
+                            .build();
             trustLedgerRepository.save(audit);
         }
 
@@ -220,12 +249,18 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             approvalsPort.save(approval);
 
             if (approval.getRestockOrderId() != null) {
-                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
-                    order.setStatus("fulfilled");
-                    restockOrderPort.save(order);
-                    log.info("GovernanceServiceImpl: B2B Restock order id={} approved by operator={}.", 
-                            order.getRestockOrderId(), operator);
-                });
+                restockOrderPort
+                        .findById(approval.getRestockOrderId())
+                        .ifPresent(
+                                order -> {
+                                    order.setStatus("fulfilled");
+                                    restockOrderPort.save(order);
+                                    log.info(
+                                            "GovernanceServiceImpl: B2B Restock order id={}"
+                                                    + " approved by operator={}.",
+                                            order.getRestockOrderId(),
+                                            operator);
+                                });
             }
         }
     }
@@ -237,8 +272,11 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             throw new IllegalArgumentException("Override justification reason is required");
         }
 
-        ProcurementApproval approval = approvalsPort.findById(approvalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
+        ProcurementApproval approval =
+                approvalsPort
+                        .findById(approvalId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
             throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
@@ -247,24 +285,33 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         boolean signaled = false;
         if (workflowClient != null && approval.getRestockOrderId() != null) {
             try {
-                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
-                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                B2BProcurementWorkflow workflow =
+                        workflowClient.newWorkflowStub(
+                                B2BProcurementWorkflow.class,
+                                "restock-order-" + approval.getRestockOrderId());
                 workflow.reject(operator, reason);
                 signaled = true;
-                log.info("GovernanceServiceImpl: Sent reject signal to Temporal workflow restock-order-{}", approval.getRestockOrderId());
+                log.info(
+                        "GovernanceServiceImpl: Sent reject signal to Temporal workflow"
+                                + " restock-order-{}",
+                        approval.getRestockOrderId());
             } catch (Exception e) {
-                log.warn("GovernanceServiceImpl: Failed to signal workflow, falling back to direct db update: {}", e.getMessage());
+                log.warn(
+                        "GovernanceServiceImpl: Failed to signal workflow, falling back to direct"
+                                + " db update: {}",
+                        e.getMessage());
             }
         }
 
         if (trustLedgerRepository != null) {
-            SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                    .actorType("system")
-                    .actorId(operator != null ? operator : "admin")
-                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
-                    .delta(0)
-                    .currentValue(100)
-                    .build();
+            SecurityTrustLedger audit =
+                    SecurityTrustLedger.builder()
+                            .actorType("system")
+                            .actorId(operator != null ? operator : "admin")
+                            .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                            .delta(0)
+                            .currentValue(100)
+                            .build();
             trustLedgerRepository.save(audit);
         }
 
@@ -275,21 +322,31 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             approvalsPort.save(approval);
 
             if (approval.getRestockOrderId() != null) {
-                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
-                    order.setStatus("failed");
-                    restockOrderPort.save(order);
-                    log.warn("GovernanceServiceImpl: B2B Restock order id={} rejected by operator={}.", 
-                            order.getRestockOrderId(), operator);
-                });
+                restockOrderPort
+                        .findById(approval.getRestockOrderId())
+                        .ifPresent(
+                                order -> {
+                                    order.setStatus("failed");
+                                    restockOrderPort.save(order);
+                                    log.warn(
+                                            "GovernanceServiceImpl: B2B Restock order id={}"
+                                                    + " rejected by operator={}.",
+                                            order.getRestockOrderId(),
+                                            operator);
+                                });
             }
         }
     }
 
     @Override
     @SecurityAudit(action = "governance.override.adjust")
-    public void adjustOverride(Integer approvalId, double newPrice, String operator, String reason) {
-        ProcurementApproval approval = approvalsPort.findById(approvalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
+    public void adjustOverride(
+            Integer approvalId, double newPrice, String operator, String reason) {
+        ProcurementApproval approval =
+                approvalsPort
+                        .findById(approvalId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Approval ticket not found"));
 
         if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
             throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
@@ -298,24 +355,34 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         boolean signaled = false;
         if (workflowClient != null && approval.getRestockOrderId() != null) {
             try {
-                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
-                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                B2BProcurementWorkflow workflow =
+                        workflowClient.newWorkflowStub(
+                                B2BProcurementWorkflow.class,
+                                "restock-order-" + approval.getRestockOrderId());
                 workflow.adjustBid(newPrice, operator, reason);
                 signaled = true;
-                log.info("GovernanceServiceImpl: Sent adjustBid signal to Temporal workflow restock-order-{} with price={}", approval.getRestockOrderId(), newPrice);
+                log.info(
+                        "GovernanceServiceImpl: Sent adjustBid signal to Temporal workflow"
+                                + " restock-order-{} with price={}",
+                        approval.getRestockOrderId(),
+                        newPrice);
             } catch (Exception e) {
-                log.warn("GovernanceServiceImpl: Failed to signal workflow (adjust), falling back to direct db update: {}", e.getMessage());
+                log.warn(
+                        "GovernanceServiceImpl: Failed to signal workflow (adjust), falling back to"
+                                + " direct db update: {}",
+                        e.getMessage());
             }
         }
 
         if (trustLedgerRepository != null) {
-            SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                    .actorType("system")
-                    .actorId(operator != null ? operator : "admin")
-                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
-                    .delta(0)
-                    .currentValue(100)
-                    .build();
+            SecurityTrustLedger audit =
+                    SecurityTrustLedger.builder()
+                            .actorType("system")
+                            .actorId(operator != null ? operator : "admin")
+                            .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                            .delta(0)
+                            .currentValue(100)
+                            .build();
             trustLedgerRepository.save(audit);
         }
 
@@ -326,19 +393,28 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             approvalsPort.save(approval);
 
             if (approval.getRestockOrderId() != null) {
-                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
-                    order.setInvoiceAmount(BigDecimal.valueOf(newPrice));
-                    order.setStatus("fulfilled");
-                    restockOrderPort.save(order);
-                    log.info("GovernanceServiceImpl: B2B Restock order id={} adjusted to price={} and approved by operator={}.", 
-                            order.getRestockOrderId(), newPrice, operator);
-                });
+                restockOrderPort
+                        .findById(approval.getRestockOrderId())
+                        .ifPresent(
+                                order -> {
+                                    order.setInvoiceAmount(BigDecimal.valueOf(newPrice));
+                                    order.setStatus("fulfilled");
+                                    restockOrderPort.save(order);
+                                    log.info(
+                                            "GovernanceServiceImpl: B2B Restock order id={}"
+                                                    + " adjusted to price={} and approved by"
+                                                    + " operator={}.",
+                                            order.getRestockOrderId(),
+                                            newPrice,
+                                            operator);
+                                });
             }
         }
     }
 
     @Override
-    public void adjustHitlItem(String compositeId, double newPrice, String operator, String reason) {
+    public void adjustHitlItem(
+            String compositeId, double newPrice, String operator, String reason) {
         if (compositeId == null) {
             throw new IllegalArgumentException("HITL item id is required");
         }
@@ -349,13 +425,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             Integer approvalId = parseId(compositeId);
             adjustOverride(approvalId, newPrice, operator, reason);
         } else {
-            throw new IllegalArgumentException("Adjust action is only supported for B2B Procurement items");
+            throw new IllegalArgumentException(
+                    "Adjust action is only supported for B2B Procurement items");
         }
     }
 
     @Override
     public String signDeliverySummary(String orderId, String podHash) {
-        log.info("GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}", orderId, podHash);
+        log.info(
+                "GovernanceServiceImpl: Generating digital signature for order id={}, podHash={}",
+                orderId,
+                podHash);
         try {
             int orderIdInt = Integer.parseInt(orderId);
             List<OrderTelemetryLog> logs = telemetryPort.findByOrderId(orderIdInt);
@@ -374,9 +454,12 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 sumTemp = sumTemp.add(temp);
             }
 
-            BigDecimal avgTemp = sumTemp.divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP);
-            String summaryPayload = String.format("orderId:%s|minTemp:%s|maxTemp:%s|avgTemp:%s|podHash:%s", 
-                    orderId, minTemp, maxTemp, avgTemp, podHash);
+            BigDecimal avgTemp =
+                    sumTemp.divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP);
+            String summaryPayload =
+                    String.format(
+                            "orderId:%s|minTemp:%s|maxTemp:%s|avgTemp:%s|podHash:%s",
+                            orderId, minTemp, maxTemp, avgTemp, podHash);
 
             Signature privateSignature = Signature.getInstance("SHA256withRSA");
             privateSignature.initSign(privateKey);
@@ -384,10 +467,15 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             byte[] signature = privateSignature.sign();
 
             String encodedSignature = Base64.getEncoder().encodeToString(signature);
-            log.info("GovernanceServiceImpl: Cryptographic signature generated: {}", encodedSignature);
+            log.info(
+                    "GovernanceServiceImpl: Cryptographic signature generated: {}",
+                    encodedSignature);
             return encodedSignature;
         } catch (Exception e) {
-            log.error("GovernanceServiceImpl: Failed to sign telemetry summary for order {}", orderId, e);
+            log.error(
+                    "GovernanceServiceImpl: Failed to sign telemetry summary for order {}",
+                    orderId,
+                    e);
             throw new RuntimeException("Cryptographic signing failed", e);
         }
     }
@@ -408,33 +496,52 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
         approvalsPort.findAll().stream()
                 .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
-                .forEach(a -> items.add(HitlItem.builder()
-                        .id(PREFIX_PROCUREMENT + a.getId())
-                        .source("B2B_PROCUREMENT")
-                        .type("b2b_override")
-                        .status(normalize(a.getStatus()))
-                        .amount(a.getAmount())
-                        .description("B2B restock override — wholesaler " + a.getWholesalerId()
-                                + ", restock order " + a.getRestockOrderId())
-                        .reference(a.getRestockOrderId() == null ? null : String.valueOf(a.getRestockOrderId()))
-                        .build()));
+                .forEach(
+                        a ->
+                                items.add(
+                                        HitlItem.builder()
+                                                .id(PREFIX_PROCUREMENT + a.getId())
+                                                .source("B2B_PROCUREMENT")
+                                                .type("b2b_override")
+                                                .status(normalize(a.getStatus()))
+                                                .amount(a.getAmount())
+                                                .description(
+                                                        "B2B restock override — wholesaler "
+                                                                + a.getWholesalerId()
+                                                                + ", restock order "
+                                                                + a.getRestockOrderId())
+                                                .reference(
+                                                        a.getRestockOrderId() == null
+                                                                ? null
+                                                                : String.valueOf(
+                                                                        a.getRestockOrderId()))
+                                                .build()));
 
-        hitlQueuePort.findByStatus("pending").forEach(t -> items.add(HitlItem.builder()
-                .id(PREFIX_AGENT + t.getTicketId())
-                .source("AGENT_ESCALATION")
-                .type(t.getType())
-                .status(normalize(t.getStatus()))
-                .amount(t.getAmount())
-                .description(t.getDescription())
-                .reference(t.getOrderId() == null ? null : String.valueOf(t.getOrderId()))
-                .createdAt(t.getCreatedAt())
-                .build()));
+        hitlQueuePort
+                .findByStatus("pending")
+                .forEach(
+                        t ->
+                                items.add(
+                                        HitlItem.builder()
+                                                .id(PREFIX_AGENT + t.getTicketId())
+                                                .source("AGENT_ESCALATION")
+                                                .type(t.getType())
+                                                .status(normalize(t.getStatus()))
+                                                .amount(t.getAmount())
+                                                .description(t.getDescription())
+                                                .reference(
+                                                        t.getOrderId() == null
+                                                                ? null
+                                                                : String.valueOf(t.getOrderId()))
+                                                .createdAt(t.getCreatedAt())
+                                                .build()));
 
         return items;
     }
 
     @Override
-    public void resolveHitlItem(String compositeId, boolean approve, String operator, String reason) {
+    public void resolveHitlItem(
+            String compositeId, boolean approve, String operator, String reason) {
         if (reason == null || reason.trim().isEmpty()) {
             throw new IllegalArgumentException("Override justification reason is required");
         }
@@ -446,7 +553,8 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             if (approve) approveOverride(approvalId, operator, reason);
             else rejectOverride(approvalId, operator, reason);
         } else if (compositeId.startsWith(PREFIX_AGENT)) {
-            resolveAgentEscalation(compositeId.substring(PREFIX_AGENT.length()), approve, operator, reason);
+            resolveAgentEscalation(
+                    compositeId.substring(PREFIX_AGENT.length()), approve, operator, reason);
         } else if (compositeId.chars().allMatch(Character::isDigit)) {
             // Legacy bare-numeric id → procurement approval (pre-unification callers).
             Integer approvalId = parseId(compositeId);
@@ -457,35 +565,51 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         }
     }
 
-    private void resolveAgentEscalation(String ticketId, boolean approve, String operator, String reason) {
+    private void resolveAgentEscalation(
+            String ticketId, boolean approve, String operator, String reason) {
         if (reason == null || reason.trim().isEmpty()) {
             throw new IllegalArgumentException("Override justification reason is required");
         }
-        HitlQueue ticket = hitlQueuePort.findByTicketId(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException("HITL ticket not found: " + ticketId));
+        HitlQueue ticket =
+                hitlQueuePort
+                        .findByTicketId(ticketId)
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "HITL ticket not found: " + ticketId));
 
         if (!"pending".equalsIgnoreCase(ticket.getStatus())) {
             throw new TicketAlreadyResolvedException("Ticket is already " + ticket.getStatus());
         }
 
         ticket.setStatus(approve ? "approved" : "voided");
-        ticket.setDescription(ticket.getDescription()
-                + " | " + (approve ? "APPROVED" : "VOIDED") + " by " + operator + ": " + reason);
+        ticket.setDescription(
+                ticket.getDescription()
+                        + " | "
+                        + (approve ? "APPROVED" : "VOIDED")
+                        + " by "
+                        + operator
+                        + ": "
+                        + reason);
 
         if (trustLedgerRepository != null) {
-            SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                    .actorType("system")
-                    .actorId(operator != null ? operator : "admin")
-                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
-                    .delta(0)
-                    .currentValue(100)
-                    .build();
+            SecurityTrustLedger audit =
+                    SecurityTrustLedger.builder()
+                            .actorType("system")
+                            .actorId(operator != null ? operator : "admin")
+                            .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                            .delta(0)
+                            .currentValue(100)
+                            .build();
             trustLedgerRepository.save(audit);
         }
 
         hitlQueuePort.save(ticket);
-        log.info("GovernanceServiceImpl: agent-escalation ticket {} {} by operator={}.",
-                ticketId, approve ? "approved" : "voided", operator);
+        log.info(
+                "GovernanceServiceImpl: agent-escalation ticket {} {} by operator={}.",
+                ticketId,
+                approve ? "approved" : "voided",
+                operator);
     }
 
     private Integer parseId(String raw) {

@@ -1,13 +1,11 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
-import ch.swissqcommerce.backend.domain.payment.adapter.out.persistence.PaymentEntity;
 import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
 import ch.swissqcommerce.backend.repository.PaymentRepository;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Component;
 
 @Component
 public class PaymentPersistenceAdapter implements PaymentPort {
@@ -20,14 +18,12 @@ public class PaymentPersistenceAdapter implements PaymentPort {
 
     @Override
     public Optional<Payment> findById(Integer paymentId) {
-        return paymentRepository.findById(paymentId)
-                .map(this::toDomain);
+        return paymentRepository.findById(paymentId).map(this::toDomain);
     }
 
     @Override
     public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
-        return paymentRepository.findByIdempotencyKey(idempotencyKey)
-                .map(this::toDomain);
+        return paymentRepository.findByIdempotencyKey(idempotencyKey).map(this::toDomain);
     }
 
     @Override

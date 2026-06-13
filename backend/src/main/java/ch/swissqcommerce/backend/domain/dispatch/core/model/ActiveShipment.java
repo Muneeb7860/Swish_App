@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.domain.dispatch.core.model;
 
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Data
 @NoArgsConstructor

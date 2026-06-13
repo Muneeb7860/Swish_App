@@ -11,7 +11,8 @@ public class RiderShift {
 
     public RiderShift() {}
 
-    public RiderShift(String shiftId, String riderId, Instant startTime, Instant endTime, String status) {
+    public RiderShift(
+            String shiftId, String riderId, Instant startTime, Instant endTime, String status) {
         this.shiftId = shiftId;
         this.riderId = riderId;
         this.startTime = startTime;
@@ -19,24 +20,57 @@ public class RiderShift {
         this.status = status;
     }
 
-    public String getShiftId() { return shiftId; }
-    public void setShiftId(String shiftId) { this.shiftId = shiftId; }
+    public String getShiftId() {
+        return shiftId;
+    }
 
-    public String getRiderId() { return riderId; }
-    public void setRiderId(String riderId) { this.riderId = riderId; }
+    public void setShiftId(String shiftId) {
+        this.shiftId = shiftId;
+    }
 
-    public Instant getStartTime() { return startTime; }
-    public void setStartTime(Instant startTime) { this.startTime = startTime; }
+    public String getRiderId() {
+        return riderId;
+    }
 
-    public Instant getEndTime() { return endTime; }
-    public void setEndTime(Instant endTime) { this.endTime = endTime; }
+    public void setRiderId(String riderId) {
+        this.riderId = riderId;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public Instant getStartTime() {
+        return startTime;
+    }
 
-    public void checkIn() { this.status = "ACTIVE"; }
-    public void complete() { this.status = "COMPLETED"; }
-    public void markNoShow() { this.status = "NO_SHOW"; }
+    public void setStartTime(Instant startTime) {
+        this.startTime = startTime;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(Instant endTime) {
+        this.endTime = endTime;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void checkIn() {
+        this.status = "ACTIVE";
+    }
+
+    public void complete() {
+        this.status = "COMPLETED";
+    }
+
+    public void markNoShow() {
+        this.status = "NO_SHOW";
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -49,11 +83,30 @@ public class RiderShift {
         private Instant endTime;
         private String status;
 
-        public Builder shiftId(String shiftId) { this.shiftId = shiftId; return this; }
-        public Builder riderId(String riderId) { this.riderId = riderId; return this; }
-        public Builder startTime(Instant startTime) { this.startTime = startTime; return this; }
-        public Builder endTime(Instant endTime) { this.endTime = endTime; return this; }
-        public Builder status(String status) { this.status = status; return this; }
+        public Builder shiftId(String shiftId) {
+            this.shiftId = shiftId;
+            return this;
+        }
+
+        public Builder riderId(String riderId) {
+            this.riderId = riderId;
+            return this;
+        }
+
+        public Builder startTime(Instant startTime) {
+            this.startTime = startTime;
+            return this;
+        }
+
+        public Builder endTime(Instant endTime) {
+            this.endTime = endTime;
+            return this;
+        }
+
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
 
         public RiderShift build() {
             return new RiderShift(shiftId, riderId, startTime, endTime, status);

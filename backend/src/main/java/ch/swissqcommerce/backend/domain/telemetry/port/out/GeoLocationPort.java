@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 
 public interface GeoLocationPort {
     void updateLocation(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp);
+
     RiderLocation getLatestLocation(Integer orderId);
 
     class RiderLocation {
@@ -20,16 +21,31 @@ public interface GeoLocationPort {
             this.timestamp = OffsetDateTime.now();
         }
 
-        public RiderLocation(BigDecimal latitude, BigDecimal longitude, BigDecimal temperature, OffsetDateTime timestamp) {
+        public RiderLocation(
+                BigDecimal latitude,
+                BigDecimal longitude,
+                BigDecimal temperature,
+                OffsetDateTime timestamp) {
             this.latitude = latitude;
             this.longitude = longitude;
             this.temperature = temperature;
             this.timestamp = timestamp;
         }
 
-        public BigDecimal getLatitude() { return latitude; }
-        public BigDecimal getLongitude() { return longitude; }
-        public BigDecimal getTemperature() { return temperature; }
-        public OffsetDateTime getTimestamp() { return timestamp; }
+        public BigDecimal getLatitude() {
+            return latitude;
+        }
+
+        public BigDecimal getLongitude() {
+            return longitude;
+        }
+
+        public BigDecimal getTemperature() {
+            return temperature;
+        }
+
+        public OffsetDateTime getTimestamp() {
+            return timestamp;
+        }
     }
 }

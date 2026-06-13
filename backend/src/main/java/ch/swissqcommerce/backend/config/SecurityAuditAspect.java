@@ -1,5 +1,7 @@
 package ch.swissqcommerce.backend.config;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -11,12 +13,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Aspect for capturing security-relevant event execution telemetry
- * and appending standard immutable records to the outbox event table.
+ * Aspect for capturing security-relevant event execution telemetry and appending standard immutable
+ * records to the outbox event table.
  */
 @Aspect
 @Component
@@ -31,7 +30,8 @@ public class SecurityAuditAspect {
     }
 
     @Around("@annotation(securityAudit)")
-    public Object audit(ProceedingJoinPoint joinPoint, SecurityAudit securityAudit) throws Throwable {
+    public Object audit(ProceedingJoinPoint joinPoint, SecurityAudit securityAudit)
+            throws Throwable {
         String actionName = securityAudit.action();
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String methodName = signature.getMethod().getName();
@@ -51,7 +51,8 @@ public class SecurityAuditAspect {
         Map<String, Object> params = new HashMap<>();
         if (parameterNames != null && args != null) {
             for (int i = 0; i < Math.min(parameterNames.length, args.length); i++) {
-                if (args[i] != null && !args[i].getClass().getSimpleName().contains("HttpServlet")) {
+                if (args[i] != null
+                        && !args[i].getClass().getSimpleName().contains("HttpServlet")) {
                     params.put(parameterNames[i], args[i].toString());
                 }
             }

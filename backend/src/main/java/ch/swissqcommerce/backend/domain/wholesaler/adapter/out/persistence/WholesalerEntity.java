@@ -1,16 +1,14 @@
 package ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "wholesalers", schema = "oltp")

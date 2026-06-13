@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.model;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "outbox_events", schema = "oltp")

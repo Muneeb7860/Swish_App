@@ -3,7 +3,6 @@ package ch.swissqcommerce.backend.domain.customer.core.service;
 import ch.swissqcommerce.backend.domain.customer.port.in.CustomerUseCase;
 import ch.swissqcommerce.backend.domain.customer.port.out.CustomerPort;
 import ch.swissqcommerce.backend.model.Customer;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -18,8 +17,10 @@ public class CustomerServiceImpl implements CustomerUseCase {
 
     @Override
     public Map<String, Object> purgeProfile(String customerId) {
-        Customer customer = customerPort.findCustomerById(customerId)
-                .orElseThrow(() -> new NoSuchElementException("Customer not found."));
+        Customer customer =
+                customerPort
+                        .findCustomerById(customerId)
+                        .orElseThrow(() -> new NoSuchElementException("Customer not found."));
 
         // GDPR F04 Right to Erasure anonymization
         customer.setFullName("ANONYMIZED-GDPR-CUST");

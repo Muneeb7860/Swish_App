@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.billing.adapter.out.persistence;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "billing_accounts", schema = "oltp")

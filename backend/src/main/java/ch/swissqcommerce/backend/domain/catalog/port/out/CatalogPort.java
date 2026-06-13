@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface CatalogPort {
     ProductListing save(ProductListing listing);
+
     Optional<ProductListing> findById(String productId);
 }

@@ -1,12 +1,12 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.out.pii;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.junit.jupiter.api.Test;
+
 /**
- * Verifies the Java fail-safe PII scanner matches the categories of the shared
- * Python pattern set (homelab-ai-governance/.../pii_patterns.py).
+ * Verifies the Java fail-safe PII scanner matches the categories of the shared Python pattern set
+ * (homelab-ai-governance/.../pii_patterns.py).
  */
 public class PiiPreScannerTest {
 
@@ -44,8 +44,8 @@ public class PiiPreScannerTest {
 
     @Test
     public void cleanBusinessPrompt_hasNoPii() {
-        assertFalse(scanner.containsPii(
-                "Summarise the weather impact on delivery demand for zone 4."));
+        assertFalse(
+                scanner.containsPii("Summarise the weather impact on delivery demand for zone 4."));
         assertFalse(scanner.containsPii("Recommend a surge multiplier between 1.0 and 3.0."));
     }
 

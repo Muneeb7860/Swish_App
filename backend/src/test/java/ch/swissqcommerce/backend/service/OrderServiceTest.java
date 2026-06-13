@@ -1,30 +1,29 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.model.OutboxEvent;
 import ch.swissqcommerce.backend.domain.transaction.core.service.OrderServiceImpl;
-import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
+import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.*;
+import ch.swissqcommerce.backend.model.*;
+import ch.swissqcommerce.backend.model.OutboxEvent;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import ch.swissqcommerce.backend.model.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceTest {
@@ -69,14 +68,23 @@ public class OrderServiceTest {
         when(riderPort.findAll()).thenReturn(List.of(rider));
         when(systemConfigPort.getSystemConfig("current_weather", "Sunny")).thenReturn("Sunny");
         when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
-        
-        when(orderPort.save(any(Order.class))).thenAnswer(invocation -> {
-            Order o = invocation.getArgument(0);
-            o.setOrderId(1);
-            return o;
-        });
 
-        Order result = orderService.checkout("CUST-1", List.of(new OrderUseCase.CartItem("ITEM-1", 2)), "Swipe", BigDecimal.ZERO, 0, "IDEM-KEY-1");
+        when(orderPort.save(any(Order.class)))
+                .thenAnswer(
+                        invocation -> {
+                            Order o = invocation.getArgument(0);
+                            o.setOrderId(1);
+                            return o;
+                        });
+
+        Order result =
+                orderService.checkout(
+                        "CUST-1",
+                        List.of(new OrderUseCase.CartItem("ITEM-1", 2)),
+                        "Swipe",
+                        BigDecimal.ZERO,
+                        0,
+                        "IDEM-KEY-1");
 
         assertNotNull(result);
         assertEquals(1, result.getOrderId());
@@ -119,14 +127,23 @@ public class OrderServiceTest {
         when(riderPort.findAll()).thenReturn(List.of(ebikeRider, scooterRider));
         when(systemConfigPort.getSystemConfig("current_weather", "Sunny")).thenReturn("Sunny");
         when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
-        
-        when(orderPort.save(any(Order.class))).thenAnswer(invocation -> {
-            Order o = invocation.getArgument(0);
-            o.setOrderId(2);
-            return o;
-        });
 
-        Order result = orderService.checkout("CUST-1", List.of(new OrderUseCase.CartItem("ITEM-1", 1)), "Swipe", BigDecimal.ZERO, 0, "IDEM-KEY-2");
+        when(orderPort.save(any(Order.class)))
+                .thenAnswer(
+                        invocation -> {
+                            Order o = invocation.getArgument(0);
+                            o.setOrderId(2);
+                            return o;
+                        });
+
+        Order result =
+                orderService.checkout(
+                        "CUST-1",
+                        List.of(new OrderUseCase.CartItem("ITEM-1", 1)),
+                        "Swipe",
+                        BigDecimal.ZERO,
+                        0,
+                        "IDEM-KEY-2");
 
         assertNotNull(result);
         assertEquals("RIDER-SCOOTER", result.getRider().getRiderId());
@@ -148,13 +165,16 @@ public class OrderServiceTest {
 
         when(orderPort.findById(100)).thenReturn(Optional.of(order));
 
-        Map<String, Object> result = orderService.requestRefund(100, "The delivery was very late, SLA expired", null, null);
+        Map<String, Object> result =
+                orderService.requestRefund(
+                        100, "The delivery was very late, SLA expired", null, null);
 
         assertNotNull(result);
         assertEquals("approved", result.get("status"));
         assertTrue(result.get("message").toString().contains("AI-AUTOPILOT"));
         assertEquals(new BigDecimal("25.50"), customer.getWalletBalance());
-        verify(ledgerUseCase, times(1)).recordTransaction(eq("REFUND-AUTO"), anyString(), anyList());
+        verify(ledgerUseCase, times(1))
+                .recordTransaction(eq("REFUND-AUTO"), anyString(), anyList());
         verify(hitlQueuePort, times(1)).save(any(HitlQueue.class));
     }
 
@@ -183,11 +203,44 @@ public class OrderServiceTest {
 
     @Test
     public void testCheckout_ValidationErrors() {
-        assertThrows(IllegalArgumentException.class, () -> orderService.checkout(null, List.of(new OrderUseCase.CartItem("1", 1)), "C", BigDecimal.ZERO, 0, null));
-        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", null, "C", BigDecimal.ZERO, 0, null));
-        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(), "C", BigDecimal.ZERO, 0, null));
-        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(new OrderUseCase.CartItem("1", 0)), "C", BigDecimal.ZERO, 0, null));
-        assertThrows(IllegalArgumentException.class, () -> orderService.checkout("C1", List.of(new OrderUseCase.CartItem("1", 1), new OrderUseCase.CartItem("1", 1)), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        orderService.checkout(
+                                null,
+                                List.of(new OrderUseCase.CartItem("1", 1)),
+                                "C",
+                                BigDecimal.ZERO,
+                                0,
+                                null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.checkout("C1", null, "C", BigDecimal.ZERO, 0, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.checkout("C1", List.of(), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        orderService.checkout(
+                                "C1",
+                                List.of(new OrderUseCase.CartItem("1", 0)),
+                                "C",
+                                BigDecimal.ZERO,
+                                0,
+                                null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        orderService.checkout(
+                                "C1",
+                                List.of(
+                                        new OrderUseCase.CartItem("1", 1),
+                                        new OrderUseCase.CartItem("1", 1)),
+                                "C",
+                                BigDecimal.ZERO,
+                                0,
+                                null));
     }
 
     @Test
@@ -208,13 +261,26 @@ public class OrderServiceTest {
         when(darkStorePort.findDarkStoreById("Central Store")).thenReturn(Optional.of(store));
         when(systemConfigPort.getSystemConfig("central_picker_backlog", "0")).thenReturn("0");
 
-        assertThrows(IllegalStateException.class, () -> orderService.checkout("CUST-1", List.of(new OrderUseCase.CartItem("ITEM-1", 1)), "C", BigDecimal.ZERO, 0, null));
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        orderService.checkout(
+                                "CUST-1",
+                                List.of(new OrderUseCase.CartItem("ITEM-1", 1)),
+                                "C",
+                                BigDecimal.ZERO,
+                                0,
+                                null));
     }
 
     @Test
     public void testCheckoutFallback() {
         Throwable t = new RuntimeException("DB down");
-        assertThrows(IllegalStateException.class, () -> orderService.checkoutFallback("C1", List.of(), "C", BigDecimal.ZERO, 0, null, t));
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        orderService.checkoutFallback(
+                                "C1", List.of(), "C", BigDecimal.ZERO, 0, null, t));
     }
 
     @Test

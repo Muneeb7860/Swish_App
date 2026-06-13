@@ -2,8 +2,8 @@ package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
+import lombok.*;
 
 @Entity
 @Table(name = "vehicle_configs", schema = "dispatch")

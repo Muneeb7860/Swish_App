@@ -1,11 +1,11 @@
 package ch.swissqcommerce.backend.domain.catalog.core.model;
 
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
-import java.util.List;
 
 @Data
 @Builder
@@ -19,6 +19,11 @@ public class ProductListing {
     private BigDecimal basePrice;
     private String status; // ACTIVE, ARCHIVED
 
-    public void updatePrice(BigDecimal newPrice) { this.basePrice = newPrice; }
-    public void archive() { this.status = "ARCHIVED"; }
+    public void updatePrice(BigDecimal newPrice) {
+        this.basePrice = newPrice;
+    }
+
+    public void archive() {
+        this.status = "ARCHIVED";
+    }
 }

@@ -867,19 +867,17 @@ export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (
 		return jwtRegex.test(token) ? token : "";
 	})(),
 	setAuthToken: (val) =>
-		set(
-			(state: any) => {
-				const rawToken = typeof val === "function" ? val(state.authToken) : val;
-				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-				const cleanToken = jwtRegex.test(rawToken) ? rawToken : "";
-				if (cleanToken) {
-					localStorage.setItem("jwt_token", cleanToken);
-				} else {
-					localStorage.removeItem("jwt_token");
-				}
-				return { authToken: cleanToken } as any;
+		set((state: any) => {
+			const rawToken = typeof val === "function" ? val(state.authToken) : val;
+			const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+			const cleanToken = jwtRegex.test(rawToken) ? rawToken : "";
+			if (cleanToken) {
+				localStorage.setItem("jwt_token", cleanToken);
+			} else {
+				localStorage.removeItem("jwt_token");
 			}
-		),
+			return { authToken: cleanToken } as any;
+		}),
 	gdprTokenProbation: false,
 	setGdprTokenProbation: (val) =>
 		set(

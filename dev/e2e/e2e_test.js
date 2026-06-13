@@ -7,7 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BACKEND_LOG_PATH = path.resolve(path.join(__dirname, "backend.log"));
-const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || "/Users/muneeb/.gemini/antigravity-ide/brain/056b2a52-4584-4a65-954d-fa54f065815a";
+const ARTIFACTS_DIR =
+	process.env.ARTIFACTS_DIR ||
+	"/Users/muneeb/.gemini/antigravity-ide/brain/056b2a52-4584-4a65-954d-fa54f065815a";
 
 // Helper to wait
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,7 +68,9 @@ async function run() {
 
 		const loginJson = await loginResponse.json();
 		const isMfaRequired = loginJson.mfaRequired || loginJson.mfa_required;
-		console.log(`[E2E TEST] Login API responded. MFA required: ${!!isMfaRequired}`);
+		console.log(
+			`[E2E TEST] Login API responded. MFA required: ${!!isMfaRequired}`,
+		);
 
 		if (isMfaRequired) {
 			// 4. Polling backend.log to extract the generated OTP PIN
@@ -96,7 +100,9 @@ async function run() {
 			});
 			await page.click("#btn-mfa-verify-otp");
 		} else {
-			console.log("[E2E TEST] Direct login succeeded. Skipping OTP verification step.");
+			console.log(
+				"[E2E TEST] Direct login succeeded. Skipping OTP verification step.",
+			);
 		}
 
 		// 6. Wait for dashboard unlock and Header

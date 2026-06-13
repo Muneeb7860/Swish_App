@@ -1,8 +1,7 @@
 package ch.swissqcommerce.backend.domain.payment.core.model;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-
-
 import lombok.*;
 
 @Getter

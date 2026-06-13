@@ -6,9 +6,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * BCrypt password encoder bean.
- * Strength 12 = ~250ms per hash on a modern CPU; tune downward only if you
- * have benchmarks proving the login latency is unacceptable.
+ * BCrypt password encoder bean. Strength 12 = ~250ms per hash on a modern CPU; tune downward only
+ * if you have benchmarks proving the login latency is unacceptable.
  */
 @Configuration
 public class PasswordEncoderConfig {

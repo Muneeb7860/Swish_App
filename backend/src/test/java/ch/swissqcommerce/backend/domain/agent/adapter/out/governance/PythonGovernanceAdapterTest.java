@@ -1,6 +1,13 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.out.governance;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,29 +18,19 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 /**
  * Unit tests for {@link PythonGovernanceAdapter} as a pure governed-service client.
  *
- * Per ADR-007 #3 the adapter no longer owns any fallback: it returns governed
- * answers/blocks and throws on transport failure so the composite
- * {@code ResilientLlmGateway} can apply the fail-safe chain.
+ * <p>Per ADR-007 #3 the adapter no longer owns any fallback: it returns governed answers/blocks and
+ * throws on transport failure so the composite {@code ResilientLlmGateway} can apply the fail-safe
+ * chain.
  */
 @ExtendWith(MockitoExtension.class)
 public class PythonGovernanceAdapterTest {
 
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock private RestTemplate restTemplate;
 
-    @Mock
-    private RestTemplateBuilder restTemplateBuilder;
+    @Mock private RestTemplateBuilder restTemplateBuilder;
 
     private PythonGovernanceAdapter adapter;
 
@@ -77,7 +74,8 @@ public class PythonGovernanceAdapterTest {
         mockResponse.put("status", "success");
         mockResponse.put("response", "governed response text");
 
-        when(restTemplate.postForObject(eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
                 .thenReturn(mockResponse);
 
         LlmResponse response = adapter.callLlm("test prompt");
@@ -94,7 +92,8 @@ public class PythonGovernanceAdapterTest {
         mockResponse.put("status", "blocked");
         mockResponse.put("message", "rate limit reached");
 
-        when(restTemplate.postForObject(eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
                 .thenReturn(mockResponse);
 
         // A governance block is a definitive decision — surfaced, never bypassed to cloud.
@@ -108,7 +107,8 @@ public class PythonGovernanceAdapterTest {
     public void testCallLlm_Offline_PropagatesException() {
         ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
 
-        when(restTemplate.postForObject(eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
                 .thenThrow(new RestClientException("Connection refused"));
 
         // Transport failure must propagate so the composite gateway applies the fail-safe chain.
@@ -119,7 +119,8 @@ public class PythonGovernanceAdapterTest {
     public void testCallLlm_NullResponse_Throws() {
         ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
 
-        when(restTemplate.postForObject(eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
                 .thenReturn(null);
 
         assertThrows(IllegalStateException.class, () -> adapter.callLlm("test prompt"));

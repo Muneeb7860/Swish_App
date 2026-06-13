@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface CustomerProfilePort {
     CustomerProfile save(CustomerProfile profile);
+
     Optional<CustomerProfile> findById(String profileId);
 }

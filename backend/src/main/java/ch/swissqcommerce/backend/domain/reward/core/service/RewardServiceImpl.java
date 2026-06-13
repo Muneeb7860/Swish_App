@@ -1,6 +1,4 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
-import ch.swissqcommerce.backend.model.Customer;
-
 
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardPoints;
 import ch.swissqcommerce.backend.domain.reward.port.in.RewardUseCase;
@@ -27,7 +25,8 @@ public class RewardServiceImpl implements RewardUseCase {
         if (amount <= 0) {
             throw new RuleViolationException("Amount must be positive");
         }
-        rewardFactory.getProcessor(ch.swissqcommerce.backend.domain.reward.core.model.RewardType.POINTS)
+        rewardFactory
+                .getProcessor(ch.swissqcommerce.backend.domain.reward.core.model.RewardType.POINTS)
                 .process(customerId, amount, "Points added via UseCase");
     }
 
@@ -36,13 +35,16 @@ public class RewardServiceImpl implements RewardUseCase {
         if (amount <= 0) {
             throw new RuleViolationException("Amount must be positive");
         }
-        RewardPoints points = rewardOutPort.findRewardPointsByCustomerId(customerId)
-            .orElseThrow(() -> new ResourceNotFoundException("Customer points not found"));
-        
+        RewardPoints points =
+                rewardOutPort
+                        .findRewardPointsByCustomerId(customerId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Customer points not found"));
+
         if (points.getLoyaltyPoints() < amount) {
             throw new RuleViolationException("Insufficient points");
         }
-        
+
         points.setLoyaltyPoints(points.getLoyaltyPoints() - amount);
         rewardOutPort.saveRewardPoints(points);
     }

@@ -3,10 +3,9 @@ package ch.swissqcommerce.backend.domain.retailer.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingTier;
 import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
 import ch.swissqcommerce.backend.domain.retailer.port.out.RetailerPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -16,19 +15,20 @@ public class RetailerPersistenceAdapter implements RetailerPort {
 
     @Override
     public Retailer save(Retailer retailer) {
-        RetailerEntity entity = RetailerEntity.builder()
-                .retailerId(retailer.getRetailerId())
-                .name(retailer.getName())
-                .contactEmail(retailer.getContactEmail())
-                .storeId(retailer.getStoreId())
-                .tier(retailer.getTier().name())
-                .status(retailer.getStatus())
-                .approvalOps(retailer.isApprovalOps())
-                .approvalCompliance(retailer.isApprovalCompliance())
-                .approvalAdmin(retailer.isApprovalAdmin())
-                .apiKeyHash(retailer.getApiKeyHash())
-                .billingAccountId(retailer.getBillingAccountId())
-                .build();
+        RetailerEntity entity =
+                RetailerEntity.builder()
+                        .retailerId(retailer.getRetailerId())
+                        .name(retailer.getName())
+                        .contactEmail(retailer.getContactEmail())
+                        .storeId(retailer.getStoreId())
+                        .tier(retailer.getTier().name())
+                        .status(retailer.getStatus())
+                        .approvalOps(retailer.isApprovalOps())
+                        .approvalCompliance(retailer.isApprovalCompliance())
+                        .approvalAdmin(retailer.isApprovalAdmin())
+                        .apiKeyHash(retailer.getApiKeyHash())
+                        .billingAccountId(retailer.getBillingAccountId())
+                        .build();
         return toDomain(repository.save(entity));
     }
 

@@ -1,5 +1,7 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.agent.core.service.*;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -8,8 +10,6 @@ import io.temporal.worker.Worker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class B2BProcurementWorkflowTest {
 
@@ -38,22 +38,21 @@ public class B2BProcurementWorkflowTest {
 
     @Test
     public void testNegotiateRestockWorkflowFlowApproved() {
-        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis = new B2BProcurementAgent.NegotiationAnalysis(
-                1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02
-        );
+        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02);
         activitiesStub.setAnalysisToReturn(expectedAnalysis);
         activitiesStub.setGuardrailApproved(true);
 
-        B2BProcurementWorkflow workflow = client.newWorkflowStub(
-                B2BProcurementWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
-                        .build()
-        );
+        B2BProcurementWorkflow workflow =
+                client.newWorkflowStub(
+                        B2BProcurementWorkflow.class,
+                        WorkflowOptions.newBuilder()
+                                .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
+                                .build());
 
-        B2BProcurementAgent.NegotiationAnalysis actualAnalysis = workflow.negotiateRestock(
-                "item-1", "Milk", 2.00, "Wholesaler A", 10
-        );
+        B2BProcurementAgent.NegotiationAnalysis actualAnalysis =
+                workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 10);
 
         assertEquals(expectedAnalysis.proposedPrice, actualAnalysis.proposedPrice);
         assertEquals(expectedAnalysis.confidence, actualAnalysis.confidence);
@@ -66,31 +65,36 @@ public class B2BProcurementWorkflowTest {
 
     @Test
     public void testNegotiateRestockWorkflowFlowBlockedAndApprovedSignal() {
-        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis = new B2BProcurementAgent.NegotiationAnalysis(
-                1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02
-        );
+        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02);
         activitiesStub.setAnalysisToReturn(expectedAnalysis);
         activitiesStub.setGuardrailApproved(false);
 
-        B2BProcurementWorkflow workflow = client.newWorkflowStub(
-                B2BProcurementWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setWorkflowId("restock-order-123")
-                        .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
-                        .build()
-        );
+        B2BProcurementWorkflow workflow =
+                client.newWorkflowStub(
+                        B2BProcurementWorkflow.class,
+                        WorkflowOptions.newBuilder()
+                                .setWorkflowId("restock-order-123")
+                                .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
+                                .build());
 
         // Run workflow asynchronously since it will block waiting for signal
-        WorkflowClient.start(workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
+        WorkflowClient.start(
+                workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
 
         // Wait a bit to ensure it is blocked
-        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException ignored) {
+        }
 
         // Send approve signal
         workflow.approve("supervisor1", "Overriding guardrail");
 
         // Wait for workflow to finish and get result
-        B2BProcurementAgent.NegotiationAnalysis actualAnalysis = workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
+        B2BProcurementAgent.NegotiationAnalysis actualAnalysis =
+                workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
 
         assertTrue(activitiesStub.pendingOrderCreated);
         assertTrue(activitiesStub.auditNegotiationCalled);
@@ -101,31 +105,36 @@ public class B2BProcurementWorkflowTest {
 
     @Test
     public void testNegotiateRestockWorkflowFlowBlockedAndAdjustedSignal() {
-        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis = new B2BProcurementAgent.NegotiationAnalysis(
-                1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02
-        );
+        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02);
         activitiesStub.setAnalysisToReturn(expectedAnalysis);
         activitiesStub.setGuardrailApproved(false);
 
-        B2BProcurementWorkflow workflow = client.newWorkflowStub(
-                B2BProcurementWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setWorkflowId("restock-order-456")
-                        .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
-                        .build()
-        );
+        B2BProcurementWorkflow workflow =
+                client.newWorkflowStub(
+                        B2BProcurementWorkflow.class,
+                        WorkflowOptions.newBuilder()
+                                .setWorkflowId("restock-order-456")
+                                .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
+                                .build());
 
         // Run workflow asynchronously
-        WorkflowClient.start(workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
+        WorkflowClient.start(
+                workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
 
         // Wait a bit
-        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException ignored) {
+        }
 
         // Send adjustBid signal
         workflow.adjustBid(1.75, "supervisor1", "Acceptable adjusted bid");
 
         // Wait for workflow to finish
-        B2BProcurementAgent.NegotiationAnalysis actualAnalysis = workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
+        B2BProcurementAgent.NegotiationAnalysis actualAnalysis =
+                workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
 
         assertTrue(activitiesStub.pendingOrderCreated);
         assertTrue(activitiesStub.auditNegotiationCalled);
@@ -137,27 +146,32 @@ public class B2BProcurementWorkflowTest {
 
     @Test
     public void testNegotiateRestockWorkflowFlowBlockedAndRejectedSignal() {
-        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis = new B2BProcurementAgent.NegotiationAnalysis(
-                1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02
-        );
+        B2BProcurementAgent.NegotiationAnalysis expectedAnalysis =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        1.50, 0.95, "Bulk pricing approved", "ACCEPTED", 0.02);
         activitiesStub.setAnalysisToReturn(expectedAnalysis);
         activitiesStub.setGuardrailApproved(false);
 
-        B2BProcurementWorkflow workflow = client.newWorkflowStub(
-                B2BProcurementWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setWorkflowId("restock-order-789")
-                        .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
-                        .build()
-        );
+        B2BProcurementWorkflow workflow =
+                client.newWorkflowStub(
+                        B2BProcurementWorkflow.class,
+                        WorkflowOptions.newBuilder()
+                                .setWorkflowId("restock-order-789")
+                                .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
+                                .build());
 
-        WorkflowClient.start(workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
+        WorkflowClient.start(
+                workflow::negotiateRestock, "item-1", "Milk", 2.00, "Wholesaler A", 100);
 
-        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException ignored) {
+        }
 
         workflow.reject("supervisor1", "Price too high");
 
-        B2BProcurementAgent.NegotiationAnalysis actualAnalysis = workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
+        B2BProcurementAgent.NegotiationAnalysis actualAnalysis =
+                workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 100);
 
         assertTrue(activitiesStub.pendingOrderCreated);
         assertTrue(activitiesStub.auditNegotiationCalled);
@@ -171,16 +185,18 @@ public class B2BProcurementWorkflowTest {
     public void testNegotiateRestockWorkflowFailureFlow() {
         activitiesStub.setExceptionToThrow(new RuntimeException("Simulated activity failure"));
 
-        B2BProcurementWorkflow workflow = client.newWorkflowStub(
-                B2BProcurementWorkflow.class,
-                WorkflowOptions.newBuilder()
-                        .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
-                        .build()
-        );
+        B2BProcurementWorkflow workflow =
+                client.newWorkflowStub(
+                        B2BProcurementWorkflow.class,
+                        WorkflowOptions.newBuilder()
+                                .setTaskQueue("B2B_PROCUREMENT_TASK_QUEUE")
+                                .build());
 
-        assertThrows(Exception.class, () -> {
-            workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 10);
-        });
+        assertThrows(
+                Exception.class,
+                () -> {
+                    workflow.negotiateRestock("item-1", "Milk", 2.00, "Wholesaler A", 10);
+                });
     }
 
     private static class B2BProcurementActivitiesStub implements B2BProcurementActivities {
@@ -226,19 +242,22 @@ public class B2BProcurementWorkflowTest {
         }
 
         @Override
-        public int createPendingOrder(String itemId, String wholesalerName, double proposedPrice, int quantity) {
+        public int createPendingOrder(
+                String itemId, String wholesalerName, double proposedPrice, int quantity) {
             pendingOrderCreated = true;
             return 123;
         }
 
         @Override
-        public int createFulfilledOrder(String itemId, String wholesalerName, double proposedPrice, int quantity) {
+        public int createFulfilledOrder(
+                String itemId, String wholesalerName, double proposedPrice, int quantity) {
             fulfilledOrderCreated = true;
             return 123;
         }
 
         @Override
-        public void auditNegotiation(int restockOrderId, String wholesalerName, double proposedPrice, int quantity) {
+        public void auditNegotiation(
+                int restockOrderId, String wholesalerName, double proposedPrice, int quantity) {
             auditNegotiationCalled = true;
         }
 
@@ -253,7 +272,8 @@ public class B2BProcurementWorkflowTest {
         }
 
         @Override
-        public void updateApprovalStatus(int restockOrderId, String status, String operator, String reason) {
+        public void updateApprovalStatus(
+                int restockOrderId, String status, String operator, String reason) {
             approvalStatus = status;
             this.operator = operator;
         }

@@ -1,10 +1,19 @@
 package ch.swissqcommerce.backend.integration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
-import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
+import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,62 +26,46 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 public class OrderIntegrationTest {
 
     @TestConfiguration
     static class TestCacheConfig {
-        @Bean @Primary
+        @Bean
+        @Primary
         public CacheManager cacheManager() {
             return new ConcurrentMapCacheManager(
-                "orders", "customer-orders", "wholesaler-restocks",
-                "wholesaler-invoices", "academy-courses", "system-health", "catalog"
-            );
+                    "orders",
+                    "customer-orders",
+                    "wholesaler-restocks",
+                    "wholesaler-invoices",
+                    "academy-courses",
+                    "system-health",
+                    "catalog");
         }
     }
 
-    @Autowired
-    private OrderUseCase orderService;
+    @Autowired private OrderUseCase orderService;
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @Autowired private OrderRepository orderRepository;
 
-    @Autowired
-    private OrderPort orderPort;
+    @Autowired private OrderPort orderPort;
 
-    @Autowired
-    private PaymentRepository paymentRepository;
+    @Autowired private PaymentRepository paymentRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    @Autowired private CustomerRepository customerRepository;
 
-    @Autowired
-    private DarkStoreRepository darkStoreRepository;
+    @Autowired private DarkStoreRepository darkStoreRepository;
 
-    @Autowired
-    private InventoryRepository inventoryRepository;
+    @Autowired private InventoryRepository inventoryRepository;
 
-    @Autowired
-    private OutboxEventRepository outboxEventRepository;
+    @Autowired private OutboxEventRepository outboxEventRepository;
 
-    @Autowired
-    private jakarta.persistence.EntityManager entityManager;
+    @Autowired private jakarta.persistence.EntityManager entityManager;
 
-    @Autowired
-    private SystemConfigurationRepository systemConfigurationRepository;
+    @Autowired private SystemConfigurationRepository systemConfigurationRepository;
 
-    @Autowired
-    private TransactionTemplate transactionTemplate;
+    @Autowired private TransactionTemplate transactionTemplate;
 
     private Customer customer;
     private DarkStore store;
@@ -80,80 +73,86 @@ public class OrderIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        transactionTemplate.executeWithoutResult(status -> {
-            // Clear repositories to ensure test isolation
-            paymentRepository.deleteAll();
-            orderRepository.deleteAll();
-            inventoryRepository.deleteAll();
-            darkStoreRepository.deleteAll();
-            customerRepository.deleteAll();
-            outboxEventRepository.deleteAll();
-            systemConfigurationRepository.deleteAll();
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    // Clear repositories to ensure test isolation
+                    paymentRepository.deleteAll();
+                    orderRepository.deleteAll();
+                    inventoryRepository.deleteAll();
+                    darkStoreRepository.deleteAll();
+                    customerRepository.deleteAll();
+                    outboxEventRepository.deleteAll();
+                    systemConfigurationRepository.deleteAll();
 
-            // 1. Seed DarkStore
-            store = DarkStore.builder()
-                    .storeId("Central Store")
-                    .storeName("Central Store")
-                    .address("10 Bahnhofstrasse, Zurich")
-                    .latitude(new BigDecimal("47.376900"))
-                    .longitude(new BigDecimal("8.541700"))
-                    .build();
-            entityManager.persist(store);
+                    // 1. Seed DarkStore
+                    store =
+                            DarkStore.builder()
+                                    .storeId("Central Store")
+                                    .storeName("Central Store")
+                                    .address("10 Bahnhofstrasse, Zurich")
+                                    .latitude(new BigDecimal("47.376900"))
+                                    .longitude(new BigDecimal("8.541700"))
+                                    .build();
+                    entityManager.persist(store);
 
-            // 2. Seed Customer with sufficient wallet balance
-            customer = Customer.builder()
-                    .customerId("CUST-100")
-                    .fullName("Jean-Luc Picard")
-                    .email("picard@starfleet.org")
-                    .hashedEmail("picard_hash_123")
-                    .walletBalance(new BigDecimal("500.00"))
-                    .loyaltyPoints(0)
-                    .trustScore(100)
-                    .build();
-            entityManager.persist(customer);
+                    // 2. Seed Customer with sufficient wallet balance
+                    customer =
+                            Customer.builder()
+                                    .customerId("CUST-100")
+                                    .fullName("Jean-Luc Picard")
+                                    .email("picard@starfleet.org")
+                                    .hashedEmail("picard_hash_123")
+                                    .walletBalance(new BigDecimal("500.00"))
+                                    .loyaltyPoints(0)
+                                    .trustScore(100)
+                                    .build();
+                    entityManager.persist(customer);
 
-            // 3. Seed Inventory item with stock
-            inventory = Inventory.builder()
-                    .itemId("MILK-001")
-                    .store(store)
-                    .name("Organic Milk 1L")
-                    .price(new BigDecimal("2.50"))
-                    .stock(10)
-                    .category("Dairy")
-                    .emoji("🥛")
-                    .perishable(true)
-                    .build();
-            entityManager.persist(inventory);
+                    // 3. Seed Inventory item with stock
+                    inventory =
+                            Inventory.builder()
+                                    .itemId("MILK-001")
+                                    .store(store)
+                                    .name("Organic Milk 1L")
+                                    .price(new BigDecimal("2.50"))
+                                    .stock(10)
+                                    .category("Dairy")
+                                    .emoji("🥛")
+                                    .perishable(true)
+                                    .build();
+                    entityManager.persist(inventory);
 
-            // Ensure Sunny weather is configured for SLA calculations
-            SystemConfiguration config = SystemConfiguration.builder()
-                    .configKey("current_weather")
-                    .configValue("Sunny")
-                    .build();
-            entityManager.persist(config);
-            
-            entityManager.flush();
-        });
+                    // Ensure Sunny weather is configured for SLA calculations
+                    SystemConfiguration config =
+                            SystemConfiguration.builder()
+                                    .configKey("current_weather")
+                                    .configValue("Sunny")
+                                    .build();
+                    entityManager.persist(config);
+
+                    entityManager.flush();
+                });
     }
 
     @Test
     @Transactional
     public void testEndToEndOrderFlow() {
         // Given
-        List<OrderUseCase.CartItem> items = List.of(
-                new OrderUseCase.CartItem("MILK-001", 3) // Buy 3 milks
-        );
+        List<OrderUseCase.CartItem> items =
+                List.of(
+                        new OrderUseCase.CartItem("MILK-001", 3) // Buy 3 milks
+                        );
         String idempotencyKey = UUID.randomUUID().toString();
 
         // When
-        Order order = orderService.checkout(
-                customer.getCustomerId(),
-                items,
-                "wallet",
-                BigDecimal.ZERO,
-                0,
-                idempotencyKey
-        );
+        Order order =
+                orderService.checkout(
+                        customer.getCustomerId(),
+                        items,
+                        "wallet",
+                        BigDecimal.ZERO,
+                        0,
+                        idempotencyKey);
 
         // Then: Verify order object
         assertNotNull(order);
@@ -162,8 +161,11 @@ public class OrderIntegrationTest {
         assertEquals(new BigDecimal("7.50"), order.getTotalAmount()); // 3 * 2.50 = 7.50
 
         // Then: Verify database persistence
-        Order persistedOrder = orderPort.findById(order.getOrderId())
-                .orElseThrow(() -> new NoSuchElementException("Order not found in database"));
+        Order persistedOrder =
+                orderPort
+                        .findById(order.getOrderId())
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found in database"));
         assertEquals("pending", persistedOrder.getStatus());
         assertEquals(new BigDecimal("7.50"), persistedOrder.getTotalAmount());
 
@@ -181,17 +183,15 @@ public class OrderIntegrationTest {
     @Transactional
     public void testOrderStateTransitions() {
         // Given: Create a pending order
-        List<OrderUseCase.CartItem> items = List.of(
-                new OrderUseCase.CartItem("MILK-001", 1)
-        );
-        Order order = orderService.checkout(
-                customer.getCustomerId(),
-                items,
-                "wallet",
-                BigDecimal.ZERO,
-                0,
-                UUID.randomUUID().toString()
-        );
+        List<OrderUseCase.CartItem> items = List.of(new OrderUseCase.CartItem("MILK-001", 1));
+        Order order =
+                orderService.checkout(
+                        customer.getCustomerId(),
+                        items,
+                        "wallet",
+                        BigDecimal.ZERO,
+                        0,
+                        UUID.randomUUID().toString());
 
         assertEquals("pending", order.getStatus());
 
@@ -205,7 +205,8 @@ public class OrderIntegrationTest {
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled("Disabled due to H2 concurrency locking limits on slower VM test environments")
+    @org.junit.jupiter.api.Disabled(
+            "Disabled due to H2 concurrency locking limits on slower VM test environments")
     public void testConcurrentOrderCheckoutStress() throws InterruptedException {
         // Given: Set stock to exactly 1 item
         inventory.setStock(1);
@@ -220,24 +221,28 @@ public class OrderIntegrationTest {
         List<Future<Void>> futures = new ArrayList<>();
 
         for (int i = 0; i < concurrentThreads; i++) {
-            futures.add(executor.submit(() -> {
-                latch.await(); // Synchronize start
-                try {
-                    // Try to checkout the last milk item concurrently
-                    orderService.checkout(
-                            customer.getCustomerId(),
-                            List.of(new OrderUseCase.CartItem("MILK-001", 1)),
-                            "wallet",
-                            BigDecimal.ZERO,
-                            0,
-                            UUID.randomUUID().toString() // Unique idempotency key per request
-                    );
-                    successCounter.incrementAndGet();
-                } catch (Exception e) {
-                    failureCounter.incrementAndGet();
-                }
-                return null;
-            }));
+            futures.add(
+                    executor.submit(
+                            () -> {
+                                latch.await(); // Synchronize start
+                                try {
+                                    // Try to checkout the last milk item concurrently
+                                    orderService.checkout(
+                                            customer.getCustomerId(),
+                                            List.of(new OrderUseCase.CartItem("MILK-001", 1)),
+                                            "wallet",
+                                            BigDecimal.ZERO,
+                                            0,
+                                            UUID.randomUUID()
+                                                    .toString() // Unique idempotency key per
+                                            // request
+                                            );
+                                    successCounter.incrementAndGet();
+                                } catch (Exception e) {
+                                    failureCounter.incrementAndGet();
+                                }
+                                return null;
+                            }));
         }
 
         // When: Trigger concurrent checkout attempts
@@ -258,7 +263,10 @@ public class OrderIntegrationTest {
 
         // Then: Exactly 1 checkout must succeed, and remaining must fail due to stock depletion
         assertEquals(1, successCounter.get(), "Exactly one checkout attempt must succeed");
-        assertEquals(concurrentThreads - 1, failureCounter.get(), "All other concurrent attempts must be blocked");
+        assertEquals(
+                concurrentThreads - 1,
+                failureCounter.get(),
+                "All other concurrent attempts must be blocked");
 
         // Then: Verify stock is exactly 0
         Inventory updatedInventory = inventoryRepository.findById("MILK-001").orElseThrow();

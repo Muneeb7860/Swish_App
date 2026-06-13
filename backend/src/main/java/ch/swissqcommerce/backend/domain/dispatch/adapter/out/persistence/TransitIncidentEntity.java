@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
-
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "transit_incidents", schema = "oltp")

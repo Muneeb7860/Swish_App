@@ -63,9 +63,7 @@ export default function App() {
 				))}
 			</div>
 
-			{tab === "admin" && !hitl.authed && (
-				<AdminLogin onLogin={hitl.login} />
-			)}
+			{tab === "admin" && !hitl.authed && <AdminLogin onLogin={hitl.login} />}
 
 			{tab === "admin" && hitl.authed && (
 				<>
@@ -78,7 +76,9 @@ export default function App() {
 							fontSize: "0.78rem",
 						}}
 					>
-						<span style={{ color: "#34d399" }}>● Supervisor session active</span>
+						<span style={{ color: "#34d399" }}>
+							● Supervisor session active
+						</span>
 						<button
 							onClick={() => hitl.refresh()}
 							style={{
@@ -105,7 +105,9 @@ export default function App() {
 						>
 							Sign out
 						</button>
-						{hitl.error && <span style={{ color: "#f87171" }}>⚠ {hitl.error}</span>}
+						{hitl.error && (
+							<span style={{ color: "#f87171" }}>⚠ {hitl.error}</span>
+						)}
 					</div>
 
 					<AdminPanel

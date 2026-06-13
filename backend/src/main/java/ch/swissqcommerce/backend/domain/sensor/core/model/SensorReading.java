@@ -1,12 +1,11 @@
 package ch.swissqcommerce.backend.domain.sensor.core.model;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 
 /** A single time-series telemetry reading emitted by a provisioned sensor. */
 @Data

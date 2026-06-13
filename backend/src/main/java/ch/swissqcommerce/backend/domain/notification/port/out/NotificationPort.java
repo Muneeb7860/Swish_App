@@ -5,6 +5,8 @@ import java.util.List;
 
 public interface NotificationPort {
     Notification save(Notification notification);
+
     List<Notification> findPending();
+
     void dispatch(Notification notification);
 }

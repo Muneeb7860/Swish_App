@@ -4,11 +4,10 @@ import ch.swissqcommerce.backend.domain.billing.core.model.BillingAccount;
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingTier;
 import ch.swissqcommerce.backend.domain.billing.core.model.Invoice;
 import ch.swissqcommerce.backend.domain.billing.port.out.BillingPort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -19,12 +18,13 @@ public class BillingPersistenceAdapter implements BillingPort {
 
     @Override
     public BillingAccount saveAccount(BillingAccount account) {
-        BillingAccountEntity entity = BillingAccountEntity.builder()
-                .accountId(account.getAccountId())
-                .storeId(account.getStoreId())
-                .tier(account.getTier().name())
-                .status(account.getStatus())
-                .build();
+        BillingAccountEntity entity =
+                BillingAccountEntity.builder()
+                        .accountId(account.getAccountId())
+                        .storeId(account.getStoreId())
+                        .tier(account.getTier().name())
+                        .status(account.getStatus())
+                        .build();
         return toDomain(accountRepository.save(entity));
     }
 
@@ -35,17 +35,18 @@ public class BillingPersistenceAdapter implements BillingPort {
 
     @Override
     public Invoice saveInvoice(Invoice invoice) {
-        InvoiceEntity entity = InvoiceEntity.builder()
-                .invoiceId(invoice.getInvoiceId())
-                .accountId(invoice.getAccountId())
-                .periodStart(invoice.getPeriodStart())
-                .periodEnd(invoice.getPeriodEnd())
-                .amount(invoice.getAmount())
-                .currency(invoice.getCurrency())
-                .status(invoice.getStatus())
-                .issuedAt(invoice.getIssuedAt())
-                .paidAt(invoice.getPaidAt())
-                .build();
+        InvoiceEntity entity =
+                InvoiceEntity.builder()
+                        .invoiceId(invoice.getInvoiceId())
+                        .accountId(invoice.getAccountId())
+                        .periodStart(invoice.getPeriodStart())
+                        .periodEnd(invoice.getPeriodEnd())
+                        .amount(invoice.getAmount())
+                        .currency(invoice.getCurrency())
+                        .status(invoice.getStatus())
+                        .issuedAt(invoice.getIssuedAt())
+                        .paidAt(invoice.getPaidAt())
+                        .build();
         return toDomain(invoiceRepository.save(entity));
     }
 
@@ -56,8 +57,9 @@ public class BillingPersistenceAdapter implements BillingPort {
 
     @Override
     public List<Invoice> findInvoicesByAccountId(String accountId) {
-        return invoiceRepository.findByAccountIdOrderByIssuedAtDesc(accountId)
-                .stream().map(this::toDomain).toList();
+        return invoiceRepository.findByAccountIdOrderByIssuedAtDesc(accountId).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     private BillingAccount toDomain(BillingAccountEntity e) {

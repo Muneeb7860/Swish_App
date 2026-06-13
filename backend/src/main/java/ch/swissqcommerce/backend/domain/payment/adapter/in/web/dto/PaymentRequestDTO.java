@@ -1,13 +1,10 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.in.web.dto;
-import ch.swissqcommerce.backend.model.Customer;
-
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
 import java.math.BigDecimal;
+import lombok.Data;
 
 @Data
 public class PaymentRequestDTO {

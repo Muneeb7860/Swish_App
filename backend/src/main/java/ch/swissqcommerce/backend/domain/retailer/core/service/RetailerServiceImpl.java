@@ -6,10 +6,6 @@ import ch.swissqcommerce.backend.domain.billing.port.in.BillingUseCase;
 import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
 import ch.swissqcommerce.backend.domain.retailer.port.in.RetailerUseCase;
 import ch.swissqcommerce.backend.domain.retailer.port.out.RetailerPort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -17,6 +13,9 @@ import java.util.HexFormat;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,29 +30,37 @@ public class RetailerServiceImpl implements RetailerUseCase {
     @Transactional
     public Retailer register(String name, String contactEmail, String storeId, BillingTier tier) {
         if (name == null || name.isBlank()) throw new IllegalArgumentException("name is required");
-        if (contactEmail == null || !contactEmail.contains("@")) throw new IllegalArgumentException("valid contactEmail is required");
-        if (storeId == null || storeId.isBlank()) throw new IllegalArgumentException("storeId (hub) is required");
+        if (contactEmail == null || !contactEmail.contains("@"))
+            throw new IllegalArgumentException("valid contactEmail is required");
+        if (storeId == null || storeId.isBlank())
+            throw new IllegalArgumentException("storeId (hub) is required");
         if (tier == null) throw new IllegalArgumentException("tier is required");
 
-        Retailer retailer = Retailer.builder()
-                .retailerId("RTL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .name(name)
-                .contactEmail(contactEmail)
-                .storeId(storeId)
-                .tier(tier)
-                .status("PENDING")
-                .approvalOps(false)
-                .approvalCompliance(false)
-                .approvalAdmin(false)
-                .build();
+        Retailer retailer =
+                Retailer.builder()
+                        .retailerId(
+                                "RTL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                        .name(name)
+                        .contactEmail(contactEmail)
+                        .storeId(storeId)
+                        .tier(tier)
+                        .status("PENDING")
+                        .approvalOps(false)
+                        .approvalCompliance(false)
+                        .approvalAdmin(false)
+                        .build();
         return port.save(retailer);
     }
 
     @Override
     @Transactional
     public ApprovalResult approveGate(String retailerId, String gate) {
-        Retailer retailer = port.findById(retailerId)
-                .orElseThrow(() -> new NoSuchElementException("Retailer not found: " + retailerId));
+        Retailer retailer =
+                port.findById(retailerId)
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Retailer not found: " + retailerId));
         if ("REJECTED".equals(retailer.getStatus())) {
             throw new IllegalStateException("Retailer application was rejected");
         }
@@ -69,13 +76,19 @@ public class RetailerServiceImpl implements RetailerUseCase {
             }
             case "admin" -> {
                 if (!retailer.isApprovalOps() || !retailer.isApprovalCompliance())
-                    throw new IllegalStateException("Ops and compliance approvals required before admin");
+                    throw new IllegalStateException(
+                            "Ops and compliance approvals required before admin");
                 retailer.setApprovalAdmin(true);
             }
-            default -> throw new IllegalArgumentException("Invalid gate: " + gate + " (ops|compliance|admin)");
+            default ->
+                    throw new IllegalArgumentException(
+                            "Invalid gate: " + gate + " (ops|compliance|admin)");
         }
 
-        boolean fullyApproved = retailer.isApprovalOps() && retailer.isApprovalCompliance() && retailer.isApprovalAdmin();
+        boolean fullyApproved =
+                retailer.isApprovalOps()
+                        && retailer.isApprovalCompliance()
+                        && retailer.isApprovalAdmin();
         String issuedApiKey = null;
 
         if (fullyApproved && "PENDING".equals(retailer.getStatus())) {
@@ -101,8 +114,7 @@ public class RetailerServiceImpl implements RetailerUseCase {
     @Transactional(readOnly = true)
     public Optional<Retailer> authenticateByApiKey(String apiKey) {
         if (apiKey == null || apiKey.isBlank()) return Optional.empty();
-        return port.findByApiKeyHash(sha256(apiKey))
-                .filter(r -> "ACTIVE".equals(r.getStatus()));
+        return port.findByApiKeyHash(sha256(apiKey)).filter(r -> "ACTIVE".equals(r.getStatus()));
     }
 
     private String generateApiKey() {

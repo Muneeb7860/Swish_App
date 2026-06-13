@@ -3,14 +3,13 @@ package ch.swissqcommerce.backend.domain.governance.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.governance.port.out.HitlQueuePort;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Component;
 
 /**
- * Adapter backing {@link HitlQueuePort} with the existing {@link HitlQueueRepository}
- * (the same table {@code MasterOrchestratorService} writes agent escalations to).
+ * Adapter backing {@link HitlQueuePort} with the existing {@link HitlQueueRepository} (the same
+ * table {@code MasterOrchestratorService} writes agent escalations to).
  */
 @Component
 public class HitlQueuePersistenceAdapter implements HitlQueuePort {

@@ -1,17 +1,20 @@
 package ch.swissqcommerce.backend.domain.customer.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.customer.port.in.CustomerUseCase;
-import ch.swissqcommerce.backend.domain.transaction.core.model.LedgerLine;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,17 +23,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonAlias;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
-@Tag(name = "Customer", description = "Customer catalog, orders, ledger, and GDPR profile operations")
+@Tag(
+        name = "Customer",
+        description = "Customer catalog, orders, ledger, and GDPR profile operations")
 public class CustomerController {
 
     private final CustomerUseCase customerUseCase;
@@ -39,8 +38,11 @@ public class CustomerController {
 
     // ---- Catalog ----------------------------------------------------------------
 
-    @Operation(summary = "Browse product catalog",
-               description = "Returns available products for the customer's zone. Optionally filter by category or search term.")
+    @Operation(
+            summary = "Browse product catalog",
+            description =
+                    "Returns available products for the customer's zone. Optionally filter by"
+                            + " category or search term.")
     @GetMapping("/catalog")
     public ResponseEntity<List<Map<String, Object>>> getCatalog(
             @RequestParam(required = false) String category,
@@ -58,16 +60,21 @@ public class CustomerController {
     public static class CheckoutRequest {
         // Optional in request body, defaulted from JWT principal if blank
         private String customerId;
-        @NotNull  private List<OrderUseCase.CartItem> items;
+        @NotNull private List<OrderUseCase.CartItem> items;
+
         @JsonProperty("payment_method")
         @JsonAlias("paymentMethod")
-        @NotBlank private String paymentMethod;
+        @NotBlank
+        private String paymentMethod;
+
         @JsonProperty("tip_amount")
         @JsonAlias("tipAmount")
         private BigDecimal tip;
+
         @JsonProperty("bags_returned")
         @JsonAlias("bagsReturned")
         private Integer bagsReturned;
+
         @JsonProperty("idempotency_key")
         @JsonAlias("idempotencyKey")
         private String idempotencyKey;
@@ -77,13 +84,19 @@ public class CustomerController {
     public static class RefundRequest {
         @JsonProperty("claim_reason")
         @JsonAlias("claimReason")
-        @NotBlank private String claimReason;
+        @NotBlank
+        private String claimReason;
+
         @JsonProperty("customer_latitude")
         @JsonAlias("customerLatitude")
-        @NotNull  private BigDecimal customerLatitude;
+        @NotNull
+        private BigDecimal customerLatitude;
+
         @JsonProperty("customer_longitude")
         @JsonAlias("customerLongitude")
-        @NotNull  private BigDecimal customerLongitude;
+        @NotNull
+        private BigDecimal customerLongitude;
+
         @JsonProperty("photo_exif_timestamp")
         @JsonAlias("photoExifTimestamp")
         private String photoExifTimestamp;
@@ -95,15 +108,16 @@ public class CustomerController {
         if (auth == null) {
             throw new AccessDeniedException("Unauthorized.");
         }
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin =
+                auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (!isAdmin && !customerId.equalsIgnoreCase(auth.getName())) {
             throw new AccessDeniedException("Access denied: you may only access your own data.");
         }
     }
 
-    @Operation(summary = "Place a new order (checkout)",
-               description = "Idempotency-Key header prevents duplicate orders on retry.")
+    @Operation(
+            summary = "Place a new order (checkout)",
+            description = "Idempotency-Key header prevents duplicate orders on retry.")
     @PostMapping("/orders")
     @Transactional
     public ResponseEntity<?> placeOrder(
@@ -117,13 +131,14 @@ public class CustomerController {
         }
         assertOwnership(req.getCustomerId());
         try {
-            Order order = orderUseCase.checkout(
-                    req.getCustomerId(),
-                    req.getItems(),
-                    req.getPaymentMethod(),
-                    req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
-                    req.getBagsReturned() != null ? req.getBagsReturned() : 0,
-                    idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
+            Order order =
+                    orderUseCase.checkout(
+                            req.getCustomerId(),
+                            req.getItems(),
+                            req.getPaymentMethod(),
+                            req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
+                            req.getBagsReturned() != null ? req.getBagsReturned() : 0,
+                            idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
             return ResponseEntity.status(201).body(order);
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
@@ -135,7 +150,8 @@ public class CustomerController {
     @Operation(summary = "List orders for a customer")
     @GetMapping("/orders")
     public ResponseEntity<?> getOrders(
-            @Parameter(description = "Customer ID") @RequestParam(required = false) String customerId) {
+            @Parameter(description = "Customer ID") @RequestParam(required = false)
+                    String customerId) {
         if (customerId == null || customerId.isBlank()) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null) {
@@ -146,20 +162,25 @@ public class CustomerController {
         return ResponseEntity.ok(orderUseCase.getCustomerOrders(customerId));
     }
 
-    @Operation(summary = "Request a refund for an order",
-               description = "Validates customer location against delivery address before approving. " +
-                             "The authenticated caller must own the order.")
+    @Operation(
+            summary = "Request a refund for an order",
+            description =
+                    "Validates customer location against delivery address before approving. "
+                            + "The authenticated caller must own the order.")
     @PostMapping("/orders/{id}/refund")
     @Transactional
     public ResponseEntity<?> requestRefund(
-            @PathVariable Integer id,
-            @Valid @RequestBody RefundRequest req) {
+            @PathVariable Integer id, @Valid @RequestBody RefundRequest req) {
         // Resolve the order first so we can assert ownership before mutating state.
         try {
             Order order = orderUseCase.getOrderById(id);
             assertOwnership(order.getCustomer().getCustomerId());
-            Map<String, Object> result = orderUseCase.requestRefund(id, req.getClaimReason(),
-                    req.getCustomerLatitude(), req.getCustomerLongitude());
+            Map<String, Object> result =
+                    orderUseCase.requestRefund(
+                            id,
+                            req.getClaimReason(),
+                            req.getCustomerLatitude(),
+                            req.getCustomerLongitude());
             Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
             return ResponseEntity.status(statusCode).body(result);
         } catch (AccessDeniedException e) {
@@ -171,11 +192,13 @@ public class CustomerController {
 
     // ---- Ledger -----------------------------------------------------------------
 
-    @Operation(summary = "Get customer double-entry ledger",
-               description = "Returns all ledger lines (wallet credits/debits, reward cashback, refunds) for the customer.")
+    @Operation(
+            summary = "Get customer double-entry ledger",
+            description =
+                    "Returns all ledger lines (wallet credits/debits, reward cashback, refunds) for"
+                            + " the customer.")
     @GetMapping("/ledger")
-    public ResponseEntity<?> getLedger(
-            @RequestParam(required = false) String customerId) {
+    public ResponseEntity<?> getLedger(@RequestParam(required = false) String customerId) {
         if (customerId == null || customerId.isBlank()) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null) {
@@ -188,8 +211,11 @@ public class CustomerController {
 
     // ---- GDPR Profile -----------------------------------------------------------
 
-    @Operation(summary = "GDPR right-to-erasure — permanently purge customer profile",
-               description = "Irreversible. Deletes PII, order history, wallet, and loyalty data. Admin or self only.")
+    @Operation(
+            summary = "GDPR right-to-erasure — permanently purge customer profile",
+            description =
+                    "Irreversible. Deletes PII, order history, wallet, and loyalty data. Admin or"
+                            + " self only.")
     @PostMapping("/profile/purge")
     @Transactional
     public ResponseEntity<?> purgeProfile(@RequestParam(required = false) String customerId) {
@@ -200,8 +226,8 @@ public class CustomerController {
         if (customerId == null || customerId.isBlank()) {
             customerId = auth.getName();
         }
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin =
+                auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (!customerId.equalsIgnoreCase(auth.getName()) && !isAdmin) {
             return ResponseEntity.status(403).body(Map.of("error", "Access denied."));
         }

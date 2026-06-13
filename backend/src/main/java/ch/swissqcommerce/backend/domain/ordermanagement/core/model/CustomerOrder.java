@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.domain.ordermanagement.core.model;
 
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.OffsetDateTime;
 
 @Data
 @Builder

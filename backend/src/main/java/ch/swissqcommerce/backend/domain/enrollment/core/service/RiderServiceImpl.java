@@ -1,22 +1,19 @@
 package ch.swissqcommerce.backend.domain.enrollment.core.service;
-import java.util.List;
-import java.util.UUID;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-
-
-import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 
 import ch.swissqcommerce.backend.domain.enrollment.core.model.*;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.port.in.RiderUseCase;
 import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
+import ch.swissqcommerce.backend.domain.transaction.core.model.*;
 import ch.swissqcommerce.backend.model.*;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-
+import ch.swissqcommerce.backend.model.Customer;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 public class RiderServiceImpl implements RiderUseCase {
 
@@ -31,20 +28,22 @@ public class RiderServiceImpl implements RiderUseCase {
         String applicationId = "APP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         String riderId = "RDR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        OnboardingApplication application = OnboardingApplication.builder()
-                .applicationId(applicationId)
-                .applicantType("rider")
-                .name(name)
-                .details(details != null ? details : "Vehicle: " + vehicleType)
-                .build();
+        OnboardingApplication application =
+                OnboardingApplication.builder()
+                        .applicationId(applicationId)
+                        .applicantType("rider")
+                        .name(name)
+                        .details(details != null ? details : "Vehicle: " + vehicleType)
+                        .build();
         outPort.saveOnboardingApplication(application);
 
-        Rider rider = Rider.builder()
-                .riderId(riderId)
-                .fullName(name)
-                .vehicleType(vehicleType)
-                .onboardingStatus("pending_review")
-                .build();
+        Rider rider =
+                Rider.builder()
+                        .riderId(riderId)
+                        .fullName(name)
+                        .vehicleType(vehicleType)
+                        .onboardingStatus("pending_review")
+                        .build();
         outPort.saveRider(rider);
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -68,12 +67,19 @@ public class RiderServiceImpl implements RiderUseCase {
     }
 
     @Override
-    public OrderTelemetryLog recordPing(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, String callerRiderId) {
+    public OrderTelemetryLog recordPing(
+            Integer orderId,
+            BigDecimal lat,
+            BigDecimal lng,
+            BigDecimal temp,
+            String callerRiderId) {
         // Security: verify the authenticated rider is the one assigned to this order.
         // Prevents a malicious rider from submitting temperature data for a competitor's
         // delivery and having it marked as spoiled.
-        Order order = outPort.findOrderById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Order order =
+                outPort.findOrderById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
         Rider assignedRider = order.getRider();
         if (assignedRider == null || !callerRiderId.equals(assignedRider.getRiderId())) {
             throw new org.springframework.security.access.AccessDeniedException(
@@ -85,11 +91,14 @@ public class RiderServiceImpl implements RiderUseCase {
     @Override
     @CacheEvict(value = "orders", key = "#orderId")
     public Map<String, Object> confirmDelivery(Integer orderId, String pin, String photoUrl) {
-        Order order = outPort.findOrderById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Order order =
+                outPort.findOrderById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
 
         if (!"shipping".equalsIgnoreCase(order.getStatus())) {
-            throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
+            throw new IllegalStateException(
+                    "Order is not in shipping state. Current: " + order.getStatus());
         }
 
         if (order.getDeliveryPin() != null && order.getDeliveryPin().equals(pin)) {
@@ -98,7 +107,9 @@ public class RiderServiceImpl implements RiderUseCase {
             // PIN mismatched or absent, but proof of delivery photo provided
             order.setProofOfDeliveryPhotoUrl(photoUrl);
         } else {
-            throw new IllegalArgumentException("Invalid Handover: Must provide correct delivery PIN or a Proof of Delivery Photo.");
+            throw new IllegalArgumentException(
+                    "Invalid Handover: Must provide correct delivery PIN or a Proof of Delivery"
+                            + " Photo.");
         }
 
         order.setStatus("delivered");
@@ -113,13 +124,14 @@ public class RiderServiceImpl implements RiderUseCase {
             rider.setTrustScore(newTrust);
             outPort.saveRider(rider);
 
-            SecurityTrustLedger riderAudit = SecurityTrustLedger.builder()
-                    .actorType("rider")
-                    .actorId(rider.getRiderId())
-                    .event("DELIVERY-CONFIRMED")
-                    .delta(5)
-                    .currentValue(newTrust)
-                    .build();
+            SecurityTrustLedger riderAudit =
+                    SecurityTrustLedger.builder()
+                            .actorType("rider")
+                            .actorId(rider.getRiderId())
+                            .event("DELIVERY-CONFIRMED")
+                            .delta(5)
+                            .currentValue(newTrust)
+                            .build();
             outPort.saveTrustLedger(riderAudit);
         }
 
@@ -147,16 +159,24 @@ public class RiderServiceImpl implements RiderUseCase {
 
     @Override
     @CacheEvict(value = "orders", key = "#orderId")
-    public Map<String, Object> rejectDelivery(Integer orderId, String reason, String rejectionPhotoUrl) {
-        Order order = outPort.findOrderById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+    public Map<String, Object> rejectDelivery(
+            Integer orderId, String reason, String rejectionPhotoUrl) {
+        Order order =
+                outPort.findOrderById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
 
         if (!"shipping".equalsIgnoreCase(order.getStatus())) {
-            throw new IllegalStateException("Order is not in shipping state. Current: " + order.getStatus());
+            throw new IllegalStateException(
+                    "Order is not in shipping state. Current: " + order.getStatus());
         }
 
-        if (reason == null || reason.isBlank() || rejectionPhotoUrl == null || rejectionPhotoUrl.isBlank()) {
-            throw new IllegalArgumentException("Invalid Rejection: Must provide a valid reason and rejection photo.");
+        if (reason == null
+                || reason.isBlank()
+                || rejectionPhotoUrl == null
+                || rejectionPhotoUrl.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Invalid Rejection: Must provide a valid reason and rejection photo.");
         }
 
         order.setStatus("rejected_at_door");
@@ -175,7 +195,9 @@ public class RiderServiceImpl implements RiderUseCase {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "rejected_at_door");
         result.put("orderId", orderId);
-        result.put("message", "Delivery rejected at the door. Instant refund issued to customer wallet.");
+        result.put(
+                "message",
+                "Delivery rejected at the door. Instant refund issued to customer wallet.");
         return result;
     }
 
@@ -183,35 +205,38 @@ public class RiderServiceImpl implements RiderUseCase {
     @Cacheable(value = "academy-courses")
     public List<Map<String, String>> getAcademyCourses() {
         return List.of(
-            Map.of("course_id", "COURSE_001", "course_name", "Cold Chain Logistics Mastery"),
-            Map.of("course_id", "COURSE_002", "course_name", "City E-Bike Advanced Maneuvers")
-        );
+                Map.of("course_id", "COURSE_001", "course_name", "Cold Chain Logistics Mastery"),
+                Map.of("course_id", "COURSE_002", "course_name", "City E-Bike Advanced Maneuvers"));
     }
 
     @Override
     public Map<String, Object> completeAcademyCourse(String riderId, String courseId) {
-        Rider rider = outPort.findRiderById(riderId)
-                .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
+        Rider rider =
+                outPort.findRiderById(riderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Rider not found: " + riderId));
 
-        String courseName = "COURSE_001".equals(courseId) ? "Cold Chain Logistics Mastery" : "City E-Bike Advanced Maneuvers";
+        String courseName =
+                "COURSE_001".equals(courseId)
+                        ? "Cold Chain Logistics Mastery"
+                        : "City E-Bike Advanced Maneuvers";
 
-        RiderAcademyCertificate cert = RiderAcademyCertificate.builder()
-                .rider(rider)
-                .courseName(courseName)
-                .build();
+        RiderAcademyCertificate cert =
+                RiderAcademyCertificate.builder().rider(rider).courseName(courseName).build();
         outPort.saveRiderAcademyCertificate(cert);
 
         int newTrust = Math.min(100, rider.getTrustScore() + 10);
         rider.setTrustScore(newTrust);
         outPort.saveRider(rider);
 
-        SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                .actorType("rider")
-                .actorId(riderId)
-                .event("ACADEMY-COURSE-COMPLETED")
-                .delta(10)
-                .currentValue(newTrust)
-                .build();
+        SecurityTrustLedger audit =
+                SecurityTrustLedger.builder()
+                        .actorType("rider")
+                        .actorId(riderId)
+                        .event("ACADEMY-COURSE-COMPLETED")
+                        .delta(10)
+                        .currentValue(newTrust)
+                        .build();
         outPort.saveTrustLedger(audit);
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -223,8 +248,13 @@ public class RiderServiceImpl implements RiderUseCase {
 
     @Override
     public Map<String, Object> approveOnboarding(String applicationId, String gateName) {
-        OnboardingApplication application = outPort.findOnboardingApplicationById(applicationId)
-                .orElseThrow(() -> new NoSuchElementException("Onboarding application not found: " + applicationId));
+        OnboardingApplication application =
+                outPort.findOnboardingApplicationById(applicationId)
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Onboarding application not found: "
+                                                        + applicationId));
 
         if (gateName == null) {
             throw new IllegalArgumentException("Gate name is required");
@@ -236,23 +266,31 @@ public class RiderServiceImpl implements RiderUseCase {
                 break;
             case "compliance":
                 if (!application.getApprovalOps()) {
-                    throw new IllegalStateException("Ops approval must precede compliance approval.");
+                    throw new IllegalStateException(
+                            "Ops approval must precede compliance approval.");
                 }
                 application.setApprovalCompliance(true);
                 break;
             case "admin":
                 if (!application.getApprovalOps() || !application.getApprovalCompliance()) {
-                    throw new IllegalStateException("Both ops and compliance approvals required before admin gate.");
+                    throw new IllegalStateException(
+                            "Both ops and compliance approvals required before admin gate.");
                 }
                 application.setApprovalAdmin(true);
                 break;
             default:
-                throw new IllegalArgumentException("Invalid gate name: " + gateName + ". Must be 'ops', 'compliance', or 'admin'.");
+                throw new IllegalArgumentException(
+                        "Invalid gate name: "
+                                + gateName
+                                + ". Must be 'ops', 'compliance', or 'admin'.");
         }
 
         outPort.saveOnboardingApplication(application);
 
-        boolean fullyApproved = application.getApprovalOps() && application.getApprovalCompliance() && application.getApprovalAdmin();
+        boolean fullyApproved =
+                application.getApprovalOps()
+                        && application.getApprovalCompliance()
+                        && application.getApprovalAdmin();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "gate_approved");
@@ -273,7 +311,9 @@ public class RiderServiceImpl implements RiderUseCase {
                 result.put("riderId", rider.getRiderId());
                 result.put("message", "Rider onboarding fully approved and active.");
             } else {
-                result.put("message", "All gates approved, but associated rider profile was not found by name.");
+                result.put(
+                        "message",
+                        "All gates approved, but associated rider profile was not found by name.");
             }
         } else {
             result.put("message", "Gate approved. Awaiting remaining approvals.");
@@ -282,4 +322,3 @@ public class RiderServiceImpl implements RiderUseCase {
         return result;
     }
 }
-

@@ -1,14 +1,12 @@
 package ch.swissqcommerce.backend.domain.feedback.adapter.out.persistence;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
 import jakarta.persistence.*;
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "feedbacks", schema = "oltp")

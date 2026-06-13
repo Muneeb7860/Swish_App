@@ -8,17 +8,16 @@ import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
+import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
-import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -37,23 +36,40 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     @Override
     public B2BProcurementAgent.NegotiationAnalysis callLlmNegotiation(
             String itemId, String itemName, double basePrice, String wholesalerName) {
-        
-        log.info("Temporal Activity: Executing LLM restock negotiation for item {} from wholesaler {}", itemName, wholesalerName);
 
-        String prompt = "You are a B2B procurement agent for Swish OS. We need to restock Item: \"" + itemName + 
-                "\" (ID: \"" + itemId + "\") from wholesaler \"" + wholesalerName + "\".\n" +
-                "The base wholesale price listed is " + basePrice + " CHF.\n" +
-                "Draft an optimized negotiation bid. Suggest a target price (typically 5% to 15% discount on base) and provide the reasoning (e.g. volume bulk buying, early net-10 payment).\n" +
-                "Return a JSON object with: \n" +
-                "  \"proposedPrice\": proposed discount price as a number,\n" +
-                "  \"confidence\": confidence score (0.0 to 1.0),\n" +
-                "  \"rationale\": rationale for the discount bid,\n" +
-                "  \"wholesalerResponse\": \"ACCEPTED\" or \"COUNTER_OFFER\" or \"REJECTED\".\n" +
-                "Response MUST be a valid JSON only, without any markdown formatting block.";
+        log.info(
+                "Temporal Activity: Executing LLM restock negotiation for item {} from wholesaler"
+                        + " {}",
+                itemName,
+                wholesalerName);
+
+        String prompt =
+                "You are a B2B procurement agent for Swish OS. We need to restock Item: \""
+                        + itemName
+                        + "\" (ID: \""
+                        + itemId
+                        + "\") from wholesaler \""
+                        + wholesalerName
+                        + "\".\n"
+                        + "The base wholesale price listed is "
+                        + basePrice
+                        + " CHF.\n"
+                        + "Draft an optimized negotiation bid. Suggest a target price (typically 5%"
+                        + " to 15% discount on base) and provide the reasoning (e.g. volume bulk"
+                        + " buying, early net-10 payment).\n"
+                        + "Return a JSON object with: \n"
+                        + "  \"proposedPrice\": proposed discount price as a number,\n"
+                        + "  \"confidence\": confidence score (0.0 to 1.0),\n"
+                        + "  \"rationale\": rationale for the discount bid,\n"
+                        + "  \"wholesalerResponse\": \"ACCEPTED\" or \"COUNTER_OFFER\" or"
+                        + " \"REJECTED\".\n"
+                        + "Response MUST be a valid JSON only, without any markdown formatting"
+                        + " block.";
 
         String content;
         double cost = 0.0;
-        String sessionKey = "procurement-" + itemId + "-" + wholesalerName.replaceAll("[^a-zA-Z0-9_-]", "-");
+        String sessionKey =
+                "procurement-" + itemId + "-" + wholesalerName.replaceAll("[^a-zA-Z0-9_-]", "-");
         try {
             if (lettaMemoryService != null) {
                 String lettaResponse = lettaMemoryService.sendMessage(sessionKey, prompt);
@@ -101,10 +117,12 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
             String rationale = (String) map.get("rationale");
             String wholesalerResponse = (String) map.get("wholesalerResponse");
 
-            return new B2BProcurementAgent.NegotiationAnalysis(proposedPrice, confidence, rationale, wholesalerResponse, cost);
+            return new B2BProcurementAgent.NegotiationAnalysis(
+                    proposedPrice, confidence, rationale, wholesalerResponse, cost);
         } catch (Exception e) {
             log.error("Temporal Activity: Failed to parse LLM response. Error: {}", e.getMessage());
-            return new B2BProcurementAgent.NegotiationAnalysis(0.0, 0.0, "Unable to parse negotiation response.", "REJECTED", cost);
+            return new B2BProcurementAgent.NegotiationAnalysis(
+                    0.0, 0.0, "Unable to parse negotiation response.", "REJECTED", cost);
         }
     }
 
@@ -116,7 +134,8 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
 
     private Integer getRestockOrderIdFromWorkflow() {
         try {
-            String workflowId = io.temporal.activity.Activity.getExecutionContext().getInfo().getWorkflowId();
+            String workflowId =
+                    io.temporal.activity.Activity.getExecutionContext().getInfo().getWorkflowId();
             if (workflowId.startsWith("restock-order-")) {
                 return Integer.parseInt(workflowId.substring("restock-order-".length()));
             }
@@ -127,8 +146,14 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
-    public int createPendingOrder(String itemId, String wholesalerName, double proposedPrice, int quantity) {
-        log.info("createPendingOrder: item={}, wholesaler={}, price={}, qty={}", itemId, wholesalerName, proposedPrice, quantity);
+    public int createPendingOrder(
+            String itemId, String wholesalerName, double proposedPrice, int quantity) {
+        log.info(
+                "createPendingOrder: item={}, wholesaler={}, price={}, qty={}",
+                itemId,
+                wholesalerName,
+                proposedPrice,
+                quantity);
         Integer orderId = getRestockOrderIdFromWorkflow();
         B2BRestockOrder order = null;
         if (orderId != null) {
@@ -143,29 +168,43 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
             return order.getRestockOrderId();
         }
 
-        DarkStore store = darkStoreRepository.findAll().stream().findFirst()
-                .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
+        DarkStore store =
+                darkStoreRepository.findAll().stream()
+                        .findFirst()
+                        .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
 
-        Wholesaler wholesaler = wholesalerPort.findAll().stream()
-                .filter(w -> w.getName() != null && w.getName().equalsIgnoreCase(wholesalerName))
-                .findFirst()
-                .orElseGet(() -> wholesalerPort.findAll().stream().findFirst().orElse(null));
+        Wholesaler wholesaler =
+                wholesalerPort.findAll().stream()
+                        .filter(
+                                w ->
+                                        w.getName() != null
+                                                && w.getName().equalsIgnoreCase(wholesalerName))
+                        .findFirst()
+                        .orElseGet(
+                                () -> wholesalerPort.findAll().stream().findFirst().orElse(null));
 
-        B2BRestockOrder restockOrder = B2BRestockOrder.builder()
-                .store(store)
-                .wholesaler(wholesaler)
-                .invoiceAmount(orderAmount)
-                .status("pending")
-                .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
-                .build();
+        B2BRestockOrder restockOrder =
+                B2BRestockOrder.builder()
+                        .store(store)
+                        .wholesaler(wholesaler)
+                        .invoiceAmount(orderAmount)
+                        .status("pending")
+                        .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
+                        .build();
 
         restockOrder = restockOrderPort.save(restockOrder);
         return restockOrder.getRestockOrderId();
     }
 
     @Override
-    public int createFulfilledOrder(String itemId, String wholesalerName, double proposedPrice, int quantity) {
-        log.info("createFulfilledOrder: item={}, wholesaler={}, price={}, qty={}", itemId, wholesalerName, proposedPrice, quantity);
+    public int createFulfilledOrder(
+            String itemId, String wholesalerName, double proposedPrice, int quantity) {
+        log.info(
+                "createFulfilledOrder: item={}, wholesaler={}, price={}, qty={}",
+                itemId,
+                wholesalerName,
+                proposedPrice,
+                quantity);
         Integer orderId = getRestockOrderIdFromWorkflow();
         B2BRestockOrder order = null;
         if (orderId != null) {
@@ -180,52 +219,78 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
             return order.getRestockOrderId();
         }
 
-        DarkStore store = darkStoreRepository.findAll().stream().findFirst()
-                .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
+        DarkStore store =
+                darkStoreRepository.findAll().stream()
+                        .findFirst()
+                        .orElseGet(() -> DarkStore.builder().storeId("store-1").build());
 
-        Wholesaler wholesaler = wholesalerPort.findAll().stream()
-                .filter(w -> w.getName() != null && w.getName().equalsIgnoreCase(wholesalerName))
-                .findFirst()
-                .orElseGet(() -> wholesalerPort.findAll().stream().findFirst().orElse(null));
+        Wholesaler wholesaler =
+                wholesalerPort.findAll().stream()
+                        .filter(
+                                w ->
+                                        w.getName() != null
+                                                && w.getName().equalsIgnoreCase(wholesalerName))
+                        .findFirst()
+                        .orElseGet(
+                                () -> wholesalerPort.findAll().stream().findFirst().orElse(null));
 
-        B2BRestockOrder restockOrder = B2BRestockOrder.builder()
-                .store(store)
-                .wholesaler(wholesaler)
-                .invoiceAmount(orderAmount)
-                .status("fulfilled")
-                .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
-                .build();
+        B2BRestockOrder restockOrder =
+                B2BRestockOrder.builder()
+                        .store(store)
+                        .wholesaler(wholesaler)
+                        .invoiceAmount(orderAmount)
+                        .status("fulfilled")
+                        .idempotencyKey("RESTOCK-" + UUID.randomUUID().toString())
+                        .build();
 
         restockOrder = restockOrderPort.save(restockOrder);
         return restockOrder.getRestockOrderId();
     }
 
     @Override
-    public void auditNegotiation(int restockOrderId, String wholesalerName, double proposedPrice, int quantity) {
-        log.info("auditNegotiation: orderId={}, wholesaler={}, price={}, qty={}", restockOrderId, wholesalerName, proposedPrice, quantity);
-        
-        Wholesaler wholesaler = wholesalerPort.findAll().stream()
-                .filter(w -> w.getName() != null && w.getName().equalsIgnoreCase(wholesalerName))
-                .findFirst()
-                .orElseGet(() -> wholesalerPort.findAll().stream().findFirst().orElse(null));
+    public void auditNegotiation(
+            int restockOrderId, String wholesalerName, double proposedPrice, int quantity) {
+        log.info(
+                "auditNegotiation: orderId={}, wholesaler={}, price={}, qty={}",
+                restockOrderId,
+                wholesalerName,
+                proposedPrice,
+                quantity);
 
-        String wholesalerId = (wholesaler != null && wholesaler.getWholesalerId() != null) ? wholesaler.getWholesalerId() : "WHOLESALER-1";
+        Wholesaler wholesaler =
+                wholesalerPort.findAll().stream()
+                        .filter(
+                                w ->
+                                        w.getName() != null
+                                                && w.getName().equalsIgnoreCase(wholesalerName))
+                        .findFirst()
+                        .orElseGet(
+                                () -> wholesalerPort.findAll().stream().findFirst().orElse(null));
+
+        String wholesalerId =
+                (wholesaler != null && wholesaler.getWholesalerId() != null)
+                        ? wholesaler.getWholesalerId()
+                        : "WHOLESALER-1";
         BigDecimal amount = BigDecimal.valueOf(proposedPrice * quantity);
 
-        ProcurementApproval approval = ProcurementApproval.builder()
-                .restockOrderId(restockOrderId)
-                .wholesalerId(wholesalerId)
-                .amount(amount)
-                .status("PENDING")
-                .build();
+        ProcurementApproval approval =
+                ProcurementApproval.builder()
+                        .restockOrderId(restockOrderId)
+                        .wholesalerId(wholesalerId)
+                        .amount(amount)
+                        .status("PENDING")
+                        .build();
         approvalsPort.save(approval);
     }
 
     @Override
     public void updateOrderStatus(int restockOrderId, String status) {
         log.info("updateOrderStatus: orderId={}, status={}", restockOrderId, status);
-        B2BRestockOrder order = restockOrderPort.findById(restockOrderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
+        B2BRestockOrder order =
+                restockOrderPort
+                        .findById(restockOrderId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Restock order not found"));
         order.setStatus(status);
         restockOrderPort.save(order);
     }
@@ -233,19 +298,32 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     @Override
     public void updateOrderPrice(int restockOrderId, double newPrice) {
         log.info("updateOrderPrice: orderId={}, newPrice={}", restockOrderId, newPrice);
-        B2BRestockOrder order = restockOrderPort.findById(restockOrderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restock order not found"));
+        B2BRestockOrder order =
+                restockOrderPort
+                        .findById(restockOrderId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Restock order not found"));
         order.setInvoiceAmount(BigDecimal.valueOf(newPrice));
         restockOrderPort.save(order);
     }
 
     @Override
-    public void updateApprovalStatus(int restockOrderId, String status, String operator, String reason) {
-        log.info("updateApprovalStatus: orderId={}, status={}, operator={}, reason={}", restockOrderId, status, operator, reason);
-        ProcurementApproval approval = approvalsPort.findAll().stream()
-                .filter(a -> a.getRestockOrderId() != null && a.getRestockOrderId().equals(restockOrderId))
-                .findFirst()
-                .orElse(null);
+    public void updateApprovalStatus(
+            int restockOrderId, String status, String operator, String reason) {
+        log.info(
+                "updateApprovalStatus: orderId={}, status={}, operator={}, reason={}",
+                restockOrderId,
+                status,
+                operator,
+                reason);
+        ProcurementApproval approval =
+                approvalsPort.findAll().stream()
+                        .filter(
+                                a ->
+                                        a.getRestockOrderId() != null
+                                                && a.getRestockOrderId().equals(restockOrderId))
+                        .findFirst()
+                        .orElse(null);
 
         if (approval != null) {
             approval.setStatus(status);

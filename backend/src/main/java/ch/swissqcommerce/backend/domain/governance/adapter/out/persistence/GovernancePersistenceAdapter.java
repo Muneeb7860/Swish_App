@@ -2,10 +2,9 @@ package ch.swissqcommerce.backend.domain.governance.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
-import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
+import org.springframework.stereotype.Component;
 
 @Component
 public class GovernancePersistenceAdapter implements ProcurementApprovalPort {
@@ -56,8 +55,6 @@ public class GovernancePersistenceAdapter implements ProcurementApprovalPort {
 
     @Override
     public List<ProcurementApproval> findAll() {
-        return repository.findAll().stream()
-                .map(this::mapToDomain)
-                .toList();
+        return repository.findAll().stream().map(this::mapToDomain).toList();
     }
 }

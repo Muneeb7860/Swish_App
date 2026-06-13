@@ -17,13 +17,19 @@ public class OutboxEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleOutboxEventSaved(OutboxEventSavedEvent event) {
-        log.info("OutboxEventListener: Received OutboxEventSavedEvent for event id={}, dispatching immediately after commit.", 
+        log.info(
+                "OutboxEventListener: Received OutboxEventSavedEvent for event id={}, dispatching"
+                        + " immediately after commit.",
                 event.getEvent().getId());
         try {
             outboxEventScheduler.dispatchEventImmediately(event.getEvent());
         } catch (Exception e) {
-            log.error("OutboxEventListener: Failed to dispatch outbox event id={} immediately. Falling back to scheduler. Error: {}", 
-                    event.getEvent().getId(), e.getMessage(), e);
+            log.error(
+                    "OutboxEventListener: Failed to dispatch outbox event id={} immediately."
+                            + " Falling back to scheduler. Error: {}",
+                    event.getEvent().getId(),
+                    e.getMessage(),
+                    e);
         }
     }
 }

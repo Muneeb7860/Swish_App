@@ -3,10 +3,9 @@ package ch.swissqcommerce.backend.domain.customer.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.customer.port.out.CustomerPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.repository.CustomerRepository;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor

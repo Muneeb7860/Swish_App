@@ -78,7 +78,14 @@ export interface PaymentRequest {
 	order_id: number;
 	customer_id: string;
 	amount: number;
-	payment_method: "Wallet" | "Swipe" | "PayPal" | "Paytm" | "Cash on Delivery" | "Direct Debit" | "Bank Transfer";
+	payment_method:
+		| "Wallet"
+		| "Swipe"
+		| "PayPal"
+		| "Paytm"
+		| "Cash on Delivery"
+		| "Direct Debit"
+		| "Bank Transfer";
 }
 
 export interface Payment {
@@ -155,7 +162,10 @@ export interface B2BInvoice {
 }
 
 export interface ChaosFaultRequest {
-	fault_type: "cold_chain_breakdown" | "wholesaler_outage" | "traffic_congestion";
+	fault_type:
+		| "cold_chain_breakdown"
+		| "wholesaler_outage"
+		| "traffic_congestion";
 	action: "inject" | "resolve";
 }
 

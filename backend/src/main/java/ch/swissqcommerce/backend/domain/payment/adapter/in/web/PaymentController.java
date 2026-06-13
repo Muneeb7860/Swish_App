@@ -5,12 +5,16 @@ import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
 import ch.swissqcommerce.backend.domain.payment.core.model.TransactionRecord;
 import ch.swissqcommerce.backend.domain.payment.port.in.PaymentProcessingUseCase;
 import ch.swissqcommerce.backend.domain.payment.port.in.PaymentUseCase;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +22,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonAlias;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -39,8 +38,8 @@ public class PaymentController {
         if (auth == null) {
             throw new AccessDeniedException("Unauthorized.");
         }
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin =
+                auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (!isAdmin && !paymentCustomerId.equalsIgnoreCase(auth.getName())) {
             throw new AccessDeniedException("Access denied: payment does not belong to you.");
         }
@@ -52,10 +51,9 @@ public class PaymentController {
         @JsonAlias("orderId")
         @NotBlank(message = "Order ID is required")
         private String orderId;
-        @NotNull @Positive
-        private BigDecimal amount;
-        @NotBlank
-        private String currency;
+
+        @NotNull @Positive private BigDecimal amount;
+        @NotBlank private String currency;
     }
 
     @Data
@@ -64,16 +62,19 @@ public class PaymentController {
         @JsonAlias("orderId")
         @NotNull
         private Integer orderId;
+
         @JsonProperty("customer_id")
         @JsonAlias("customerId")
         @NotBlank
         private String customerId;
-        @NotNull @Positive
-        private BigDecimal amount;
+
+        @NotNull @Positive private BigDecimal amount;
+
         @JsonProperty("payment_method")
         @JsonAlias("paymentMethod")
         @NotBlank
         private String paymentMethod;
+
         @JsonProperty("idempotency_key")
         @JsonAlias("idempotencyKey")
         private String idempotencyKey;
@@ -81,18 +82,24 @@ public class PaymentController {
 
     // ---- Authorize (POST /api/payments) ----------------------------------------
 
-    @Operation(summary = "Authorise a payment",
-               description = "Reserves funds against an order. Returns AUTHORIZED status. " +
-                             "Call capture to settle. Idempotency-Key prevents duplicates.")
+    @Operation(
+            summary = "Authorise a payment",
+            description =
+                    "Reserves funds against an order. Returns AUTHORIZED status. "
+                            + "Call capture to settle. Idempotency-Key prevents duplicates.")
     @PostMapping
     public ResponseEntity<?> authorize(
             @Valid @RequestBody AuthorizeRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         try {
             assertPaymentOwnership(req.getCustomerId());
-            Payment payment = paymentUseCase.authorizePayment(
-                    req.getOrderId(), req.getCustomerId(), req.getAmount(), req.getPaymentMethod(),
-                    idempotencyKey);
+            Payment payment =
+                    paymentUseCase.authorizePayment(
+                            req.getOrderId(),
+                            req.getCustomerId(),
+                            req.getAmount(),
+                            req.getPaymentMethod(),
+                            idempotencyKey);
             return ResponseEntity.status(201).body(payment);
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
@@ -132,9 +139,11 @@ public class PaymentController {
 
     // ---- Capture (POST /api/payments/{id}/capture) ------------------------------
 
-    @Operation(summary = "Capture an authorised payment",
-               description = "Settles a previously AUTHORIZED payment. Moves status to CAPTURED " +
-                             "and triggers the payment.captured + payment.notification outbox events.")
+    @Operation(
+            summary = "Capture an authorised payment",
+            description =
+                    "Settles a previously AUTHORIZED payment. Moves status to CAPTURED and triggers"
+                            + " the payment.captured + payment.notification outbox events.")
     @PostMapping("/{id}/capture")
     public ResponseEntity<?> capture(@PathVariable Integer id) {
         try {
@@ -150,13 +159,15 @@ public class PaymentController {
 
     // ---- Compensate (POST /api/payments/{id}/compensate) -------------------------
 
-    @Operation(summary = "Compensate (reverse) a payment",
-               description = "Issues a full reversal for fraud, system error, or regulatory compliance. " +
-                             "Creates a balancing ledger entry and publishes payment.compensated event.")
+    @Operation(
+            summary = "Compensate (reverse) a payment",
+            description =
+                    "Issues a full reversal for fraud, system error, or regulatory compliance."
+                            + " Creates a balancing ledger entry and publishes payment.compensated"
+                            + " event.")
     @PostMapping("/{id}/compensate")
     public ResponseEntity<?> compensate(
-            @PathVariable Integer id,
-            @RequestBody(required = false) Map<String, String> body) {
+            @PathVariable Integer id, @RequestBody(required = false) Map<String, String> body) {
         try {
             Payment payment = paymentUseCase.getPayment(id);
             assertPaymentOwnership(payment.getCustomerId());
@@ -173,14 +184,17 @@ public class PaymentController {
 
     // ---- Legacy charge endpoint (POST /api/payments/charge) ---------------------
 
-    @Operation(summary = "Direct charge (legacy)",
-               description = "Single-step charge without separate authorize/capture. Prefer the " +
-                             "authorize + capture flow for production use.")
+    @Operation(
+            summary = "Direct charge (legacy)",
+            description =
+                    "Single-step charge without separate authorize/capture. Prefer the "
+                            + "authorize + capture flow for production use.")
     @PostMapping("/charge")
     public ResponseEntity<?> charge(@Valid @RequestBody ChargeRequest request) {
         try {
             Money money = new Money(request.getAmount(), request.getCurrency());
-            TransactionRecord tx = paymentProcessingUseCase.processCharge(request.getOrderId(), money);
+            TransactionRecord tx =
+                    paymentProcessingUseCase.processCharge(request.getOrderId(), money);
             return ResponseEntity.ok(tx);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

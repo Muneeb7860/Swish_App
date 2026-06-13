@@ -14,6 +14,7 @@ public class BillingAccount {
     private String accountId;
     private String storeId;
     private BillingTier tier;
+
     /** ACTIVE, SUSPENDED, or CANCELLED. */
     private String status;
 }

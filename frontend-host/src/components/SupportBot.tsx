@@ -59,7 +59,11 @@ const parseMarkdown = (text) => {
 const isSafeUrl = (url: string | null | undefined): boolean => {
 	if (!url) return false;
 	const cleanUrl = url.trim().toLowerCase();
-	if (cleanUrl.startsWith("/") || cleanUrl.startsWith("./") || cleanUrl.startsWith("../")) {
+	if (
+		cleanUrl.startsWith("/") ||
+		cleanUrl.startsWith("./") ||
+		cleanUrl.startsWith("../")
+	) {
 		return true;
 	}
 	try {

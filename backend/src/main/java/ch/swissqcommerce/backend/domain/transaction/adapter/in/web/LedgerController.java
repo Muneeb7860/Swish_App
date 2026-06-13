@@ -9,8 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/ledger")
 public class LedgerController {
 
-    @Autowired
-    private LedgerUseCase ledgerUseCase;
+    @Autowired private LedgerUseCase ledgerUseCase;
 
     @GetMapping
     public ResponseEntity<?> getCustomerLedger(@RequestParam String customerId) {

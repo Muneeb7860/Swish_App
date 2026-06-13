@@ -14,7 +14,8 @@ public class CustomerProfileController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CustomerProfile> getProfile(@PathVariable String id) {
-        return profileUseCase.getProfile(id)
+        return profileUseCase
+                .getProfile(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

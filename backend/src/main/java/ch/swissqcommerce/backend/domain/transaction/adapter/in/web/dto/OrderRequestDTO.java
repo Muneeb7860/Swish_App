@@ -1,14 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.in.web.dto;
-import ch.swissqcommerce.backend.model.Customer;
-
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class OrderRequestDTO {

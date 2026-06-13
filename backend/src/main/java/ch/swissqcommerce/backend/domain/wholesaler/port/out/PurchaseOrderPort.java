@@ -6,6 +6,8 @@ import java.util.Optional;
 
 public interface PurchaseOrderPort {
     PurchaseOrder savePurchaseOrder(PurchaseOrder po);
+
     Optional<PurchaseOrder> findPurchaseOrder(String poId);
+
     WastageLog saveWastageLog(WastageLog log);
 }

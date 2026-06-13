@@ -1,42 +1,41 @@
 package ch.swissqcommerce.backend.domain.telemetry.core.service;
 
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.telemetry.port.in.TelemetryUseCase;
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.GeoLocationPort;
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-import ch.swissqcommerce.backend.model.SecurityTrustLedger;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Service
 public class TelemetryServiceImpl implements TelemetryUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetryServiceImpl.class);
 
-    private final java.util.concurrent.ConcurrentHashMap<Integer, ThermalBreachTracker> activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
-    private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTick> tickBuffer = new java.util.concurrent.ConcurrentLinkedQueue<>();
-    private final ConcurrentHashMap<Integer, LocationTimestamp> lastLocations = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Integer, ThermalBreachTracker>
+            activeBreaches = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentLinkedQueue<TelemetryTick> tickBuffer =
+            new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<Integer, LocationTimestamp> lastLocations =
+            new ConcurrentHashMap<>();
 
-    @Autowired
-    private TelemetryPort telemetryPort;
+    @Autowired private TelemetryPort telemetryPort;
 
-    @Autowired
-    private LedgerUseCase ledgerUseCase;
+    @Autowired private LedgerUseCase ledgerUseCase;
 
-    @Autowired
-    private GeoLocationPort geoLocationPort;
+    @Autowired private GeoLocationPort geoLocationPort;
 
     public static class TelemetryTick {
         private final Integer orderId;
@@ -45,7 +44,12 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         private final BigDecimal temperature;
         private final boolean dryIceInjected;
 
-        public TelemetryTick(Integer orderId, BigDecimal latitude, BigDecimal longitude, BigDecimal temperature, boolean dryIceInjected) {
+        public TelemetryTick(
+                Integer orderId,
+                BigDecimal latitude,
+                BigDecimal longitude,
+                BigDecimal temperature,
+                boolean dryIceInjected) {
             this.orderId = orderId;
             this.latitude = latitude;
             this.longitude = longitude;
@@ -53,11 +57,25 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             this.dryIceInjected = dryIceInjected;
         }
 
-        public Integer getOrderId() { return orderId; }
-        public BigDecimal getLatitude() { return latitude; }
-        public BigDecimal getLongitude() { return longitude; }
-        public BigDecimal getTemperature() { return temperature; }
-        public boolean isDryIceInjected() { return dryIceInjected; }
+        public Integer getOrderId() {
+            return orderId;
+        }
+
+        public BigDecimal getLatitude() {
+            return latitude;
+        }
+
+        public BigDecimal getLongitude() {
+            return longitude;
+        }
+
+        public BigDecimal getTemperature() {
+            return temperature;
+        }
+
+        public boolean isDryIceInjected() {
+            return dryIceInjected;
+        }
     }
 
     private static class LocationTimestamp {
@@ -71,9 +89,17 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
             this.timestampMs = timestampMs;
         }
 
-        public BigDecimal getLatitude() { return latitude; }
-        public BigDecimal getLongitude() { return longitude; }
-        public long getTimestampMs() { return timestampMs; }
+        public BigDecimal getLatitude() {
+            return latitude;
+        }
+
+        public BigDecimal getLongitude() {
+            return longitude;
+        }
+
+        public long getTimestampMs() {
+            return timestampMs;
+        }
     }
 
     private static class ThermalBreachTracker {
@@ -94,7 +120,8 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
                 // Add time to breach counter (cap single jump at 30s to prevent huge jumps)
                 cumulativeSeconds += Math.min(secondsSinceLastPing, 30);
             } else {
-                // Cooldown: deduct time slowly, ensuring single pings don't reset everything instantly
+                // Cooldown: deduct time slowly, ensuring single pings don't reset everything
+                // instantly
                 cumulativeSeconds = Math.max(0, cumulativeSeconds - (secondsSinceLastPing / 2));
             }
         }
@@ -106,30 +133,39 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
     @Override
     @Transactional
-    public OrderTelemetryLog recordTelemetry(Integer orderId, BigDecimal lat, BigDecimal lng,
-                                             BigDecimal temp, boolean dryIceInjected) {
-        
-        Order order = telemetryPort.findOrderById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+    public OrderTelemetryLog recordTelemetry(
+            Integer orderId,
+            BigDecimal lat,
+            BigDecimal lng,
+            BigDecimal temp,
+            boolean dryIceInjected) {
+
+        Order order =
+                telemetryPort
+                        .findOrderById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
 
         boolean alert = temp.compareTo(new BigDecimal("8.0")) > 0;
 
-        OrderTelemetryLog log = OrderTelemetryLog.builder()
-                .orderId(order.getOrderId())
-                .order(order)
-                .deviceTimestamp(OffsetDateTime.now())
-                .latitude(lat)
-                .longitude(lng)
-                .temperature(temp)
-                .dryIceInjected(dryIceInjected)
-                .alertTriggered(alert)
-                .build();
+        OrderTelemetryLog log =
+                OrderTelemetryLog.builder()
+                        .orderId(order.getOrderId())
+                        .order(order)
+                        .deviceTimestamp(OffsetDateTime.now())
+                        .latitude(lat)
+                        .longitude(lng)
+                        .temperature(temp)
+                        .dryIceInjected(dryIceInjected)
+                        .alertTriggered(alert)
+                        .build();
 
         OrderTelemetryLog savedLog = telemetryPort.save(log);
 
         // Check thermal spoilage threshold F21 — only in-transit cargo can spoil;
         // late/buffered ticks must not corrupt delivered or cancelled orders.
-        if (temp.compareTo(new BigDecimal("12.0")) >= 0 && "shipping".equalsIgnoreCase(order.getStatus())) {
+        if (temp.compareTo(new BigDecimal("12.0")) >= 0
+                && "shipping".equalsIgnoreCase(order.getStatus())) {
             order.setStatus("spoiled");
             telemetryPort.saveOrder(order);
 
@@ -142,22 +178,26 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
                 telemetryPort.saveRider(rider);
 
                 // Audit trust delta
-                SecurityTrustLedger audit = SecurityTrustLedger.builder()
-                        .actorType("rider")
-                        .actorId(rider.getRiderId())
-                        .event("COLD-BREACH-TEMP-SPIKE")
-                        .delta(-30)
-                        .currentValue(newTrust)
-                        .build();
+                SecurityTrustLedger audit =
+                        SecurityTrustLedger.builder()
+                                .actorType("rider")
+                                .actorId(rider.getRiderId())
+                                .event("COLD-BREACH-TEMP-SPIKE")
+                                .delta(-30)
+                                .currentValue(newTrust)
+                                .build();
                 telemetryPort.saveTrustLedger(audit);
             }
 
             // Log cargo write-off debit system ledger
-            List<LedgerUseCase.LedgerLeg> legs = List.of(
-                new LedgerUseCase.LedgerLeg("system", null, order.getTotalAmount(), BigDecimal.ZERO),
-                new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, order.getTotalAmount())
-            );
-            ledgerUseCase.recordTransaction("COLD-BREACH", " Perishable cargo spoilage write-off", legs);
+            List<LedgerUseCase.LedgerLeg> legs =
+                    List.of(
+                            new LedgerUseCase.LedgerLeg(
+                                    "system", null, order.getTotalAmount(), BigDecimal.ZERO),
+                            new LedgerUseCase.LedgerLeg(
+                                    "system", null, BigDecimal.ZERO, order.getTotalAmount()));
+            ledgerUseCase.recordTransaction(
+                    "COLD-BREACH", " Perishable cargo spoilage write-off", legs);
         }
 
         return OrderTelemetryLog.builder()
@@ -179,12 +219,13 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     @Override
     public boolean isThermalBreachActive(Integer orderId, BigDecimal currentTemp) {
         if (currentTemp == null) return false;
-        
+
         boolean thresholdBreached = currentTemp.compareTo(new BigDecimal("8.0")) > 0;
-        
-        ThermalBreachTracker tracker = activeBreaches.computeIfAbsent(orderId, k -> new ThermalBreachTracker());
+
+        ThermalBreachTracker tracker =
+                activeBreaches.computeIfAbsent(orderId, k -> new ThermalBreachTracker());
         tracker.update(thresholdBreached);
-        
+
         if (tracker.getCumulativeSeconds() >= 180) {
             return true;
         } else if (tracker.getCumulativeSeconds() == 0 && !thresholdBreached) {
@@ -199,31 +240,44 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     @Transactional
     public void injectDryIce(Integer orderId) {
         activeBreaches.remove(orderId);
-        
-        Order order = telemetryPort.findOrderById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        Order order =
+                telemetryPort
+                        .findOrderById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
 
         if (!"shipping".equalsIgnoreCase(order.getStatus())) {
-            throw new IllegalStateException("Coolant can only be injected during shipping transit.");
+            throw new IllegalStateException(
+                    "Coolant can only be injected during shipping transit.");
         }
         if (order.getRider() == null) {
-            throw new IllegalStateException("Order has no assigned rider; cannot record coolant telemetry.");
+            throw new IllegalStateException(
+                    "Order has no assigned rider; cannot record coolant telemetry.");
         }
 
         // Charge merchant $2.00
-        List<LedgerUseCase.LedgerLeg> legs = List.of(
-            new LedgerUseCase.LedgerLeg("system", null, new BigDecimal("2.00"), BigDecimal.ZERO),
-            new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, new BigDecimal("2.00"))
-        );
-        ledgerUseCase.recordTransaction("DRY-ICE-DEBIT", "Dry ice cargo cooling mitigation fee", legs);
+        List<LedgerUseCase.LedgerLeg> legs =
+                List.of(
+                        new LedgerUseCase.LedgerLeg(
+                                "system", null, new BigDecimal("2.00"), BigDecimal.ZERO),
+                        new LedgerUseCase.LedgerLeg(
+                                "system", null, BigDecimal.ZERO, new BigDecimal("2.00")));
+        ledgerUseCase.recordTransaction(
+                "DRY-ICE-DEBIT", "Dry ice cargo cooling mitigation fee", legs);
 
         // Record a clean telemetry tick resetting temp
-        recordTelemetry(orderId, order.getRider().getActiveLat(), order.getRider().getActiveLng(), 
-                        new BigDecimal("4.0"), true);
+        recordTelemetry(
+                orderId,
+                order.getRider().getActiveLat(),
+                order.getRider().getActiveLng(),
+                new BigDecimal("4.0"),
+                true);
     }
 
     @Override
-    public boolean updateLocation(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
+    public boolean updateLocation(
+            Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp) {
         long now = System.currentTimeMillis();
         LocationTimestamp last = lastLocations.get(orderId);
         if (last != null) {
@@ -243,7 +297,11 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
 
                 double speed = distance / timeDeltaSeconds; // meters per second
                 if (speed > 41.67) { // 150 km/h is 41.67 m/s
-                    log.warn("TelemetryServiceImpl: Discarded GPS outlier for order {}. Calculated speed: {} m/s", orderId, speed);
+                    log.warn(
+                            "TelemetryServiceImpl: Discarded GPS outlier for order {}. Calculated"
+                                    + " speed: {} m/s",
+                            orderId,
+                            speed);
                     return false; // Discard coordinate update
                 }
             }
@@ -259,7 +317,12 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
     }
 
     @Override
-    public void queueTick(Integer orderId, BigDecimal lat, BigDecimal lng, BigDecimal temp, boolean dryIceInjected) {
+    public void queueTick(
+            Integer orderId,
+            BigDecimal lat,
+            BigDecimal lng,
+            BigDecimal temp,
+            boolean dryIceInjected) {
         tickBuffer.add(new TelemetryTick(orderId, lat, lng, temp, dryIceInjected));
     }
 
@@ -275,8 +338,12 @@ public class TelemetryServiceImpl implements TelemetryUseCase {
         if (ticksToFlush.isEmpty()) return;
         for (TelemetryTick request : ticksToFlush) {
             try {
-                recordTelemetry(request.getOrderId(), request.getLatitude(), request.getLongitude(),
-                        request.getTemperature(), request.isDryIceInjected());
+                recordTelemetry(
+                        request.getOrderId(),
+                        request.getLatitude(),
+                        request.getLongitude(),
+                        request.getTemperature(),
+                        request.isDryIceInjected());
             } catch (NoSuchElementException e) {
                 // Order is gone — the tick can never succeed; drop it instead of
                 // re-queueing a poison entry that would retry on every flush forever.

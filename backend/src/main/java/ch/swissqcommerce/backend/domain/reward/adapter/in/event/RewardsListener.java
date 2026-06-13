@@ -19,9 +19,10 @@ public class RewardsListener {
     private final RiderLeaderboardService leaderboardService;
     private final OrderPort orderPort;
 
-    public RewardsListener(RewardUseCase rewardUseCase,
-                           RiderLeaderboardService leaderboardService,
-                           OrderPort orderPort) {
+    public RewardsListener(
+            RewardUseCase rewardUseCase,
+            RiderLeaderboardService leaderboardService,
+            OrderPort orderPort) {
         this.rewardUseCase = rewardUseCase;
         this.leaderboardService = leaderboardService;
         this.orderPort = orderPort;
@@ -30,7 +31,9 @@ public class RewardsListener {
     @Async
     @EventListener
     public void handleOrderFulfilled(OrderFulfilledEvent event) {
-        log.info("RewardsListener: Received OrderFulfilledEvent for order id={}", event.getOrderId());
+        log.info(
+                "RewardsListener: Received OrderFulfilledEvent for order id={}",
+                event.getOrderId());
         try {
             // 1. Credit loyalty points to the customer
             if (event.getCustomerId() != null) {
@@ -40,27 +43,45 @@ public class RewardsListener {
             // 2. Fetch the order to get the associated rider
             try {
                 int orderIdInt = Integer.parseInt(event.getOrderId());
-                orderPort.findById(orderIdInt).ifPresent(order -> {
-                    if (order.getRider() != null && order.getRider().getRiderId() != null) {
-                        String riderId = order.getRider().getRiderId();
-                        String vehicle = order.getRider().getVehicleType();
-                        double scoreDelta = 10.0;
-                        boolean isGreen = vehicle != null && ("ebike".equalsIgnoreCase(vehicle) || "bicycle".equalsIgnoreCase(vehicle) || "bike".equalsIgnoreCase(vehicle));
-                        if (isGreen) {
-                            scoreDelta += 5.0;
-                        }
-                        leaderboardService.updateRiderScore(riderId, scoreDelta);
-                        log.info("RewardsListener: Credited rider id={} with {} leaderboard points (Green Rider Bonus: {}).", 
-                                riderId, scoreDelta, isGreen);
-                    }
-                });
+                orderPort
+                        .findById(orderIdInt)
+                        .ifPresent(
+                                order -> {
+                                    if (order.getRider() != null
+                                            && order.getRider().getRiderId() != null) {
+                                        String riderId = order.getRider().getRiderId();
+                                        String vehicle = order.getRider().getVehicleType();
+                                        double scoreDelta = 10.0;
+                                        boolean isGreen =
+                                                vehicle != null
+                                                        && ("ebike".equalsIgnoreCase(vehicle)
+                                                                || "bicycle"
+                                                                        .equalsIgnoreCase(vehicle)
+                                                                || "bike"
+                                                                        .equalsIgnoreCase(vehicle));
+                                        if (isGreen) {
+                                            scoreDelta += 5.0;
+                                        }
+                                        leaderboardService.updateRiderScore(riderId, scoreDelta);
+                                        log.info(
+                                                "RewardsListener: Credited rider id={} with {}"
+                                                        + " leaderboard points (Green Rider Bonus:"
+                                                        + " {}).",
+                                                riderId,
+                                                scoreDelta,
+                                                isGreen);
+                                    }
+                                });
             } catch (NumberFormatException nfe) {
                 log.warn("RewardsListener: Invalid orderId format: {}", event.getOrderId());
             }
 
         } catch (Exception e) {
-            log.error("RewardsListener: Failed to process rewards for order id={}. Error: {}", 
-                    event.getOrderId(), e.getMessage(), e);
+            log.error(
+                    "RewardsListener: Failed to process rewards for order id={}. Error: {}",
+                    event.getOrderId(),
+                    e.getMessage(),
+                    e);
         }
     }
 }

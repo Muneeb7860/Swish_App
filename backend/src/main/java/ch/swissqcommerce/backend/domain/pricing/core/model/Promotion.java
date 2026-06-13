@@ -18,17 +18,37 @@ public class Promotion {
         this.expiresAt = expiresAt;
     }
 
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
+    public String getCode() {
+        return code;
+    }
 
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public void setCode(String code) {
+        this.code = code;
+    }
 
-    public BigDecimal getValue() { return value; }
-    public void setValue(BigDecimal value) { this.value = value; }
+    public String getType() {
+        return type;
+    }
 
-    public OffsetDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; }
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public void setValue(BigDecimal value) {
+        this.value = value;
+    }
+
+    public OffsetDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(OffsetDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -40,10 +60,25 @@ public class Promotion {
         private BigDecimal value;
         private OffsetDateTime expiresAt;
 
-        public Builder code(String code) { this.code = code; return this; }
-        public Builder type(String type) { this.type = type; return this; }
-        public Builder value(BigDecimal value) { this.value = value; return this; }
-        public Builder expiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; return this; }
+        public Builder code(String code) {
+            this.code = code;
+            return this;
+        }
+
+        public Builder type(String type) {
+            this.type = type;
+            return this;
+        }
+
+        public Builder value(BigDecimal value) {
+            this.value = value;
+            return this;
+        }
+
+        public Builder expiresAt(OffsetDateTime expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
 
         public Promotion build() {
             return new Promotion(code, type, value, expiresAt);

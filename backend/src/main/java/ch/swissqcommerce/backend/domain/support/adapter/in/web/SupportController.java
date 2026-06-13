@@ -14,7 +14,8 @@ public class SupportController {
 
     @GetMapping("/tickets/{id}")
     public ResponseEntity<SupportTicket> getTicket(@PathVariable String id) {
-        return supportUseCase.getTicket(id)
+        return supportUseCase
+                .getTicket(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

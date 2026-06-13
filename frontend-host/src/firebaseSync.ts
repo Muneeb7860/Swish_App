@@ -1,4 +1,10 @@
-import { collection, onSnapshot, setDoc, doc, getDocs } from "firebase/firestore";
+import {
+	collection,
+	onSnapshot,
+	setDoc,
+	doc,
+	getDocs,
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { useStore, Product } from "./store";
 
@@ -87,7 +93,7 @@ const INITIAL_PRODUCTS = [
 
 export async function syncProductsFromFirebase() {
 	const productsRef = collection(db, "products");
-	
+
 	// Seed if empty
 	const snapshot = await getDocs(productsRef);
 	if (snapshot.empty) {
@@ -103,7 +109,7 @@ export async function syncProductsFromFirebase() {
 		snap.forEach((doc) => {
 			products.push(doc.data() as Product);
 		});
-		
+
 		if (products.length > 0) {
 			useStore.getState().setProducts(products);
 		}

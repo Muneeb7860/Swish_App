@@ -3,9 +3,9 @@ package ch.swissqcommerce.backend.domain.support.core.service;
 import ch.swissqcommerce.backend.domain.support.core.model.SupportTicket;
 import ch.swissqcommerce.backend.domain.support.port.in.SupportUseCase;
 import ch.swissqcommerce.backend.domain.support.port.out.SupportPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
