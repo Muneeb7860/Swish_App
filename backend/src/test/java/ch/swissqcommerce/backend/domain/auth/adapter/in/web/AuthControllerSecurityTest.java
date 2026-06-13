@@ -38,7 +38,7 @@ public class AuthControllerSecurityTest {
                 .claim("role", "ADMIN")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 100000))
-                .signWith(key)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
 
         // Clear security context
@@ -72,7 +72,7 @@ public class AuthControllerSecurityTest {
                 .claim("role", "CUSTOMER")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 100000))
-                .signWith(key)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
 
         // Clear security context

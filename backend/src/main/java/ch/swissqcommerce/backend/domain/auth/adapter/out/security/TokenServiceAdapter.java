@@ -45,7 +45,7 @@ public class TokenServiceAdapter implements TokenServicePort {
                 .claim("sid", sessionId)
                 .issuedAt(now)
                 .expiration(exp)
-                .signWith(signingKey)
+                .signWith(signingKey, Jwts.SIG.HS256)
                 .compact();
     }
 

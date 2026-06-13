@@ -2,7 +2,7 @@
   "_comment": "Test configuration fixture. Sensitive values (adminToken, etc.) must be supplied via CYPRESS_* environment variables, never committed here.",
   "defaultPassword": "Cypress1!",
   "gatewayPort": 8083,
-  "viteFrontendPort": 5173,
+  "viteFrontendPort": 3001,
   "defaultTimeoutMs": 10000,
   "adminEndpoints": [
     "/api/admin/health",

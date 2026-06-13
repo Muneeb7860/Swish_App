@@ -92,6 +92,9 @@ public class RewardsAndGovernanceIntegrationTest {
     private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent b2BProcurementAgent;
 
     @MockBean
+    private ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementActivities b2BProcurementActivities;
+
+    @MockBean
     private StringRedisTemplate redisTemplate;
 
     private Customer customer;
@@ -282,10 +285,40 @@ public class RewardsAndGovernanceIntegrationTest {
         request.setQuantity(3000); // 3000 * 2.50 = 7500 CHF (exceeds 5000 CHF limit)
         request.setCustomerId("CUST-999");
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
+        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
                 Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.anyString()))
                 .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
                         2.50, 0.95, "Good price", "ACCEPTED", 0.00005));
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.anyString(), Mockito.anyInt()))
+                .thenAnswer(invocation -> {
+                    String itemId = invocation.getArgument(0);
+                    String itemName = invocation.getArgument(1);
+                    double basePrice = invocation.getArgument(2);
+                    String wholesalerName = invocation.getArgument(3);
+                    int quantity = invocation.getArgument(4);
+
+                    DarkStore store = darkStoreRepository.findAll().stream().findFirst().orElse(null);
+                    WholesalerEntity wholesalerEntity = wholesalerRepository.findAll().stream()
+                            .filter(w -> w.getName() != null && w.getName().equalsIgnoreCase(wholesalerName))
+                            .findFirst()
+                            .orElse(null);
+
+                    B2BRestockOrderEntity orderEntity = B2BRestockOrderEntity.builder()
+                            .store(store)
+                            .wholesaler(wholesalerEntity)
+                            .invoiceAmount(BigDecimal.valueOf(2.50 * quantity))
+                            .status("pending")
+                            .idempotencyKey("RESTOCK-" + java.util.UUID.randomUUID().toString())
+                            .build();
+                    orderEntity = restockOrderRepository.save(orderEntity);
+
+                    governanceUseCase.auditNegotiation(orderEntity.getRestockOrderId(), wholesalerEntity.getWholesalerId(), orderEntity.getInvoiceAmount());
+
+                    return new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                            2.50, 0.95, "Good price", "ACCEPTED", 0.00005);
+                });
 
         // When
         ResponseEntity<AgentUseCase.NegotiationResponse> responseEntity = agentController.negotiate(request);
@@ -335,13 +368,23 @@ public class RewardsAndGovernanceIntegrationTest {
         request.setQuantity(100); 
         request.setCustomerId("CUST-999");
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
+        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
                 Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Starfleet Supplies")))
                 .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
                         2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
 
-        Mockito.when(b2BProcurementAgent.negotiateRestock(
+        Mockito.when(b2BProcurementActivities.callLlmNegotiation(
                 Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Galactic Supplies")))
+                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                        2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Starfleet Supplies"), Mockito.anyInt()))
+                .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
+                        2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
+
+        Mockito.when(b2BProcurementAgent.negotiateRestock(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyDouble(), Mockito.eq("Galactic Supplies"), Mockito.anyInt()))
                 .thenReturn(new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent.NegotiationAnalysis(
                         2.30, 0.95, "Cheaper price from Galactic", "ACCEPTED", 0.00005));
 

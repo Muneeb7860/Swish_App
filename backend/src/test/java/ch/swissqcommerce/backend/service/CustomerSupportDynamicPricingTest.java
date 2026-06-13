@@ -30,6 +30,7 @@ public class CustomerSupportDynamicPricingTest {
     @Mock private DynamicPricingAgent dynamicPricingAgent;
     @Mock private EventUseCase eventUseCase;
     @Mock private B2BProcurementAgent b2BProcurementAgent;
+    @Mock private B2BProcurementActivities b2BProcurementActivities;
     @Mock private ProcurementGuardrailsEngine procurementGuardrailsEngine;
     @Mock private ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort wholesalerPort;
 
@@ -56,6 +57,9 @@ public class CustomerSupportDynamicPricingTest {
                 mock(io.micrometer.core.instrument.MeterRegistry.class),
                 mock(ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort.class)
         );
+
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                masterOrchestratorService, "b2BProcurementActivities", b2BProcurementActivities);
     }
 
     @Test
@@ -231,5 +235,6 @@ public class CustomerSupportDynamicPricingTest {
 
         // Verify that B2B procurement agent was NEVER called
         verify(b2BProcurementAgent, never()).negotiateRestock(anyString(), anyString(), anyDouble(), anyString());
+        verify(b2BProcurementAgent, never()).negotiateRestock(anyString(), anyString(), anyDouble(), anyString(), anyInt());
     }
 }

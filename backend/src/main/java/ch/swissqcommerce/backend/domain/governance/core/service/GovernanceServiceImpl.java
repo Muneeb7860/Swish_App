@@ -18,6 +18,9 @@ import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.temporal.client.WorkflowClient;
+import ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementWorkflow;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -49,6 +52,9 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     private final TelemetryPort telemetryPort;
     private final HitlQueuePort hitlQueuePort;
     private final SecurityTrustLedgerRepository trustLedgerRepository;
+
+    @Autowired(required = false)
+    private WorkflowClient workflowClient;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
@@ -183,10 +189,18 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
         }
 
-        approval.setStatus("APPROVED");
-        approval.setOverrideBy(operator);
-        approval.setOverrideReason(reason);
-        approvalsPort.save(approval);
+        boolean signaled = false;
+        if (workflowClient != null && approval.getRestockOrderId() != null) {
+            try {
+                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
+                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                workflow.approve(operator, reason);
+                signaled = true;
+                log.info("GovernanceServiceImpl: Sent approve signal to Temporal workflow restock-order-{}", approval.getRestockOrderId());
+            } catch (Exception e) {
+                log.warn("GovernanceServiceImpl: Failed to signal workflow, falling back to direct db update: {}", e.getMessage());
+            }
+        }
 
         if (trustLedgerRepository != null) {
             SecurityTrustLedger audit = SecurityTrustLedger.builder()
@@ -199,13 +213,20 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             trustLedgerRepository.save(audit);
         }
 
-        if (approval.getRestockOrderId() != null) {
-            restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
-                order.setStatus("fulfilled");
-                restockOrderPort.save(order);
-                log.info("GovernanceServiceImpl: B2B Restock order id={} approved by operator={}.", 
-                        order.getRestockOrderId(), operator);
-            });
+        if (!signaled) {
+            approval.setStatus("APPROVED");
+            approval.setOverrideBy(operator);
+            approval.setOverrideReason(reason);
+            approvalsPort.save(approval);
+
+            if (approval.getRestockOrderId() != null) {
+                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
+                    order.setStatus("fulfilled");
+                    restockOrderPort.save(order);
+                    log.info("GovernanceServiceImpl: B2B Restock order id={} approved by operator={}.", 
+                            order.getRestockOrderId(), operator);
+                });
+            }
         }
     }
 
@@ -223,10 +244,18 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
         }
 
-        approval.setStatus("REJECTED");
-        approval.setOverrideBy(operator);
-        approval.setOverrideReason(reason);
-        approvalsPort.save(approval);
+        boolean signaled = false;
+        if (workflowClient != null && approval.getRestockOrderId() != null) {
+            try {
+                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
+                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                workflow.reject(operator, reason);
+                signaled = true;
+                log.info("GovernanceServiceImpl: Sent reject signal to Temporal workflow restock-order-{}", approval.getRestockOrderId());
+            } catch (Exception e) {
+                log.warn("GovernanceServiceImpl: Failed to signal workflow, falling back to direct db update: {}", e.getMessage());
+            }
+        }
 
         if (trustLedgerRepository != null) {
             SecurityTrustLedger audit = SecurityTrustLedger.builder()
@@ -239,13 +268,88 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
             trustLedgerRepository.save(audit);
         }
 
-        if (approval.getRestockOrderId() != null) {
-            restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
-                order.setStatus("failed");
-                restockOrderPort.save(order);
-                log.warn("GovernanceServiceImpl: B2B Restock order id={} rejected by operator={}.", 
-                        order.getRestockOrderId(), operator);
-            });
+        if (!signaled) {
+            approval.setStatus("REJECTED");
+            approval.setOverrideBy(operator);
+            approval.setOverrideReason(reason);
+            approvalsPort.save(approval);
+
+            if (approval.getRestockOrderId() != null) {
+                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
+                    order.setStatus("failed");
+                    restockOrderPort.save(order);
+                    log.warn("GovernanceServiceImpl: B2B Restock order id={} rejected by operator={}.", 
+                            order.getRestockOrderId(), operator);
+                });
+            }
+        }
+    }
+
+    @Override
+    @SecurityAudit(action = "governance.override.adjust")
+    public void adjustOverride(Integer approvalId, double newPrice, String operator, String reason) {
+        ProcurementApproval approval = approvalsPort.findById(approvalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
+
+        if (!"PENDING".equalsIgnoreCase(approval.getStatus())) {
+            throw new TicketAlreadyResolvedException("Ticket is already " + approval.getStatus());
+        }
+
+        boolean signaled = false;
+        if (workflowClient != null && approval.getRestockOrderId() != null) {
+            try {
+                B2BProcurementWorkflow workflow = workflowClient.newWorkflowStub(
+                        B2BProcurementWorkflow.class, "restock-order-" + approval.getRestockOrderId());
+                workflow.adjustBid(newPrice, operator, reason);
+                signaled = true;
+                log.info("GovernanceServiceImpl: Sent adjustBid signal to Temporal workflow restock-order-{} with price={}", approval.getRestockOrderId(), newPrice);
+            } catch (Exception e) {
+                log.warn("GovernanceServiceImpl: Failed to signal workflow (adjust), falling back to direct db update: {}", e.getMessage());
+            }
+        }
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
+
+        if (!signaled) {
+            approval.setStatus("APPROVED");
+            approval.setOverrideBy(operator);
+            approval.setOverrideReason("Adjusted bid to " + newPrice + " CHF: " + reason);
+            approvalsPort.save(approval);
+
+            if (approval.getRestockOrderId() != null) {
+                restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
+                    order.setInvoiceAmount(BigDecimal.valueOf(newPrice));
+                    order.setStatus("fulfilled");
+                    restockOrderPort.save(order);
+                    log.info("GovernanceServiceImpl: B2B Restock order id={} adjusted to price={} and approved by operator={}.", 
+                            order.getRestockOrderId(), newPrice, operator);
+                });
+            }
+        }
+    }
+
+    @Override
+    public void adjustHitlItem(String compositeId, double newPrice, String operator, String reason) {
+        if (compositeId == null) {
+            throw new IllegalArgumentException("HITL item id is required");
+        }
+        if (compositeId.startsWith(PREFIX_PROCUREMENT)) {
+            Integer approvalId = parseId(compositeId.substring(PREFIX_PROCUREMENT.length()));
+            adjustOverride(approvalId, newPrice, operator, reason);
+        } else if (compositeId.chars().allMatch(Character::isDigit)) {
+            Integer approvalId = parseId(compositeId);
+            adjustOverride(approvalId, newPrice, operator, reason);
+        } else {
+            throw new IllegalArgumentException("Adjust action is only supported for B2B Procurement items");
         }
     }
 

@@ -65,4 +65,29 @@ public class HitlQueueController {
                 "message", "HITL item rejected."
         ));
     }
+
+    public static class AdjustRequest {
+        private double newPrice;
+        private String operator;
+        private String reason;
+
+        public double getNewPrice() { return newPrice; }
+        public void setNewPrice(double newPrice) { this.newPrice = newPrice; }
+        public String getOperator() { return operator; }
+        public void setOperator(String operator) { this.operator = operator; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
+    @PostMapping("/{id}/adjust")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> adjust(@PathVariable String id,
+                                                      @RequestBody AdjustRequest request) {
+        governanceUseCase.adjustHitlItem(id, request.getNewPrice(), request.getOperator(), request.getReason());
+        return ResponseEntity.ok(Map.of(
+                "id", id,
+                "status", "ADJUSTED",
+                "message", "HITL item adjusted and approved."
+        ));
+    }
 }

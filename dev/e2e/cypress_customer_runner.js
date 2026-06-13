@@ -3,8 +3,8 @@ import fs from "fs";
 import http from "http";
 import net from "net";
 import path from "path";
-
 import { fileURLToPath } from "url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_DIR = path.resolve(path.join(__dirname, "../.."));
@@ -20,7 +20,6 @@ function isPortOpen(port) {
 			const onError = () => {
 				socket.destroy();
 				if (host === "127.0.0.1") {
-					// If IPv4 failed, fall back to checking IPv6 loopback
 					checkAddress("::1");
 				} else {
 					resolve(false);
@@ -41,11 +40,11 @@ function isPortOpen(port) {
 // Helper to wait for all required ports
 async function waitForPorts(ports, timeoutMs = 60000) {
 	const start = Date.now();
-	console.log(`[E2E RUNNER] Waiting for ports: ${ports.join(", ")}...`);
+	console.log(`[CYPRESS RUNNER] Waiting for ports: ${ports.join(", ")}...`);
 	while (Date.now() - start < timeoutMs) {
 		const statuses = await Promise.all(ports.map((port) => isPortOpen(port)));
 		if (statuses.every((status) => status === true)) {
-			console.log("[E2E RUNNER] All services are online!");
+			console.log("[CYPRESS RUNNER] All services are online!");
 			return true;
 		}
 		await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -55,9 +54,7 @@ async function waitForPorts(ports, timeoutMs = 60000) {
 
 // Helper to spawn background processes
 function runService(name, command, args, cwd, logFile, envOverrides = {}) {
-	console.log(
-		`[E2E RUNNER] Starting service [${name}] in directory: ${cwd}...`,
-	);
+	console.log(`[CYPRESS RUNNER] Starting service [${name}] in directory: ${cwd}...`);
 	const logStream = fs.createWriteStream(logFile);
 
 	const proc = spawn(command, args, {
@@ -72,7 +69,7 @@ function runService(name, command, args, cwd, logFile, envOverrides = {}) {
 	proc.stderr.pipe(logStream);
 
 	proc.on("close", (code) => {
-		console.log(`[E2E RUNNER] Service [${name}] exited with code: ${code}`);
+		console.log(`[CYPRESS RUNNER] Service [${name}] exited with code: ${code}`);
 	});
 
 	processes.push(proc);
@@ -80,45 +77,30 @@ function runService(name, command, args, cwd, logFile, envOverrides = {}) {
 }
 
 async function cleanUp() {
-	console.log("[E2E RUNNER] Cleaning up background services...");
-
-	// Terminate all processes
+	console.log("[CYPRESS RUNNER] Cleaning up background services...");
 	for (const proc of processes) {
 		if (proc && !proc.killed) {
 			try {
-				// On Windows, kill process tree utilizing taskkill
 				if (process.platform === "win32") {
 					spawn("taskkill", ["/pid", proc.pid, "/f", "/t"]);
 				} else {
 					proc.kill("SIGTERM");
 				}
 			} catch (err) {
-				console.error(
-					`[E2E RUNNER] Error killing process ${proc.pid}:`,
-					err.message,
-				);
+				console.error(`[CYPRESS RUNNER] Error killing process ${proc.pid}:`, err.message);
 			}
 		}
 	}
-	console.log("[E2E RUNNER] Services terminated.");
+	console.log("[CYPRESS RUNNER] Services terminated.");
 }
 
 async function run() {
-	// Ensure log directory exists
 	if (!fs.existsSync(LOGS_DIR)) {
 		fs.mkdirSync(LOGS_DIR, { recursive: true });
 	}
 
 	// Clear previous log files
-	[
-		"backend.log",
-		"bff.log",
-		"host.log",
-		"customer.log",
-		"rider.log",
-		"admin.log",
-		"core_business_engine.log",
-	].forEach((file) => {
+	["backend_cy.log", "bff_cy.log", "customer_cy.log"].forEach((file) => {
 		const logPath = path.join(LOGS_DIR, file);
 		if (fs.existsSync(logPath)) {
 			fs.writeFileSync(logPath, "");
@@ -142,7 +124,7 @@ async function run() {
 			mvnCmd,
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "backend"),
-			path.join(LOGS_DIR, "backend.log"),
+			path.join(LOGS_DIR, "backend_cy.log"),
 			commonEnv
 		);
 
@@ -152,100 +134,27 @@ async function run() {
 			mvnCmd,
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "platform-gateway"),
-			path.join(LOGS_DIR, "bff.log"),
+			path.join(LOGS_DIR, "bff_cy.log"),
 			commonEnv
 		);
 
-		// 2.5. Boot Core Business Engine (port 8081) - DISABLED due to Flyway Postgres compatibility issues on H2
-		/*
-		const coreEnv = {
-			...commonEnv,
-			SPRING_DATASOURCE_URL: "jdbc:h2:mem:b2b_qcomm;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-			SPRING_DATASOURCE_USERNAME: "sa",
-			SPRING_DATASOURCE_PASSWORD: "",
-			SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.h2.Driver",
-			SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.H2Dialect"
-		};
+		// 3. Boot frontend Customer MFE dev server on port 3001
 		runService(
-			"Core Business Engine",
-			mvnCmd,
-			["spring-boot:run"],
-			path.join(WORKSPACE_DIR, "core-business-engine"),
-			path.join(LOGS_DIR, "core_business_engine.log"),
-			coreEnv
-		);
-		*/
-
-		// 3. Boot frontend App Shell Host
-		runService(
-			"Host App Shell",
+			"Customer Dev Server",
 			npmCmd,
 			["run", "dev"],
-			path.join(WORKSPACE_DIR, "frontend-host"),
-			path.join(LOGS_DIR, "host.log"),
-		);
-
-		// 4. Boot Customer remote MFE (serve pre-built dist folder with remoteEntry.js)
-		runService(
-			"Customer Remote",
-			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3001",
-				"--strictPort",
-			],
 			path.join(WORKSPACE_DIR, "frontend-customer"),
-			path.join(LOGS_DIR, "customer.log"),
+			path.join(LOGS_DIR, "customer_cy.log"),
 		);
 
-		// 5. Boot Rider remote MFE
-		runService(
-			"Rider Remote",
-			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3002",
-				"--strictPort",
-			],
-			path.join(WORKSPACE_DIR, "frontend-rider"),
-			path.join(LOGS_DIR, "rider.log"),
-		);
-
-		// 6. Boot Admin remote MFE
-		runService(
-			"Admin Remote",
-			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3003",
-				"--strictPort",
-			],
-			path.join(WORKSPACE_DIR, "frontend-admin"),
-			path.join(LOGS_DIR, "admin.log"),
-		);
-
-		// 7. Wait for all target ports to be open
-		const online = await waitForPorts(
-			[8080, 8083, 3000, 3001, 3002, 3003],
-			120000,
-		);
+		// 4. Wait for ports
+		const online = await waitForPorts([8080, 8083, 3001], 120000);
 		if (!online) {
-			throw new Error(
-				"Timeout: Not all ports came online in time. Check the log files in dev/e2e.",
-			);
+			throw new Error("Timeout: Not all ports came online in time.");
 		}
 
-		// HTTP health check — ensure backend API is truly ready (Spring context loaded)
-		console.log("[E2E RUNNER] Running HTTP health check on backend...");
+		// Health check on backend
+		console.log("[CYPRESS RUNNER] Running HTTP health check on backend...");
 		let apiReady = false;
 		for (let i = 0; i < 15; i++) {
 			try {
@@ -258,60 +167,53 @@ async function run() {
 							method: "GET",
 							timeout: 2000,
 						},
-						(res) => {
-							resolve(res.statusCode);
-						},
+						(res) => resolve(res.statusCode)
 					);
 					req.on("error", reject);
-					req.on("timeout", () => {
-						req.destroy();
-						reject(new Error("timeout"));
-					});
+					req.on("timeout", () => { req.destroy(); reject(new Error("timeout")); });
 					req.end();
 				});
 				apiReady = true;
-				console.log("[E2E RUNNER] Backend API health check passed.");
+				console.log("[CYPRESS RUNNER] Backend API health check passed.");
 				break;
 			} catch (e) {
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 			}
 		}
 		if (!apiReady) {
-			console.warn(
-				"[E2E RUNNER] Backend API health check did not pass. Proceeding anyway...",
-			);
+			console.warn("[CYPRESS RUNNER] Backend API health check did not pass. Proceeding anyway...");
 		}
 
-		// Allow extra seconds for full context readiness
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 
-		// 8. Run Playwright script
-		console.log("[E2E RUNNER] Spawning Playwright E2E execution tests...");
-		const runner = spawn("node", ["e2e_test.js"], {
-			cwd: LOGS_DIR,
+		// 5. Run Cypress
+		console.log("[CYPRESS RUNNER] Spawning Cypress E2E execution tests...");
+		const runner = spawn(npmCmd, ["run", "cy:run"], {
+			cwd: path.join(WORKSPACE_DIR, "frontend-customer"),
 			shell: true,
 			stdio: "inherit",
+			env: {
+				...process.env,
+				CYPRESS_adminToken: "" // If we have a way to generate a token, we can supply it here, but let's test regular flow first.
+			}
 		});
 
 		await new Promise((resolve, reject) => {
 			runner.on("close", (code) => {
 				if (code === 0) {
-					console.log(
-						"[E2E RUNNER] Playwright E2E execution finished successfully!",
-					);
+					console.log("[CYPRESS RUNNER] Cypress E2E finished successfully!");
 					resolve();
 				} else {
-					reject(
-						new Error(`Playwright E2E exited with non-zero exit code: ${code}`),
-					);
+					reject(new Error(`Cypress E2E exited with non-zero exit code: ${code}`));
 				}
 			});
 		});
 	} catch (err) {
-		console.error("[E2E RUNNER] Execution failed:", err);
+		console.error("[CYPRESS RUNNER] Execution failed:", err);
+		process.exitCode = 1;
 	} finally {
 		await cleanUp();
-		process.exit(0);
+		process.exit(process.exitCode || 0);
 	}
 }
 

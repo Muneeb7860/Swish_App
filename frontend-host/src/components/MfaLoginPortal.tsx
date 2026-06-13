@@ -174,7 +174,7 @@ export default function MfaLoginPortal({
 							<select
 								id="select-mfa-method"
 								value={mfaMethod}
-								onChange={(e) => setMfaMethod(e.target.value)}
+								onChange={(e) => setMfaMethod(e.target.value as "sms" | "totp")}
 								style={{
 									width: "100%",
 									background: "#020408",
