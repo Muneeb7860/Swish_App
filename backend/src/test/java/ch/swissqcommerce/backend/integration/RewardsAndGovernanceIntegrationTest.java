@@ -81,6 +81,8 @@ public class RewardsAndGovernanceIntegrationTest {
 
     @MockBean private StringRedisTemplate redisTemplate;
 
+    @MockBean private org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
+
     private Customer customer;
     private Wholesaler wholesaler;
     private B2BRestockOrder restockOrder;

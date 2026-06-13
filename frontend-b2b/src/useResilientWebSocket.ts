@@ -37,7 +37,7 @@ export const useResilientWebSocket = (
 	const {
 		userId,
 		accessToken,
-		maxReconnectAttempts = 10,
+		maxReconnectAttempts = 5,
 		reconnectIntervalMin = 1000,
 		reconnectIntervalMax = 30000,
 	} = options;

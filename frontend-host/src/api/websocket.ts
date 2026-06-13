@@ -38,7 +38,7 @@ export const useResilientWebSocket = (
 	const {
 		userId,
 		accessToken,
-		maxReconnectAttempts = 10,
+		maxReconnectAttempts = 5,
 		reconnectIntervalMin = 1000,
 		reconnectIntervalMax = 30000,
 	} = options;
@@ -303,6 +303,7 @@ export class OrderStatusSocket {
 	private static listeners: Map<number, Set<OrderStatusCallback>> = new Map();
 	private static ws: WebSocket | null = null;
 	private static simulatedTimers: Map<number, any> = new Map();
+	private static reconnectAttempts: Map<number, number> = new Map();
 
 	public static subscribe(
 		orderId: number,
@@ -379,6 +380,9 @@ export class OrderStatusSocket {
 
 			try {
 				this.ws = new WebSocket(url);
+				this.ws.onopen = () => {
+					this.reconnectAttempts.set(orderId, 0);
+				};
 				this.ws.onmessage = (event) => {
 					const data = JSON.parse(event.data);
 					if (data && data.orderId) {
@@ -387,8 +391,18 @@ export class OrderStatusSocket {
 				};
 				this.ws.onclose = () => {
 					this.ws = null;
-					// Reconnect after 3s
-					setTimeout(() => this.initForOrder(orderId), 3000);
+					const attempts = this.reconnectAttempts.get(orderId) || 0;
+					if (attempts < 5) {
+						this.reconnectAttempts.set(orderId, attempts + 1);
+						console.warn(
+							`[WebSocket] Order status reconnect attempt #${attempts + 1}/5 in 3000ms`,
+						);
+						setTimeout(() => this.initForOrder(orderId), 3000);
+					} else {
+						console.error(
+							"[WebSocket] Order status reconnect: Max attempts (5) reached. Stopping reconnection.",
+						);
+					}
 				};
 			} catch (e) {
 				console.error(
@@ -400,6 +414,7 @@ export class OrderStatusSocket {
 	}
 
 	private static cleanupOrder(orderId: number) {
+		this.reconnectAttempts.delete(orderId);
 		if (this.simulatedTimers.has(orderId)) {
 			clearTimeout(this.simulatedTimers.get(orderId));
 			this.simulatedTimers.delete(orderId);
