@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface InventoryPort {
     Optional<Inventory> findInventoryById(String id);
+
     Inventory save(Inventory inventory);
 }

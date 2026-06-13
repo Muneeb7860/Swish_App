@@ -2,13 +2,6 @@ package ch.swissqcommerce.backend.config;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Component;
-
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
@@ -17,19 +10,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Component;
 
 /**
- * Optimized and hardened Registry holding event schema definitions and performing 
- * deep JSON payload validations with cumulative error diagnostics.
+ * Optimized and hardened Registry holding event schema definitions and performing deep JSON payload
+ * validations with cumulative error diagnostics.
  */
 @Component
 public class TelemetrySchemaRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetrySchemaRegistry.class);
-    
+
     private final ObjectMapper objectMapper;
     private final ResourceLoader resourceLoader;
-    
+
     private final Map<String, JsonNode> schemas = new HashMap<>();
 
     @Autowired
@@ -57,13 +56,18 @@ public class TelemetrySchemaRegistry {
                 log.warn("Schema resource not found: {}", resourcePath);
             }
         } catch (Exception e) {
-            log.error("Failed to load schema '{}' from path '{}': {}", key, resourcePath, e.getMessage(), e);
+            log.error(
+                    "Failed to load schema '{}' from path '{}': {}",
+                    key,
+                    resourcePath,
+                    e.getMessage(),
+                    e);
         }
     }
 
     /**
-     * Validates the payload against the corresponding schema.
-     * Throws IllegalArgumentException carrying all cumulative error details if validation fails.
+     * Validates the payload against the corresponding schema. Throws IllegalArgumentException
+     * carrying all cumulative error details if validation fails.
      */
     public void validate(String eventType, String jsonPayload) {
         if (jsonPayload == null || jsonPayload.trim().isEmpty()) {
@@ -73,7 +77,9 @@ public class TelemetrySchemaRegistry {
         String schemaKey = resolveSchemaKey(eventType);
         JsonNode schema = schemas.get(schemaKey);
         if (schema == null) {
-            log.debug("No registered schema found for eventType '{}'. Skipping validation.", eventType);
+            log.debug(
+                    "No registered schema found for eventType '{}'. Skipping validation.",
+                    eventType);
             return;
         }
 
@@ -84,8 +90,10 @@ public class TelemetrySchemaRegistry {
 
             if (!errors.isEmpty()) {
                 String errorSummary = String.join(", ", errors);
-                throw new IllegalArgumentException(String.format(
-                    "Schema validation failed for eventType '%s': [%s]", eventType, errorSummary));
+                throw new IllegalArgumentException(
+                        String.format(
+                                "Schema validation failed for eventType '%s': [%s]",
+                                eventType, errorSummary));
             }
         } catch (IllegalArgumentException e) {
             throw e;
@@ -98,13 +106,15 @@ public class TelemetrySchemaRegistry {
         if ("security.anomaly".equals(eventType)) {
             return "security-anomaly";
         }
-        if (eventType != null && (eventType.startsWith("admin.") || eventType.startsWith("security."))) {
+        if (eventType != null
+                && (eventType.startsWith("admin.") || eventType.startsWith("security."))) {
             return "security-audit";
         }
         return "unknown";
     }
 
-    private void validateNode(JsonNode payloadNode, JsonNode schemaNode, String eventType, List<String> errors) {
+    private void validateNode(
+            JsonNode payloadNode, JsonNode schemaNode, String eventType, List<String> errors) {
         // 1. Verify required fields
         JsonNode requiredNode = schemaNode.get("required");
         if (requiredNode != null && requiredNode.isArray()) {
@@ -119,58 +129,89 @@ public class TelemetrySchemaRegistry {
         // 2. Verify properties type and enum constraints
         JsonNode propertiesNode = schemaNode.get("properties");
         if (propertiesNode != null && propertiesNode.isObject()) {
-            propertiesNode.fieldNames().forEachRemaining(fieldName -> {
-                if (payloadNode.has(fieldName)) {
-                    JsonNode valNode = payloadNode.get(fieldName);
-                    if (valNode.isNull()) {
-                        return;
-                    }
+            propertiesNode
+                    .fieldNames()
+                    .forEachRemaining(
+                            fieldName -> {
+                                if (payloadNode.has(fieldName)) {
+                                    JsonNode valNode = payloadNode.get(fieldName);
+                                    if (valNode.isNull()) {
+                                        return;
+                                    }
 
-                    JsonNode fieldSchema = propertiesNode.get(fieldName);
-                    String expectedType = fieldSchema.has("type") ? fieldSchema.get("type").asText() : null;
+                                    JsonNode fieldSchema = propertiesNode.get(fieldName);
+                                    String expectedType =
+                                            fieldSchema.has("type")
+                                                    ? fieldSchema.get("type").asText()
+                                                    : null;
 
-                    if (expectedType != null) {
-                        validateType(valNode, expectedType, fieldName, eventType, errors);
-                    }
+                                    if (expectedType != null) {
+                                        validateType(
+                                                valNode,
+                                                expectedType,
+                                                fieldName,
+                                                eventType,
+                                                errors);
+                                    }
 
-                    // Format check (e.g. date-time format)
-                    String format = fieldSchema.has("format") ? fieldSchema.get("format").asText() : null;
-                    if ("date-time".equals(format) && valNode.isTextual()) {
-                        validateDateTimeFormat(valNode.asText(), fieldName, errors);
-                    }
+                                    // Format check (e.g. date-time format)
+                                    String format =
+                                            fieldSchema.has("format")
+                                                    ? fieldSchema.get("format").asText()
+                                                    : null;
+                                    if ("date-time".equals(format) && valNode.isTextual()) {
+                                        validateDateTimeFormat(valNode.asText(), fieldName, errors);
+                                    }
 
-                    // Enum check
-                    JsonNode enumNode = fieldSchema.get("enum");
-                    if (enumNode != null && enumNode.isArray()) {
-                        boolean match = false;
-                        String actualValue = valNode.asText();
-                        for (JsonNode enumVal : enumNode) {
-                            if (enumVal.asText().equals(actualValue)) {
-                                match = true;
-                                break;
-                            }
-                        }
-                        if (!match) {
-                            errors.add(String.format("Field '%s' value '%s' is not in allowed enum list", fieldName, actualValue));
-                        }
-                    }
-                }
-            });
+                                    // Enum check
+                                    JsonNode enumNode = fieldSchema.get("enum");
+                                    if (enumNode != null && enumNode.isArray()) {
+                                        boolean match = false;
+                                        String actualValue = valNode.asText();
+                                        for (JsonNode enumVal : enumNode) {
+                                            if (enumVal.asText().equals(actualValue)) {
+                                                match = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!match) {
+                                            errors.add(
+                                                    String.format(
+                                                            "Field '%s' value '%s' is not in"
+                                                                    + " allowed enum list",
+                                                            fieldName, actualValue));
+                                        }
+                                    }
+                                }
+                            });
         }
 
         // 3. Strict Additional Properties Constraint (additionalProperties: false)
         JsonNode additionalPropsNode = schemaNode.get("additionalProperties");
-        boolean additionalPropertiesAllowed = additionalPropsNode == null || additionalPropsNode.asBoolean();
+        boolean additionalPropertiesAllowed =
+                additionalPropsNode == null || additionalPropsNode.asBoolean();
         if (!additionalPropertiesAllowed && propertiesNode != null) {
-            payloadNode.fieldNames().forEachRemaining(payloadField -> {
-                if (!propertiesNode.has(payloadField)) {
-                    errors.add(String.format("Undeclared additional property '%s' is not allowed", payloadField));
-                }
-            });
+            payloadNode
+                    .fieldNames()
+                    .forEachRemaining(
+                            payloadField -> {
+                                if (!propertiesNode.has(payloadField)) {
+                                    errors.add(
+                                            String.format(
+                                                    "Undeclared additional property '%s' is not"
+                                                            + " allowed",
+                                                    payloadField));
+                                }
+                            });
         }
     }
 
-    private void validateType(JsonNode node, String expectedType, String fieldName, String eventType, List<String> errors) {
+    private void validateType(
+            JsonNode node,
+            String expectedType,
+            String fieldName,
+            String eventType,
+            List<String> errors) {
         boolean valid = false;
         switch (expectedType) {
             case "string":
@@ -197,8 +238,10 @@ public class TelemetrySchemaRegistry {
         }
 
         if (!valid) {
-            errors.add(String.format("Field '%s' expected type '%s', but got '%s'",
-                fieldName, expectedType, node.getNodeType().toString().toLowerCase()));
+            errors.add(
+                    String.format(
+                            "Field '%s' expected type '%s', but got '%s'",
+                            fieldName, expectedType, node.getNodeType().toString().toLowerCase()));
         }
     }
 
@@ -206,7 +249,10 @@ public class TelemetrySchemaRegistry {
         try {
             DateTimeFormatter.ISO_DATE_TIME.parse(value);
         } catch (DateTimeParseException e) {
-            errors.add(String.format("Field '%s' value '%s' is not a valid ISO-8601 date-time string", fieldName, value));
+            errors.add(
+                    String.format(
+                            "Field '%s' value '%s' is not a valid ISO-8601 date-time string",
+                            fieldName, value));
         }
     }
 }

@@ -5,21 +5,20 @@ import ch.swissqcommerce.backend.domain.dispatch.core.model.GearScan;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.ShipmentStatus;
 import ch.swissqcommerce.backend.domain.dispatch.port.in.DispatchUseCase;
 import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort;
-import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.domain.enrollment.port.out.EnrollmentOutPort;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,21 +31,23 @@ public class DispatchServiceImpl implements DispatchUseCase {
 
     @Override
     @Transactional
-    public GearScan submitGearScan(String riderId, String gearType, String verificationStatus, String imageUrl) {
+    public GearScan submitGearScan(
+            String riderId, String gearType, String verificationStatus, String imageUrl) {
         // Confirm rider exists
         if (enrollmentOutPort.findRiderById(riderId).isEmpty()) {
             throw new NoSuchElementException("Rider not found: " + riderId);
         }
 
-        GearScan scan = GearScan.builder()
-                .scanId(UUID.randomUUID().toString())
-                .riderId(riderId)
-                .scanTime(OffsetDateTime.now())
-                .gearType(gearType)
-                .verificationStatus(verificationStatus)
-                .imageUrl(imageUrl)
-                .checkedBy("SYSTEM_AUTO")
-                .build();
+        GearScan scan =
+                GearScan.builder()
+                        .scanId(UUID.randomUUID().toString())
+                        .riderId(riderId)
+                        .scanTime(OffsetDateTime.now())
+                        .gearType(gearType)
+                        .verificationStatus(verificationStatus)
+                        .imageUrl(imageUrl)
+                        .checkedBy("SYSTEM_AUTO")
+                        .build();
 
         return dispatchPort.saveGearScan(scan);
     }
@@ -54,16 +55,23 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment updateRiderGps(String riderId, BigDecimal lat, BigDecimal lng) {
-        Rider rider = enrollmentOutPort.findRiderById(riderId)
-                .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
+        Rider rider =
+                enrollmentOutPort
+                        .findRiderById(riderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Rider not found: " + riderId));
 
         rider.setActiveLat(lat);
         rider.setActiveLng(lng);
         enrollmentOutPort.saveRider(rider);
 
-        List<ActiveShipment> activeShipments = new java.util.ArrayList<>(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "ASSIGNED"));
-        activeShipments.addAll(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "PICKING_UP"));
-        activeShipments.addAll(dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "DELIVERING"));
+        List<ActiveShipment> activeShipments =
+                new java.util.ArrayList<>(
+                        dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "ASSIGNED"));
+        activeShipments.addAll(
+                dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "PICKING_UP"));
+        activeShipments.addAll(
+                dispatchPort.findActiveShipmentsByRiderAndStatus(riderId, "DELIVERING"));
 
         ActiveShipment updatedShipment = null;
         OffsetDateTime now = OffsetDateTime.now();
@@ -98,9 +106,9 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public List<Integer> runReallocationAudit() {
-        List<ActiveShipment> activeShipments = dispatchPort.findActiveShipmentsByStatusIn(
-                List.of("ASSIGNED", "PICKING_UP", "DELIVERING")
-        );
+        List<ActiveShipment> activeShipments =
+                dispatchPort.findActiveShipmentsByStatusIn(
+                        List.of("ASSIGNED", "PICKING_UP", "DELIVERING"));
 
         List<Integer> reallocatedOrders = new ArrayList<>();
         OffsetDateTime now = OffsetDateTime.now();
@@ -109,7 +117,8 @@ public class DispatchServiceImpl implements DispatchUseCase {
         List<Integer> orderIdsToFetch = new ArrayList<>();
 
         for (ActiveShipment shipment : activeShipments) {
-            if (shipment.getStationarySince() != null && shipment.getStationarySince().isBefore(now.minusMinutes(10))) {
+            if (shipment.getStationarySince() != null
+                    && shipment.getStationarySince().isBefore(now.minusMinutes(10))) {
                 shipment.setStatus(ShipmentStatus.REALLOCATED);
                 shipment.setUpdatedAt(now);
                 shipmentsToReallocate.add(shipment);
@@ -137,29 +146,39 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment assignOrder(Integer orderId, String riderId, BigDecimal weightKg) {
-        Rider rider = enrollmentOutPort.findRiderById(riderId)
-                .orElseThrow(() -> new NoSuchElementException("Rider not found: " + riderId));
+        Rider rider =
+                enrollmentOutPort
+                        .findRiderById(riderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Rider not found: " + riderId));
 
-        Order order = orderPort.findById(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+        Order order =
+                orderPort
+                        .findById(orderId)
+                        .orElseThrow(
+                                () -> new NoSuchElementException("Order not found: " + orderId));
 
-        String customerId = order.getCustomer() != null ? order.getCustomer().getCustomerId() : null;
-        String customerName = order.getCustomer() != null ? order.getCustomer().getFullName() : null;
+        String customerId =
+                order.getCustomer() != null ? order.getCustomer().getCustomerId() : null;
+        String customerName =
+                order.getCustomer() != null ? order.getCustomer().getFullName() : null;
 
-        DispatchPort.EligibilityCriteria criteria = new DispatchPort.EligibilityCriteria(
-                riderId,
-                rider.getVehicleType(),
-                rider.getOnboardingStatus(),
-                rider.getFullName(),
-                customerId,
-                customerName,
-                weightKg,
-                rider.isGearExempt()
-        );
+        DispatchPort.EligibilityCriteria criteria =
+                new DispatchPort.EligibilityCriteria(
+                        riderId,
+                        rider.getVehicleType(),
+                        rider.getOnboardingStatus(),
+                        rider.getFullName(),
+                        customerId,
+                        customerName,
+                        weightKg,
+                        rider.isGearExempt());
 
         boolean eligible = dispatchPort.isRiderEligible(criteria);
         if (!eligible) {
-            throw new IllegalStateException("Rider is not eligible for order assignment due to gear verification, vehicle weight limits, or self-matching restrictions.");
+            throw new IllegalStateException(
+                    "Rider is not eligible for order assignment due to gear verification, vehicle"
+                            + " weight limits, or self-matching restrictions.");
         }
 
         // Assign order to rider
@@ -167,12 +186,21 @@ public class DispatchServiceImpl implements DispatchUseCase {
         orderPort.save(order);
 
         // Update active shipment entry
-        ActiveShipment shipment = dispatchPort.findActiveShipmentByOrder(orderId)
-                .orElseGet(() -> ActiveShipment.builder()
-                        .shipmentId("SHIP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                        .orderId(orderId)
-                        .totalWeightKg(weightKg)
-                        .build());
+        ActiveShipment shipment =
+                dispatchPort
+                        .findActiveShipmentByOrder(orderId)
+                        .orElseGet(
+                                () ->
+                                        ActiveShipment.builder()
+                                                .shipmentId(
+                                                        "SHIP-"
+                                                                + UUID.randomUUID()
+                                                                        .toString()
+                                                                        .substring(0, 8)
+                                                                        .toUpperCase())
+                                                .orderId(orderId)
+                                                .totalWeightKg(weightKg)
+                                                .build());
 
         shipment.setRiderId(riderId);
         shipment.setStatus(ShipmentStatus.ASSIGNED);
@@ -185,24 +213,33 @@ public class DispatchServiceImpl implements DispatchUseCase {
     @Override
     @Transactional
     public ActiveShipment updateShipmentStatus(Integer orderId, String status) {
-        ActiveShipment shipment = dispatchPort.findActiveShipmentByOrder(orderId)
-                .orElseThrow(() -> new NoSuchElementException("Active shipment not found for order: " + orderId));
+        ActiveShipment shipment =
+                dispatchPort
+                        .findActiveShipmentByOrder(orderId)
+                        .orElseThrow(
+                                () ->
+                                        new NoSuchElementException(
+                                                "Active shipment not found for order: " + orderId));
 
         shipment.setStatus(ShipmentStatus.valueOf(status.toUpperCase()));
         shipment.setUpdatedAt(OffsetDateTime.now());
         return dispatchPort.saveActiveShipment(shipment);
     }
 
-    private double calculateHaversineDistance(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
+    private double calculateHaversineDistance(
+            BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
         double R = 6371e3; // metres
         double phi1 = lat1.doubleValue() * Math.PI / 180;
         double phi2 = lat2.doubleValue() * Math.PI / 180;
         double deltaPhi = (lat2.doubleValue() - lat1.doubleValue()) * Math.PI / 180;
         double deltaLambda = (lon2.doubleValue() - lon1.doubleValue()) * Math.PI / 180;
 
-        double a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-                   Math.cos(phi1) * Math.cos(phi2) *
-                   Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        double a =
+                Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
+                        + Math.cos(phi1)
+                                * Math.cos(phi2)
+                                * Math.sin(deltaLambda / 2)
+                                * Math.sin(deltaLambda / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return R * c;

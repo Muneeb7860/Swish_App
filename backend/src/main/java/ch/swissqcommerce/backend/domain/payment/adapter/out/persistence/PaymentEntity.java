@@ -1,13 +1,10 @@
 package ch.swissqcommerce.backend.domain.payment.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.model.Customer;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "payments", schema = "oltp")

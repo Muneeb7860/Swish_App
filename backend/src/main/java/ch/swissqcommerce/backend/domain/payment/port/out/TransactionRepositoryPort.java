@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface TransactionRepositoryPort {
     TransactionRecord save(TransactionRecord transaction);
+
     Optional<TransactionRecord> findById(String transactionId);
 }

@@ -2,22 +2,23 @@ package ch.swissqcommerce.backend.config;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Component
 @Converter
 public class AesEncryptionConverter implements AttributeConverter<String, String> {
 
-    private static final String DEFAULT_KEY = "my-default-32-byte-db-encryption-key-for-local-dev-only!";
+    private static final String DEFAULT_KEY =
+            "my-default-32-byte-db-encryption-key-for-local-dev-only!";
 
-    @Value("${swish.security.db.encryption.key:my-default-32-byte-db-encryption-key-for-local-dev-only!}")
+    @Value(
+            "${swish.security.db.encryption.key:my-default-32-byte-db-encryption-key-for-local-dev-only!}")
     private String keyString = DEFAULT_KEY;
 
     private SecretKeySpec getSecretKey() {

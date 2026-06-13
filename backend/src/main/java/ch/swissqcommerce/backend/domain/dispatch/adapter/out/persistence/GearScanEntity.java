@@ -2,8 +2,8 @@ package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "gear_scans", schema = "dispatch")

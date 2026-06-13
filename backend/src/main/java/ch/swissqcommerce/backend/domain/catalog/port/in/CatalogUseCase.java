@@ -5,5 +5,6 @@ import java.util.Optional;
 
 public interface CatalogUseCase {
     ProductListing createListing(ProductListing listing);
+
     Optional<ProductListing> getListing(String productId);
 }

@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.time.OffsetDateTime;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 
 @Entity
 @Table(name = "customer_payment_cards", schema = "oltp")

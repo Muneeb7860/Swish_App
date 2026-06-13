@@ -1,10 +1,15 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.auth.core.model.*;
 import ch.swissqcommerce.backend.domain.auth.core.service.AuthServiceImpl;
 import ch.swissqcommerce.backend.domain.auth.port.out.AuthEventPublisherPort;
 import ch.swissqcommerce.backend.domain.auth.port.out.SessionRepositoryPort;
 import ch.swissqcommerce.backend.domain.auth.port.out.UserRepositoryPort;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,40 +18,30 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
 
-    @Mock
-    private UserRepositoryPort userRepositoryPort;
+    @Mock private UserRepositoryPort userRepositoryPort;
 
-    @Mock
-    private SessionRepositoryPort sessionRepositoryPort;
+    @Mock private SessionRepositoryPort sessionRepositoryPort;
 
-    @Mock
-    private AuthEventPublisherPort eventPublisherPort;
+    @Mock private AuthEventPublisherPort eventPublisherPort;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @Mock private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
-    private AuthServiceImpl authService;
+    @InjectMocks private AuthServiceImpl authService;
 
     private UserAccount mockUser;
 
     @BeforeEach
     public void setUp() {
-        mockUser = UserAccount.builder()
-                .id("user-123")
-                .emailAddress(new EmailAddress("test@example.com"))
-                .passwordHash(new PasswordHash("hashedPassword"))
-                .status(AccountStatus.ACTIVE)
-                .build();
+        mockUser =
+                UserAccount.builder()
+                        .id("user-123")
+                        .emailAddress(new EmailAddress("test@example.com"))
+                        .passwordHash(new PasswordHash("hashedPassword"))
+                        .status(AccountStatus.ACTIVE)
+                        .build();
     }
 
     @Test
@@ -55,7 +50,8 @@ public class AuthServiceTest {
         when(passwordEncoder.matches("password123", "hashedPassword")).thenReturn(true);
         when(sessionRepositoryPort.save(any(Session.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        Session session = authService.login("test@example.com", "password123", "fingerprint", "127.0.0.1");
+        Session session =
+                authService.login("test@example.com", "password123", "fingerprint", "127.0.0.1");
 
         assertNotNull(session);
         assertEquals("user-123", session.getUserId());
@@ -67,10 +63,12 @@ public class AuthServiceTest {
     public void testLogin_InvalidEmail() {
         when(userRepositoryPort.findByEmail("wrong@example.com")).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            authService.login("wrong@example.com", "password", "fingerprint", "127.0.0.1");
-        });
-        
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    authService.login("wrong@example.com", "password", "fingerprint", "127.0.0.1");
+                });
+
         verify(passwordEncoder).matches(eq("password"), anyString());
     }
 
@@ -79,9 +77,11 @@ public class AuthServiceTest {
         when(userRepositoryPort.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
         when(passwordEncoder.matches("wrongpass", "hashedPassword")).thenReturn(false);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            authService.login("test@example.com", "wrongpass", "fingerprint", "127.0.0.1");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    authService.login("test@example.com", "wrongpass", "fingerprint", "127.0.0.1");
+                });
     }
 
     @Test
@@ -90,9 +90,12 @@ public class AuthServiceTest {
         when(userRepositoryPort.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
         when(passwordEncoder.matches("password123", "hashedPassword")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            authService.login("test@example.com", "password123", "fingerprint", "127.0.0.1");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    authService.login(
+                            "test@example.com", "password123", "fingerprint", "127.0.0.1");
+                });
     }
 
     @Test
@@ -108,7 +111,12 @@ public class AuthServiceTest {
 
     @Test
     public void testValidateSession_Valid() {
-        Session session = Session.builder().id("session-1").active(true).expiresAt(java.time.OffsetDateTime.now().plusHours(1)).build();
+        Session session =
+                Session.builder()
+                        .id("session-1")
+                        .active(true)
+                        .expiresAt(java.time.OffsetDateTime.now().plusHours(1))
+                        .build();
         when(sessionRepositoryPort.findById("session-1")).thenReturn(Optional.of(session));
 
         boolean isValid = authService.validateSession("session-1");
@@ -127,10 +135,12 @@ public class AuthServiceTest {
     public void testRegister_Success() {
         when(userRepositoryPort.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("hashedPassword");
-        when(userRepositoryPort.save(any(UserAccount.class))).thenAnswer(i -> {
-            UserAccount account = i.getArgument(0);
-            return account;
-        });
+        when(userRepositoryPort.save(any(UserAccount.class)))
+                .thenAnswer(
+                        i -> {
+                            UserAccount account = i.getArgument(0);
+                            return account;
+                        });
 
         UserAccount newUser = authService.register("new@example.com", "password123");
 
@@ -143,8 +153,10 @@ public class AuthServiceTest {
     public void testRegister_EmailAlreadyInUse() {
         when(userRepositoryPort.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            authService.register("test@example.com", "password123");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    authService.register("test@example.com", "password123");
+                });
     }
 }

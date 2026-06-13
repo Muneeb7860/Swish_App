@@ -2,28 +2,26 @@ package ch.swissqcommerce.backend.domain.agent.adapter.out.governance;
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Pure client for the Python AI-governance service ("never leaves the homelab"
- * PII gate, model routing, content guardrails, rate limiting).
+ * Pure client for the Python AI-governance service ("never leaves the homelab" PII gate, model
+ * routing, content guardrails, rate limiting).
  *
- * Per ADR-007 #3 this adapter no longer owns any fallback logic — fallback and
- * gateway selection live in {@link ch.swissqcommerce.backend.domain.agent.adapter.out.resilient.ResilientLlmGateway}.
- * On any transport failure or unusable response this adapter throws so the
- * composite gateway can apply the fail-safe chain (PII-gated). A governance
- * <em>block</em> is a definitive governed decision and is returned as-is — it is
- * never bypassed by falling back to an ungoverned model.
+ * <p>Per ADR-007 #3 this adapter no longer owns any fallback logic — fallback and gateway selection
+ * live in {@link ch.swissqcommerce.backend.domain.agent.adapter.out.resilient.ResilientLlmGateway}.
+ * On any transport failure or unusable response this adapter throws so the composite gateway can
+ * apply the fail-safe chain (PII-gated). A governance <em>block</em> is a definitive governed
+ * decision and is returned as-is — it is never bypassed by falling back to an ungoverned model.
  */
 @Component
 @Slf4j
@@ -70,7 +68,8 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
         Map<?, ?> response = restTemplate.postForObject(endpointUrl, entity, Map.class);
 
         if (response == null) {
-            throw new IllegalStateException("Null response from Python Governance service at " + endpointUrl);
+            throw new IllegalStateException(
+                    "Null response from Python Governance service at " + endpointUrl);
         }
 
         String status = (String) response.get("status");
@@ -82,10 +81,7 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
             double outputTokens = content != null ? content.length() / 4.0 : 0.0;
             double cost = (inputTokens * 0.000000075) + (outputTokens * 0.00000030);
 
-            return LlmResponse.builder()
-                    .content(content)
-                    .tokenCost(cost)
-                    .build();
+            return LlmResponse.builder().content(content).tokenCost(cost).build();
         }
 
         // Governance block/failure is a definitive governed decision — surface it,

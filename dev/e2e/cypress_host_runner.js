@@ -40,7 +40,9 @@ function isPortOpen(port) {
 // Helper to wait for all required ports
 async function waitForPorts(ports, timeoutMs = 60000) {
 	const start = Date.now();
-	console.log(`[CYPRESS HOST RUNNER] Waiting for ports: ${ports.join(", ")}...`);
+	console.log(
+		`[CYPRESS HOST RUNNER] Waiting for ports: ${ports.join(", ")}...`,
+	);
 	while (Date.now() - start < timeoutMs) {
 		const statuses = await Promise.all(ports.map((port) => isPortOpen(port)));
 		if (statuses.every((status) => status === true)) {
@@ -54,7 +56,9 @@ async function waitForPorts(ports, timeoutMs = 60000) {
 
 // Helper to spawn background processes
 function runService(name, command, args, cwd, logFile, envOverrides = {}) {
-	console.log(`[CYPRESS HOST RUNNER] Starting service [${name}] in directory: ${cwd}...`);
+	console.log(
+		`[CYPRESS HOST RUNNER] Starting service [${name}] in directory: ${cwd}...`,
+	);
 	const logStream = fs.createWriteStream(logFile);
 
 	const proc = spawn(command, args, {
@@ -62,14 +66,16 @@ function runService(name, command, args, cwd, logFile, envOverrides = {}) {
 		shell: true,
 		env: {
 			...process.env,
-			...envOverrides
-		}
+			...envOverrides,
+		},
 	});
 	proc.stdout.pipe(logStream);
 	proc.stderr.pipe(logStream);
 
 	proc.on("close", (code) => {
-		console.log(`[CYPRESS HOST RUNNER] Service [${name}] exited with code: ${code}`);
+		console.log(
+			`[CYPRESS HOST RUNNER] Service [${name}] exited with code: ${code}`,
+		);
 	});
 
 	processes.push(proc);
@@ -87,7 +93,10 @@ async function cleanUp() {
 					proc.kill("SIGTERM");
 				}
 			} catch (err) {
-				console.error(`[CYPRESS HOST RUNNER] Error killing process ${proc.pid}:`, err.message);
+				console.error(
+					`[CYPRESS HOST RUNNER] Error killing process ${proc.pid}:`,
+					err.message,
+				);
 			}
 		}
 	}
@@ -100,7 +109,14 @@ async function run() {
 	}
 
 	// Clear previous log files
-	["backend_hostcy.log", "bff_hostcy.log", "host_hostcy.log", "customer_hostcy.log", "rider_hostcy.log", "admin_hostcy.log"].forEach((file) => {
+	[
+		"backend_hostcy.log",
+		"bff_hostcy.log",
+		"host_hostcy.log",
+		"customer_hostcy.log",
+		"rider_hostcy.log",
+		"admin_hostcy.log",
+	].forEach((file) => {
 		const logPath = path.join(LOGS_DIR, file);
 		if (fs.existsSync(logPath)) {
 			fs.writeFileSync(logPath, "");
@@ -113,9 +129,10 @@ async function run() {
 		const npmCmd = isWin ? "npm.cmd" : "npm";
 
 		const commonEnv = {
-			JWT_SECRET: "my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
+			JWT_SECRET:
+				"my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
 			ADMIN_EMAIL: "admin@swish.local",
-			ADMIN_PASSWORD: "swiss-secure-password"
+			ADMIN_PASSWORD: "swiss-secure-password",
 		};
 
 		// 1. Boot Backend Monolith
@@ -125,7 +142,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "backend"),
 			path.join(LOGS_DIR, "backend_hostcy.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 2. Boot Platform Gateway (port 8080)
@@ -135,7 +152,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "platform-gateway"),
 			path.join(LOGS_DIR, "bff_hostcy.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 3. Boot frontend App Shell Host
@@ -175,13 +192,18 @@ async function run() {
 		);
 
 		// 7. Wait for ports
-		const online = await waitForPorts([8080, 8083, 3000, 3001, 3002, 3003], 120000);
+		const online = await waitForPorts(
+			[8080, 8083, 3000, 3001, 3002, 3003],
+			120000,
+		);
 		if (!online) {
 			throw new Error("Timeout: Not all ports came online in time.");
 		}
 
 		// Health check on backend
-		console.log("[CYPRESS HOST RUNNER] Running HTTP health check on backend...");
+		console.log(
+			"[CYPRESS HOST RUNNER] Running HTTP health check on backend...",
+		);
 		let apiReady = false;
 		for (let i = 0; i < 15; i++) {
 			try {
@@ -194,10 +216,13 @@ async function run() {
 							method: "GET",
 							timeout: 2000,
 						},
-						(res) => resolve(res.statusCode)
+						(res) => resolve(res.statusCode),
 					);
 					req.on("error", reject);
-					req.on("timeout", () => { req.destroy(); reject(new Error("timeout")); });
+					req.on("timeout", () => {
+						req.destroy();
+						reject(new Error("timeout"));
+					});
 					req.end();
 				});
 				apiReady = true;
@@ -208,26 +233,36 @@ async function run() {
 			}
 		}
 		if (!apiReady) {
-			console.warn("[CYPRESS HOST RUNNER] Backend API health check did not pass. Proceeding anyway...");
+			console.warn(
+				"[CYPRESS HOST RUNNER] Backend API health check did not pass. Proceeding anyway...",
+			);
 		}
 
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 
 		// 8. Run Cypress in frontend-host
-		console.log("[CYPRESS HOST RUNNER] Spawning Cypress E2E execution tests for Host...");
+		console.log(
+			"[CYPRESS HOST RUNNER] Spawning Cypress E2E execution tests for Host...",
+		);
 		const runner = spawn(npmCmd, ["run", "e2e"], {
 			cwd: path.join(WORKSPACE_DIR, "frontend-host"),
 			shell: true,
-			stdio: "inherit"
+			stdio: "inherit",
 		});
 
 		await new Promise((resolve, reject) => {
 			runner.on("close", (code) => {
 				if (code === 0) {
-					console.log("[CYPRESS HOST RUNNER] Cypress Host E2E finished successfully!");
+					console.log(
+						"[CYPRESS HOST RUNNER] Cypress Host E2E finished successfully!",
+					);
 					resolve();
 				} else {
-					reject(new Error(`Cypress Host E2E exited with non-zero exit code: ${code}`));
+					reject(
+						new Error(
+							`Cypress Host E2E exited with non-zero exit code: ${code}`,
+						),
+					);
 				}
 			});
 		});

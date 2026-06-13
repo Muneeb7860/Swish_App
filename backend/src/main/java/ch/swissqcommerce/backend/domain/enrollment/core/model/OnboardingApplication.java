@@ -1,7 +1,6 @@
 package ch.swissqcommerce.backend.domain.enrollment.core.model;
+
 import java.time.OffsetDateTime;
-
-
 import lombok.*;
 
 @Getter

@@ -233,16 +233,44 @@ export default function CustomerApp({
 			<div key={i} className="product-card" style={{ cursor: "default" }}>
 				<div className="skeleton-image skeleton-shimmer" />
 				<div className="skeleton-text medium skeleton-shimmer" />
-				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem" }}>
-					<div className="skeleton-text short skeleton-shimmer" style={{ margin: 0, height: 16, width: "40%" }} />
-					<div className="skeleton-shimmer" style={{ width: 40, height: 24, borderRadius: 8 }} />
+				<div
+					style={{
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginTop: "1rem",
+					}}
+				>
+					<div
+						className="skeleton-text short skeleton-shimmer"
+						style={{ margin: 0, height: 16, width: "40%" }}
+					/>
+					<div
+						className="skeleton-shimmer"
+						style={{ width: 40, height: 24, borderRadius: 8 }}
+					/>
 				</div>
 			</div>
 		));
 	} else if (filteredProducts.length === 0) {
 		productShelfContent = (
-			<div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-				<Lucide.SearchCheck size={32} style={{ opacity: 0.3, marginBottom: "0.5rem", display: "inline-block" }} />
+			<div
+				style={{
+					gridColumn: "1 / -1",
+					textAlign: "center",
+					padding: "3rem",
+					color: "var(--text-muted)",
+					fontSize: "0.85rem",
+				}}
+			>
+				<Lucide.SearchCheck
+					size={32}
+					style={{
+						opacity: 0.3,
+						marginBottom: "0.5rem",
+						display: "inline-block",
+					}}
+				/>
 				<p>No products found matching your search.</p>
 			</div>
 		);
@@ -250,9 +278,7 @@ export default function CustomerApp({
 		productShelfContent = filteredProducts.map((p) => (
 			<div key={p.id} className="product-card">
 				{p.perishable && (
-					<span className="badge-perishable">
-						Cold Chain Perishable
-					</span>
+					<span className="badge-perishable">Cold Chain Perishable</span>
 				)}
 				<div className="product-emoji-row">
 					<span style={{ fontSize: "2rem" }}>{p.emoji}</span>
@@ -267,9 +293,7 @@ export default function CustomerApp({
 				<h4 style={{ fontWeight: 700, margin: "0.5rem 0 0.2rem 0" }}>
 					{p.name}
 				</h4>
-				<span
-					style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-				>
+				<span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
 					{p.category}
 				</span>
 				<div
@@ -633,9 +657,7 @@ export default function CustomerApp({
 						</div>
 
 						{/* Product Shelf Grid */}
-						<div className="product-shelf-grid">
-							{productShelfContent}
-						</div>
+						<div className="product-shelf-grid">{productShelfContent}</div>
 					</div>
 				) : (
 					<div
@@ -684,13 +706,21 @@ export default function CustomerApp({
 									className={vipMember ? "vip-card-glow" : "glass-card"}
 									style={{
 										padding: "1.5rem",
-										borderLeft: vipMember ? "none" : "4px solid var(--color-customer)",
+										borderLeft: vipMember
+											? "none"
+											: "4px solid var(--color-customer)",
 										display: "flex",
 										flexDirection: "column",
 										gap: "1.25rem",
 									}}
 								>
-									<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+									<div
+										style={{
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+										}}
+									>
 										<h3
 											style={{
 												display: "flex",
@@ -701,7 +731,12 @@ export default function CustomerApp({
 											}}
 											className={vipMember ? "vip-gold-text" : ""}
 										>
-											<Lucide.Crown size={20} style={{ color: vipMember ? "gold" : "var(--text-muted)" }} />
+											<Lucide.Crown
+												size={20}
+												style={{
+													color: vipMember ? "gold" : "var(--text-muted)",
+												}}
+											/>
 											Swiss Q-Commerce VIP Hub
 										</h3>
 										<div
@@ -723,7 +758,13 @@ export default function CustomerApp({
 										</div>
 									</div>
 
-									<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+									<div
+										style={{
+											display: "grid",
+											gridTemplateColumns: "1fr 1fr",
+											gap: "1rem",
+										}}
+									>
 										{/* Trust Score Bento */}
 										<div
 											className="glass-card"
@@ -736,33 +777,74 @@ export default function CustomerApp({
 												gap: "0.4rem",
 											}}
 										>
-											<span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+											<span
+												style={{
+													fontSize: "0.6rem",
+													color: "var(--text-muted)",
+													fontWeight: 700,
+													textTransform: "uppercase",
+													letterSpacing: "0.05em",
+												}}
+											>
 												Trust Shield Rating
 											</span>
-											<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: "0.5rem",
+												}}
+											>
 												{customerTrustScore >= 85 ? (
-													<Lucide.ShieldCheck size={20} style={{ color: "var(--color-customer)" }} />
+													<Lucide.ShieldCheck
+														size={20}
+														style={{ color: "var(--color-customer)" }}
+													/>
 												) : (
-													<Lucide.ShieldAlert size={20} style={{ color: "var(--color-admin)" }} />
+													<Lucide.ShieldAlert
+														size={20}
+														style={{ color: "var(--color-admin)" }}
+													/>
 												)}
 												<span
 													style={{
 														fontSize: "1.25rem",
 														fontWeight: 800,
 														fontFamily: "var(--font-mono)",
-														color: customerTrustScore >= 85 ? "var(--color-customer)" : "var(--color-admin)",
+														color:
+															customerTrustScore >= 85
+																? "var(--color-customer)"
+																: "var(--color-admin)",
 													}}
 												>
 													{customerTrustScore}
-													<span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>/100</span>
+													<span
+														style={{
+															fontSize: "0.8rem",
+															color: "var(--text-muted)",
+															fontWeight: 500,
+														}}
+													>
+														/100
+													</span>
 												</span>
 											</div>
 											{/* Small progress meter */}
-											<div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+											<div
+												style={{
+													height: "4px",
+													background: "rgba(255,255,255,0.05)",
+													borderRadius: "2px",
+													overflow: "hidden",
+												}}
+											>
 												<div
 													style={{
 														height: "100%",
-														background: customerTrustScore >= 85 ? "var(--color-customer)" : "var(--color-admin)",
+														background:
+															customerTrustScore >= 85
+																? "var(--color-customer)"
+																: "var(--color-admin)",
 														width: `${customerTrustScore}%`,
 														transition: "width 0.5s ease",
 													}}
@@ -782,17 +864,50 @@ export default function CustomerApp({
 												gap: "0.4rem",
 											}}
 										>
-											<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+											<span
+												style={{
+													fontSize: "0.65rem",
+													color: "var(--text-muted)",
+													fontWeight: 700,
+													textTransform: "uppercase",
+													letterSpacing: "0.05em",
+												}}
+											>
 												Membership Tier
 											</span>
-											<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-												<Lucide.Zap size={18} style={{ color: vipMember ? "gold" : "var(--text-muted)" }} />
-												<span style={{ fontSize: "0.95rem", fontWeight: 800, color: vipMember ? "gold" : "var(--text-primary)" }}>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: "0.5rem",
+												}}
+											>
+												<Lucide.Zap
+													size={18}
+													style={{
+														color: vipMember ? "gold" : "var(--text-muted)",
+													}}
+												/>
+												<span
+													style={{
+														fontSize: "0.95rem",
+														fontWeight: 800,
+														color: vipMember ? "gold" : "var(--text-primary)",
+													}}
+												>
 													{vipMember ? "VIP Premium" : "Standard Tier"}
 												</span>
 											</div>
-											<span style={{ fontSize: "0.65rem", color: "var(--text-muted)", lineHeight: 1.2 }}>
-												{vipMember ? "✓ Unlimited free delivery on orders above $15" : "Upgrade by earning loyalty points on purchases"}
+											<span
+												style={{
+													fontSize: "0.65rem",
+													color: "var(--text-muted)",
+													lineHeight: 1.2,
+												}}
+											>
+												{vipMember
+													? "✓ Unlimited free delivery on orders above $15"
+													: "Upgrade by earning loyalty points on purchases"}
 											</span>
 										</div>
 									</div>
@@ -811,7 +926,9 @@ export default function CustomerApp({
 										>
 											<Lucide.AlertTriangle size={16} />
 											<div style={{ fontSize: "0.75rem", lineHeight: 1.3 }}>
-												<strong>GDPR Probation Active:</strong> Your trust rating is temporarily capped. Complete 3 successful deliveries to clear compliance logs.
+												<strong>GDPR Probation Active:</strong> Your trust
+												rating is temporarily capped. Complete 3 successful
+												deliveries to clear compliance logs.
 											</div>
 										</div>
 									)}
@@ -872,7 +989,8 @@ export default function CustomerApp({
 													}}
 												>
 													<div>
-														<strong>Order #{historyItem.id}</strong> ({historyItem.date})
+														<strong>Order #{historyItem.id}</strong> (
+														{historyItem.date})
 														<div
 															style={{
 																color: "var(--text-muted)",
@@ -904,10 +1022,22 @@ export default function CustomerApp({
 								<div className="voucher-ticket-row">
 									{vouchers.map((v) => (
 										<div key={v.code} className="voucher-ticket">
-											<div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+											<div
+												style={{
+													display: "flex",
+													flexDirection: "column",
+													gap: "0.25rem",
+												}}
+											>
 												<div>
 													<span className="voucher-code">{v.code}</span>
-													<span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginLeft: "0.5rem" }}>
+													<span
+														style={{
+															fontSize: "0.75rem",
+															color: "var(--text-secondary)",
+															marginLeft: "0.5rem",
+														}}
+													>
 														(Flat ${v.value.toFixed(2)} Off)
 													</span>
 												</div>
@@ -923,7 +1053,13 @@ export default function CustomerApp({
 											</div>
 											<button
 												className="btn-secondary-glow"
-												style={{ fontSize: "0.7rem", padding: "0.3rem 0.65rem", cursor: "pointer", border: "1px solid var(--border-color)", borderRadius: "6px" }}
+												style={{
+													fontSize: "0.7rem",
+													padding: "0.3rem 0.65rem",
+													cursor: "pointer",
+													border: "1px solid var(--border-color)",
+													borderRadius: "6px",
+												}}
 												onClick={() => {
 													if (setVoucherCode) setVoucherCode(v.code);
 												}}
@@ -1127,7 +1263,9 @@ export default function CustomerApp({
 									>
 										<span>🌳 Return bags offset rebate</span>
 									</label>
-									<span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+									<span
+										style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
+									>
 										$0.50 cash rebate applied to total cost
 									</span>
 								</div>

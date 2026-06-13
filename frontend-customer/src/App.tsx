@@ -57,15 +57,25 @@ export default function App() {
 				color: "#fff",
 			}}
 		>
-			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+					marginBottom: "1rem",
+				}}
+			>
 				<h2 style={{ margin: 0 }}>Customer MFE (Standalone Dev Preview)</h2>
 				<button
 					type="button"
 					onClick={async () => {
-						await fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth/logout`, {
-							method: "POST",
-							headers: { "X-Session-Id": session.sessionId },
-						}).catch(() => {});
+						await fetch(
+							`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth/logout`,
+							{
+								method: "POST",
+								headers: { "X-Session-Id": session.sessionId },
+							},
+						).catch(() => {});
 						setSession(null);
 					}}
 					style={{

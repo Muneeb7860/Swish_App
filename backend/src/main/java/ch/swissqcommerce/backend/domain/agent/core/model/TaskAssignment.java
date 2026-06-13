@@ -13,7 +13,8 @@ public class TaskAssignment {
 
     public TaskAssignment(String taskId, String agentId, String payload, TaskStatus status) {
         if (taskId == null || agentId == null || payload == null) {
-            throw new IllegalArgumentException("TaskAssignment requires taskId, agentId, and payload");
+            throw new IllegalArgumentException(
+                    "TaskAssignment requires taskId, agentId, and payload");
         }
         this.taskId = taskId;
         this.agentId = agentId;

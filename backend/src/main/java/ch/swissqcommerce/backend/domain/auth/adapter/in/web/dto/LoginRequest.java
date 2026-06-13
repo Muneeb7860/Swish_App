@@ -13,12 +13,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LoginRequest {
 
-    @NotBlank
-    @Email
-    private String email;
+    @NotBlank @Email private String email;
 
-    @NotBlank
-    private String password;
+    @NotBlank private String password;
 
     /** Optional client-supplied device fingerprint (UA hash, etc.). */
     private String deviceFingerprint;

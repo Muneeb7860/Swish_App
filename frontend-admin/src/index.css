@@ -2306,7 +2306,8 @@ body {
 	vertical-align: middle;
 }
 
-.ledger-time, .ledger-ref {
+.ledger-time,
+.ledger-ref {
 	font-family: var(--font-mono);
 	color: var(--text-secondary);
 }

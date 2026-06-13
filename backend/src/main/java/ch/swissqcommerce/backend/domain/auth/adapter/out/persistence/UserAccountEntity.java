@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.auth.adapter.out.persistence;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "user_accounts", schema = "oltp")
@@ -31,8 +30,10 @@ public class UserAccountEntity {
     @Column(name = "status", length = 20, nullable = false)
     private String status;
 
-    /** User role — determines the Spring Security authority granted in the JWT.
-     *  Values: CUSTOMER (default), ADMIN, RIDER, WHOLESALER. */
+    /**
+     * User role — determines the Spring Security authority granted in the JWT. Values: CUSTOMER
+     * (default), ADMIN, RIDER, WHOLESALER.
+     */
     @Column(name = "role", length = 20, nullable = false)
     @Builder.Default
     private String role = "CUSTOMER";

@@ -4,12 +4,13 @@ import org.mockito.Mockito;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.kafka.core.KafkaTemplate;
 
 /**
- * Test configuration providing mock beans to satisfy Redis and Kafka dependencies during integration tests.
+ * Test configuration providing mock beans to satisfy Redis and Kafka dependencies during
+ * integration tests.
  */
 @Configuration
 public class TestConfig {
@@ -30,5 +31,4 @@ public class TestConfig {
         Mockito.when(mockTemplate.opsForValue()).thenReturn(mockOps);
         return mockTemplate;
     }
-
 }

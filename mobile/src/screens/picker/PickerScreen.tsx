@@ -182,7 +182,10 @@ export default function PickerScreen() {
 		try {
 			const response = await fetch(`${bffUrl}/api/admin/health`, {
 				method: "GET",
-				headers: { Authorization: `Bearer ${jwtToken}`, Accept: "application/json" },
+				headers: {
+					Authorization: `Bearer ${jwtToken}`,
+					Accept: "application/json",
+				},
 			});
 			if (response.ok) {
 				setIsConnected(true);
@@ -214,7 +217,10 @@ export default function PickerScreen() {
 				`${bffUrl}/api/inventory/picker/queue?storeId=${selectedStore}`,
 				{
 					method: "GET",
-					headers: { Authorization: `Bearer ${jwtToken}`, Accept: "application/json" },
+					headers: {
+						Authorization: `Bearer ${jwtToken}`,
+						Accept: "application/json",
+					},
 				},
 			);
 			if (response.ok) {
@@ -393,7 +399,10 @@ export default function PickerScreen() {
 
 	const dispatchStockRequest = async () => {
 		if (dispatchSource === dispatchTarget) {
-			Alert.alert("Invalid Target", "Source and Target MFCs must be different.");
+			Alert.alert(
+				"Invalid Target",
+				"Source and Target MFCs must be different.",
+			);
 			return;
 		}
 		setDispatchLoading(true);
@@ -416,7 +425,8 @@ export default function PickerScreen() {
 					quantity: dispatchQty,
 					fromStore: dispatchSource.toUpperCase() + " MFC",
 					toStore: dispatchTarget.toUpperCase() + " MFC",
-					transferTruckId: "TX-TRUCK-" + Math.floor(1000 + Math.random() * 9000),
+					transferTruckId:
+						"TX-TRUCK-" + Math.floor(1000 + Math.random() * 9000),
 					timestamp: new Date().toLocaleTimeString(),
 				};
 				setLastDispatchResult(result);
@@ -450,8 +460,7 @@ export default function PickerScreen() {
 						quantity: resData.quantity || dispatchQty,
 						fromStore:
 							(resData.fromStore || dispatchSource).toUpperCase() + " MFC",
-						toStore:
-							(resData.toStore || dispatchTarget).toUpperCase() + " MFC",
+						toStore: (resData.toStore || dispatchTarget).toUpperCase() + " MFC",
 						transferTruckId:
 							resData.transferTruckId ||
 							resData.transfer_truck_id ||
@@ -735,7 +744,9 @@ export default function PickerScreen() {
 					<MaterialCommunityIcons
 						name="format-list-checks"
 						size={22}
-						color={activeTab === "queue" ? THEME.inventory : THEME.textSecondary}
+						color={
+							activeTab === "queue" ? THEME.inventory : THEME.textSecondary
+						}
 					/>
 					<Text
 						style={[

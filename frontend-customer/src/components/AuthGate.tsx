@@ -29,7 +29,8 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 		try {
 			const endpoint = mode === "login" ? "/login" : "/register";
 			const body: Record<string, string> = { email, password };
-			if (mode === "login") body.deviceFingerprint = navigator.userAgent.slice(0, 64);
+			if (mode === "login")
+				body.deviceFingerprint = navigator.userAgent.slice(0, 64);
 
 			const res = await fetch(`${API}${endpoint}`, {
 				method: "POST",
@@ -243,77 +244,172 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 			{/* Left Column: Feature Bento Grid */}
 			<div className="auth-left-panel">
 				<div style={{ maxWidth: 640 }}>
-					<span style={{
-						color: "#10b981",
-						fontSize: "0.8rem",
-						fontWeight: 800,
-						letterSpacing: "0.15em",
-						textTransform: "uppercase"
-					}}>
+					<span
+						style={{
+							color: "#10b981",
+							fontSize: "0.8rem",
+							fontWeight: 800,
+							letterSpacing: "0.15em",
+							textTransform: "uppercase",
+						}}
+					>
 						Enterprise Q-Commerce Platform
 					</span>
-					<h2 style={{
-						fontSize: "2.5rem",
-						fontWeight: 800,
-						margin: "0.5rem 0",
-						letterSpacing: "-0.03em",
-						background: "linear-gradient(135deg, #fff 30%, #94a3b8)",
-						WebkitBackgroundClip: "text",
-						WebkitTextFillColor: "transparent"
-					}}>
+					<h2
+						style={{
+							fontSize: "2.5rem",
+							fontWeight: 800,
+							margin: "0.5rem 0",
+							letterSpacing: "-0.03em",
+							background: "linear-gradient(135deg, #fff 30%, #94a3b8)",
+							WebkitBackgroundClip: "text",
+							WebkitTextFillColor: "transparent",
+						}}
+					>
 						Swish Agentic OS
 					</h2>
-					<p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.5, margin: "0 0 2rem" }}>
-						Decentralized micro-frontends, event-driven hexagonal core, and governed AI agents guaranteeing 15-minute grocery delivery.
+					<p
+						style={{
+							color: "#94a3b8",
+							fontSize: "0.95rem",
+							lineHeight: 1.5,
+							margin: "0 0 2rem",
+						}}
+					>
+						Decentralized micro-frontends, event-driven hexagonal core, and
+						governed AI agents guaranteeing 15-minute grocery delivery.
 					</p>
 				</div>
 
 				<div className="auth-bento-grid">
 					{/* Card 1: 15-Min SLA */}
 					<div className="auth-bento-card">
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-							<span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8" }}>DELIVERY SLA</span>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: "1rem",
+							}}
+						>
+							<span
+								style={{
+									fontSize: "0.7rem",
+									fontWeight: 700,
+									color: "#94a3b8",
+								}}
+							>
+								DELIVERY SLA
+							</span>
 							<span className="pulsing-time">09:59</span>
 						</div>
-						<h4 style={{ fontWeight: 800, fontSize: "0.95rem", margin: "0 0 0.25rem" }}>15-Minute Guarantee</h4>
+						<h4
+							style={{
+								fontWeight: 800,
+								fontSize: "0.95rem",
+								margin: "0 0 0.25rem",
+							}}
+						>
+							15-Minute Guarantee
+						</h4>
 						<p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
-							Dynamic rider dispatching and dark store automation mapping routes instantly.
+							Dynamic rider dispatching and dark store automation mapping routes
+							instantly.
 						</p>
 					</div>
 
 					{/* Card 2: AI Governance */}
 					<div className="auth-bento-card">
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-							<span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8" }}>GOVERNANCE SHIELD</span>
-							<span style={{
-								background: "rgba(16, 185, 129, 0.1)",
-								color: "#10b981",
-								padding: "0.15rem 0.4rem",
-								borderRadius: 4,
-								fontSize: "0.6rem",
-								fontWeight: 700
-							}}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: "1rem",
+							}}
+						>
+							<span
+								style={{
+									fontSize: "0.7rem",
+									fontWeight: 700,
+									color: "#94a3b8",
+								}}
+							>
+								GOVERNANCE SHIELD
+							</span>
+							<span
+								style={{
+									background: "rgba(16, 185, 129, 0.1)",
+									color: "#10b981",
+									padding: "0.15rem 0.4rem",
+									borderRadius: 4,
+									fontSize: "0.6rem",
+									fontWeight: 700,
+								}}
+							>
 								100% OK
 							</span>
 						</div>
-						<h4 style={{ fontWeight: 800, fontSize: "0.95rem", margin: "0 0 0.25rem" }}>Llm Safety Guardrails</h4>
+						<h4
+							style={{
+								fontWeight: 800,
+								fontSize: "0.95rem",
+								margin: "0 0 0.25rem",
+							}}
+						>
+							Llm Safety Guardrails
+						</h4>
 						<p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
-							Obfuscation filters, nesting limits, and real-time RAG grounding audit.
+							Obfuscation filters, nesting limits, and real-time RAG grounding
+							audit.
 						</p>
 					</div>
 
 					{/* Card 3: Hexagonal & SSE Telemetry */}
 					<div className="auth-bento-card auth-bento-span-2">
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-							<span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8" }}>CONNECTION INTEGRITY</span>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: "1rem",
+							}}
+						>
+							<span
+								style={{
+									fontSize: "0.7rem",
+									fontWeight: 700,
+									color: "#94a3b8",
+								}}
+							>
+								CONNECTION INTEGRITY
+							</span>
 							<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
 								<div className="telemetry-node" />
-								<span style={{ fontSize: "0.65rem", color: "#8b5cf6", fontWeight: 700 }}>SSE Stream: ACTIVE</span>
+								<span
+									style={{
+										fontSize: "0.65rem",
+										color: "#8b5cf6",
+										fontWeight: 700,
+									}}
+								>
+									SSE Stream: ACTIVE
+								</span>
 							</div>
 						</div>
-						<h4 style={{ fontWeight: 800, fontSize: "0.95rem", margin: "0 0 0.25rem" }}>Federated Hexagonal Core</h4>
+						<h4
+							style={{
+								fontWeight: 800,
+								fontSize: "0.95rem",
+								margin: "0 0 0.25rem",
+							}}
+						>
+							Federated Hexagonal Core
+						</h4>
 						<p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
-							Micro-frontends synced with the Spring Boot backend via Server-Sent Events, processing real-time telemetry flows and cold chain logistics seamlessly.
+							Micro-frontends synced with the Spring Boot backend via
+							Server-Sent Events, processing real-time telemetry flows and cold
+							chain logistics seamlessly.
 						</p>
 					</div>
 				</div>
@@ -323,48 +419,68 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 			<div className="auth-right-panel">
 				<div className="auth-glass-form">
 					<div style={{ textAlign: "center", marginBottom: "2rem" }}>
-						<h3 style={{ fontSize: "1.5rem", fontWeight: 800, margin: "0 0 0.25rem", color: "#fff" }}>
+						<h3
+							style={{
+								fontSize: "1.5rem",
+								fontWeight: 800,
+								margin: "0 0 0.25rem",
+								color: "#fff",
+							}}
+						>
 							{mode === "login" ? "Welcome Back" : "Register Account"}
 						</h3>
 						<p style={{ fontSize: "0.8rem", color: "#94a3b8", margin: 0 }}>
-							{mode === "login" ? "Enter credentials to unlock cockpit" : "Create profile to start ordering"}
+							{mode === "login"
+								? "Enter credentials to unlock cockpit"
+								: "Create profile to start ordering"}
 						</p>
 					</div>
 
 					{/* Mode Tabs */}
-					<div style={{
-						display: "flex",
-						background: "rgba(255, 255, 255, 0.03)",
-						padding: 4,
-						borderRadius: 12,
-						marginBottom: "1.5rem",
-						border: "1px solid rgba(255, 255, 255, 0.05)"
-					}}>
+					<div
+						style={{
+							display: "flex",
+							background: "rgba(255, 255, 255, 0.03)",
+							padding: 4,
+							borderRadius: 12,
+							marginBottom: "1.5rem",
+							border: "1px solid rgba(255, 255, 255, 0.05)",
+						}}
+					>
 						<button
 							type="button"
-							onClick={() => { setMode("login"); setError(""); }}
+							onClick={() => {
+								setMode("login");
+								setError("");
+							}}
 							className="auth-mode-tab"
 							style={{
 								background: mode === "login" ? "#10b981" : "transparent",
-								color: mode === "login" ? "#070a13" : "#94a3b8"
+								color: mode === "login" ? "#070a13" : "#94a3b8",
 							}}
 						>
 							Log in
 						</button>
 						<button
 							type="button"
-							onClick={() => { setMode("register"); setError(""); }}
+							onClick={() => {
+								setMode("register");
+								setError("");
+							}}
 							className="auth-mode-tab"
 							style={{
 								background: mode === "register" ? "#10b981" : "transparent",
-								color: mode === "register" ? "#070a13" : "#94a3b8"
+								color: mode === "register" ? "#070a13" : "#94a3b8",
 							}}
 						>
 							Register
 						</button>
 					</div>
 
-					<form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+					<form
+						onSubmit={submit}
+						style={{ display: "flex", flexDirection: "column", gap: 14 }}
+					>
 						<div>
 							<input
 								type="email"
@@ -387,18 +503,22 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 								id="password-input"
 							/>
 						</div>
-						
+
 						{error && (
-							<p style={{
-								margin: 0,
-								color: error.startsWith("Account") ? "#10b981" : "#ef5350",
-								fontSize: "0.8rem",
-								fontWeight: 600,
-								background: error.startsWith("Account") ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 83, 80, 0.08)",
-								padding: "0.5rem 0.75rem",
-								borderRadius: 8,
-								border: `1px solid ${error.startsWith("Account") ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 83, 80, 0.2)"}`
-							}}>
+							<p
+								style={{
+									margin: 0,
+									color: error.startsWith("Account") ? "#10b981" : "#ef5350",
+									fontSize: "0.8rem",
+									fontWeight: 600,
+									background: error.startsWith("Account")
+										? "rgba(16, 185, 129, 0.08)"
+										: "rgba(239, 83, 80, 0.08)",
+									padding: "0.5rem 0.75rem",
+									borderRadius: 8,
+									border: `1px solid ${error.startsWith("Account") ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 83, 80, 0.2)"}`,
+								}}
+							>
 								{error}
 							</p>
 						)}
@@ -409,7 +529,11 @@ export default function AuthGate({ onAuth }: AuthGateProps) {
 							className="auth-btn-primary"
 							style={{ marginTop: "0.5rem" }}
 						>
-							{loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
+							{loading
+								? "Please wait…"
+								: mode === "login"
+									? "Log in"
+									: "Create account"}
 						</button>
 					</form>
 				</div>

@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.dispatch.core.model;
 
-import lombok.Value;
 import java.math.BigDecimal;
+import lombok.Value;
 
 @Value
 public class GeoPoint {

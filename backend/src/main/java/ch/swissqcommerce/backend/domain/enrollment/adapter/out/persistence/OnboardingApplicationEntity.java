@@ -2,8 +2,8 @@ package ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "onboarding_applications", schema = "oltp")

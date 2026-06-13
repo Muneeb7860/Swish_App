@@ -1,6 +1,5 @@
 package ch.swissqcommerce.backend.domain.inventory.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.inventory.core.model.InventoryItem;
 import ch.swissqcommerce.backend.domain.inventory.port.in.StockManagementUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -1,28 +1,18 @@
 package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-
 
 import ch.swissqcommerce.backend.domain.dispatch.core.model.ActiveShipment;
-import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.ActiveShipmentEntity;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.GearScan;
-import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.GearScanEntity;
+import ch.swissqcommerce.backend.domain.dispatch.core.model.ShipmentStatus;
 import ch.swissqcommerce.backend.domain.dispatch.core.model.VehicleConfig;
-import ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence.VehicleConfigEntity;
 import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort;
 import ch.swissqcommerce.backend.domain.dispatch.port.out.DispatchPort.EligibilityCriteria;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import ch.swissqcommerce.backend.domain.dispatch.core.model.RouteCoordinates;
-import ch.swissqcommerce.backend.domain.dispatch.core.model.GeoPoint;
-import ch.swissqcommerce.backend.domain.dispatch.core.model.ShipmentStatus;
 
 @Component
 @RequiredArgsConstructor
@@ -100,7 +90,10 @@ public class DispatchPersistenceAdapter implements DispatchPort {
                 .shipmentId(entity.getShipmentId())
                 .orderId(entity.getOrderId())
                 .riderId(entity.getRiderId())
-                .status(entity.getStatus() != null ? ShipmentStatus.valueOf(entity.getStatus().toUpperCase()) : null)
+                .status(
+                        entity.getStatus() != null
+                                ? ShipmentStatus.valueOf(entity.getStatus().toUpperCase())
+                                : null)
                 .totalWeightKg(entity.getTotalWeightKg())
                 .assignedAt(entity.getAssignedAt())
                 .lastGpsUpdate(entity.getLastGpsUpdate())
@@ -170,31 +163,44 @@ public class DispatchPersistenceAdapter implements DispatchPort {
             return false;
         }
 
-        VehicleConfigEntity vehicleConfig = vehicleConfigRepository.findById(criteria.vehicleType()).orElse(null);
+        VehicleConfigEntity vehicleConfig =
+                vehicleConfigRepository.findById(criteria.vehicleType()).orElse(null);
         if (vehicleConfig == null) {
             log.warn("Vehicle configuration not found for type {}.", criteria.vehicleType());
             return false;
         }
 
-        BigDecimal limitWithTolerance = vehicleConfig.getMaxWeightKg().multiply(new BigDecimal("1.10"));
+        BigDecimal limitWithTolerance =
+                vehicleConfig.getMaxWeightKg().multiply(new BigDecimal("1.10"));
         if (criteria.weightKg().compareTo(limitWithTolerance) > 0) {
-            log.warn("Order weight {} exceeds vehicle max weight limit {} (including 10% tolerance).", criteria.weightKg(), limitWithTolerance);
+            log.warn(
+                    "Order weight {} exceeds vehicle max weight limit {} (including 10%"
+                            + " tolerance).",
+                    criteria.weightKg(), limitWithTolerance);
             return false;
         }
 
         if (!criteria.gearExempt()) {
             OffsetDateTime oneDayAgo = OffsetDateTime.now().minusDays(1);
-            List<GearScanEntity> scans = gearScanRepository.findByRiderIdOrderByScanTimeDesc(criteria.riderId());
-            boolean hasValidGear = scans.stream()
-                    .filter(s -> "THERMAL_BAG".equals(s.getGearType()))
-                    .filter(s -> "PASSED".equals(s.getVerificationStatus()))
-                    .anyMatch(s -> {
-                        OffsetDateTime time = s.getScanTime() != null ? s.getScanTime() : OffsetDateTime.now();
-                        return time.isAfter(oneDayAgo);
-                    });
+            List<GearScanEntity> scans =
+                    gearScanRepository.findByRiderIdOrderByScanTimeDesc(criteria.riderId());
+            boolean hasValidGear =
+                    scans.stream()
+                            .filter(s -> "THERMAL_BAG".equals(s.getGearType()))
+                            .filter(s -> "PASSED".equals(s.getVerificationStatus()))
+                            .anyMatch(
+                                    s -> {
+                                        OffsetDateTime time =
+                                                s.getScanTime() != null
+                                                        ? s.getScanTime()
+                                                        : OffsetDateTime.now();
+                                        return time.isAfter(oneDayAgo);
+                                    });
 
             if (!hasValidGear) {
-                log.warn("Rider {} has no valid passed thermal bag gear scan in the last 24 hours.", criteria.riderId());
+                log.warn(
+                        "Rider {} has no valid passed thermal bag gear scan in the last 24 hours.",
+                        criteria.riderId());
                 return false;
             }
         }
@@ -205,8 +211,11 @@ public class DispatchPersistenceAdapter implements DispatchPort {
         }
 
         if (criteria.customerId().equals(criteria.riderId())) {
-            log.warn("Self-matching detected. Customer ID matches Rider profile: customer={}, rider={}", 
-                    criteria.customerId(), criteria.riderId());
+            log.warn(
+                    "Self-matching detected. Customer ID matches Rider profile: customer={},"
+                            + " rider={}",
+                    criteria.customerId(),
+                    criteria.riderId());
             return false;
         }
 

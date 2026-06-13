@@ -1,12 +1,11 @@
 package ch.swissqcommerce.backend.domain.transaction.core.model;
+
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
+import ch.swissqcommerce.backend.model.Customer;
+import ch.swissqcommerce.backend.model.DarkStore;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.model.DarkStore;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
-
-
 import lombok.*;
 
 @Getter

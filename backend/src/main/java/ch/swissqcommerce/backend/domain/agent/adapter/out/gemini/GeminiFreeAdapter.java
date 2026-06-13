@@ -1,18 +1,16 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.out.gemini;
-import java.util.List;
-
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import java.util.*;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.*;
 
 @Component
 public class GeminiFreeAdapter implements LlmGatewayPort {
@@ -36,7 +34,9 @@ public class GeminiFreeAdapter implements LlmGatewayPort {
             throw new IllegalStateException("Gemini API key is not configured");
         }
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
+        String url =
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
+                        + apiKey;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -57,21 +57,18 @@ public class GeminiFreeAdapter implements LlmGatewayPort {
                 if (resParts != null && !resParts.isEmpty()) {
                     Map<?, ?> resPart = (Map<?, ?>) resParts.get(0);
                     String text = (String) resPart.get("text");
-                    
+
                     double inputTokens = prompt.length() / 4.0;
                     double outputTokens = text.length() / 4.0;
                     double cost = (inputTokens * 0.000000075) + (outputTokens * 0.00000030);
-                    
-                    return LlmResponse.builder()
-                            .content(text)
-                            .tokenCost(cost)
-                            .build();
+
+                    return LlmResponse.builder().content(text).tokenCost(cost).build();
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException("Error calling Gemini API: " + e.getMessage(), e);
         }
-        
+
         throw new RuntimeException("Invalid response format from Gemini API");
     }
 }

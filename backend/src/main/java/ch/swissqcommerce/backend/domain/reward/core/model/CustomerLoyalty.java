@@ -1,7 +1,6 @@
 package ch.swissqcommerce.backend.domain.reward.core.model;
+
 import java.time.OffsetDateTime;
-
-
 import lombok.*;
 
 @Getter

@@ -1,14 +1,10 @@
 package ch.swissqcommerce.backend.domain.auth.core.model;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-
-import lombok.Getter;
-
 import java.time.OffsetDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
 
 @Getter
 @Builder

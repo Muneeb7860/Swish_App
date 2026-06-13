@@ -1,12 +1,11 @@
 package ch.swissqcommerce.backend.service;
 
-import ch.swissqcommerce.backend.domain.inventory.core.service.InventoryService;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import ch.swissqcommerce.backend.domain.inventory.core.service.InventoryService;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 public class InventoryServiceTest {
 

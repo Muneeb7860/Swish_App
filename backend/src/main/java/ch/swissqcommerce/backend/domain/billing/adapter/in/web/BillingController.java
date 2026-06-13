@@ -6,20 +6,18 @@ import ch.swissqcommerce.backend.domain.billing.core.model.Invoice;
 import ch.swissqcommerce.backend.domain.billing.port.in.BillingUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
 /**
- * Billing engine API (BRD FR-06). Administrator-only: subscription and invoice
- * operations are operator functions, gated at the method layer in addition to
- * the gateway/OPA URL policy.
+ * Billing engine API (BRD FR-06). Administrator-only: subscription and invoice operations are
+ * operator functions, gated at the method layer in addition to the gateway/OPA URL policy.
  */
 @RestController
 @RequestMapping("/api/v1/billing")
@@ -30,7 +28,9 @@ public class BillingController {
     private final BillingUseCase billing;
 
     public record SubscribeRequest(String storeId, BillingTier tier) {}
+
     public record TierRequest(BillingTier tier) {}
+
     public record InvoicePeriodRequest(LocalDate periodStart, LocalDate periodEnd) {}
 
     @Operation(summary = "Subscribe a hub to a flat-tier billing plan")
@@ -48,7 +48,8 @@ public class BillingController {
     @Operation(summary = "Change a billing account's tier")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/accounts/{accountId}/tier")
-    public ResponseEntity<?> changeTier(@PathVariable String accountId, @RequestBody TierRequest req) {
+    public ResponseEntity<?> changeTier(
+            @PathVariable String accountId, @RequestBody TierRequest req) {
         try {
             return ResponseEntity.ok(billing.changeTier(accountId, req.tier()));
         } catch (NoSuchElementException e) {
@@ -64,16 +65,20 @@ public class BillingController {
     public ResponseEntity<?> getAccount(@PathVariable String accountId) {
         return billing.getAccount(accountId)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Billing account not found")));
+                .orElseGet(
+                        () ->
+                                ResponseEntity.status(404)
+                                        .body(Map.of("error", "Billing account not found")));
     }
 
     @Operation(summary = "Generate a flat-tier invoice for a billing period")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/accounts/{accountId}/invoices")
-    public ResponseEntity<?> generateInvoice(@PathVariable String accountId,
-                                             @RequestBody InvoicePeriodRequest req) {
+    public ResponseEntity<?> generateInvoice(
+            @PathVariable String accountId, @RequestBody InvoicePeriodRequest req) {
         try {
-            Invoice invoice = billing.generateInvoice(accountId, req.periodStart(), req.periodEnd());
+            Invoice invoice =
+                    billing.generateInvoice(accountId, req.periodStart(), req.periodEnd());
             return ResponseEntity.status(201).body(invoice);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));

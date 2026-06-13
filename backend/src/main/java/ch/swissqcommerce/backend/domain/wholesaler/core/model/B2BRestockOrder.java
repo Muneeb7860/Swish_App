@@ -1,9 +1,8 @@
 package ch.swissqcommerce.backend.domain.wholesaler.core.model;
+
+import ch.swissqcommerce.backend.model.DarkStore;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import ch.swissqcommerce.backend.model.DarkStore;
-
-
 import lombok.*;
 
 @Getter
@@ -21,11 +20,9 @@ public class B2BRestockOrder {
 
     private BigDecimal invoiceAmount;
 
-    @Builder.Default
-    private Boolean isFallback = false;
+    @Builder.Default private Boolean isFallback = false;
 
-    @Builder.Default
-    private String status = "pending";
+    @Builder.Default private String status = "pending";
 
     private String idempotencyKey;
 

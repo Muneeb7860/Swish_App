@@ -101,7 +101,13 @@ export default function AdminPanel({
 						<Lucide.Flame size={18} />
 						Chaos Engineering Control Desk
 					</h3>
-					<p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1rem" }}>
+					<p
+						style={{
+							fontSize: "0.7rem",
+							color: "var(--text-muted)",
+							marginBottom: "1rem",
+						}}
+					>
 						Inject database latency spikes, telemetry geofencing mismatches,
 						cold chain warming anomalies, wholesaler fallbacks, or gateway
 						outages.
@@ -124,9 +130,14 @@ export default function AdminPanel({
 									type="checkbox"
 									className="switch-input"
 									checked={coldChainBreakdownActive}
-									onChange={(e) => setColdChainBreakdownActive(e.target.checked)}
+									onChange={(e) =>
+										setColdChainBreakdownActive(e.target.checked)
+									}
 								/>
-								<label htmlFor="switch-cold-chain" className="switch-label"></label>
+								<label
+									htmlFor="switch-cold-chain"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 
@@ -137,7 +148,8 @@ export default function AdminPanel({
 									Simulate Primary Wholesaler Supplier Outage
 								</span>
 								<div className="chaos-switch-desc">
-									B2B restocks route to Secondary supplier ($35 surcharge, -20 trust).
+									B2B restocks route to Secondary supplier ($35 surcharge, -20
+									trust).
 								</div>
 							</div>
 							<div>
@@ -148,7 +160,10 @@ export default function AdminPanel({
 									checked={wholesalerOutageActive}
 									onChange={(e) => setWholesalerOutageActive(e.target.checked)}
 								/>
-								<label htmlFor="switch-wholesaler-outage" className="switch-label"></label>
+								<label
+									htmlFor="switch-wholesaler-outage"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 
@@ -170,7 +185,10 @@ export default function AdminPanel({
 									checked={paymentOutageActive}
 									onChange={(e) => setPaymentOutageActive(e.target.checked)}
 								/>
-								<label htmlFor="switch-payment-outage" className="switch-label"></label>
+								<label
+									htmlFor="switch-payment-outage"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 
@@ -192,7 +210,10 @@ export default function AdminPanel({
 									checked={simulateTelemetryFraud}
 									onChange={(e) => setSimulateTelemetryFraud(e.target.checked)}
 								/>
-								<label htmlFor="switch-telemetry-fraud" className="switch-label"></label>
+								<label
+									htmlFor="switch-telemetry-fraud"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 
@@ -203,7 +224,8 @@ export default function AdminPanel({
 									Inject Database Latency Spike
 								</span>
 								<div className="chaos-switch-desc">
-									Simulates BFF database latency. Circuit breaker caches results.
+									Simulates BFF database latency. Circuit breaker caches
+									results.
 								</div>
 							</div>
 							<div>
@@ -214,7 +236,10 @@ export default function AdminPanel({
 									checked={dbLatencyActive}
 									onChange={(e) => setDbLatencyActive(e.target.checked)}
 								/>
-								<label htmlFor="switch-db-latency" className="switch-label"></label>
+								<label
+									htmlFor="switch-db-latency"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 
@@ -236,7 +261,10 @@ export default function AdminPanel({
 									checked={riderTrafficActive}
 									onChange={(e) => setRiderTrafficActive(e.target.checked)}
 								/>
-								<label htmlFor="switch-rider-traffic" className="switch-label"></label>
+								<label
+									htmlFor="switch-rider-traffic"
+									className="switch-label"
+								></label>
 							</div>
 						</div>
 					</div>
@@ -286,11 +314,17 @@ export default function AdminPanel({
 											justifyContent: "space-between",
 											fontSize: "0.75rem",
 											fontWeight: 700,
-											marginBottom: "0.5rem"
+											marginBottom: "0.5rem",
 										}}
 									>
 										<span>{app.name}</span>
-										<span style={{ color: "var(--color-admin)", fontFamily: "var(--font-mono)", fontSize: "0.65rem" }}>
+										<span
+											style={{
+												color: "var(--color-admin)",
+												fontFamily: "var(--font-mono)",
+												fontSize: "0.65rem",
+											}}
+										>
 											{app.type.toUpperCase()}
 										</span>
 									</div>
@@ -303,29 +337,41 @@ export default function AdminPanel({
 									>
 										<button
 											aria-label="Approve L1 ID"
-											className={`onboard-step-btn ${app.approvals.l1 ? 'approved' : 'pending'}`}
+											className={`onboard-step-btn ${app.approvals.l1 ? "approved" : "pending"}`}
 											onClick={() => handleApproveOnboard(app.id, "l1")}
 											disabled={app.approvals.l1}
 										>
-											{app.approvals.l1 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											{app.approvals.l1 ? (
+												<Lucide.CheckCircle2 size={12} />
+											) : (
+												<Lucide.CircleDot size={12} />
+											)}
 											<span>L1 ID</span>
 										</button>
 										<button
 											aria-label="Approve L2 Vehicle"
-											className={`onboard-step-btn ${app.approvals.l2 ? 'approved' : 'pending'}`}
+											className={`onboard-step-btn ${app.approvals.l2 ? "approved" : "pending"}`}
 											onClick={() => handleApproveOnboard(app.id, "l2")}
 											disabled={app.approvals.l2}
 										>
-											{app.approvals.l2 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											{app.approvals.l2 ? (
+												<Lucide.CheckCircle2 size={12} />
+											) : (
+												<Lucide.CircleDot size={12} />
+											)}
 											<span>L2 Vehicle</span>
 										</button>
 										<button
 											aria-label="Approve L3 Background"
-											className={`onboard-step-btn ${app.approvals.l3 ? 'approved' : 'pending'}`}
+											className={`onboard-step-btn ${app.approvals.l3 ? "approved" : "pending"}`}
 											onClick={() => handleApproveOnboard(app.id, "l3")}
 											disabled={app.approvals.l3}
 										>
-											{app.approvals.l3 ? <Lucide.CheckCircle2 size={12} /> : <Lucide.CircleDot size={12} />}
+											{app.approvals.l3 ? (
+												<Lucide.CheckCircle2 size={12} />
+											) : (
+												<Lucide.CircleDot size={12} />
+											)}
 											<span>L3 BG</span>
 										</button>
 									</div>
@@ -339,7 +385,7 @@ export default function AdminPanel({
 									fontSize: "0.7rem",
 									color: "var(--text-muted)",
 									textAlign: "center",
-									padding: "1rem 0"
+									padding: "1rem 0",
 								}}
 							>
 								No pending applications
@@ -362,10 +408,26 @@ export default function AdminPanel({
 						}}
 					>
 						{hitlLoading ? (
-							<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", padding: "0.5rem" }}>
-								<div className="skeleton-shimmer skeleton-text medium" style={{ height: 14 }} />
-								<div className="skeleton-shimmer skeleton-text" style={{ height: 10 }} />
-								<div className="skeleton-shimmer skeleton-text short" style={{ height: 10 }} />
+							<div
+								style={{
+									display: "flex",
+									flexDirection: "column",
+									gap: "0.6rem",
+									padding: "0.5rem",
+								}}
+							>
+								<div
+									className="skeleton-shimmer skeleton-text medium"
+									style={{ height: 14 }}
+								/>
+								<div
+									className="skeleton-shimmer skeleton-text"
+									style={{ height: 10 }}
+								/>
+								<div
+									className="skeleton-shimmer skeleton-text short"
+									style={{ height: 10 }}
+								/>
 							</div>
 						) : hitlQueue.length === 0 ? (
 							<p
@@ -373,7 +435,7 @@ export default function AdminPanel({
 									fontSize: "0.7rem",
 									color: "var(--text-muted)",
 									textAlign: "center",
-									padding: "1rem 0"
+									padding: "1rem 0",
 								}}
 							>
 								No pending approvals
@@ -395,13 +457,29 @@ export default function AdminPanel({
 											display: "flex",
 											justifyContent: "space-between",
 											fontWeight: 700,
-											marginBottom: "0.25rem"
+											marginBottom: "0.25rem",
 										}}
 									>
-										<span style={{ color: "var(--color-admin)" }}>{ticket.type.toUpperCase()}</span>
-										<span style={{ fontFamily: "var(--font-mono)", color: "var(--color-customer)" }}>${ticket.amount.toFixed(2)}</span>
+										<span style={{ color: "var(--color-admin)" }}>
+											{ticket.type.toUpperCase()}
+										</span>
+										<span
+											style={{
+												fontFamily: "var(--font-mono)",
+												color: "var(--color-customer)",
+											}}
+										>
+											${ticket.amount.toFixed(2)}
+										</span>
 									</div>
-									<p style={{ color: "var(--text-muted)", margin: "0.3rem 0 0.6rem 0", fontSize: "0.7rem", lineHeight: "1.4" }}>
+									<p
+										style={{
+											color: "var(--text-muted)",
+											margin: "0.3rem 0 0.6rem 0",
+											fontSize: "0.7rem",
+											lineHeight: "1.4",
+										}}
+									>
 										{ticket.desc}
 									</p>
 									<div
@@ -478,13 +556,22 @@ export default function AdminPanel({
 											<button
 												type="button"
 												className="btn-primary-glow hitl-btn-approve"
-												disabled={!adjustPrices[ticket.id] || Number(adjustPrices[ticket.id]) <= 0}
+												disabled={
+													!adjustPrices[ticket.id] ||
+													Number(adjustPrices[ticket.id]) <= 0
+												}
 												onClick={() => {
 													const price = Number(adjustPrices[ticket.id]);
 													if (price > 0) {
 														handleAdjustHitl(ticket, price);
-														setAdjustOpen((prev) => ({ ...prev, [ticket.id]: false }));
-														setAdjustPrices((prev) => ({ ...prev, [ticket.id]: "" }));
+														setAdjustOpen((prev) => ({
+															...prev,
+															[ticket.id]: false,
+														}));
+														setAdjustPrices((prev) => ({
+															...prev,
+															[ticket.id]: "",
+														}));
 													}
 												}}
 											>
@@ -495,7 +582,10 @@ export default function AdminPanel({
 												type="button"
 												className="btn-secondary-glow"
 												onClick={() =>
-													setAdjustOpen((prev) => ({ ...prev, [ticket.id]: false }))
+													setAdjustOpen((prev) => ({
+														...prev,
+														[ticket.id]: false,
+													}))
 												}
 											>
 												<Lucide.X size={13} />

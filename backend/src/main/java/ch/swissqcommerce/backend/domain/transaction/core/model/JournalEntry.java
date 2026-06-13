@@ -1,9 +1,8 @@
 package ch.swissqcommerce.backend.domain.transaction.core.model;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-
-
 import lombok.*;
 
 @Getter

@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.feedback.core.model;
 
-import lombok.*;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Getter
 @Setter

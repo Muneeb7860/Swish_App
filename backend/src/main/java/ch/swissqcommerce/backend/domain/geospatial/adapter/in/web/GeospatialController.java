@@ -14,7 +14,8 @@ public class GeospatialController {
 
     @GetMapping("/zones/{id}")
     public ResponseEntity<DeliveryZone> getZone(@PathVariable String id) {
-        return geoUseCase.getZone(id)
+        return geoUseCase
+                .getZone(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

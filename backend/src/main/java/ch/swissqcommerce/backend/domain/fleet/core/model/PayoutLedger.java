@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.domain.fleet.core.model;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -17,9 +17,10 @@ public class PayoutLedger {
     private String status;
 
     public void addEarnings(BigDecimal amount) {
-        if(balance == null) balance = BigDecimal.ZERO;
+        if (balance == null) balance = BigDecimal.ZERO;
         this.balance = this.balance.add(amount);
     }
+
     public void processPayout() {
         this.balance = BigDecimal.ZERO;
         this.status = "PAID";

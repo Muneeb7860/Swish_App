@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.domain.reward.core.service;
 
 import ch.swissqcommerce.backend.domain.reward.core.model.RewardType;
-import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
 @Component
 public class RewardFactory {
@@ -12,8 +12,8 @@ public class RewardFactory {
     private final Map<RewardType, RewardProcessor> processors;
 
     public RewardFactory(List<RewardProcessor> processorList) {
-        this.processors = processorList.stream()
-                .collect(Collectors.toMap(RewardProcessor::getType, p -> p));
+        this.processors =
+                processorList.stream().collect(Collectors.toMap(RewardProcessor::getType, p -> p));
     }
 
     public RewardProcessor getProcessor(RewardType type) {

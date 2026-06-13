@@ -17,31 +17,33 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-    info = @Info(
-        title = "Swiss Quick Commerce BFF API",
-        version = "1.1.0",
-        description = """
+        info =
+                @Info(
+                        title = "Swiss Quick Commerce BFF API",
+                        version = "1.1.0",
+                        description =
+                                """
             Backend-for-Frontend (BFF) API Gateway contract for the Swiss Quick Commerce System.
             Integrates the five-sided marketplace: Customers, Riders, Pickers, Wholesalers, and Platform Admins.
             Enforces JWT security with MFA parameters, GDPR compliance controls, and Chaos Engineering fault logs.
             Idempotency-Key headers prevent duplicate execution on critical payment/write routes.
             """,
-        contact = @Contact(name = "SwissQ Commerce Engineering", email = "dev@swissqcommerce.ch"),
-        license = @License(name = "Proprietary")
-    ),
-    servers = {
-        @Server(url = "http://localhost:8080", description = "Local Development"),
-        @Server(url = "https://api.staging.swissqcommerce.ch", description = "Staging")
-    }
-)
+                        contact =
+                                @Contact(
+                                        name = "SwissQ Commerce Engineering",
+                                        email = "dev@swissqcommerce.ch"),
+                        license = @License(name = "Proprietary")),
+        servers = {
+            @Server(url = "http://localhost:8080", description = "Local Development"),
+            @Server(url = "https://api.staging.swissqcommerce.ch", description = "Staging")
+        })
 @SecurityScheme(
-    name = "bearerAuth",
-    type = SecuritySchemeType.HTTP,
-    scheme = "bearer",
-    bearerFormat = "JWT",
-    in = SecuritySchemeIn.HEADER,
-    description = "JWT token obtained from POST /api/v1/auth/login"
-)
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT",
+        in = SecuritySchemeIn.HEADER,
+        description = "JWT token obtained from POST /api/v1/auth/login")
 public class OpenApiConfig {
 
     @Bean
@@ -57,7 +59,12 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("1-customer")
                 .displayName("Customer APIs")
-                .pathsToMatch("/api/v1/auth/**", "/api/customer/**", "/api/orders/**", "/api/payments/**", "/api/ledger/**")
+                .pathsToMatch(
+                        "/api/v1/auth/**",
+                        "/api/customer/**",
+                        "/api/orders/**",
+                        "/api/payments/**",
+                        "/api/ledger/**")
                 .build();
     }
 
@@ -97,7 +104,8 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("5-admin")
                 .displayName("Admin, Governance & Security APIs")
-                .pathsToMatch("/api/admin/**", "/api/security/**", "/api/governance/**", "/api/agent/**")
+                .pathsToMatch(
+                        "/api/admin/**", "/api/security/**", "/api/governance/**", "/api/agent/**")
                 .build();
     }
 

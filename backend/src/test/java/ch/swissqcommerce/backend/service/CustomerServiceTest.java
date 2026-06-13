@@ -1,33 +1,30 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.customer.core.service.CustomerServiceImpl;
 import ch.swissqcommerce.backend.domain.customer.port.out.CustomerPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.CustomerAddress;
 import ch.swissqcommerce.backend.model.CustomerPaymentCard;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 public class CustomerServiceTest {
 
-    @Mock
-    private CustomerPort customerPort;
+    @Mock private CustomerPort customerPort;
 
-    @InjectMocks
-    private CustomerServiceImpl customerService;
+    @InjectMocks private CustomerServiceImpl customerService;
 
     @Test
     public void testPurgeProfile_Success() {
@@ -49,7 +46,8 @@ public class CustomerServiceTest {
         customer.setPaymentCards(cards);
 
         when(customerPort.findCustomerById("C1")).thenReturn(Optional.of(customer));
-        when(customerPort.saveCustomer(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(customerPort.saveCustomer(any(Customer.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Map<String, Object> result = customerService.purgeProfile("C1");
 

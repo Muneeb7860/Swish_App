@@ -28,7 +28,8 @@
 		"dev:customer": "cd frontend-customer && npm run dev",
 		"dev:rider": "cd frontend-rider && npm run dev",
 		"dev:admin": "cd frontend-admin && npm run dev",
-		"build:all": "npm run build --prefix frontend-host && npm run build --prefix frontend-customer && npm run build --prefix frontend-rider && npm run build --prefix frontend-admin"
+		"build:all": "npm run build --prefix frontend-host && npm run build --prefix frontend-customer && npm run build --prefix frontend-rider && npm run build --prefix frontend-admin",
+		"format": "biome format --write ./"
 	},
 	"dependencies": {
 		"@vitejs/plugin-react": "^6.0.2",

@@ -7,13 +7,11 @@ import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.transaction.port.out.OutboxEventPort;
 import ch.swissqcommerce.backend.model.OutboxEvent;
-import ch.swissqcommerce.backend.repository.OrderRepository;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
 
 public class PaymentUseCaseImpl implements PaymentUseCase {
 
@@ -23,11 +21,12 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
     private final OutboxEventPort outboxEventPort;
     private final ApplicationEventPublisher eventPublisher;
 
-    public PaymentUseCaseImpl(PaymentPort paymentPort,
-                              ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort orderPort,
-                              LedgerUseCase ledgerUseCase,
-                              OutboxEventPort outboxEventPort,
-                              ApplicationEventPublisher eventPublisher) {
+    public PaymentUseCaseImpl(
+            PaymentPort paymentPort,
+            ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort orderPort,
+            LedgerUseCase ledgerUseCase,
+            OutboxEventPort outboxEventPort,
+            ApplicationEventPublisher eventPublisher) {
         this.paymentPort = paymentPort;
         this.orderPort = orderPort;
         this.ledgerUseCase = ledgerUseCase;
@@ -37,7 +36,12 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
 
     @Override
     @Transactional
-    public Payment authorizePayment(Integer orderId, String customerId, BigDecimal amount, String paymentMethod, String idempotencyKey) {
+    public Payment authorizePayment(
+            Integer orderId,
+            String customerId,
+            BigDecimal amount,
+            String paymentMethod,
+            String idempotencyKey) {
         if (orderId == null) {
             throw new IllegalArgumentException("Order ID is required to initialize payment.");
         }
@@ -52,58 +56,92 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
         }
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            return paymentPort.findByIdempotencyKey(idempotencyKey).orElseGet(() -> createAuthorization(orderId, customerId, amount, paymentMethod, idempotencyKey));
+            return paymentPort
+                    .findByIdempotencyKey(idempotencyKey)
+                    .orElseGet(
+                            () ->
+                                    createAuthorization(
+                                            orderId,
+                                            customerId,
+                                            amount,
+                                            paymentMethod,
+                                            idempotencyKey));
         }
 
         return createAuthorization(orderId, customerId, amount, paymentMethod, idempotencyKey);
     }
 
-    private Payment createAuthorization(Integer orderId, String customerId, BigDecimal amount, String paymentMethod, String idempotencyKey) {
-        Order order = orderPort.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+    private Payment createAuthorization(
+            Integer orderId,
+            String customerId,
+            BigDecimal amount,
+            String paymentMethod,
+            String idempotencyKey) {
+        Order order =
+                orderPort
+                        .findById(orderId)
+                        .orElseThrow(
+                                () -> new IllegalArgumentException("Order not found: " + orderId));
 
-        if (order.getCustomer() == null || !customerId.equals(order.getCustomer().getCustomerId())) {
+        if (order.getCustomer() == null
+                || !customerId.equals(order.getCustomer().getCustomerId())) {
             throw new IllegalArgumentException("Payment customer must match order customer.");
         }
 
-        Payment payment = Payment.builder()
-                .orderId(orderId)
-                .customerId(customerId)
-                .amount(amount)
-                .currency("CHF")
-                .paymentMethod(paymentMethod)
-                .status("AUTHORIZED")
-                .idempotencyKey(idempotencyKey)
-                .build();
+        Payment payment =
+                Payment.builder()
+                        .orderId(orderId)
+                        .customerId(customerId)
+                        .amount(amount)
+                        .currency("CHF")
+                        .paymentMethod(paymentMethod)
+                        .status("AUTHORIZED")
+                        .idempotencyKey(idempotencyKey)
+                        .build();
 
         ledgerUseCase.recordTransaction(
                 "PAYMENT-AUTH",
                 "Authorise payment for order " + orderId,
                 List.of(
-                        new LedgerUseCase.LedgerLeg("customer", customerId, amount, BigDecimal.ZERO),
-                        new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, amount)
-                )
-        );
+                        new LedgerUseCase.LedgerLeg(
+                                "customer", customerId, amount, BigDecimal.ZERO),
+                        new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, amount)));
 
         Payment saved = paymentPort.save(payment);
 
-        OutboxEvent event = OutboxEvent.builder()
-                .aggregateType("Payment")
-                .aggregateId(saved.getPaymentId() != null ? saved.getPaymentId().toString() : null)
-                .eventType("payment.authorized")
-                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
-                        saved.getPaymentId(), orderId, saved.getAmount()))
-                .build();
+        OutboxEvent event =
+                OutboxEvent.builder()
+                        .aggregateType("Payment")
+                        .aggregateId(
+                                saved.getPaymentId() != null
+                                        ? saved.getPaymentId().toString()
+                                        : null)
+                        .eventType("payment.authorized")
+                        .payload(
+                                String.format(
+                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
+                                        saved.getPaymentId(), orderId, saved.getAmount()))
+                        .build();
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
 
-        OutboxEvent fraudEvent = OutboxEvent.builder()
-                .aggregateType("Payment")
-                .aggregateId(saved.getPaymentId() != null ? saved.getPaymentId().toString() : null)
-                .eventType("payment.fraud_check")
-                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s, \"customerId\": \"%s\"}",
-                        saved.getPaymentId(), orderId, saved.getAmount(), customerId))
-                .build();
+        OutboxEvent fraudEvent =
+                OutboxEvent.builder()
+                        .aggregateType("Payment")
+                        .aggregateId(
+                                saved.getPaymentId() != null
+                                        ? saved.getPaymentId().toString()
+                                        : null)
+                        .eventType("payment.fraud_check")
+                        .payload(
+                                String.format(
+                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s,"
+                                                + " \"customerId\": \"%s\"}",
+                                        saved.getPaymentId(),
+                                        orderId,
+                                        saved.getAmount(),
+                                        customerId))
+                        .build();
         outboxEventPort.save(fraudEvent);
         eventPublisher.publishEvent(fraudEvent);
 
@@ -113,8 +151,13 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
     @Override
     @Transactional
     public Payment capturePayment(Integer paymentId) {
-        Payment payment = paymentPort.findById(paymentId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
+        Payment payment =
+                paymentPort
+                        .findById(paymentId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Payment not found: " + paymentId));
 
         if (!"AUTHORIZED".equalsIgnoreCase(payment.getStatus())) {
             throw new IllegalStateException("Only authorized payments can be captured.");
@@ -124,23 +167,34 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
         payment.setCapturedAt(OffsetDateTime.now());
         Payment saved = paymentPort.save(payment);
 
-        OutboxEvent event = OutboxEvent.builder()
-                .aggregateType("Payment")
-                .aggregateId(saved.getPaymentId().toString())
-                .eventType("payment.captured")
-                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
-                        saved.getPaymentId(), saved.getOrderId(), saved.getAmount()))
-                .build();
+        OutboxEvent event =
+                OutboxEvent.builder()
+                        .aggregateType("Payment")
+                        .aggregateId(saved.getPaymentId().toString())
+                        .eventType("payment.captured")
+                        .payload(
+                                String.format(
+                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
+                                        saved.getPaymentId(),
+                                        saved.getOrderId(),
+                                        saved.getAmount()))
+                        .build();
         outboxEventPort.save(event);
         eventPublisher.publishEvent(event);
 
-        OutboxEvent notificationEvent = OutboxEvent.builder()
-                .aggregateType("Payment")
-                .aggregateId(saved.getPaymentId().toString())
-                .eventType("payment.notification")
-                .payload(String.format("{\"paymentId\": %d, \"orderId\": %d, \"status\": \"CAPTURED\", \"amount\": %s}",
-                        saved.getPaymentId(), saved.getOrderId(), saved.getAmount()))
-                .build();
+        OutboxEvent notificationEvent =
+                OutboxEvent.builder()
+                        .aggregateType("Payment")
+                        .aggregateId(saved.getPaymentId().toString())
+                        .eventType("payment.notification")
+                        .payload(
+                                String.format(
+                                        "{\"paymentId\": %d, \"orderId\": %d, \"status\":"
+                                                + " \"CAPTURED\", \"amount\": %s}",
+                                        saved.getPaymentId(),
+                                        saved.getOrderId(),
+                                        saved.getAmount()))
+                        .build();
         outboxEventPort.save(notificationEvent);
         eventPublisher.publishEvent(notificationEvent);
 
@@ -149,7 +203,8 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
 
     @Override
     public Payment getPayment(Integer paymentId) {
-        return paymentPort.findById(paymentId)
+        return paymentPort
+                .findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
     }
 

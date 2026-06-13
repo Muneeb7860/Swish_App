@@ -1,12 +1,11 @@
 package ch.swissqcommerce.backend.model;
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "hitl_queue", schema = "oltp")
@@ -52,4 +51,3 @@ public class HitlQueue {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
-

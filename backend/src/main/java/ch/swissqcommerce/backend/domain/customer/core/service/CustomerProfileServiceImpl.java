@@ -3,10 +3,10 @@ package ch.swissqcommerce.backend.domain.customer.core.service;
 import ch.swissqcommerce.backend.domain.customer.core.model.CustomerProfile;
 import ch.swissqcommerce.backend.domain.customer.port.in.CustomerProfileUseCase;
 import ch.swissqcommerce.backend.domain.customer.port.out.CustomerProfilePort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

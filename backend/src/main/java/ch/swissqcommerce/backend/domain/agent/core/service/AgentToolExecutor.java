@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -36,17 +35,33 @@ public class AgentToolExecutor {
                 Optional<Order> orderOpt = agentOutPort.findOrderById(orderId);
                 if (orderOpt.isPresent()) {
                     Order o = orderOpt.get();
-                    return new ToolResult("Order ID: " + o.getOrderId() + ", Status: " + o.getStatus() + 
-                           ", Total Amount: " + o.getTotalAmount() + ", Created At: " + o.getCreatedAt(), 0.0);
+                    return new ToolResult(
+                            "Order ID: "
+                                    + o.getOrderId()
+                                    + ", Status: "
+                                    + o.getStatus()
+                                    + ", Total Amount: "
+                                    + o.getTotalAmount()
+                                    + ", Created At: "
+                                    + o.getCreatedAt(),
+                            0.0);
                 }
             } catch (NumberFormatException e) {
                 List<Order> orders = agentOutPort.findOrdersByCustomerId(argument.trim());
                 if (orders.isEmpty()) {
                     return new ToolResult("No orders found for customer: " + argument, 0.0);
                 }
-                String content = orders.stream()
-                        .map(o -> "Order ID: " + o.getOrderId() + ", Status: " + o.getStatus() + ", Total Amount: " + o.getTotalAmount())
-                        .collect(Collectors.joining("; "));
+                String content =
+                        orders.stream()
+                                .map(
+                                        o ->
+                                                "Order ID: "
+                                                        + o.getOrderId()
+                                                        + ", Status: "
+                                                        + o.getStatus()
+                                                        + ", Total Amount: "
+                                                        + o.getTotalAmount())
+                                .collect(Collectors.joining("; "));
                 return new ToolResult(content, 0.0);
             }
             return new ToolResult("Order not found.", 0.0);
@@ -78,22 +93,38 @@ public class AgentToolExecutor {
                             } else if ("vipdensity".equals(key) || "vip".equals(key)) {
                                 vipDensity = Double.parseDouble(val);
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
 
             try {
-                var analysis = dynamicPricingAgent.recommendPricing(isRaining, riderToOrderRatio, competitorPrice, daysToExpiry, vipDensity);
-                String result = String.format("Dynamic Pricing Recommendation: Surge Multiplier: %.2fx, Discount Percent: %.2f%%. Rationale: %s",
-                        analysis.surgeMultiplier, analysis.discountPercent, analysis.rationale);
+                var analysis =
+                        dynamicPricingAgent.recommendPricing(
+                                isRaining,
+                                riderToOrderRatio,
+                                competitorPrice,
+                                daysToExpiry,
+                                vipDensity);
+                String result =
+                        String.format(
+                                "Dynamic Pricing Recommendation: Surge Multiplier: %.2fx, Discount"
+                                        + " Percent: %.2f%%. Rationale: %s",
+                                analysis.surgeMultiplier,
+                                analysis.discountPercent,
+                                analysis.rationale);
                 return new ToolResult(result, analysis.tokenCost);
             } catch (Exception e) {
                 // Rule-based fallback if execution fails
                 double surge = isRaining ? 2.0 : 1.0;
                 double discount = (daysToExpiry > 0 && daysToExpiry <= 2) ? 20.0 : 0.0;
-                String result = String.format("Dynamic Pricing Recommendation (Fallback): Surge Multiplier: %.2fx, Discount Percent: %.2f%%. Rationale: Exception in pricing agent: %s",
-                        surge, discount, e.getMessage());
+                String result =
+                        String.format(
+                                "Dynamic Pricing Recommendation (Fallback): Surge Multiplier:"
+                                    + " %.2fx, Discount Percent: %.2f%%. Rationale: Exception in"
+                                    + " pricing agent: %s",
+                                surge, discount, e.getMessage());
                 return new ToolResult(result, 0.0);
             }
         }

@@ -1,9 +1,9 @@
 package ch.swissqcommerce.backend.domain.dispatch.adapter.out.persistence;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "active_shipments", schema = "dispatch")
@@ -49,7 +49,7 @@ public class ActiveShipmentEntity {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
-    
+
     @PrePersist
     protected void onCreate() {
         if (assignedAt == null) {
@@ -59,7 +59,7 @@ public class ActiveShipmentEntity {
             updatedAt = OffsetDateTime.now();
         }
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = OffsetDateTime.now();

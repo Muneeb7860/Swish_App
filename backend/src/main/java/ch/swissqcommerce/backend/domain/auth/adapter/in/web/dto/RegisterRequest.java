@@ -14,9 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RegisterRequest {
 
-    @NotBlank
-    @Email
-    private String email;
+    @NotBlank @Email private String email;
 
     @NotBlank
     @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")

@@ -16,10 +16,12 @@ public class NotificationController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<Void> sendNotification(@RequestParam String userId, @RequestParam String message, @RequestParam String type) {
+    public ResponseEntity<Void> sendNotification(
+            @RequestParam String userId, @RequestParam String message, @RequestParam String type) {
         try {
             NotificationType notificationType = NotificationType.valueOf(type.toUpperCase());
-            notificationUseCase.scheduleNotification(userId, notificationType.name(), "Notification", message);
+            notificationUseCase.scheduleNotification(
+                    userId, notificationType.name(), "Notification", message);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

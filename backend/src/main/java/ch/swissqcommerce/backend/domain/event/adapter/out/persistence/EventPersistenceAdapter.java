@@ -1,6 +1,5 @@
 package ch.swissqcommerce.backend.domain.event.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.event.adapter.out.persistence.DomainEventEntity;
 import ch.swissqcommerce.backend.domain.event.port.out.EventPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

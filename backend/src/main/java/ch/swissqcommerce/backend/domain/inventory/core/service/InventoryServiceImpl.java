@@ -28,18 +28,21 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     public InventoryItem reserveStock(String skuStr, int quantity) {
         requirePositiveQuantity(quantity, "Reserve");
         SKU sku = new SKU(skuStr);
-        InventoryItem item = inventoryRepositoryPort.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
-        
+        InventoryItem item =
+                inventoryRepositoryPort
+                        .findBySku(sku)
+                        .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+
         item.reserve(quantity);
         InventoryItem savedItem = inventoryRepositoryPort.save(item);
-        
+
         eventPublisherPort.publishStockReservedEvent(skuStr, quantity);
-        
+
         if (savedItem.getAvailableQuantity().getValue() < 10) { // Low stock threshold
-            eventPublisherPort.publishLowStockEvent(skuStr, savedItem.getAvailableQuantity().getValue());
+            eventPublisherPort.publishLowStockEvent(
+                    skuStr, savedItem.getAvailableQuantity().getValue());
         }
-        
+
         return savedItem;
     }
 
@@ -48,9 +51,11 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     public void releaseStock(String skuStr, int quantity) {
         requirePositiveQuantity(quantity, "Release");
         SKU sku = new SKU(skuStr);
-        InventoryItem item = inventoryRepositoryPort.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
-                
+        InventoryItem item =
+                inventoryRepositoryPort
+                        .findBySku(sku)
+                        .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+
         item.release(quantity);
         inventoryRepositoryPort.save(item);
     }
@@ -60,9 +65,11 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     public void fulfillStock(String skuStr, int quantity) {
         requirePositiveQuantity(quantity, "Fulfill");
         SKU sku = new SKU(skuStr);
-        InventoryItem item = inventoryRepositoryPort.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
-                
+        InventoryItem item =
+                inventoryRepositoryPort
+                        .findBySku(sku)
+                        .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+
         item.fulfill(quantity);
         inventoryRepositoryPort.save(item);
     }
@@ -72,9 +79,11 @@ public class InventoryServiceImpl implements StockManagementUseCase {
     public InventoryItem addStock(String skuStr, int quantity) {
         requirePositiveQuantity(quantity, "AddStock");
         SKU sku = new SKU(skuStr);
-        InventoryItem item = inventoryRepositoryPort.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
-                
+        InventoryItem item =
+                inventoryRepositoryPort
+                        .findBySku(sku)
+                        .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+
         item.addStock(quantity);
         return inventoryRepositoryPort.save(item);
     }

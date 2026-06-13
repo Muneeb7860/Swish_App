@@ -65,8 +65,8 @@ function runService(name, command, args, cwd, logFile, envOverrides = {}) {
 		shell: true,
 		env: {
 			...process.env,
-			...envOverrides
-		}
+			...envOverrides,
+		},
 	});
 	proc.stdout.pipe(logStream);
 	proc.stderr.pipe(logStream);
@@ -130,9 +130,10 @@ async function run() {
 		const npmCmd = isWin ? "npm.cmd" : "npm";
 
 		const commonEnv = {
-			JWT_SECRET: "my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
+			JWT_SECRET:
+				"my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long",
 			ADMIN_EMAIL: "admin@swish.local",
-			ADMIN_PASSWORD: "swiss-secure-password"
+			ADMIN_PASSWORD: "swiss-secure-password",
 		};
 
 		// 1. Boot Backend Monolith
@@ -142,7 +143,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "backend"),
 			path.join(LOGS_DIR, "backend.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 2. Boot Platform Gateway (port 8080)
@@ -152,7 +153,7 @@ async function run() {
 			["spring-boot:run"],
 			path.join(WORKSPACE_DIR, "platform-gateway"),
 			path.join(LOGS_DIR, "bff.log"),
-			commonEnv
+			commonEnv,
 		);
 
 		// 3. Boot frontend App Shell Host
@@ -164,21 +165,14 @@ async function run() {
 			path.join(LOGS_DIR, "host.log"),
 			{
 				VITE_MOCK_MODE: "true",
-			}
+			},
 		);
 
 		// 4. Boot Customer remote MFE (serve pre-built dist folder with remoteEntry.js)
 		runService(
 			"Customer Remote",
 			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3001",
-				"--strictPort",
-			],
+			["run", "preview", "--", "--port", "3001", "--strictPort"],
 			path.join(WORKSPACE_DIR, "frontend-customer"),
 			path.join(LOGS_DIR, "customer.log"),
 		);
@@ -187,14 +181,7 @@ async function run() {
 		runService(
 			"Rider Remote",
 			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3002",
-				"--strictPort",
-			],
+			["run", "preview", "--", "--port", "3002", "--strictPort"],
 			path.join(WORKSPACE_DIR, "frontend-rider"),
 			path.join(LOGS_DIR, "rider.log"),
 		);
@@ -203,14 +190,7 @@ async function run() {
 		runService(
 			"Admin Remote",
 			npmCmd,
-			[
-				"run",
-				"preview",
-				"--",
-				"--port",
-				"3003",
-				"--strictPort",
-			],
+			["run", "preview", "--", "--port", "3003", "--strictPort"],
 			path.join(WORKSPACE_DIR, "frontend-admin"),
 			path.join(LOGS_DIR, "admin.log"),
 		);

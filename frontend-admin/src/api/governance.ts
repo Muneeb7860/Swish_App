@@ -31,7 +31,8 @@ export function mapItemToTicket(item: HitlItem): HitlTicket {
 	return {
 		id: item.id,
 		type: item.type ?? item.source ?? "hitl",
-		amount: typeof item.amount === "number" ? item.amount : Number(item.amount ?? 0),
+		amount:
+			typeof item.amount === "number" ? item.amount : Number(item.amount ?? 0),
 		desc: item.description ?? "",
 		source: item.source,
 	};
@@ -58,7 +59,10 @@ export async function login(email: string, password: string): Promise<string> {
 	});
 	if (!res.ok) throw await asError(res);
 	const body = await res.json();
-	if (!body?.token) throw new Error("Login succeeded but no token was returned (MFA required?).");
+	if (!body?.token)
+		throw new Error(
+			"Login succeeded but no token was returned (MFA required?).",
+		);
 	return body.token as string;
 }
 
@@ -79,11 +83,17 @@ export async function resolveHitl(
 	reason: string,
 ): Promise<void> {
 	const action = approve ? "approve" : "reject";
-	const res = await fetch(`${API_BASE}/api/governance/hitl/${encodeURIComponent(id)}/${action}`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-		body: JSON.stringify({ operator, reason }),
-	});
+	const res = await fetch(
+		`${API_BASE}/api/governance/hitl/${encodeURIComponent(id)}/${action}`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ operator, reason }),
+		},
+	);
 	if (!res.ok) throw await asError(res);
 }
 
@@ -95,10 +105,16 @@ export async function adjustHitl(
 	operator: string,
 	reason: string,
 ): Promise<void> {
-	const res = await fetch(`${API_BASE}/api/governance/hitl/${encodeURIComponent(id)}/adjust`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-		body: JSON.stringify({ newPrice, operator, reason }),
-	});
+	const res = await fetch(
+		`${API_BASE}/api/governance/hitl/${encodeURIComponent(id)}/adjust`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ newPrice, operator, reason }),
+		},
+	);
 	if (!res.ok) throw await asError(res);
 }

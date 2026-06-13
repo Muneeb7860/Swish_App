@@ -1,0 +1,70 @@
+#!/bin/sh
+
+echo "========================================"
+echo "    Pre-commit Hook Validation"
+echo "========================================"
+
+# ── Pin Java 17 unambiguously ────────────────────────────────────────────────
+# Homebrew JDK 26 (on PATH at /opt/homebrew/...) breaks Lombok via
+# Unsafe.objectFieldOffset → "TypeTag::UNKNOWN". Resolve the real Java 17 home
+# from java_home (portable across machines), put it FIRST on PATH so `mvn`
+# cannot fall back to a newer PATH java, and hard-fail if the active java != 17.
+if [ -x /usr/libexec/java_home ]; then
+    JAVA_HOME="$(/usr/libexec/java_home -v 17 2>/dev/null)"
+fi
+if [ -z "$JAVA_HOME" ] && [ -d /Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home ]; then
+    JAVA_HOME=/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home
+fi
+export JAVA_HOME
+export PATH="$JAVA_HOME/bin:$PATH"
+
+JAVA_MAJOR="$("$JAVA_HOME/bin/java" -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p')"
+if [ "$JAVA_MAJOR" != "17" ]; then
+    echo "❌ ERROR: Java 17 required but JAVA_HOME resolves to Java ${JAVA_MAJOR:-unknown} ($JAVA_HOME)."
+    echo "   Install a JDK 17 (e.g. Microsoft OpenJDK 17) — do NOT build with JDK 18+."
+    exit 1
+fi
+echo "> ☕ Using Java $JAVA_MAJOR from $JAVA_HOME"
+
+echo "\n> 🛡️ Running Local Secret Scan..."
+# A simple regex to catch high entropy tokens or specific keys in the staged diff, excluding self and dummy keys
+if git diff --cached | grep -v "\.githooks/pre-commit" | grep -v "local-dev-jwt-secret-do-not-use-in-prod" | grep -v "ci-e2e-test-secret" | grep -E "^[+]" | grep -iE "(AKIA[A-Z0-9]{16}|xoxb-|BEGIN RSA PRIVATE KEY|JWT_SECRET=)"; then
+    echo "❌ ERROR: High entropy secret or token found in staged files! Commit aborted."
+    exit 1
+fi
+
+echo "\n> 💅 Formatting Frontend Code (Biome)..."
+npm run format
+if [ $? -ne 0 ]; then
+    echo "Frontend formatting failed! Commit aborted."
+    exit 1
+fi
+
+echo "\n> 💅 Formatting Backend Code (Spotless)..."
+cd backend
+mvn spotless:apply
+if [ $? -ne 0 ]; then
+    echo "Backend formatting failed! Commit aborted."
+    exit 1
+fi
+
+echo "\n> 🧪 Running Backend Unit & Architecture Tests..."
+mvn clean test -Djacoco.skip=true
+if [ $? -ne 0 ]; then
+    echo "Backend tests failed! Commit aborted."
+    exit 1
+fi
+cd ..
+
+# Skip E2E by default in pre-commit since it takes a long time, unless forced
+if [ "$SKIP_E2E" != "true" ]; then
+    echo "\n> 🚦 Running E2E Test Suite Matrix (set SKIP_E2E=true to skip)..."
+    node dev/e2e/e2e_all_runner.js
+    if [ $? -ne 0 ]; then
+        echo "E2E Validation failed! Commit aborted."
+        exit 1
+    fi
+fi
+
+echo "\n✅ All pre-commit checks passed successfully!"
+exit 0

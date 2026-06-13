@@ -1,13 +1,12 @@
 package ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.model.*;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.*;
 
 @Entity
 @Table(name = "journal_entries", schema = "oltp")

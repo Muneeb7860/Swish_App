@@ -28,7 +28,10 @@ export default function RbacBlocker({
 		}
 
 		// Initialize mockup security logs to look realistic and high-tech
-		const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
+		const timestamp = new Date()
+			.toISOString()
+			.replace("T", " ")
+			.substring(0, 19);
 		setSecurityLogs([
 			`[${timestamp}] SEC_ENFORCE: Access intercept triggered on /dashboard/${targetRole}`,
 			`[${timestamp}] AUTH_AUDIT: Session ID ${currentUserSession?.token || "sess-unknown"} inspected`,
@@ -50,7 +53,10 @@ export default function RbacBlocker({
 		if (triggerToast) {
 			triggerToast("Elevation request forwarded to Security Ops.", "system");
 		}
-		const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
+		const timestamp = new Date()
+			.toISOString()
+			.replace("T", " ")
+			.substring(0, 19);
 		setSecurityLogs((prev) => [
 			...prev,
 			`[${timestamp}] SEC_ALERT: Privilege elevation request generated for role ${targetRole.toUpperCase()}`,
@@ -74,9 +80,7 @@ export default function RbacBlocker({
 				</div>
 			</div>
 
-			<h2 className="rbac-title">
-				403 Forbidden - Access Denied
-			</h2>
+			<h2 className="rbac-title">403 Forbidden - Access Denied</h2>
 
 			<p className="rbac-description">
 				Your authenticated session with role{" "}
@@ -126,4 +130,3 @@ export default function RbacBlocker({
 		</div>
 	);
 }
-

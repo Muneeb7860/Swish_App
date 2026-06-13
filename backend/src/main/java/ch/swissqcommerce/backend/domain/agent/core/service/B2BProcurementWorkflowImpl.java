@@ -3,7 +3,6 @@ package ch.swissqcommerce.backend.domain.agent.core.service;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
-
 import java.time.Duration;
 
 public class B2BProcurementWorkflowImpl implements B2BProcurementWorkflow {
@@ -13,10 +12,11 @@ public class B2BProcurementWorkflowImpl implements B2BProcurementWorkflow {
                     B2BProcurementActivities.class,
                     ActivityOptions.newBuilder()
                             .setStartToCloseTimeout(Duration.ofSeconds(60))
-                            .setRetryOptions(RetryOptions.newBuilder()
-                                    .setMaximumAttempts(3)
-                                    .setBackoffCoefficient(1.0)
-                                    .build())
+                            .setRetryOptions(
+                                    RetryOptions.newBuilder()
+                                            .setMaximumAttempts(3)
+                                            .setBackoffCoefficient(1.0)
+                                            .build())
                             .build());
 
     private boolean approved = false;
@@ -29,21 +29,25 @@ public class B2BProcurementWorkflowImpl implements B2BProcurementWorkflow {
     @Override
     public B2BProcurementAgent.NegotiationAnalysis negotiateRestock(
             String itemId, String itemName, double basePrice, String wholesalerName, int quantity) {
-        
+
         // 1. Call LLM activity
-        B2BProcurementAgent.NegotiationAnalysis analysis = activities.callLlmNegotiation(itemId, itemName, basePrice, wholesalerName);
+        B2BProcurementAgent.NegotiationAnalysis analysis =
+                activities.callLlmNegotiation(itemId, itemName, basePrice, wholesalerName);
 
         // 2. Validate proposed price against guardrails
         boolean isApproved = activities.checkGuardrail(analysis.proposedPrice, basePrice, quantity);
 
         if (isApproved) {
             // 4. If passing: automatically create a completed database order
-            activities.createFulfilledOrder(itemId, wholesalerName, analysis.proposedPrice, quantity);
+            activities.createFulfilledOrder(
+                    itemId, wholesalerName, analysis.proposedPrice, quantity);
         } else {
             // 3. If failing guardrails:
             // - Create a pending database order
-            int orderId = activities.createPendingOrder(itemId, wholesalerName, analysis.proposedPrice, quantity);
-            
+            int orderId =
+                    activities.createPendingOrder(
+                            itemId, wholesalerName, analysis.proposedPrice, quantity);
+
             // - Create a pending governance audit ticket
             activities.auditNegotiation(orderId, wholesalerName, analysis.proposedPrice, quantity);
 
@@ -61,7 +65,11 @@ public class B2BProcurementWorkflowImpl implements B2BProcurementWorkflow {
             } else if (adjusted) {
                 activities.updateOrderStatus(orderId, "fulfilled");
                 activities.updateOrderPrice(orderId, adjustedPrice);
-                activities.updateApprovalStatus(orderId, "APPROVED", operatorName, "Adjusted bid to " + adjustedPrice + " CHF: " + decisionReason);
+                activities.updateApprovalStatus(
+                        orderId,
+                        "APPROVED",
+                        operatorName,
+                        "Adjusted bid to " + adjustedPrice + " CHF: " + decisionReason);
                 analysis.proposedPrice = adjustedPrice;
             }
         }

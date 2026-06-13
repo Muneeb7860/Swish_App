@@ -6,7 +6,10 @@ import java.util.Optional;
 
 public interface WholesalerPort {
     Optional<Wholesaler> findById(String wholesalerId);
+
     Optional<Wholesaler> findByIsPrimary(Boolean isPrimary);
+
     List<Wholesaler> findAll();
+
     Wholesaler save(Wholesaler wholesaler);
 }

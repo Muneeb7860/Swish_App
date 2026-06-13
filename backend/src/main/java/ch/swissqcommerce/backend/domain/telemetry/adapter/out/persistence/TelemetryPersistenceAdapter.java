@@ -1,21 +1,20 @@
 package ch.swissqcommerce.backend.domain.telemetry.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
-import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity;
-import ch.swissqcommerce.backend.repository.OrderRepository;
-import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderEntity;
 import ch.swissqcommerce.backend.domain.enrollment.adapter.out.persistence.RiderRepository;
-import ch.swissqcommerce.backend.model.SecurityTrustLedger;
-import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
-
+import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import ch.swissqcommerce.backend.repository.OrderRepository;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -29,103 +28,137 @@ public class TelemetryPersistenceAdapter implements TelemetryPort {
     private OrderTelemetryLogEntity toEntity(OrderTelemetryLog log) {
         if (log == null) return null;
         return OrderTelemetryLogEntity.builder()
-            .logId(log.getLogId())
-            .orderId(log.getOrderId())
-            .deviceTimestamp(log.getDeviceTimestamp())
-            .serverTimestamp(log.getServerTimestamp())
-            .latitude(log.getLatitude())
-            .longitude(log.getLongitude())
-            .temperature(log.getTemperature())
-            .dryIceInjected(log.getDryIceInjected())
-            .alertTriggered(log.getAlertTriggered())
-            .build();
+                .logId(log.getLogId())
+                .orderId(log.getOrderId())
+                .deviceTimestamp(log.getDeviceTimestamp())
+                .serverTimestamp(log.getServerTimestamp())
+                .latitude(log.getLatitude())
+                .longitude(log.getLongitude())
+                .temperature(log.getTemperature())
+                .dryIceInjected(log.getDryIceInjected())
+                .alertTriggered(log.getAlertTriggered())
+                .build();
     }
 
     private OrderTelemetryLog toDomain(OrderTelemetryLogEntity entity) {
         if (entity == null) return null;
         return OrderTelemetryLog.builder()
-            .logId(entity.getLogId())
-            .orderId(entity.getOrderId())
-            .deviceTimestamp(entity.getDeviceTimestamp())
-            .serverTimestamp(entity.getServerTimestamp())
-            .latitude(entity.getLatitude())
-            .longitude(entity.getLongitude())
-            .temperature(entity.getTemperature())
-            .dryIceInjected(entity.getDryIceInjected())
-            .alertTriggered(entity.getAlertTriggered())
-            .build();
+                .logId(entity.getLogId())
+                .orderId(entity.getOrderId())
+                .deviceTimestamp(entity.getDeviceTimestamp())
+                .serverTimestamp(entity.getServerTimestamp())
+                .latitude(entity.getLatitude())
+                .longitude(entity.getLongitude())
+                .temperature(entity.getTemperature())
+                .dryIceInjected(entity.getDryIceInjected())
+                .alertTriggered(entity.getAlertTriggered())
+                .build();
     }
 
     private Order mapToDomain(OrderEntity entity) {
         if (entity == null) return null;
-        Order order = Order.builder()
-                .orderId(entity.getOrderId())
-                .customer(entity.getCustomer())
-                .store(entity.getStore())
-                .rider(mapToDomainRider(entity.getRider()))
-                .totalAmount(entity.getTotalAmount())
-                .weatherSurcharge(entity.getWeatherSurcharge())
-                .tipAmount(entity.getTipAmount())
-                .paymentMethod(entity.getPaymentMethod())
-                .status(entity.getStatus())
-                .slaCountdownSec(entity.getSlaCountdownSec())
-                .bagsReturned(entity.getBagsReturned())
-                .idempotencyKey(entity.getIdempotencyKey())
-                .promisedBy(entity.getPromisedBy())
-                .containsPerishables(entity.getContainsPerishables())
-                .minCartValueMet(entity.getMinCartValueMet())
-                .storeFaultWaiverApplied(entity.getStoreFaultWaiverApplied())
-                .perishableMaintenanceFee(entity.getPerishableMaintenanceFee())
-                .priceLockedAt(entity.getPriceLockedAt())
-                .createdAt(entity.getCreatedAt())
-                .build();
+        Order order =
+                Order.builder()
+                        .orderId(entity.getOrderId())
+                        .customer(entity.getCustomer())
+                        .store(entity.getStore())
+                        .rider(mapToDomainRider(entity.getRider()))
+                        .totalAmount(entity.getTotalAmount())
+                        .weatherSurcharge(entity.getWeatherSurcharge())
+                        .tipAmount(entity.getTipAmount())
+                        .paymentMethod(entity.getPaymentMethod())
+                        .status(entity.getStatus())
+                        .slaCountdownSec(entity.getSlaCountdownSec())
+                        .bagsReturned(entity.getBagsReturned())
+                        .idempotencyKey(entity.getIdempotencyKey())
+                        .promisedBy(entity.getPromisedBy())
+                        .containsPerishables(entity.getContainsPerishables())
+                        .minCartValueMet(entity.getMinCartValueMet())
+                        .storeFaultWaiverApplied(entity.getStoreFaultWaiverApplied())
+                        .perishableMaintenanceFee(entity.getPerishableMaintenanceFee())
+                        .priceLockedAt(entity.getPriceLockedAt())
+                        .createdAt(entity.getCreatedAt())
+                        .build();
 
         if (entity.getOrderItems() != null) {
-            order.setOrderItems(new java.util.ArrayList<>(entity.getOrderItems().stream().map(itemEntity ->
-                ch.swissqcommerce.backend.domain.transaction.core.model.OrderItem.builder()
-                        .order(order)
-                        .item(itemEntity.getItem())
-                        .quantity(itemEntity.getQuantity())
-                        .price(itemEntity.getPrice())
-                        .build()
-            ).toList()));
+            order.setOrderItems(
+                    new java.util.ArrayList<>(
+                            entity.getOrderItems().stream()
+                                    .map(
+                                            itemEntity ->
+                                                    ch.swissqcommerce.backend.domain.transaction
+                                                            .core.model.OrderItem.builder()
+                                                            .order(order)
+                                                            .item(itemEntity.getItem())
+                                                            .quantity(itemEntity.getQuantity())
+                                                            .price(itemEntity.getPrice())
+                                                            .build())
+                                    .toList()));
         }
         return order;
     }
 
     private OrderEntity mapToEntity(Order domain) {
         if (domain == null) return null;
-        OrderEntity entity = OrderEntity.builder()
-                .orderId(domain.getOrderId())
-                .customer(domain.getCustomer())
-                .store(domain.getStore())
-                .rider(mapToEntityRider(domain.getRider()))
-                .totalAmount(domain.getTotalAmount())
-                .weatherSurcharge(domain.getWeatherSurcharge() != null ? domain.getWeatherSurcharge() : java.math.BigDecimal.ZERO)
-                .tipAmount(domain.getTipAmount() != null ? domain.getTipAmount() : java.math.BigDecimal.ZERO)
-                .paymentMethod(domain.getPaymentMethod())
-                .status(domain.getStatus() != null ? domain.getStatus() : "pending")
-                .slaCountdownSec(domain.getSlaCountdownSec() != null ? domain.getSlaCountdownSec() : 540)
-                .bagsReturned(domain.getBagsReturned() != null ? domain.getBagsReturned() : 0)
-                .idempotencyKey(domain.getIdempotencyKey())
-                .promisedBy(domain.getPromisedBy())
-                .containsPerishables(domain.getContainsPerishables() != null ? domain.getContainsPerishables() : false)
-                .minCartValueMet(domain.getMinCartValueMet() != null ? domain.getMinCartValueMet() : true)
-                .storeFaultWaiverApplied(domain.getStoreFaultWaiverApplied() != null ? domain.getStoreFaultWaiverApplied() : false)
-                .perishableMaintenanceFee(domain.getPerishableMaintenanceFee() != null ? domain.getPerishableMaintenanceFee() : java.math.BigDecimal.ZERO)
-                .priceLockedAt(domain.getPriceLockedAt())
-                .createdAt(domain.getCreatedAt())
-                .build();
+        OrderEntity entity =
+                OrderEntity.builder()
+                        .orderId(domain.getOrderId())
+                        .customer(domain.getCustomer())
+                        .store(domain.getStore())
+                        .rider(mapToEntityRider(domain.getRider()))
+                        .totalAmount(domain.getTotalAmount())
+                        .weatherSurcharge(
+                                domain.getWeatherSurcharge() != null
+                                        ? domain.getWeatherSurcharge()
+                                        : java.math.BigDecimal.ZERO)
+                        .tipAmount(
+                                domain.getTipAmount() != null
+                                        ? domain.getTipAmount()
+                                        : java.math.BigDecimal.ZERO)
+                        .paymentMethod(domain.getPaymentMethod())
+                        .status(domain.getStatus() != null ? domain.getStatus() : "pending")
+                        .slaCountdownSec(
+                                domain.getSlaCountdownSec() != null
+                                        ? domain.getSlaCountdownSec()
+                                        : 540)
+                        .bagsReturned(
+                                domain.getBagsReturned() != null ? domain.getBagsReturned() : 0)
+                        .idempotencyKey(domain.getIdempotencyKey())
+                        .promisedBy(domain.getPromisedBy())
+                        .containsPerishables(
+                                domain.getContainsPerishables() != null
+                                        ? domain.getContainsPerishables()
+                                        : false)
+                        .minCartValueMet(
+                                domain.getMinCartValueMet() != null
+                                        ? domain.getMinCartValueMet()
+                                        : true)
+                        .storeFaultWaiverApplied(
+                                domain.getStoreFaultWaiverApplied() != null
+                                        ? domain.getStoreFaultWaiverApplied()
+                                        : false)
+                        .perishableMaintenanceFee(
+                                domain.getPerishableMaintenanceFee() != null
+                                        ? domain.getPerishableMaintenanceFee()
+                                        : java.math.BigDecimal.ZERO)
+                        .priceLockedAt(domain.getPriceLockedAt())
+                        .createdAt(domain.getCreatedAt())
+                        .build();
 
         if (domain.getOrderItems() != null) {
-            entity.setOrderItems(new java.util.ArrayList<>(domain.getOrderItems().stream().map(domainItem -> {
-                OrderItemEntity itemEntity = new OrderItemEntity();
-                itemEntity.setOrder(entity);
-                itemEntity.setItem(domainItem.getItem());
-                itemEntity.setQuantity(domainItem.getQuantity());
-                itemEntity.setPrice(domainItem.getPrice());
-                return itemEntity;
-            }).toList()));
+            entity.setOrderItems(
+                    new java.util.ArrayList<>(
+                            domain.getOrderItems().stream()
+                                    .map(
+                                            domainItem -> {
+                                                OrderItemEntity itemEntity = new OrderItemEntity();
+                                                itemEntity.setOrder(entity);
+                                                itemEntity.setItem(domainItem.getItem());
+                                                itemEntity.setQuantity(domainItem.getQuantity());
+                                                itemEntity.setPrice(domainItem.getPrice());
+                                                return itemEntity;
+                                            })
+                                    .toList()));
         }
         return entity;
     }
@@ -160,7 +193,10 @@ public class TelemetryPersistenceAdapter implements TelemetryPort {
         entity.setActiveLng(domain.getActiveLng());
         entity.setTrustScore(domain.getTrustScore() != null ? domain.getTrustScore() : 100);
         entity.setCashCollectedLimit(domain.getCashCollectedLimit());
-        entity.setCurrentCashInHand(domain.getCurrentCashInHand() != null ? domain.getCurrentCashInHand() : java.math.BigDecimal.ZERO);
+        entity.setCurrentCashInHand(
+                domain.getCurrentCashInHand() != null
+                        ? domain.getCurrentCashInHand()
+                        : java.math.BigDecimal.ZERO);
         entity.setActiveShiftId(domain.getActiveShiftId());
         return entity;
     }

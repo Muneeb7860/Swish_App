@@ -1,16 +1,21 @@
 package ch.swissqcommerce.backend.integration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ch.swissqcommerce.backend.domain.enrollment.core.service.RiderServiceImpl;
-import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
-import ch.swissqcommerce.backend.domain.wholesaler.port.in.WholesalerUseCase;
-import ch.swissqcommerce.backend.model.*;
-import ch.swissqcommerce.backend.repository.*;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
+import ch.swissqcommerce.backend.domain.transaction.port.in.OrderUseCase;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.B2BRestockOrderRepository;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerEntity;
 import ch.swissqcommerce.backend.domain.wholesaler.adapter.out.persistence.WholesalerRepository;
+import ch.swissqcommerce.backend.domain.wholesaler.port.in.WholesalerUseCase;
+import ch.swissqcommerce.backend.model.*;
+import ch.swissqcommerce.backend.repository.*;
 import ch.swissqcommerce.backend.service.AdminService;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,31 +34,29 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 /**
- * Verifies that @Cacheable, @CacheEvict, and per-cache TTL configuration
- * are wired correctly end-to-end through the Spring Cache abstraction.
+ * Verifies that @Cacheable, @CacheEvict, and per-cache TTL configuration are wired correctly
+ * end-to-end through the Spring Cache abstraction.
  *
- * Tests do NOT need Redis running — Spring Boot auto-configures a
- * ConcurrentMapCacheManager as fallback when Redis is unavailable,
- * so all assertions on cache presence/absence still hold.
+ * <p>Tests do NOT need Redis running — Spring Boot auto-configures a ConcurrentMapCacheManager as
+ * fallback when Redis is unavailable, so all assertions on cache presence/absence still hold.
  */
 @SpringBootTest
 public class CacheIntegrationTest {
 
     @TestConfiguration
     static class TestCacheConfig {
-        @Bean @Primary
+        @Bean
+        @Primary
         public CacheManager cacheManager() {
             return new ConcurrentMapCacheManager(
-                "orders", "customer-orders", "wholesaler-restocks",
-                "wholesaler-invoices", "academy-courses", "system-health", "catalog"
-            );
+                    "orders",
+                    "customer-orders",
+                    "wholesaler-restocks",
+                    "wholesaler-invoices",
+                    "academy-courses",
+                    "system-health",
+                    "catalog");
         }
     }
 
@@ -83,57 +86,78 @@ public class CacheIntegrationTest {
         Mockito.when(stringRedisTemplate.opsForValue()).thenReturn(mockOps);
 
         // Clear all relevant caches before each test
-        List.of("orders", "customer-orders", "wholesaler-restocks",
-                "wholesaler-invoices", "academy-courses", "system-health")
-            .forEach(name -> {
-                Cache c = cacheManager.getCache(name);
-                if (c != null) c.clear();
-            });
+        List.of(
+                        "orders",
+                        "customer-orders",
+                        "wholesaler-restocks",
+                        "wholesaler-invoices",
+                        "academy-courses",
+                        "system-health")
+                .forEach(
+                        name -> {
+                            Cache c = cacheManager.getCache(name);
+                            if (c != null) c.clear();
+                        });
 
         // Seed DarkStore
-        transactionTemplate.executeWithoutResult(s ->
-            darkStoreRepository.save(DarkStore.builder()
-                .storeId("cache-store-1").storeName("Cache Hub")
-                .address("Cachestrasse 1")
-                .latitude(BigDecimal.valueOf(47.3769))
-                .longitude(BigDecimal.valueOf(8.5417))
-                .build())
-        );
+        transactionTemplate.executeWithoutResult(
+                s ->
+                        darkStoreRepository.save(
+                                DarkStore.builder()
+                                        .storeId("cache-store-1")
+                                        .storeName("Cache Hub")
+                                        .address("Cachestrasse 1")
+                                        .latitude(BigDecimal.valueOf(47.3769))
+                                        .longitude(BigDecimal.valueOf(8.5417))
+                                        .build()));
 
         // Seed Customer
-        transactionTemplate.executeWithoutResult(s ->
-            customerRepository.save(Customer.builder()
-                .customerId(CUSTOMER_ID).fullName("Cache Tester")
-                .email("cache@swish.ch").hashedEmail("cache_hash_01")
-                .walletBalance(new BigDecimal("500.00")).loyaltyPoints(0)
-                .build())
-        );
+        transactionTemplate.executeWithoutResult(
+                s ->
+                        customerRepository.save(
+                                Customer.builder()
+                                        .customerId(CUSTOMER_ID)
+                                        .fullName("Cache Tester")
+                                        .email("cache@swish.ch")
+                                        .hashedEmail("cache_hash_01")
+                                        .walletBalance(new BigDecimal("500.00"))
+                                        .loyaltyPoints(0)
+                                        .build()));
 
         // Seed Wholesaler
-        transactionTemplate.executeWithoutResult(s ->
-            wholesalerRepository.save(WholesalerEntity.builder()
-                .wholesalerId(WHOLESALER_ID).name("Cache Wholesaler")
-                .baseInvoiceAmount(new BigDecimal("200.00"))
-                .fallbackInvoiceAmount(new BigDecimal("250.00"))
-                .build())
-        );
+        transactionTemplate.executeWithoutResult(
+                s ->
+                        wholesalerRepository.save(
+                                WholesalerEntity.builder()
+                                        .wholesalerId(WHOLESALER_ID)
+                                        .name("Cache Wholesaler")
+                                        .baseInvoiceAmount(new BigDecimal("200.00"))
+                                        .fallbackInvoiceAmount(new BigDecimal("250.00"))
+                                        .build()));
     }
 
     @AfterEach
     void tearDown() {
-        List.of("orders", "customer-orders", "wholesaler-restocks",
-                "wholesaler-invoices", "academy-courses", "system-health")
-            .forEach(name -> {
-                Cache c = cacheManager.getCache(name);
-                if (c != null) c.clear();
-            });
-        transactionTemplate.executeWithoutResult(s -> {
-            if (seededOrderId != null) orderRepository.deleteById(seededOrderId);
-            restockOrderRepository.deleteAll();
-            customerRepository.deleteById(CUSTOMER_ID);
-            wholesalerRepository.deleteById(WHOLESALER_ID);
-            darkStoreRepository.deleteById("cache-store-1");
-        });
+        List.of(
+                        "orders",
+                        "customer-orders",
+                        "wholesaler-restocks",
+                        "wholesaler-invoices",
+                        "academy-courses",
+                        "system-health")
+                .forEach(
+                        name -> {
+                            Cache c = cacheManager.getCache(name);
+                            if (c != null) c.clear();
+                        });
+        transactionTemplate.executeWithoutResult(
+                s -> {
+                    if (seededOrderId != null) orderRepository.deleteById(seededOrderId);
+                    restockOrderRepository.deleteAll();
+                    customerRepository.deleteById(CUSTOMER_ID);
+                    wholesalerRepository.deleteById(WHOLESALER_ID);
+                    darkStoreRepository.deleteById("cache-store-1");
+                });
         seededOrderId = null;
     }
 
@@ -159,26 +183,32 @@ public class CacheIntegrationTest {
     @Test
     public void testGetOrderByIdIsCached() {
         // Seed an order entity directly so we have a known ID
-        OrderEntity seeded = transactionTemplate.execute(s -> {
-            Customer customer = customerRepository.findById(CUSTOMER_ID).orElseThrow();
-            DarkStore store = darkStoreRepository.findById("cache-store-1").orElseThrow();
-            OrderEntity o = OrderEntity.builder()
-                .customer(customer).store(store)
-                .status("pending")
-                .totalAmount(new BigDecimal("25.00"))
-                .tipAmount(BigDecimal.ZERO)
-                .paymentMethod("wallet")
-                .perishableMaintenanceFee(BigDecimal.ZERO)
-                .bagsReturned(0)
-                .slaCountdownSec(540)
-                .containsPerishables(false)
-                .minCartValueMet(true)
-                .storeFaultWaiverApplied(false)
-                .deliveryPin("9999")
-                .idempotencyKey("cache-order-idem-001")
-                .build();
-            return orderRepository.save(o);
-        });
+        OrderEntity seeded =
+                transactionTemplate.execute(
+                        s -> {
+                            Customer customer =
+                                    customerRepository.findById(CUSTOMER_ID).orElseThrow();
+                            DarkStore store =
+                                    darkStoreRepository.findById("cache-store-1").orElseThrow();
+                            OrderEntity o =
+                                    OrderEntity.builder()
+                                            .customer(customer)
+                                            .store(store)
+                                            .status("pending")
+                                            .totalAmount(new BigDecimal("25.00"))
+                                            .tipAmount(BigDecimal.ZERO)
+                                            .paymentMethod("wallet")
+                                            .perishableMaintenanceFee(BigDecimal.ZERO)
+                                            .bagsReturned(0)
+                                            .slaCountdownSec(540)
+                                            .containsPerishables(false)
+                                            .minCartValueMet(true)
+                                            .storeFaultWaiverApplied(false)
+                                            .deliveryPin("9999")
+                                            .idempotencyKey("cache-order-idem-001")
+                                            .build();
+                            return orderRepository.save(o);
+                        });
         assertNotNull(seeded);
         seededOrderId = seeded.getOrderId();
 
@@ -269,8 +299,9 @@ public class CacheIntegrationTest {
         Cache cache = cacheManager.getCache("system-health");
         assertNotNull(cache, "system-health cache must exist");
         // Value should be present in cache immediately after first call
-        assertNotNull(cache.get(org.springframework.cache.interceptor.SimpleKey.EMPTY),
-            "system-health must be cached after first call");
+        assertNotNull(
+                cache.get(org.springframework.cache.interceptor.SimpleKey.EMPTY),
+                "system-health must be cached after first call");
 
         // Second call is served from cache
         Map<String, Object> second = adminService.getSystemHealth();
@@ -281,13 +312,19 @@ public class CacheIntegrationTest {
 
     @Test
     public void testAllExpectedCacheNamesAreRegistered() {
-        List<String> expected = List.of(
-            "orders", "customer-orders", "wholesaler-restocks",
-            "wholesaler-invoices", "academy-courses", "system-health", "catalog"
-        );
+        List<String> expected =
+                List.of(
+                        "orders",
+                        "customer-orders",
+                        "wholesaler-restocks",
+                        "wholesaler-invoices",
+                        "academy-courses",
+                        "system-health",
+                        "catalog");
         for (String name : expected) {
-            assertNotNull(cacheManager.getCache(name),
-                "Cache '" + name + "' must be registered in CacheManager");
+            assertNotNull(
+                    cacheManager.getCache(name),
+                    "Cache '" + name + "' must be registered in CacheManager");
         }
     }
 }

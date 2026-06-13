@@ -1,11 +1,15 @@
 import { useStore } from "../store";
 
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+export const BASE_URL =
+	import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const generateSecureSessionId = (): string => {
 	try {
 		const array = new Uint8Array(16);
 		window.crypto.getRandomValues(array);
-		return "sess-" + Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+		return (
+			"sess-" +
+			Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("")
+		);
 	} catch (e) {
 		return "sess-" + Math.random().toString(36).substring(2, 15);
 	}
@@ -66,7 +70,7 @@ export class ApiClient {
 	public static async request<T>(
 		path: string,
 		options: FetchOptions = {},
-		mockFallback?: () => T | Promise<T>
+		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
 		const url = `${BASE_URL}${path}`;
 
@@ -115,11 +119,12 @@ export class ApiClient {
 				// If response has no content (e.g. 204 or empty 200)
 				const text = await response.text();
 				return text ? (JSON.parse(text) as T) : ({} as T);
-
 			} catch (error) {
 				// Fallback to mock data on network error
 				if (mockFallback && !options.bypassMock) {
-					console.warn(`API request to ${path} failed (${(error as Error).message}). Falling back to mock data.`);
+					console.warn(
+						`API request to ${path} failed (${(error as Error).message}). Falling back to mock data.`,
+					);
 					await this.delay(400); // Simulate network latency
 					return mockFallback();
 				}
@@ -139,7 +144,7 @@ export class ApiClient {
 	public static async get<T>(
 		path: string,
 		options?: FetchOptions,
-		mockFallback?: () => T | Promise<T>
+		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
 		return this.request<T>(path, { ...options, method: "GET" }, mockFallback);
 	}
@@ -148,9 +153,11 @@ export class ApiClient {
 		path: string,
 		body?: any,
 		options?: FetchOptions,
-		mockFallback?: () => T | Promise<T>
+		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
-		const idempotencyKey = options?.idempotencyKey || (options?.method !== "GET" ? this.generateIdempotencyKey() : undefined);
+		const idempotencyKey =
+			options?.idempotencyKey ||
+			(options?.method !== "GET" ? this.generateIdempotencyKey() : undefined);
 		return this.request<T>(
 			path,
 			{
@@ -159,7 +166,7 @@ export class ApiClient {
 				body: body ? JSON.stringify(body) : undefined,
 				idempotencyKey,
 			},
-			mockFallback
+			mockFallback,
 		);
 	}
 
@@ -167,9 +174,10 @@ export class ApiClient {
 		path: string,
 		body?: any,
 		options?: FetchOptions,
-		mockFallback?: () => T | Promise<T>
+		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
-		const idempotencyKey = options?.idempotencyKey || this.generateIdempotencyKey();
+		const idempotencyKey =
+			options?.idempotencyKey || this.generateIdempotencyKey();
 		return this.request<T>(
 			path,
 			{
@@ -178,30 +186,39 @@ export class ApiClient {
 				body: body ? JSON.stringify(body) : undefined,
 				idempotencyKey,
 			},
-			mockFallback
+			mockFallback,
 		);
 	}
 
 	public static async delete<T>(
 		path: string,
 		options?: FetchOptions,
-		mockFallback?: () => T | Promise<T>
+		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
-		const idempotencyKey = options?.idempotencyKey || this.generateIdempotencyKey();
+		const idempotencyKey =
+			options?.idempotencyKey || this.generateIdempotencyKey();
 		return this.request<T>(
 			path,
 			{ ...options, method: "DELETE", idempotencyKey },
-			mockFallback
+			mockFallback,
 		);
 	}
 
 	private static generateIdempotencyKey(): string {
-		return "idem-" + Math.random().toString(36).substring(2, 15) + "-" + Date.now();
+		return (
+			"idem-" + Math.random().toString(36).substring(2, 15) + "-" + Date.now()
+		);
 	}
 }
 
 function responseStatusNotRetryable(error: any): boolean {
 	// Don't retry if it is an Auth/Client input error
 	const msg = String(error?.message || "");
-	return msg.includes("HTTP 400") || msg.includes("HTTP 401") || msg.includes("HTTP 403") || msg.includes("HTTP 404") || msg.includes("Unauthorized");
+	return (
+		msg.includes("HTTP 400") ||
+		msg.includes("HTTP 401") ||
+		msg.includes("HTTP 403") ||
+		msg.includes("HTTP 404") ||
+		msg.includes("Unauthorized")
+	);
 }
