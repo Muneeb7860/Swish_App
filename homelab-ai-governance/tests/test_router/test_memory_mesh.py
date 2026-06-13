@@ -12,6 +12,8 @@ def reset_circuit_breakers():
     """Reset circuit breaker and pool states on MemoryMesh class before every test."""
     MemoryMesh._db_failed_time = None
     MemoryMesh._embedding_failed_time = None
+    MemoryMesh.db_breaker_trips = 0
+    MemoryMesh.embedding_breaker_trips = 0
     if MemoryMesh._pool is not None:
         try:
             MemoryMesh._pool.closeall()
@@ -141,6 +143,8 @@ def test_memory_mesh_circuit_breaker():
     # Reset circuit breaker states first
     MemoryMesh._db_failed_time = None
     MemoryMesh._embedding_failed_time = None
+    MemoryMesh.db_breaker_trips = 0
+    MemoryMesh.embedding_breaker_trips = 0
     
     with patch("governance.stubs.memory_mesh.load_routing_config") as mock_cfg, \
          patch("psycopg2.connect") as mock_connect, \
@@ -160,11 +164,13 @@ def test_memory_mesh_circuit_breaker():
         mock_connect.side_effect = Exception("DB offline")
         
         mesh = MemoryMesh()
+        assert MemoryMesh.db_breaker_trips == 0
         # First query should fail and trip DB circuit breaker
         docs1 = mesh.retrieve("weather query")
         assert len(docs1) == 1
         assert docs1[0]["id"] == "doc_weather_1"
         assert MemoryMesh._db_failed_time is not None
+        assert MemoryMesh.db_breaker_trips == 1  # Counter incremented on DB failure
         
         # Reset mock_connect call history
         mock_connect.reset_mock()
@@ -174,6 +180,8 @@ def test_memory_mesh_circuit_breaker():
         assert len(docs2) == 1
         assert docs2[0]["id"] == "doc_weather_1"
         mock_connect.assert_not_called()
+        # Counter should NOT increment on circuit-breaker bypass (no new failure)
+        assert MemoryMesh.db_breaker_trips == 1
         
         # Reset DB breaker, trip embedding breaker
         MemoryMesh._db_failed_time = None
@@ -186,11 +194,13 @@ def test_memory_mesh_circuit_breaker():
         mock_client_instance.post.side_effect = Exception("Embedding service down")
         mock_client.return_value.__enter__.return_value = mock_client_instance
         
+        assert MemoryMesh.embedding_breaker_trips == 0
         # First query with DB online but embedding failing
         docs3 = mesh.retrieve("pricing query")
         assert len(docs3) == 1
         assert docs3[0]["id"] == "doc_pricing_1"
         assert MemoryMesh._embedding_failed_time is not None
+        assert MemoryMesh.embedding_breaker_trips == 1  # Counter incremented on embedding failure
         
         # Reset mock_client call history
         mock_client_instance.post.reset_mock()
@@ -200,8 +210,12 @@ def test_memory_mesh_circuit_breaker():
         assert len(docs4) == 1
         assert docs4[0]["id"] == "doc_pricing_1"
         mock_client_instance.post.assert_not_called()
+        # Counter should NOT increment on bypass
+        assert MemoryMesh.embedding_breaker_trips == 1
         
     # Reset circuit breaker states after test
     MemoryMesh._db_failed_time = None
     MemoryMesh._embedding_failed_time = None
+    MemoryMesh.db_breaker_trips = 0
+    MemoryMesh.embedding_breaker_trips = 0
 

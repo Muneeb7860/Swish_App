@@ -19,4 +19,6 @@ public class Sensor {
     private String status;
     /** SHA-256 hash of the device key; plaintext returned only once at provisioning. */
     private String deviceKeyHash;
+    private java.time.OffsetDateTime lastCalibratedAt;
+    private String calibrationStatus;
 }

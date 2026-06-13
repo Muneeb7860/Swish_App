@@ -1,6 +1,6 @@
 package ch.swissqcommerce.backend.domain.governance.adapter.in.web;
 
-import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.domain.governance.core.model.HitlItem;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Supervisor HITL console API (Phase 8). Serves the unified queue (B2B
+ * procurement overrides + agent escalations) and routes approve/reject by the
+ * item's composite id. ADMIN-only and idempotent (resolving a non-pending item
+ * yields 409 via TicketAlreadyResolvedException).
+ */
 @RestController
 @RequestMapping("/api/governance/hitl")
 @CrossOrigin(origins = "*")
@@ -22,9 +28,8 @@ public class HitlQueueController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ProcurementApproval>> getPendingApprovals() {
-        List<ProcurementApproval> approvals = governanceUseCase.getPendingApprovals();
-        return ResponseEntity.ok(approvals);
+    public ResponseEntity<List<HitlItem>> getPendingHitlItems() {
+        return ResponseEntity.ok(governanceUseCase.getPendingHitlItems());
     }
 
     public static class OverrideRequest {
@@ -37,27 +42,27 @@ public class HitlQueueController {
         public void setReason(String reason) { this.reason = reason; }
     }
 
-    @PostMapping("/{approvalId}/approve")
+    @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> approve(@PathVariable Integer approvalId, 
+    public ResponseEntity<Map<String, Object>> approve(@PathVariable String id,
                                                        @RequestBody OverrideRequest request) {
-        governanceUseCase.approveOverride(approvalId, request.getOperator(), request.getReason());
+        governanceUseCase.resolveHitlItem(id, true, request.getOperator(), request.getReason());
         return ResponseEntity.ok(Map.of(
-                "approvalId", approvalId,
+                "id", id,
                 "status", "APPROVED",
-                "message", "B2B restock transaction successfully overridden and released."
+                "message", "HITL item approved and released."
         ));
     }
 
-    @PostMapping("/{approvalId}/reject")
+    @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> reject(@PathVariable Integer approvalId, 
-                                                       @RequestBody OverrideRequest request) {
-        governanceUseCase.rejectOverride(approvalId, request.getOperator(), request.getReason());
+    public ResponseEntity<Map<String, Object>> reject(@PathVariable String id,
+                                                      @RequestBody OverrideRequest request) {
+        governanceUseCase.resolveHitlItem(id, false, request.getOperator(), request.getReason());
         return ResponseEntity.ok(Map.of(
-                "approvalId", approvalId,
+                "id", id,
                 "status", "REJECTED",
-                "message", "B2B restock transaction override rejected. Order canceled."
+                "message", "HITL item rejected."
         ));
     }
 }

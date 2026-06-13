@@ -49,11 +49,18 @@ public class SensorEntity {
     @Column(name = "last_seen_at")
     private OffsetDateTime lastSeenAt;
 
+    @Column(name = "last_calibrated_at")
+    private OffsetDateTime lastCalibratedAt;
+
+    @Column(name = "calibration_status", length = 20)
+    private String calibrationStatus;
+
     @PrePersist
     void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
+        if (calibrationStatus == null) calibrationStatus = "PENDING";
     }
 
     @PreUpdate

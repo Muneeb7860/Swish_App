@@ -6,11 +6,13 @@ on:
       - develop
       - master
       - Mac_Machine
+      - Windows_Machine
   pull_request:
     branches:
       - develop
       - master
       - Mac_Machine
+      - Windows_Machine
 
 jobs:
   backend-quality:
@@ -190,13 +192,14 @@ jobs:
           JWT_SECRET: ci-e2e-test-secret-32-chars-long!!
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: "6379"
+          SPRING_DATA_REDIS_PASSWORD: ""
           ADMIN_EMAIL: ci-admin@swish.local
           ADMIN_PASSWORD: CiAdm1nP@ss!
           DB_SSL_MODE: disable
         run: |
           mvn spring-boot:run \
             -Dspring-boot.run.jvmArguments="-Dserver.port=8083" \
-            -Dspring-boot.run.profiles=staging &
+            -Dspring-boot.run.profiles=staging > backend_startup.log 2>&1 &
           echo "Backend PID: $!"
           # Wait until /actuator/health returns UP (max 90s)
           for i in $(seq 1 30); do
@@ -205,7 +208,13 @@ jobs:
             [ "$STATUS" = "UP" ] && break
             sleep 3
           done
-          [ "$STATUS" = "UP" ] || (echo "Backend did not start in time" && exit 1)
+          if [ "$STATUS" != "UP" ]; then
+            echo "=== BACKEND STARTUP LOG ==="
+            cat backend_startup.log
+            echo "==========================="
+            echo "Backend did not start in time"
+            exit 1
+          fi
 
       - name: Fetch admin JWT for Cypress
         id: admin-jwt

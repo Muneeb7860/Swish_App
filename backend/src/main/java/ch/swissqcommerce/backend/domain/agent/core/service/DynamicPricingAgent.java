@@ -4,13 +4,17 @@ import ch.swissqcommerce.backend.domain.enrollment.core.model.Rider;
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
+import ch.swissqcommerce.backend.model.HitlQueue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 @Service
@@ -21,6 +25,7 @@ public class DynamicPricingAgent {
     // which owns the fail-safe fallback chain (ADR-007).
     private final LlmGatewayPort llmGateway;
     private final PricingGuardrailsEngine pricingGuardrailsEngine;
+    private final AgentOutPort agentOutPort;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Executor executor;
 
@@ -30,9 +35,11 @@ public class DynamicPricingAgent {
     public DynamicPricingAgent(
             LlmGatewayPort llmGateway,
             PricingGuardrailsEngine pricingGuardrailsEngine,
+            AgentOutPort agentOutPort,
             @Qualifier("engineTaskExecutor") Executor executor) {
         this.llmGateway = llmGateway;
         this.pricingGuardrailsEngine = pricingGuardrailsEngine;
+        this.agentOutPort = agentOutPort;
         this.executor = executor;
     }
 
@@ -113,7 +120,13 @@ public class DynamicPricingAgent {
 
             // Enforce Guardrails
             PricingGuardrailsEngine.GuardrailResult guardrailResult = pricingGuardrailsEngine.validateAndClamp(surgeMultiplier, discountPercent);
-            
+
+            // Phase 8: aggressive (but in-range) pricing is flagged to the HITL queue
+            // for supervisor review while the clamped recommendation still proceeds.
+            if (guardrailResult.isNeedsReview()) {
+                raisePricingReview(guardrailResult.getReviewReason(), surgeMultiplier, discountPercent);
+            }
+
             return new PricingAnalysis(
                     guardrailResult.getValidatedSurgeMultiplier(),
                     guardrailResult.getValidatedDiscountPercent(),
@@ -149,6 +162,24 @@ public class DynamicPricingAgent {
                 0.0,
                 true // Is a fallback
         );
+    }
+
+    /** Best-effort: file a pricing-review ticket to the HITL queue (never breaks pricing). */
+    private void raisePricingReview(String reason, double rawSurge, double rawDiscount) {
+        try {
+            HitlQueue ticket = HitlQueue.builder()
+                    .ticketId("HITL-PRICE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                    .type("pricing_review")
+                    .description(String.format("Pricing flagged for review: %s (model proposed surge=%.2fx, discount=%.1f%%)",
+                            reason, rawSurge, rawDiscount))
+                    .amount(BigDecimal.ZERO)
+                    .status("pending")
+                    .build();
+            agentOutPort.saveHitlQueue(ticket);
+            log.info("DynamicPricingAgent: raised pricing-review HITL ticket {} — {}", ticket.getTicketId(), reason);
+        } catch (Exception e) {
+            log.warn("DynamicPricingAgent: failed to file pricing-review HITL ticket (non-fatal): {}", e.getMessage());
+        }
     }
 
     public static class PricingAnalysis {

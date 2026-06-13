@@ -15,4 +15,5 @@ public interface SensorPort {
     /** Append a telemetry reading to the time-series store (TimescaleDB hypertable). */
     SensorReading saveReading(SensorReading reading);
     List<SensorReading> recentReadings(String sensorId);
+    List<Sensor> findByStoreId(String storeId);
 }

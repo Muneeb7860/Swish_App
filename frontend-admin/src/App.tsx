@@ -1,12 +1,15 @@
 import { useState } from "react";
 import AdminPanel from "./components/AdminPanel";
+import AdminLogin from "./components/AdminLogin";
 import BusinessApp from "./components/BusinessApp";
 import InventoryApp from "./components/InventoryApp";
 import SystemEngineRoom from "./components/SystemEngineRoom";
+import { useHitlConsole } from "./hooks/useHitlConsole";
 import "./index.css";
 
 export default function App() {
 	const [tab, setTab] = useState("admin"); // admin, business, inventory, system
+	const hitl = useHitlConsole();
 	const [products, setProducts] = useState([
 		{
 			id: "p1",
@@ -60,28 +63,74 @@ export default function App() {
 				))}
 			</div>
 
-			{tab === "admin" && (
-				<AdminPanel
-					coldChainBreakdownActive={false}
-					setColdChainBreakdownActive={() => {}}
-					wholesalerOutageActive={false}
-					setWholesalerOutageActive={() => {}}
-					paymentOutageActive={false}
-					setPaymentOutageActive={() => {}}
-					redisCrashActive={false}
-					setRedisCrashActive={() => {}}
-					dbLatencyActive={false}
-					setDbLatencyActive={() => {}}
-					riderTrafficActive={false}
-					setRiderTrafficActive={() => {}}
-					simulateTelemetryFraud={false}
-					setSimulateTelemetryFraud={() => {}}
-					onboardingQueue={[]}
-					handleApproveOnboard={() => {}}
-					hitlQueue={[]}
-					handleReleaseHitl={() => {}}
-					handleVoidHitl={() => {}}
-				/>
+			{tab === "admin" && !hitl.authed && (
+				<AdminLogin onLogin={hitl.login} />
+			)}
+
+			{tab === "admin" && hitl.authed && (
+				<>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "0.75rem",
+							marginBottom: "1rem",
+							fontSize: "0.78rem",
+						}}
+					>
+						<span style={{ color: "#34d399" }}>● Supervisor session active</span>
+						<button
+							onClick={() => hitl.refresh()}
+							style={{
+								padding: "0.3rem 0.7rem",
+								background: "rgba(255,255,255,0.06)",
+								border: "1px solid rgba(255,255,255,0.15)",
+								color: "#fff",
+								borderRadius: 4,
+								cursor: "pointer",
+							}}
+						>
+							↻ Refresh queue
+						</button>
+						<button
+							onClick={hitl.logout}
+							style={{
+								padding: "0.3rem 0.7rem",
+								background: "rgba(255,255,255,0.06)",
+								border: "1px solid rgba(255,255,255,0.15)",
+								color: "#fff",
+								borderRadius: 4,
+								cursor: "pointer",
+							}}
+						>
+							Sign out
+						</button>
+						{hitl.error && <span style={{ color: "#f87171" }}>⚠ {hitl.error}</span>}
+					</div>
+
+					<AdminPanel
+						coldChainBreakdownActive={false}
+						setColdChainBreakdownActive={() => {}}
+						wholesalerOutageActive={false}
+						setWholesalerOutageActive={() => {}}
+						paymentOutageActive={false}
+						setPaymentOutageActive={() => {}}
+						redisCrashActive={false}
+						setRedisCrashActive={() => {}}
+						dbLatencyActive={false}
+						setDbLatencyActive={() => {}}
+						riderTrafficActive={false}
+						setRiderTrafficActive={() => {}}
+						simulateTelemetryFraud={false}
+						setSimulateTelemetryFraud={() => {}}
+						onboardingQueue={[]}
+						handleApproveOnboard={() => {}}
+						hitlQueue={hitl.queue}
+						handleReleaseHitl={hitl.approve}
+						handleVoidHitl={hitl.voidTicket}
+						hitlLoading={hitl.loading}
+					/>
+				</>
 			)}
 
 			{tab === "business" && (

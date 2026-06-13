@@ -3,14 +3,21 @@ package ch.swissqcommerce.backend.domain.governance.core.service;
 import ch.swissqcommerce.backend.domain.governance.adapter.out.persistence.ProcurementApprovalEntity;
 import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
 import ch.swissqcommerce.backend.domain.governance.port.out.ProcurementApprovalPort;
+import ch.swissqcommerce.backend.domain.governance.port.out.HitlQueuePort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
+import ch.swissqcommerce.backend.domain.governance.core.model.HitlItem;
+import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.config.SecurityAudit;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -32,19 +40,51 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(GovernanceServiceImpl.class);
 
+    // Composite-id prefixes that route a unified HITL item back to its source queue.
+    private static final String PREFIX_PROCUREMENT = "PA-";
+    private static final String PREFIX_AGENT       = "AQ-";
+
     private final ProcurementApprovalPort approvalsPort;
     private final B2BRestockOrderPort restockOrderPort;
     private final TelemetryPort telemetryPort;
+    private final HitlQueuePort hitlQueuePort;
+    private final SecurityTrustLedgerRepository trustLedgerRepository;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
     public GovernanceServiceImpl(ProcurementApprovalPort approvalsPort,
                                  B2BRestockOrderPort restockOrderPort,
-                                 TelemetryPort telemetryPort) {
+                                 TelemetryPort telemetryPort,
+                                 HitlQueuePort hitlQueuePort,
+                                 SecurityTrustLedgerRepository trustLedgerRepository,
+                                 MeterRegistry meterRegistry) {
         this.approvalsPort = approvalsPort;
         this.restockOrderPort = restockOrderPort;
         this.telemetryPort = telemetryPort;
+        this.hitlQueuePort = hitlQueuePort;
+        this.trustLedgerRepository = trustLedgerRepository;
+
+        // Pending-HITL gauge for the Mission Control dashboard (Epic 2.5 row).
+        if (meterRegistry != null) {
+            Gauge.builder("hitl.pending.count", this, GovernanceServiceImpl::countPendingHitl)
+                    .description("HITL items awaiting supervisor review (B2B overrides + agent escalations)")
+                    .tag("service", "governance")
+                    .register(meterRegistry);
+        }
+    }
+
+    /** Best-effort count for the gauge — never throws on a scrape if the DB hiccups. */
+    private double countPendingHitl() {
+        try {
+            long procurement = approvalsPort.findAll().stream()
+                    .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
+                    .count();
+            long agent = hitlQueuePort.countByStatus("pending");
+            return procurement + agent;
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     @PostConstruct
@@ -113,9 +153,29 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 restockOrderId, amount);
     }
 
+    private String sha256(String value) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 hashing failed", e);
+        }
+    }
+
     @Override
     @SecurityAudit(action = "governance.override.approve")
     public void approveOverride(Integer approvalId, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
@@ -127,6 +187,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
         approvalsPort.save(approval);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
@@ -141,6 +212,10 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     @Override
     @SecurityAudit(action = "governance.override.reject")
     public void rejectOverride(Integer approvalId, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
@@ -152,6 +227,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
         approvalsPort.save(approval);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
@@ -207,5 +293,112 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         return approvalsPort.findAll().stream()
                 .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
                 .toList();
+    }
+
+    // ── Phase 8: unified HITL queue (B2B overrides + agent escalations) ──────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HitlItem> getPendingHitlItems() {
+        List<HitlItem> items = new ArrayList<>();
+
+        approvalsPort.findAll().stream()
+                .filter(a -> "PENDING".equalsIgnoreCase(a.getStatus()))
+                .forEach(a -> items.add(HitlItem.builder()
+                        .id(PREFIX_PROCUREMENT + a.getId())
+                        .source("B2B_PROCUREMENT")
+                        .type("b2b_override")
+                        .status(normalize(a.getStatus()))
+                        .amount(a.getAmount())
+                        .description("B2B restock override — wholesaler " + a.getWholesalerId()
+                                + ", restock order " + a.getRestockOrderId())
+                        .reference(a.getRestockOrderId() == null ? null : String.valueOf(a.getRestockOrderId()))
+                        .build()));
+
+        hitlQueuePort.findByStatus("pending").forEach(t -> items.add(HitlItem.builder()
+                .id(PREFIX_AGENT + t.getTicketId())
+                .source("AGENT_ESCALATION")
+                .type(t.getType())
+                .status(normalize(t.getStatus()))
+                .amount(t.getAmount())
+                .description(t.getDescription())
+                .reference(t.getOrderId() == null ? null : String.valueOf(t.getOrderId()))
+                .createdAt(t.getCreatedAt())
+                .build()));
+
+        return items;
+    }
+
+    @Override
+    public void resolveHitlItem(String compositeId, boolean approve, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+        if (compositeId == null) {
+            throw new IllegalArgumentException("HITL item id is required");
+        }
+        if (compositeId.startsWith(PREFIX_PROCUREMENT)) {
+            Integer approvalId = parseId(compositeId.substring(PREFIX_PROCUREMENT.length()));
+            if (approve) approveOverride(approvalId, operator, reason);
+            else rejectOverride(approvalId, operator, reason);
+        } else if (compositeId.startsWith(PREFIX_AGENT)) {
+            resolveAgentEscalation(compositeId.substring(PREFIX_AGENT.length()), approve, operator, reason);
+        } else if (compositeId.chars().allMatch(Character::isDigit)) {
+            // Legacy bare-numeric id → procurement approval (pre-unification callers).
+            Integer approvalId = parseId(compositeId);
+            if (approve) approveOverride(approvalId, operator, reason);
+            else rejectOverride(approvalId, operator, reason);
+        } else {
+            throw new IllegalArgumentException("Unknown HITL item id: " + compositeId);
+        }
+    }
+
+    private void resolveAgentEscalation(String ticketId, boolean approve, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+        HitlQueue ticket = hitlQueuePort.findByTicketId(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("HITL ticket not found: " + ticketId));
+
+        if (!"pending".equalsIgnoreCase(ticket.getStatus())) {
+            throw new TicketAlreadyResolvedException("Ticket is already " + ticket.getStatus());
+        }
+
+        ticket.setStatus(approve ? "approved" : "voided");
+        ticket.setDescription(ticket.getDescription()
+                + " | " + (approve ? "APPROVED" : "VOIDED") + " by " + operator + ": " + reason);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
+
+        hitlQueuePort.save(ticket);
+        log.info("GovernanceServiceImpl: agent-escalation ticket {} {} by operator={}.",
+                ticketId, approve ? "approved" : "voided", operator);
+    }
+
+    private Integer parseId(String raw) {
+        try {
+            return Integer.valueOf(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid procurement approval id: " + raw);
+        }
+    }
+
+    /** Normalize either queue's status spelling to PENDING / APPROVED / REJECTED. */
+    private String normalize(String status) {
+        if (status == null) return "PENDING";
+        return switch (status.toLowerCase()) {
+            case "approved" -> "APPROVED";
+            case "rejected", "voided" -> "REJECTED";
+            default -> "PENDING";
+        };
     }
 }

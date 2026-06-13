@@ -395,9 +395,9 @@ public class SecurityHardeningIntegrationTest {
             )
         );
 
-        // Accessing getPendingApprovals should throw AccessDeniedException
+        // Accessing getPendingHitlItems should throw AccessDeniedException
         assertThrows(AccessDeniedException.class, () ->
-            hitlQueueController.getPendingApprovals()
+            hitlQueueController.getPendingHitlItems()
         );
 
         // Accessing approve should throw AccessDeniedException
@@ -405,12 +405,12 @@ public class SecurityHardeningIntegrationTest {
         req.setOperator("operator");
         req.setReason("reason");
         assertThrows(AccessDeniedException.class, () ->
-            hitlQueueController.approve(1, req)
+            hitlQueueController.approve("1", req)
         );
 
         // Accessing reject should throw AccessDeniedException
         assertThrows(AccessDeniedException.class, () ->
-            hitlQueueController.reject(1, req)
+            hitlQueueController.reject("1", req)
         );
 
         // Authenticate as ADMIN
@@ -421,9 +421,9 @@ public class SecurityHardeningIntegrationTest {
             )
         );
 
-        // Accessing getPendingApprovals as ADMIN should not throw AccessDeniedException
+        // Accessing getPendingHitlItems as ADMIN should not throw AccessDeniedException
         assertDoesNotThrow(() ->
-            hitlQueueController.getPendingApprovals()
+            hitlQueueController.getPendingHitlItems()
         );
     }
 

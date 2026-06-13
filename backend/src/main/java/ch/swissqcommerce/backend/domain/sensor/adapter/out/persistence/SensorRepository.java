@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface SensorRepository extends JpaRepository<SensorEntity, String> {
     Optional<SensorEntity> findByDeviceKeyHash(String deviceKeyHash);
     List<SensorEntity> findByRetailerIdOrderByCreatedAtDesc(String retailerId);
+    List<SensorEntity> findByStoreId(String storeId);
 }

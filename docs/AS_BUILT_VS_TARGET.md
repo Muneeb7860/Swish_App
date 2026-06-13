@@ -26,8 +26,8 @@ Legend: ✅ built · 🟡 partial · 🔴 not yet (roadmap).
 | :-- | :--- | :--- | :-: | :-- |
 | FR-01 | Retailer self-service onboarding (sensor provisioning, API keys) | `retailer` context (V23): self-signup + 3-gate + API key + auto billing account; **+ `sensor` device-provisioning context (V24)** | ✅ | **done (R2/R3)** |
 | FR-02 | AI negotiation: outbox → Kafka → **MongoDB** → price negotiation | RFQ reverse auction + outbox→Kafka relay + **Mongo negotiation-event CDC archive** (conditional adapter `swish.mongo.archive.enabled`; NoOp fallback for dev/CI) | ✅ | **done (R3)** |
-| FR-03 | Telemetry ingestion (MQTT/HTTPS → **TimescaleDB**) | order cold-chain CQRS on PostgreSQL + **`sensor_readings` TimescaleDB hypertable** (V25) with device-key HTTP ingestion (`sensor` context); MQTT still pending | 🟡→✅ | R3 (MQTT deferred) |
-| FR-04 | Ledger auditing (SHA-256 hash chain, REST search) | `LedgerServiceImpl` + DB hash-chain & balance triggers + `/ledger` API | ✅ | — |
+| FR-03 | Telemetry ingestion (MQTT/HTTPS → **TimescaleDB**) | order cold-chain CQRS on PostgreSQL + **`sensor_readings` TimescaleDB hypertable** (V25) with device-key HTTP ingestion (`sensor` context); MQTT still pending. Cryptographic telemetry hash-chain chaining (SHA-256) at ingestion + continuous sensor calibration tracking with dynamic B2B restock order rerouting. | 🟡→✅ | R3 (MQTT deferred) |
+| FR-04 | Ledger auditing (SHA-256 hash chain, REST search) | `LedgerServiceImpl` + DB hash-chain & balance triggers + `/ledger` API. Enforced non-blank override justifications at HITL queue / resolve endpoints with SHA-256 hashing recorded into `SecurityTrustLedger`. | ✅ | — |
 | FR-05 | Operator dashboard + RBAC | `frontend-admin` + JWT/OPA RBAC + unified HITL queue | ✅ | — |
 | FR-06 | Billing engine (per-hub flat tier, invoicing) | `billing` context (V22): flat-tier subscription BASIC/PRO/ENTERPRISE + per-period invoicing | ✅ | **done (R2)** |
 | FR-07 | Alert & notification (SMS/Email/Webhook) | `notification-engine` (Email/SMS/Push/WS) + SLA/temp/anomaly alerts | ✅ | — |

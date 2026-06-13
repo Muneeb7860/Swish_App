@@ -41,4 +41,10 @@ public class SensorReadingEntity {
 
     @Column(name = "reading_value", precision = 12, scale = 4, nullable = false)
     private BigDecimal readingValue;
+
+    @Column(name = "previous_reading_hash", length = 64)
+    private String previousReadingHash;
+
+    @Column(name = "reading_hash", length = 64)
+    private String readingHash;
 }

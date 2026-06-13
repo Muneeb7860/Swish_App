@@ -7,6 +7,7 @@ import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,7 @@ class GovernanceServiceIdempotencyTest {
     @Mock private ProcurementApprovalPort approvalsPort;
     @Mock private B2BRestockOrderPort restockOrderPort;
     @Mock private TelemetryPort telemetryPort;
+    @Mock private SecurityTrustLedgerRepository trustLedgerRepository;
 
     @InjectMocks private GovernanceServiceImpl service;
 

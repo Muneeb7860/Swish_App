@@ -164,3 +164,46 @@ groups:
             MasterOrchestratorService fired the $5/day budget cap on {{ $labels.instance }}.
             Subsequent customer requests are being routed to the HITL queue.
             Check token cost per request and consider increasing the daily budget limit.
+
+      - alert: RagCircuitBreakerTripped
+        expr: |
+          increase(rag_circuit_breaker_tripped_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: ai
+        annotations:
+          summary: "RAG circuit breaker tripped on {{ $labels.job }}"
+          description: >-
+            A RAG circuit breaker tripped (type={{ $labels.type }}) in the AI Governance pipeline.
+            Database or Ollama embedding service is degraded.
+
+  # ── Event-driven automation alerts (Phase 7) ─────────────────────────────────
+  - name: swish_events
+    rules:
+      - alert: KafkaConsumerProcessingErrors
+        expr: |
+          increase(kafka_consumer_processing_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          domain: events
+        annotations:
+          summary: "Kafka consumer processing errors on {{ $labels.job }}"
+          description: >-
+            {{ $value | humanize }} processing error(s) detected in the last 5 minutes
+            on topic {{ $labels.topic }}. Events may be sent to DLT.
+
+      - alert: WebhookAuthFailures
+        expr: |
+          increase(webhook_events_rejected_total[5m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          domain: events
+        annotations:
+          summary: "Webhook authentication failures on {{ $labels.job }}"
+          description: >-
+            {{ $value | humanize }} webhook signature rejections in the last 5 minutes.
+            Possible misconfigured n8n secret or unauthorized access attempt.
+
