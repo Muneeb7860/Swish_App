@@ -21,8 +21,8 @@ public class OutboxEntity {
     @Column(nullable = false)
     private String type;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false, columnDefinition = "TEXT")
+    @Convert(converter = AesEncryptionConverter.class)
     private String payload;
 
     private Instant createdAt;
