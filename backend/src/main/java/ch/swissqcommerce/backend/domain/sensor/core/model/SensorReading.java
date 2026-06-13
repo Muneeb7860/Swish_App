@@ -19,4 +19,6 @@ public class SensorReading {
     private OffsetDateTime recordedAt;
     private String metricType;
     private BigDecimal value;
+    private String previousReadingHash;
+    private String readingHash;
 }

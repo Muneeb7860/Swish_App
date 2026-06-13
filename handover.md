@@ -261,3 +261,30 @@ We successfully audited Phase 6 and completed the implementation and validation 
 * **Verification**:
   - Backend test suite is 100% green (`BUILD SUCCESS` with 319 tests).
 
+### Cycle Update (2026-06-13) — BRD Innovation & Hardening [DONE]
+
+We successfully implemented and validated the board-mandated compliance and audit capability enhancements:
+
+* **Telemetry Audit Schema (Flyway Migration)**:
+  - Created [V29__telemetry_audit_hardening.sql](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V29__telemetry_audit_hardening.sql) adding calibration tracking columns (`last_calibrated_at`, `calibration_status`) and cryptographic chaining columns (`previous_reading_hash`, `reading_hash`) to database entities.
+
+* **Telemetry Invariant Auditing**:
+  - Updated models and entity mappings ([SensorEntity.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorEntity.java), [SensorReadingEntity.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorReadingEntity.java)) and fixed a gap in [SensorPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorPersistenceAdapter.java) to correctly persist hashes.
+  - Implemented dynamic SHA-256 chaining of telemetry readings on ingestion inside [SensorServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/core/service/SensorServiceImpl.java).
+
+* **Telemetry Chain Verification Audit Engine**:
+  - Implemented `verifySensorIntegrity(String sensorId)` in `SensorServiceImpl` to verify telemetry chain integrity and exposed `/api/v1/sensors/{sensorId}/verify-integrity` in [SensorController.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/in/web/SensorController.java).
+
+* **Continuous Calibration Logs & B2B Replenishment Rerouting**:
+  - Exposed `/calibrate` endpoint for sensor calibration check logs.
+  - Modified [WholesalerServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/wholesaler/core/service/WholesalerServiceImpl.java) to verify store sensor calibration compliance and dynamically reroute B2B restock order generation to alternative compliant dark stores if any temperature/GPS sensors have failed.
+
+* **Human Override Justification Hashing**:
+  - Enforced non-blank override reasons in all resolution handlers in [GovernanceServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/governance/core/service/GovernanceServiceImpl.java).
+  - Computed the SHA-256 hash of all non-blank reasons and saved them under `"HITL-OVERRIDE-HASH:<hash>"` event logs in the double-entry `SecurityTrustLedger`.
+
+* **Verification**:
+  - **Backend Test Suite**: 100% green (`BUILD SUCCESS` with 326 tests). Includes new unit tests verifying dynamic rerouting, calibration status changes, and telemetry chain validation under normal/tampered scenarios.
+  - **Frontend Build Suite**: All React micro-frontends compile cleanly (`npm run build:all` success).
+  - **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](file:///c:/Users/DELL%209420/Documents/swiss_App/docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features.
+

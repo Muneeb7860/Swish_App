@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -121,6 +122,100 @@ class SensorServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> service.recordReading("dev_key", "  ", BigDecimal.ONE));
         verify(port, never()).saveReading(any());
+    }
+
+    @Test
+    void calibrateSensor_updatesCalibrationStatus() {
+        Sensor s = sensor("SNS-7", "ACTIVE");
+        when(port.findById("SNS-7")).thenReturn(Optional.of(s));
+        when(port.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        Sensor result = service.calibrateSensor("SNS-7", true);
+        assertEquals("CALIBRATED", result.getCalibrationStatus());
+        assertNotNull(result.getLastCalibratedAt());
+
+        Sensor result2 = service.calibrateSensor("SNS-7", false);
+        assertEquals("FAILED", result2.getCalibrationStatus());
+    }
+
+    @Test
+    void recordReading_calculatesCryptographicHashChain() {
+        Sensor active = sensor("SNS-8", "ACTIVE");
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.of(active));
+        
+        final SensorReading[] saved = new SensorReading[1];
+        when(port.saveReading(any())).thenAnswer(i -> {
+            saved[0] = i.getArgument(0);
+            return saved[0];
+        });
+        
+        when(port.recentReadings("SNS-8")).thenAnswer(i -> {
+            if (saved[0] == null) {
+                return java.util.Collections.emptyList();
+            } else {
+                return List.of(saved[0]);
+            }
+        });
+
+        SensorReading reading1 = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("4.5"));
+        assertEquals("0000000000000000000000000000000000000000000000000000000000000000", reading1.getPreviousReadingHash());
+        assertNotNull(reading1.getReadingHash());
+
+        SensorReading reading2 = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("5.0"));
+        assertEquals(reading1.getReadingHash(), reading2.getPreviousReadingHash());
+        assertNotNull(reading2.getReadingHash());
+    }
+
+    @Test
+    void verifySensorIntegrity_validAndTamperedChains() {
+        Sensor active = sensor("SNS-8", "ACTIVE");
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.of(active));
+        
+        final SensorReading[] saved = new SensorReading[1];
+        when(port.saveReading(any())).thenAnswer(i -> {
+            saved[0] = i.getArgument(0);
+            return saved[0];
+        });
+        
+        when(port.recentReadings("SNS-8")).thenAnswer(i -> {
+            if (saved[0] == null) {
+                return java.util.Collections.emptyList();
+            } else {
+                return List.of(saved[0]);
+            }
+        });
+
+        SensorReading reading1 = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("4.5"));
+        
+        when(port.recentReadings("SNS-8")).thenReturn(List.of(reading1));
+        
+        assertTrue(service.verifySensorIntegrity("SNS-8"));
+        
+        reading1.setReadingHash("tampered_hash");
+        assertFalse(service.verifySensorIntegrity("SNS-8"));
+    }
+
+    @Test
+    void verifySensorIntegrity_twoReadingsChain() {
+        Sensor active = sensor("SNS-9", "ACTIVE");
+        when(port.findByDeviceKeyHash(anyString())).thenReturn(Optional.of(active));
+        
+        final java.util.List<SensorReading> list = new java.util.ArrayList<>();
+        when(port.saveReading(any())).thenAnswer(i -> {
+            SensorReading r = i.getArgument(0);
+            list.add(r);
+            return r;
+        });
+        
+        when(port.recentReadings("SNS-9")).thenAnswer(i -> new java.util.ArrayList<>(list));
+
+        SensorReading reading1 = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("4.5"));
+        SensorReading reading2 = service.recordReading("dev_key", "TEMPERATURE", new BigDecimal("5.0"));
+        
+        assertTrue(service.verifySensorIntegrity("SNS-9"));
+        
+        reading2.setPreviousReadingHash("broken_link");
+        assertFalse(service.verifySensorIntegrity("SNS-9"));
     }
 
     private Sensor sensor(String id, String status) {

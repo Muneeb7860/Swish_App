@@ -28,6 +28,8 @@ public class WholesalerServiceTest {
     @Mock private WholesalerPort wholesalerPort;
     @Mock private B2BRestockOrderPort restockOrderPort;
     @Mock private LedgerUseCase ledgerService;
+    @Mock private ch.swissqcommerce.backend.domain.sensor.port.out.SensorPort sensorPort;
+    @Mock private ch.swissqcommerce.backend.repository.DarkStoreRepository darkStoreRepository;
 
     @InjectMocks private WholesalerServiceImpl wholesalerService;
 
@@ -208,5 +210,50 @@ public class WholesalerServiceTest {
         assertEquals(2, summary.get("totalOrderCount"));
         assertEquals(true, summary.get("academyDiscountActive"));
         assertEquals(80, summary.get("trustScore"));
+    }
+
+    @Test
+    public void testCreateRestockOrder_reroutesWhenStoreHasFailedSensors() {
+        // Mock a failed sensor on STORE-1
+        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor failedSensor = 
+                ch.swissqcommerce.backend.domain.sensor.core.model.Sensor.builder()
+                        .sensorId("SNS-BAD")
+                        .storeId("STORE-1")
+                        .calibrationStatus("FAILED")
+                        .build();
+
+        // Mock a calibrated sensor on STORE-2
+        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor goodSensor = 
+                ch.swissqcommerce.backend.domain.sensor.core.model.Sensor.builder()
+                        .sensorId("SNS-GOOD")
+                        .storeId("STORE-2")
+                        .calibrationStatus("CALIBRATED")
+                        .build();
+
+        when(sensorPort.findByStoreId("STORE-1")).thenReturn(List.of(failedSensor));
+        when(sensorPort.findByStoreId("STORE-2")).thenReturn(List.of(goodSensor));
+
+        // Mock stores
+        ch.swissqcommerce.backend.model.DarkStore s1 = ch.swissqcommerce.backend.model.DarkStore.builder()
+                .storeId("STORE-1").storeName("Store 1").build();
+        ch.swissqcommerce.backend.model.DarkStore s2 = ch.swissqcommerce.backend.model.DarkStore.builder()
+                .storeId("STORE-2").storeName("Store 2").build();
+        when(darkStoreRepository.findAll()).thenReturn(List.of(s1, s2));
+
+        Wholesaler w = new Wholesaler();
+        w.setWholesalerId("W-1");
+        w.setIsActive(true);
+        w.setTrustScore(80);
+        w.setBaseInvoiceAmount(new BigDecimal("1000.00"));
+
+        when(wholesalerPort.findById("W-1")).thenReturn(Optional.of(w));
+        when(restockOrderPort.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        // Attempt to create restock for STORE-1 (which is failed)
+        B2BRestockOrder order = wholesalerService.createRestockOrder("STORE-1", "W-1", null);
+
+        assertNotNull(order);
+        // Assert that the store has been rerouted to STORE-2
+        assertEquals("STORE-2", order.getStore().getStoreId());
     }
 }

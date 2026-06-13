@@ -33,10 +33,11 @@ public class SensorController {
     public record ProvisionRequest(String retailerId, String storeId, SensorType type) {}
 
     public record SensorView(String sensorId, String retailerId, String storeId,
-                             SensorType sensorType, String status) {
+                             SensorType sensorType, String status,
+                             java.time.OffsetDateTime lastCalibratedAt, String calibrationStatus) {
         static SensorView of(Sensor s) {
             return new SensorView(s.getSensorId(), s.getRetailerId(), s.getStoreId(),
-                    s.getSensorType(), s.getStatus());
+                    s.getSensorType(), s.getStatus(), s.getLastCalibratedAt(), s.getCalibrationStatus());
         }
     }
 
@@ -70,6 +71,18 @@ public class SensorController {
         return transition(() -> SensorView.of(sensors.decommission(sensorId)));
     }
 
+    @Operation(summary = "Submit sensor calibration status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{sensorId}/calibrate")
+    public ResponseEntity<?> calibrate(@PathVariable String sensorId, @RequestParam boolean success) {
+        try {
+            Sensor s = sensors.calibrateSensor(sensorId, success);
+            return ResponseEntity.ok(SensorView.of(s));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @Operation(summary = "List sensors for a retailer")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
@@ -98,6 +111,14 @@ public class SensorController {
     @GetMapping("/{sensorId}/readings")
     public ResponseEntity<List<SensorReading>> readings(@PathVariable String sensorId) {
         return ResponseEntity.ok(sensors.getRecentReadings(sensorId));
+    }
+
+    @Operation(summary = "Verify sensor telemetry chain integrity (SHA-256 chain validation)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{sensorId}/verify-integrity")
+    public ResponseEntity<?> verifyIntegrity(@PathVariable String sensorId) {
+        boolean valid = sensors.verifySensorIntegrity(sensorId);
+        return ResponseEntity.ok(Map.of("sensorId", sensorId, "valid", valid));
     }
 
     private ResponseEntity<?> transition(java.util.function.Supplier<SensorView> action) {

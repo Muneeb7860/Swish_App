@@ -7,6 +7,8 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.domain.sensor.port.out.SensorPort;
+import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -20,6 +22,8 @@ import java.util.*;
 @Service
 public class WholesalerServiceImpl implements WholesalerUseCase {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WholesalerServiceImpl.class);
+
     @Autowired
     private WholesalerPort wholesalerPort;
 
@@ -31,6 +35,44 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
 
     @Autowired
     private LedgerUseCase ledgerService;
+
+    @Autowired
+    private SensorPort sensorPort;
+
+    @Autowired
+    private DarkStoreRepository darkStoreRepository;
+
+    private boolean isStoreCompliant(String storeId) {
+        if (sensorPort == null) return true;
+        try {
+            List<ch.swissqcommerce.backend.domain.sensor.core.model.Sensor> storeSensors = sensorPort.findByStoreId(storeId);
+            if (storeSensors == null) return true;
+            for (var s : storeSensors) {
+                if ("FAILED".equalsIgnoreCase(s.getCalibrationStatus())) {
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            return true;
+        }
+        return true;
+    }
+
+    private String findAlternateCompliantStore(String currentStoreId) {
+        if (darkStoreRepository == null) return currentStoreId;
+        try {
+            List<DarkStore> allStores = darkStoreRepository.findAll();
+            if (allStores == null) return currentStoreId;
+            for (DarkStore store : allStores) {
+                if (store.getStoreId() != null && !store.getStoreId().equals(currentStoreId) && isStoreCompliant(store.getStoreId())) {
+                    return store.getStoreId();
+                }
+            }
+        } catch (Exception e) {
+            return currentStoreId;
+        }
+        return currentStoreId;
+    }
 
     @Override
     @Cacheable(value = "wholesaler-restocks", key = "#wholesalerId")
@@ -44,6 +86,12 @@ public class WholesalerServiceImpl implements WholesalerUseCase {
     @Transactional
     @CacheEvict(value = "wholesaler-restocks", allEntries = true)
     public B2BRestockOrder createRestockOrder(String storeId, String preferredWholesalerId, String idempotencyKey) {
+        if (!isStoreCompliant(storeId)) {
+            String alternateStoreId = findAlternateCompliantStore(storeId);
+            log.warn("Store {} has failed sensors and is non-compliant. Rerouting B2B restock order to compliant store {}", storeId, alternateStoreId);
+            storeId = alternateStoreId;
+        }
+
         // Idempotency guard
         if (idempotencyKey != null) {
             Optional<B2BRestockOrder> existing = restockOrderPort.findByIdempotencyKey(idempotencyKey);

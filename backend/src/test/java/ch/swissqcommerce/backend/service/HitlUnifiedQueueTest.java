@@ -11,6 +11,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.exception.ResourceNotFoundException;
 import ch.swissqcommerce.backend.exception.TicketAlreadyResolvedException;
 import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,13 +38,14 @@ class HitlUnifiedQueueTest {
     @Mock private B2BRestockOrderPort restockOrderPort;
     @Mock private TelemetryPort telemetryPort;
     @Mock private HitlQueuePort hitlQueuePort;
+    @Mock private SecurityTrustLedgerRepository trustLedgerRepository;
 
     private GovernanceServiceImpl service;
 
     @BeforeEach
     void setUp() {
         // null MeterRegistry → constructor skips the gauge (guarded).
-        service = new GovernanceServiceImpl(approvalsPort, restockOrderPort, telemetryPort, hitlQueuePort, null);
+        service = new GovernanceServiceImpl(approvalsPort, restockOrderPort, telemetryPort, hitlQueuePort, trustLedgerRepository, null);
     }
 
     private ProcurementApproval approval(int id, String status) {
@@ -120,5 +122,26 @@ class HitlUnifiedQueueTest {
     void resolveHitlItem_unknownIdShape_throws() {
         assertThrows(IllegalArgumentException.class, () ->
                 service.resolveHitlItem("ZZ-7", true, "swissadmin", "x"));
+    }
+
+    @Test
+    void resolveHitlItem_blankReason_throws() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.resolveHitlItem("PA-5", true, "swissadmin", "   "));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.resolveHitlItem("PA-5", true, "swissadmin", null));
+    }
+
+    @Test
+    void resolveHitlItem_recordsJustificationHashInTrustLedger() {
+        ProcurementApproval pending = approval(5, "PENDING");
+        when(approvalsPort.findById(5)).thenReturn(Optional.of(pending));
+        when(restockOrderPort.findById(any())).thenReturn(Optional.<B2BRestockOrder>empty());
+
+        service.resolveHitlItem("PA-5", true, "swissadmin", "My special justification");
+
+        assertEquals("APPROVED", pending.getStatus());
+        // Verify that trustLedgerRepository saved the hash audit log
+        verify(trustLedgerRepository, times(1)).save(any());
     }
 }

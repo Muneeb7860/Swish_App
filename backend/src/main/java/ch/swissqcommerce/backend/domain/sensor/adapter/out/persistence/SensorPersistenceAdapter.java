@@ -26,6 +26,8 @@ public class SensorPersistenceAdapter implements SensorPort {
                 .sensorType(sensor.getSensorType().name())
                 .status(sensor.getStatus())
                 .deviceKeyHash(sensor.getDeviceKeyHash())
+                .lastCalibratedAt(sensor.getLastCalibratedAt())
+                .calibrationStatus(sensor.getCalibrationStatus())
                 .build();
         return toDomain(repository.save(entity));
     }
@@ -47,12 +49,20 @@ public class SensorPersistenceAdapter implements SensorPort {
     }
 
     @Override
+    public List<Sensor> findByStoreId(String storeId) {
+        return repository.findByStoreId(storeId)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public SensorReading saveReading(SensorReading reading) {
         SensorReadingEntity entity = SensorReadingEntity.builder()
                 .sensorId(reading.getSensorId())
                 .recordedAt(reading.getRecordedAt())
                 .metricType(reading.getMetricType())
                 .readingValue(reading.getValue())
+                .previousReadingHash(reading.getPreviousReadingHash())
+                .readingHash(reading.getReadingHash())
                 .build();
         return toDomain(readingRepository.save(entity));
     }
@@ -70,6 +80,8 @@ public class SensorPersistenceAdapter implements SensorPort {
                 .recordedAt(e.getRecordedAt())
                 .metricType(e.getMetricType())
                 .value(e.getReadingValue())
+                .previousReadingHash(e.getPreviousReadingHash())
+                .readingHash(e.getReadingHash())
                 .build();
     }
 
@@ -81,6 +93,8 @@ public class SensorPersistenceAdapter implements SensorPort {
                 .sensorType(SensorType.valueOf(e.getSensorType()))
                 .status(e.getStatus())
                 .deviceKeyHash(e.getDeviceKeyHash())
+                .lastCalibratedAt(e.getLastCalibratedAt())
+                .calibrationStatus(e.getCalibrationStatus())
                 .build();
     }
 }

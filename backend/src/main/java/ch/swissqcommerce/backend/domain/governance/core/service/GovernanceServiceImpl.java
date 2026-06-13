@@ -8,6 +8,8 @@ import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
 import ch.swissqcommerce.backend.domain.governance.core.model.ProcurementApproval;
 import ch.swissqcommerce.backend.domain.governance.core.model.HitlItem;
 import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.SecurityTrustLedger;
+import ch.swissqcommerce.backend.repository.SecurityTrustLedgerRepository;
 import ch.swissqcommerce.backend.domain.telemetry.core.model.OrderTelemetryLog;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.telemetry.port.out.TelemetryPort;
@@ -46,6 +48,7 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     private final B2BRestockOrderPort restockOrderPort;
     private final TelemetryPort telemetryPort;
     private final HitlQueuePort hitlQueuePort;
+    private final SecurityTrustLedgerRepository trustLedgerRepository;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
@@ -54,11 +57,13 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                                  B2BRestockOrderPort restockOrderPort,
                                  TelemetryPort telemetryPort,
                                  HitlQueuePort hitlQueuePort,
+                                 SecurityTrustLedgerRepository trustLedgerRepository,
                                  MeterRegistry meterRegistry) {
         this.approvalsPort = approvalsPort;
         this.restockOrderPort = restockOrderPort;
         this.telemetryPort = telemetryPort;
         this.hitlQueuePort = hitlQueuePort;
+        this.trustLedgerRepository = trustLedgerRepository;
 
         // Pending-HITL gauge for the Mission Control dashboard (Epic 2.5 row).
         if (meterRegistry != null) {
@@ -148,9 +153,29 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
                 restockOrderId, amount);
     }
 
+    private String sha256(String value) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 hashing failed", e);
+        }
+    }
+
     @Override
     @SecurityAudit(action = "governance.override.approve")
     public void approveOverride(Integer approvalId, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
@@ -162,6 +187,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
         approvalsPort.save(approval);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
@@ -176,6 +212,10 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     @Override
     @SecurityAudit(action = "governance.override.reject")
     public void rejectOverride(Integer approvalId, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
+
         ProcurementApproval approval = approvalsPort.findById(approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval ticket not found"));
 
@@ -187,6 +227,17 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         approval.setOverrideBy(operator);
         approval.setOverrideReason(reason);
         approvalsPort.save(approval);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
+        }
 
         if (approval.getRestockOrderId() != null) {
             restockOrderPort.findById(approval.getRestockOrderId()).ifPresent(order -> {
@@ -280,6 +331,9 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
     @Override
     public void resolveHitlItem(String compositeId, boolean approve, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
         if (compositeId == null) {
             throw new IllegalArgumentException("HITL item id is required");
         }
@@ -300,6 +354,9 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     }
 
     private void resolveAgentEscalation(String ticketId, boolean approve, String operator, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Override justification reason is required");
+        }
         HitlQueue ticket = hitlQueuePort.findByTicketId(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("HITL ticket not found: " + ticketId));
 
@@ -308,10 +365,20 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         }
 
         ticket.setStatus(approve ? "approved" : "voided");
-        if (reason != null && !reason.isBlank()) {
-            ticket.setDescription(ticket.getDescription()
-                    + " | " + (approve ? "APPROVED" : "VOIDED") + " by " + operator + ": " + reason);
+        ticket.setDescription(ticket.getDescription()
+                + " | " + (approve ? "APPROVED" : "VOIDED") + " by " + operator + ": " + reason);
+
+        if (trustLedgerRepository != null) {
+            SecurityTrustLedger audit = SecurityTrustLedger.builder()
+                    .actorType("system")
+                    .actorId(operator != null ? operator : "admin")
+                    .event("HITL-OVERRIDE-HASH:" + sha256(reason))
+                    .delta(0)
+                    .currentValue(100)
+                    .build();
+            trustLedgerRepository.save(audit);
         }
+
         hitlQueuePort.save(ticket);
         log.info("GovernanceServiceImpl: agent-escalation ticket {} {} by operator={}.",
                 ticketId, approve ? "approved" : "voided", operator);

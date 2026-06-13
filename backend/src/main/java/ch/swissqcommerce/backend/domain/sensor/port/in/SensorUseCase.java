@@ -32,4 +32,8 @@ public interface SensorUseCase {
     SensorReading recordReading(String deviceKey, String metricType, BigDecimal value);
 
     List<SensorReading> getRecentReadings(String sensorId);
+
+    Sensor calibrateSensor(String sensorId, boolean success);
+
+    boolean verifySensorIntegrity(String sensorId);
 }

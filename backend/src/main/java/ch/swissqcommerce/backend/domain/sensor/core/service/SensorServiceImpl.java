@@ -94,19 +94,83 @@ public class SensorServiceImpl implements SensorUseCase {
         if (metricType == null || metricType.isBlank()) throw new IllegalArgumentException("metricType is required");
         if (value == null) throw new IllegalArgumentException("value is required");
 
+        List<SensorReading> recent = port.recentReadings(sensor.getSensorId());
+        String prevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        if (recent != null && !recent.isEmpty()) {
+            SensorReading lastReading = recent.get(0);
+            if (lastReading.getReadingHash() != null) {
+                prevHash = lastReading.getReadingHash();
+            }
+        }
+
+        OffsetDateTime recordedAt = OffsetDateTime.now();
+        String currentHash = computeReadingHash(sensor.getSensorId(), recordedAt, metricType, value, prevHash);
+
         SensorReading reading = SensorReading.builder()
                 .sensorId(sensor.getSensorId())
-                .recordedAt(OffsetDateTime.now())
+                .recordedAt(recordedAt)
                 .metricType(metricType)
                 .value(value)
+                .previousReadingHash(prevHash)
+                .readingHash(currentHash)
                 .build();
         return port.saveReading(reading);
+    }
+
+    private String computeReadingHash(String sensorId, OffsetDateTime recordedAt, String metricType, BigDecimal value, String prevHash) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            String data = sensorId + ":" + recordedAt.toString() + ":" + metricType + ":" + value.toString() + ":" + prevHash;
+            return HexFormat.of().formatHex(md.digest(data.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public Sensor calibrateSensor(String sensorId, boolean success) {
+        Sensor sensor = require(sensorId);
+        sensor.setLastCalibratedAt(OffsetDateTime.now());
+        sensor.setCalibrationStatus(success ? "CALIBRATED" : "FAILED");
+        return port.save(sensor);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SensorReading> getRecentReadings(String sensorId) {
         return port.recentReadings(sensorId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean verifySensorIntegrity(String sensorId) {
+        List<SensorReading> readings = port.recentReadings(sensorId);
+        if (readings == null || readings.isEmpty()) {
+            return true;
+        }
+        List<SensorReading> sorted = new java.util.ArrayList<>(readings);
+        sorted.sort(java.util.Comparator.comparing(SensorReading::getRecordedAt));
+        for (int i = 0; i < sorted.size(); i++) {
+            SensorReading current = sorted.get(i);
+            String calculatedHash = computeReadingHash(
+                    current.getSensorId(),
+                    current.getRecordedAt(),
+                    current.getMetricType(),
+                    current.getValue(),
+                    current.getPreviousReadingHash()
+            );
+            if (!calculatedHash.equals(current.getReadingHash())) {
+                return false;
+            }
+            if (i > 0) {
+                SensorReading prev = sorted.get(i - 1);
+                if (!current.getPreviousReadingHash().equals(prev.getReadingHash())) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private Sensor require(String sensorId) {
