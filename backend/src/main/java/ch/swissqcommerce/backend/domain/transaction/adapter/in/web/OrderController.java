@@ -76,10 +76,14 @@ public class OrderController {
             return ResponseEntity.status(403)
                     .body(Map.of("error", "Cannot access another customer's orders"));
         }
-        List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
-        List<OrderResponseDTO> responseDTOs =
-                orders.stream().map(this::mapToDTO).collect(Collectors.toList());
-        return ResponseEntity.ok(responseDTOs);
+        try {
+            List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
+            List<OrderResponseDTO> responseDTOs =
+                    orders.stream().map(this::mapToDTO).collect(Collectors.toList());
+            return ResponseEntity.ok(responseDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/refund")
