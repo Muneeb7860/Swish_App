@@ -23,6 +23,10 @@ from governance.stubs.memory_mesh import retrieve_context
 
 logger = logging.getLogger(__name__)
 
+# Sentinel agent id with no per-agent config file → load_guardrails() returns the
+# shared base rules unchanged. Used for the pre-route input gate (see execute_pipeline).
+_PREROUTE_AGENT = "__preroute_base__"
+
 
 def get_agent(agent_id: str) -> BaseAgent:
     """Load agent configurations and instantiate the appropriate agent class."""
@@ -118,6 +122,25 @@ def execute_pipeline(
     # 1. PII Scan
     pii_res = pre_route_pii_scan(query)
     local_only = pii_res.local_only or local_only_override
+
+    # 1b. Pre-route input gate (security + latency). Apply the shared base input
+    # guardrails BEFORE any model is touched, so block-action input (prompt
+    # injection, hate speech — critical rules no agent may weaken) is rejected in
+    # microseconds instead of after the embedding + classifier calls. Previously
+    # these ran only post-routing (step 7), so a blocked request still paid the
+    # full retrieval + classification cost (~tens of seconds when the local model
+    # was slow) and the malicious prompt reached the models first. Agent-specific
+    # input rules are still applied post-routing.
+    base_input_gate = apply_rules(
+        rules=load_guardrails(_PREROUTE_AGENT),
+        phase="input",
+        content=query,
+        agent_id=_PREROUTE_AGENT,
+        input_hash=input_hash,
+    )
+    if not base_input_gate["allowed"]:
+        audit.log_event("pipeline_blocked", phase="input_preroute", input_hash=input_hash)
+        return blocked_response(base_input_gate["triggered_rules"])
 
     # 2. Context Enrichment
     context_docs = retrieve_context(query)
