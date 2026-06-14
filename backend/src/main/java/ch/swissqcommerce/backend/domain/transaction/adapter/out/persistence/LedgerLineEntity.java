@@ -44,5 +44,6 @@ public class LedgerLineEntity {
     @Column(name = "credit", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
+    @Builder.Default
     private BigDecimal credit = BigDecimal.ZERO;
 }

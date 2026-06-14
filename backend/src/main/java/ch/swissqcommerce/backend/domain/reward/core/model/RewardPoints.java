@@ -11,5 +11,5 @@ public class RewardPoints {
 
     private String customerId;
 
-    private Integer loyaltyPoints = 0;
+    @Builder.Default private Integer loyaltyPoints = 0;
 }

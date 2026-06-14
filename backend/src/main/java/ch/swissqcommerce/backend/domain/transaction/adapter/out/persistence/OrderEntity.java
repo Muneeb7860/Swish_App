@@ -56,6 +56,7 @@ public class OrderEntity {
     @Column(name = "tip_amount", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
+    @Builder.Default
     private BigDecimal tipAmount = BigDecimal.ZERO;
 
     @Column(name = "payment_method", length = 20, nullable = false)
@@ -66,13 +67,16 @@ public class OrderEntity {
     @Column(name = "status", length = 20, nullable = false)
     @NotBlank
     @Size(max = 20)
+    @Builder.Default
     private String status = "pending";
 
     @Column(name = "sla_countdown_sec", nullable = false)
+    @Builder.Default
     private Integer slaCountdownSec = 540;
 
     @Column(name = "bags_returned", nullable = false)
     @Min(0)
+    @Builder.Default
     private Integer bagsReturned = 0;
 
     @Column(name = "idempotency_key", length = 100, unique = true)
@@ -83,17 +87,21 @@ public class OrderEntity {
     private OffsetDateTime promisedBy;
 
     @Column(name = "contains_perishables", nullable = false)
+    @Builder.Default
     private Boolean containsPerishables = false;
 
     @Column(name = "min_cart_value_met", nullable = false)
+    @Builder.Default
     private Boolean minCartValueMet = true;
 
     @Column(name = "store_fault_waiver_applied", nullable = false)
+    @Builder.Default
     private Boolean storeFaultWaiverApplied = false;
 
     @Column(name = "perishable_maintenance_fee", precision = 10, scale = 2, nullable = false)
     @NotNull
     @DecimalMin(value = "0.00")
+    @Builder.Default
     private BigDecimal perishableMaintenanceFee = BigDecimal.ZERO;
 
     @Column(name = "price_locked_at")

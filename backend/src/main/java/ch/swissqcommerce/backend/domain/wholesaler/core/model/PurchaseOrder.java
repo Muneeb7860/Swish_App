@@ -24,7 +24,7 @@ public class PurchaseOrder {
 
     private String grnVerificationFileUrl;
 
-    private List<PurchaseOrderItem> items = new ArrayList<>();
+    @Builder.Default private List<PurchaseOrderItem> items = new ArrayList<>();
 
     private OffsetDateTime createdAt;
 

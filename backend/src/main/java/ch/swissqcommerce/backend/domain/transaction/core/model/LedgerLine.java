@@ -18,7 +18,7 @@ public class LedgerLine {
 
     private String actorId;
 
-    private BigDecimal debit = BigDecimal.ZERO;
+    @Builder.Default private BigDecimal debit = BigDecimal.ZERO;
 
-    private BigDecimal credit = BigDecimal.ZERO;
+    @Builder.Default private BigDecimal credit = BigDecimal.ZERO;
 }

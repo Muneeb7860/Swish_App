@@ -25,29 +25,29 @@ public class Order {
 
     private BigDecimal totalAmount;
 
-    private BigDecimal weatherSurcharge = BigDecimal.ZERO;
+    @Builder.Default private BigDecimal weatherSurcharge = BigDecimal.ZERO;
 
-    private BigDecimal tipAmount = BigDecimal.ZERO;
+    @Builder.Default private BigDecimal tipAmount = BigDecimal.ZERO;
 
     private String paymentMethod;
 
-    private String status = "pending";
+    @Builder.Default private String status = "pending";
 
-    private Integer slaCountdownSec = 540;
+    @Builder.Default private Integer slaCountdownSec = 540;
 
-    private Integer bagsReturned = 0;
+    @Builder.Default private Integer bagsReturned = 0;
 
     private String idempotencyKey;
 
     private OffsetDateTime promisedBy;
 
-    private Boolean containsPerishables = false;
+    @Builder.Default private Boolean containsPerishables = false;
 
-    private Boolean minCartValueMet = true;
+    @Builder.Default private Boolean minCartValueMet = true;
 
-    private Boolean storeFaultWaiverApplied = false;
+    @Builder.Default private Boolean storeFaultWaiverApplied = false;
 
-    private BigDecimal perishableMaintenanceFee = BigDecimal.ZERO;
+    @Builder.Default private BigDecimal perishableMaintenanceFee = BigDecimal.ZERO;
 
     private OffsetDateTime priceLockedAt;
 

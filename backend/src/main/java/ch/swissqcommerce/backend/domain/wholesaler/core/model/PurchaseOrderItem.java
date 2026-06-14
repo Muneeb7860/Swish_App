@@ -17,5 +17,5 @@ public class PurchaseOrderItem {
 
     private Integer requestedQty;
 
-    private Integer receivedQty = 0;
+    @Builder.Default private Integer receivedQty = 0;
 }
