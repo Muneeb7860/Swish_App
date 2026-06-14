@@ -28,7 +28,8 @@
 		"dev:customer": "cd frontend-customer && npm run dev",
 		"dev:rider": "cd frontend-rider && npm run dev",
 		"dev:admin": "cd frontend-admin && npm run dev",
-		"build:all": "npm run build --prefix frontend-host && npm run build --prefix frontend-customer && npm run build --prefix frontend-rider && npm run build --prefix frontend-admin",
+		"dev:b2b": "cd frontend-b2b && npm run dev",
+		"build:all": "npm run build --prefix frontend-host && npm run build --prefix frontend-customer && npm run build --prefix frontend-rider && npm run build --prefix frontend-admin && npm run build --prefix frontend-b2b",
 		"format": "biome format --write ./"
 	},
 	"dependencies": {

@@ -83,6 +83,9 @@ const InventoryApp = React.lazy(() =>
 const SystemEngineRoom = React.lazy(() =>
 	verifyMfeOrigin(import("admin/SystemEngineRoom"), "admin"),
 );
+const B2bDashboard = React.lazy(() =>
+	verifyMfeOrigin(import("b2b/B2bDashboard"), "b2b"),
+);
 
 interface ErrorBoundaryProps {
 	name: string;
@@ -504,6 +507,7 @@ export default function App() {
 					verifyMfeOrigin(import("admin/BusinessApp"), "admin"),
 					verifyMfeOrigin(import("admin/InventoryApp"), "admin"),
 					verifyMfeOrigin(import("admin/SystemEngineRoom"), "admin"),
+					verifyMfeOrigin(import("b2b/B2bDashboard"), "b2b"),
 				]);
 				console.log("Preloading of Micro-Frontends complete.");
 			} catch (e) {
@@ -2303,7 +2307,7 @@ export default function App() {
 						onClick={() => handleRoleChange("business")}
 					>
 						<Lucide.BarChart3 size={15} />
-						<span>Business Console</span>
+						<span>B2B Retailer Hub</span>
 					</button>
 					<button
 						aria-label="Admin Tab"
@@ -2564,23 +2568,8 @@ export default function App() {
 
 						{activeRole === "business" &&
 							(hasRoleAccess("business") ? (
-								<LocalErrorBoundary name="Business App">
-									<BusinessApp
-										products={products}
-										merchantWallet={merchantWallet}
-										ledger={ledger}
-										trustLogs={trustLogs}
-										customerTrustScore={customerTrustScore}
-										riderTrustScore={riderTrustScore}
-										pickerTrustScore={pickerTrustScore}
-										wholesalerTrustScore={wholesalerTrustScore}
-										centralCapacity={centralCapacity}
-										eastCapacity={eastCapacity}
-										centralScalingCount={centralScalingCount}
-										eastScalingCount={eastScalingCount}
-										handleScaleCapacity={handleScaleCapacity}
-										downloadRegulatoryReport={downloadRegulatoryReport}
-									/>
+								<LocalErrorBoundary name="B2B Retailer Hub">
+									<B2bDashboard />
 								</LocalErrorBoundary>
 							) : (
 								<RbacBlocker

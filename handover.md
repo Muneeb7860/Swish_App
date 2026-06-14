@@ -366,4 +366,20 @@ As the Lead Tester, I have verified and validated the entire application stack a
   - Pushed to `origin/develop` integration branch from `Mac_Machine`.
   - Synced local branch `develop` to track `origin/develop`.
 
+### Cycle Update (2026-06-15) — B2B Retailer MFE Integration & FR-01 Onboarding [DONE]
+
+*   **B2B Retailer Hub Micro-Frontend Integration**:
+    - Reclaimed the dormant `frontend-b2b` module on port `5002` to serve as the "B2B Retailer Hub" remote MFE instead of introducing a redundant directory.
+    - Added the `b2b` remote entry config (`b2b: "http://127.0.0.1:5002/assets/remoteEntry.js"`) in [vite.config.ts](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-host/vite.config.ts).
+    - Registered remote/lazy import, preloaded it, verified origins, and routed the host tab "B2B Retailer Hub" (formerly Business Console) to load `<B2bDashboard />` in [App.tsx](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-host/src/App.tsx).
+    - Updated root [package.json](file:///c:/Users/DELL%209420/Documents/swiss_App/package.json) with scripts `"dev:b2b"` and updated `"build:all"` to compile the `frontend-b2b` remote component.
+*   **FR-01 Self-Service Onboarding & Sensor Provisioning Portal**:
+    - Developed the B2B dashboard tab navigation inside [B2bDashboard.tsx](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-b2b/src/B2bDashboard.tsx) containing onboarding and device provisioning controls.
+    - **Retailer Onboarding Portal**: Built a retailer sign-up form, an interactive 3-gate compliance checking simulator (Document review, Sanctions check, Risk assessment), and a secure API key generation box with a single-reveal visibility toggle.
+    - **IoT Sensor Provisioning Hub**: Enabled retailers to provision sensors, trigger calibrations (recording compliance audits), and verify the SHA-256 cryptographic hash chaining integrity of stored telemetry readings.
+    - Integrated a visual sandbox logging sidebar terminal to trace lifecycle and mock API events dynamically.
+*   **Verification**:
+    - **Backend Unit Tests**: Verified `RetailerServiceTest` and `SensorServiceTest` pass successfully via `mvnw`.
+    - **Frontend Compile**: Confirmed all 5 React micro-frontends (host, customer, rider, admin, b2b) build cleanly (`npm run build:all` success).
+
 
