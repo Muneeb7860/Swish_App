@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.domain.retailer.port.in;
 
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingTier;
 import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
+import java.util.List;
 import java.util.Optional;
 
 /** Retailer self-service onboarding use cases (BRD FR-01). */
@@ -19,6 +20,9 @@ public interface RetailerUseCase {
     ApprovalResult approveGate(String retailerId, String gate);
 
     Optional<Retailer> getRetailer(String retailerId);
+
+    /** List retailers in an onboarding status (e.g. "PENDING") — the admin approval queue. */
+    List<Retailer> listByStatus(String status);
 
     /** Resolve an ACTIVE retailer by raw API key (hashed internally). */
     Optional<Retailer> authenticateByApiKey(String apiKey);

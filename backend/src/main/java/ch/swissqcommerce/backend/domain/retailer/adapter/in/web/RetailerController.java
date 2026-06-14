@@ -5,8 +5,10 @@ import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
 import ch.swissqcommerce.backend.domain.retailer.port.in.RetailerUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -88,6 +90,21 @@ public class RetailerController {
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "List retailers by onboarding status (admin approval queue)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<?> listByStatus(@RequestParam(defaultValue = "PENDING") String status) {
+        try {
+            List<RetailerView> views =
+                    retailers.listByStatus(status).stream()
+                            .map(RetailerView::of)
+                            .collect(Collectors.toList());
+            return ResponseEntity.ok(views);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
