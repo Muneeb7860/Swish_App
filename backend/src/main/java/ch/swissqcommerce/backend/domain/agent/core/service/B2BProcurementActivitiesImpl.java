@@ -31,6 +31,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     private final DarkStoreRepository darkStoreRepository;
     private final B2BRestockOrderPort restockOrderPort;
     private final ProcurementApprovalPort approvalsPort;
+    private final AgentBudgetTracker budgetTracker;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -42,6 +43,19 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
                         + " {}",
                 itemName,
                 wholesalerName);
+
+        if (budgetTracker.isBudgetExceeded()) {
+            log.warn(
+                    "Temporal Activity: Cost budget exceeded ($5 limit reached). Bypassing LLM"
+                            + " negotiation for wholesaler {}.",
+                    wholesalerName);
+            return new B2BProcurementAgent.NegotiationAnalysis(
+                    basePrice * 0.90,
+                    0.50,
+                    "Rule-based fallback (Daily budget limit exceeded)",
+                    "COUNTER_OFFER",
+                    0.0);
+        }
 
         String prompt =
                 "You are a B2B procurement agent for Swish OS. We need to restock Item: \""
@@ -76,6 +90,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
                 if (lettaResponse != null) {
                     content = lettaResponse;
                     cost = 0.035; // Default cost estimate for Letta calls to prevent budget bypass
+                    budgetTracker.trackUsage(cost); // Track the Letta call cost dynamically
                 } else {
                     LlmResponse response = llmGateway.callLlm(prompt);
                     content = response.getContent();

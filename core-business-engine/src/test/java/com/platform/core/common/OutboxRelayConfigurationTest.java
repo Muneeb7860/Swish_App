@@ -28,6 +28,9 @@ public class OutboxRelayConfigurationTest {
     private StreamBridge streamBridge;
 
     @Mock
+    private AesEncryptionConverter aesEncryptionConverter;
+
+    @Mock
     private DataSource dataSource;
 
     @InjectMocks
@@ -46,11 +49,15 @@ public class OutboxRelayConfigurationTest {
         assertNotNull(handler);
 
         List<Map<String, Object>> payloads = List.of(
-                Map.of("aggregateType", "Payment", "payload", "pay-payload"),
-                Map.of("aggregateType", "WholesaleOrder", "payload", "whole-payload"),
-                Map.of("aggregateType", "Other", "payload", "other-payload")
+                Map.of("aggregateType", "Payment", "payload", "encrypted-pay-payload"),
+                Map.of("aggregateType", "WholesaleOrder", "payload", "encrypted-whole-payload"),
+                Map.of("aggregateType", "Other", "payload", "encrypted-other-payload")
         );
         
+        org.mockito.Mockito.when(aesEncryptionConverter.convertToEntityAttribute("encrypted-pay-payload")).thenReturn("pay-payload");
+        org.mockito.Mockito.when(aesEncryptionConverter.convertToEntityAttribute("encrypted-whole-payload")).thenReturn("whole-payload");
+        org.mockito.Mockito.when(aesEncryptionConverter.convertToEntityAttribute("encrypted-other-payload")).thenReturn("other-payload");
+
         Message<List<Map<String, Object>>> message = new GenericMessage<>(payloads);
         
         handler.handleMessage(message);

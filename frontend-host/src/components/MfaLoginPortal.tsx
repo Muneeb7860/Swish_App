@@ -53,64 +53,26 @@ export default function MfaLoginPortal({
 					<div className="mfa-logo-icon">
 						<Lucide.ShieldCheck size={28} />
 					</div>
-					<h3
-						style={{
-							color: "#ffffff",
-							fontWeight: 800,
-							margin: "0.5rem 0 0 0",
-							letterSpacing: "1px",
-							fontFamily: "var(--font-display)",
-						}}
-					>
+					<h3 className="text-white font-extrabold text-lg tracking-wider mt-2">
 						SWISS SECURE SHIELD
 					</h3>
-					<span
-						style={{
-							fontSize: "0.65rem",
-							color: "var(--color-engine)",
-							fontWeight: "bold",
-							fontFamily: "var(--font-sans)",
-						}}
-					>
+					<span className="text-xs font-bold tracking-wider text-cyan-400 mt-1">
 						MULTI-FACTOR AUTHENTICATION PORTAL
 					</span>
 				</div>
 
 				{mfaStep === "credentials" ? (
-					<div
-						style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-					>
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: "0.25rem",
-							}}
-						>
-							<label
-								style={{
-									fontSize: "0.65rem",
-									fontWeight: 700,
-									color: "var(--text-secondary)",
-								}}
-							>
-								AUTHENTICATION PROFILE (ROLE)
+					<div className="mfa-form-layout">
+						<div className="mfa-field-group">
+							<label className="mfa-label">
+								Authentication Profile (Role)
 							</label>
 							<select
 								id="mfa-select-role"
 								aria-label="Select Authentication Profile"
 								value={mfaRole}
 								onChange={(e) => setMfaRole(e.target.value)}
-								style={{
-									width: "100%",
-									background: "#020408",
-									border: "1px solid var(--border-color)",
-									borderRadius: "6px",
-									color: "var(--text-primary)",
-									padding: "0.4rem",
-									fontSize: "0.85rem",
-									fontFamily: "var(--font-sans)",
-								}}
+								className="mfa-select"
 							>
 								<option value="customer">Customer Super App</option>
 								<option value="rider">Rider Light</option>
@@ -120,21 +82,9 @@ export default function MfaLoginPortal({
 							</select>
 						</div>
 
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: "0.25rem",
-							}}
-						>
-							<label
-								style={{
-									fontSize: "0.65rem",
-									fontWeight: 700,
-									color: "var(--text-secondary)",
-								}}
-							>
-								ACCOUNT PASSWORD
+						<div className="mfa-field-group">
+							<label className="mfa-label">
+								Account Password
 							</label>
 							<input
 								id="input-mfa-password"
@@ -142,49 +92,19 @@ export default function MfaLoginPortal({
 								placeholder="Enter account security key"
 								value={mfaPassword}
 								onChange={(e) => setMfaPassword(e.target.value)}
-								style={{
-									width: "100%",
-									background: "#020408",
-									border: "1px solid var(--border-color)",
-									borderRadius: "6px",
-									color: "var(--text-primary)",
-									padding: "0.4rem",
-									fontSize: "0.85rem",
-									fontFamily: "var(--font-mono)",
-								}}
+								className="mfa-input"
 							/>
 						</div>
 
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: "0.25rem",
-							}}
-						>
-							<label
-								style={{
-									fontSize: "0.65rem",
-									fontWeight: 700,
-									color: "var(--text-secondary)",
-								}}
-							>
-								MFA VERIFICATION PATH
+						<div className="mfa-field-group">
+							<label className="mfa-label">
+								MFA Verification Path
 							</label>
 							<select
 								id="select-mfa-method"
 								value={mfaMethod}
 								onChange={(e) => setMfaMethod(e.target.value as "sms" | "totp")}
-								style={{
-									width: "100%",
-									background: "#020408",
-									border: "1px solid var(--border-color)",
-									borderRadius: "6px",
-									color: "var(--text-primary)",
-									padding: "0.4rem",
-									fontSize: "0.85rem",
-									fontFamily: "var(--font-sans)",
-								}}
+								className="mfa-select"
 							>
 								<option value="sms">Mock SMS Gateway Pin Broadcast</option>
 								<option value="totp">Google Authenticator TOTP Rotation</option>
@@ -194,96 +114,36 @@ export default function MfaLoginPortal({
 						<button
 							aria-label="Button"
 							id="btn-mfa-request-otp"
-							className="btn-primary-glow"
-							style={{
-								background: "var(--color-engine)",
-								color: "#ffffff",
-								border: "none",
-								padding: "0.5rem",
-								width: "100%",
-								cursor: "pointer",
-								marginTop: "0.5rem",
-								fontFamily: "var(--font-sans)",
-								fontWeight: "bold",
-							}}
+							className="mfa-button-primary mt-2"
 							onClick={handleMfaSendOtp}
 						>
 							Verify Credentials & Proceed
 						</button>
 					</div>
 				) : (
-					<div
-						style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-					>
-						<div
-							style={{
-								background: "rgba(6, 182, 212, 0.05)",
-								border: "1px solid rgba(6, 182, 212, 0.2)",
-								padding: "0.5rem",
-								borderRadius: "6px",
-								textAlign: "center",
-							}}
-						>
+					<div className="mfa-form-layout">
+						<div className="mfa-info-panel">
 							{mfaMethod === "sms" ? (
-								<p
-									style={{
-										fontSize: "0.75rem",
-										color: "var(--text-secondary)",
-										margin: 0,
-										fontFamily: "var(--font-sans)",
-									}}
-								>
+								<p className="mfa-info-text">
 									We sent a 6-digit OTP to your registered phone. Check the
 									Kafka console or browser toast notifications for the
 									broadcast.
 								</p>
 							) : (
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "0.2rem",
-									}}
-								>
-									<p
-										style={{
-											fontSize: "0.75rem",
-											color: "var(--text-secondary)",
-											margin: 0,
-											fontFamily: "var(--font-sans)",
-										}}
-									>
+								<div className="flex flex-col gap-1">
+									<p className="mfa-info-text">
 										Enter the 6-digit Google Authenticator TOTP code.
 									</p>
-									<div
-										style={{
-											fontSize: "0.85rem",
-											color: "var(--color-engine)",
-											fontWeight: 800,
-											fontFamily: "var(--font-mono)",
-										}}
-									>
+									<div className="mfa-totp-token">
 										Active Token Key: {totpSecretCode} ({totpTimer}s remaining)
 									</div>
 								</div>
 							)}
 						</div>
 
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: "0.25rem",
-							}}
-						>
-							<label
-								style={{
-									fontSize: "0.65rem",
-									fontWeight: 700,
-									color: "var(--text-secondary)",
-								}}
-							>
-								6-DIGIT VERIFICATION CODE
+						<div className="mfa-field-group">
+							<label className="mfa-label">
+								6-Digit Verification Code
 							</label>
 							<input
 								id="input-mfa-otp"
@@ -292,35 +152,14 @@ export default function MfaLoginPortal({
 								placeholder="••••••"
 								value={mfaOtpInput}
 								onChange={(e) => setMfaOtpInput(e.target.value)}
-								style={{
-									width: "100%",
-									background: "#020408",
-									border: "1px solid var(--border-color)",
-									borderRadius: "6px",
-									color: "var(--text-primary)",
-									padding: "0.4rem",
-									fontSize: "0.85rem",
-									letterSpacing: "4px",
-									textAlign: "center",
-									fontFamily: "var(--font-mono)",
-								}}
+								className="mfa-input mfa-input-otp"
 							/>
 						</div>
 
 						<button
 							aria-label="Button"
 							id="btn-mfa-verify-otp"
-							className="btn-primary-glow"
-							style={{
-								background: "var(--color-engine)",
-								color: "#ffffff",
-								border: "none",
-								padding: "0.5rem",
-								width: "100%",
-								cursor: "pointer",
-								fontFamily: "var(--font-sans)",
-								fontWeight: "bold",
-							}}
+							className="mfa-button-primary"
 							onClick={handleMfaVerify}
 						>
 							Authenticate and Unlock
@@ -329,13 +168,7 @@ export default function MfaLoginPortal({
 						<button
 							aria-label="Button"
 							id="btn-mfa-back"
-							className="btn-secondary-glow"
-							style={{
-								width: "100%",
-								padding: "0.5rem",
-								cursor: "pointer",
-								fontFamily: "var(--font-sans)",
-							}}
+							className="mfa-button-secondary"
 							onClick={() => setMfaStep("credentials")}
 						>
 							Back to Credentials

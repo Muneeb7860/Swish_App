@@ -53,6 +53,8 @@ public class MasterOrchestratorServiceTest {
     private ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort
             negotiationArchivePort;
 
+    @Mock private AgentBudgetTracker agentBudgetTracker;
+
     @InjectMocks private MasterOrchestratorService masterOrchestratorService;
 
     @BeforeEach
@@ -124,30 +126,21 @@ public class MasterOrchestratorServiceTest {
 
     @Test
     public void testProcessMessage_DailyBudgetLimitExceeded() {
-        AgentRequest request1 = new AgentRequest("High cost query", "conv-1", "cust-1");
-        CustomerSupportAgent.AgentAnalysis highCostAnalysis =
-                new CustomerSupportAgent.AgentAnalysis("Initial reply", 0.95, null, null, 6.00);
+        AgentRequest request = new AgentRequest("Next query", "conv-2", "cust-2");
 
-        when(customerSupportAgent.analyze(request1)).thenReturn(highCostAnalysis);
+        when(agentBudgetTracker.isBudgetExceeded()).thenReturn(true);
+        when(agentBudgetTracker.markDailyBudgetEscalated()).thenReturn(true);
 
-        // First call sets dailyCost to 6.00 which is >= 5.0
-        AgentResponse response1 = masterOrchestratorService.processMessage(request1);
-        assertNotNull(response1);
-        assertFalse(response1.isHitlStatus());
+        AgentResponse response = masterOrchestratorService.processMessage(request);
 
-        // Second request triggers the daily budget block
-        AgentRequest request2 = new AgentRequest("Next query", "conv-2", "cust-2");
-
-        AgentResponse response2 = masterOrchestratorService.processMessage(request2);
-
-        assertNotNull(response2);
+        assertNotNull(response);
         assertEquals(
                 "System limit reached. Your request is routed to a customer support agent.",
-                response2.getReply());
-        assertEquals(0.0, response2.getConfidenceScore());
-        assertEquals(0.0, response2.getTokenCost());
-        assertTrue(response2.isHitlStatus());
-        assertNotNull(response2.getTicketId());
+                response.getReply());
+        assertEquals(0.0, response.getConfidenceScore());
+        assertEquals(0.0, response.getTokenCost());
+        assertTrue(response.isHitlStatus());
+        assertNotNull(response.getTicketId());
 
         ArgumentCaptor<HitlQueue> ticketCaptor = ArgumentCaptor.forClass(HitlQueue.class);
         verify(agentOutPort, times(1)).saveHitlQueue(ticketCaptor.capture());

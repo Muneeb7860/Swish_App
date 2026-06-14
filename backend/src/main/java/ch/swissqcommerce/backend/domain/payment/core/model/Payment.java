@@ -19,11 +19,11 @@ public class Payment {
 
     private BigDecimal amount;
 
-    private String currency = "CHF";
+    @Builder.Default private String currency = "CHF";
 
     private String paymentMethod;
 
-    private String status = "AUTHORIZED";
+    @Builder.Default private String status = "AUTHORIZED";
 
     private String idempotencyKey;
 

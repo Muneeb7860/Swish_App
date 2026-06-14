@@ -18,11 +18,11 @@ public class OnboardingApplication {
 
     private String details;
 
-    private Boolean approvalOps = false;
+    @Builder.Default private Boolean approvalOps = false;
 
-    private Boolean approvalCompliance = false;
+    @Builder.Default private Boolean approvalCompliance = false;
 
-    private Boolean approvalAdmin = false;
+    @Builder.Default private Boolean approvalAdmin = false;
 
     private OffsetDateTime createdAt;
 }

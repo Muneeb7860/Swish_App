@@ -46,6 +46,7 @@ public class B2BRestockOrderEntity {
     @Column(name = "status", length = 20, nullable = false)
     @NotBlank
     @Size(max = 20)
+    @Builder.Default
     private String status = "pending";
 
     @Column(name = "idempotency_key", length = 100, unique = true)

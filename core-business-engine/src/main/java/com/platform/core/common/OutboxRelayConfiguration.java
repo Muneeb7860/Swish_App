@@ -20,9 +20,11 @@ import java.util.Map;
 public class OutboxRelayConfiguration {
 
     private final StreamBridge streamBridge;
+    private final AesEncryptionConverter aesEncryptionConverter;
 
-    public OutboxRelayConfiguration(StreamBridge streamBridge) {
+    public OutboxRelayConfiguration(StreamBridge streamBridge, AesEncryptionConverter aesEncryptionConverter) {
         this.streamBridge = streamBridge;
+        this.aesEncryptionConverter = aesEncryptionConverter;
     }
 
     @Bean
@@ -52,8 +54,12 @@ public class OutboxRelayConfiguration {
                 String aggregateType = (String) outboxEvent.get("aggregateType");
                 String destination = getDestinationForAggregate(aggregateType);
                 
+                // Decrypt the payload before sending
+                String encryptedPayload = (String) outboxEvent.get("payload");
+                String decryptedPayload = aesEncryptionConverter.convertToEntityAttribute(encryptedPayload);
+                
                 // Publish the event to Spring Cloud Stream
-                streamBridge.send(destination, outboxEvent.get("payload"));
+                streamBridge.send(destination, decryptedPayload);
             }
         };
     }

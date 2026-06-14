@@ -18,10 +18,12 @@ export default defineConfig({
 	],
 	server: {
 		port: 5002,
+		host: "127.0.0.1",
 		cors: true,
 	},
 	preview: {
 		port: 5002,
+		host: "127.0.0.1",
 		cors: true,
 	},
 	build: {

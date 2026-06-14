@@ -16,9 +16,7 @@ import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -43,72 +41,24 @@ public class MasterOrchestratorService implements AgentUseCase {
     private final GovernanceUseCase governanceUseCase;
     private final MeterRegistry meterRegistry;
     private final NegotiationArchivePort negotiationArchivePort;
+    private final AgentBudgetTracker agentBudgetTracker;
 
     @org.springframework.beans.factory.annotation.Autowired
     private B2BProcurementActivities b2BProcurementActivities;
 
-    // Prometheus counter — incremented every time the budget/rate guardrail fires.
-    // Drives the AgentDailyBudgetExceeded alert in alert.rules.
-    private Counter budgetGuardrailCounter;
-
-    @PostConstruct
-    public void registerMetrics() {
-        budgetGuardrailCounter =
-                Counter.builder("agent.budget.guardrail.triggers")
-                        .description(
-                                "Number of times the AI agent daily cost-budget guardrail was"
-                                        + " reached")
-                        .tag("service", "master-orchestrator")
-                        .register(meterRegistry);
-    }
-
-    // Java orchestration owns the cost-budget guardrail (ADR-007 #1). Request-rate
-    // limiting is owned solely by the Python governance layer, so there is no rate cap
-    // here. hourlyRequestCount is retained for observability only (admin dashboard),
-    // not for enforcement.
-    private double dailyCost = 0.0;
-    private int hourlyRequestCount = 0;
-    private boolean dailyBudgetEscalated = false;
-    private long lastDailyReset = System.currentTimeMillis();
-    private long lastHourlyReset = System.currentTimeMillis();
-
-    private synchronized void trackUsage(double cost) {
-        long now = System.currentTimeMillis();
-        if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
-            dailyCost = 0.0;
-            dailyBudgetEscalated = false;
-            lastDailyReset = now;
-        }
-        if (now - lastHourlyReset > 60 * 60 * 1000) {
-            hourlyRequestCount = 0;
-            lastHourlyReset = now;
-        }
-
-        dailyCost += cost;
-        hourlyRequestCount++;
+    private void trackUsage(double cost) {
+        agentBudgetTracker.trackUsage(cost);
     }
 
     @Override
     public AgentResponse processMessage(AgentRequest request) {
-        long now = System.currentTimeMillis();
-        if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
-            dailyCost = 0.0;
-            dailyBudgetEscalated = false;
-            lastDailyReset = now;
-        }
-
         // Cost-budget guardrail only — rate limiting is the Python layer's responsibility.
-        if (dailyCost >= 5.0) {
+        if (agentBudgetTracker.isBudgetExceeded()) {
             String reason = "Daily budget limit of $5 exceeded";
-            // Increment Prometheus counter — drives the AgentDailyBudgetExceeded alert.
-            // Null-guard: @PostConstruct is not invoked in unit tests (no Spring context).
-            if (budgetGuardrailCounter != null) budgetGuardrailCounter.increment();
-
             String ticketId;
             synchronized (this) {
-                if (!dailyBudgetEscalated) {
+                if (agentBudgetTracker.markDailyBudgetEscalated()) {
                     ticketId = triggerHitl(request, null, null, reason);
-                    dailyBudgetEscalated = true;
                 } else {
                     ticketId = "BUDGET-EXCEEDED-ACTIVE";
                 }
@@ -231,8 +181,8 @@ public class MasterOrchestratorService implements AgentUseCase {
         // hourlyRequestCount / hourlyRequestLimit: observability only — request-rate is
         // enforced by the Python governance layer (mirrors its hourly_request_limit: 100).
         return AgentMetrics.builder()
-                .dailyCost(dailyCost)
-                .hourlyRequestCount(hourlyRequestCount)
+                .dailyCost(agentBudgetTracker.getDailyCost())
+                .hourlyRequestCount(agentBudgetTracker.getHourlyRequestCount())
                 .dailyBudgetLimit(5.0)
                 .hourlyRequestLimit(100)
                 .build();
@@ -243,13 +193,6 @@ public class MasterOrchestratorService implements AgentUseCase {
 
     @Override
     public NegotiationResponse negotiateProcurement(NegotiationRequest request) {
-        long now = System.currentTimeMillis();
-        if (now - lastDailyReset > 24 * 60 * 60 * 1000) {
-            dailyCost = 0.0;
-            dailyBudgetEscalated = false;
-            lastDailyReset = now;
-        }
-
         List<Wholesaler> activeWholesalers;
         try {
             activeWholesalers = wholesalerPort.findAll();
@@ -279,7 +222,7 @@ public class MasterOrchestratorService implements AgentUseCase {
 
         for (Wholesaler wholesaler : activeWholesalers) {
             B2BProcurementAgent.NegotiationAnalysis analysis;
-            if (dailyCost >= 5.0) {
+            if (agentBudgetTracker.isBudgetExceeded()) {
                 analysis =
                         new B2BProcurementAgent.NegotiationAnalysis(
                                 request.getBasePrice() * 0.90,
@@ -341,7 +284,7 @@ public class MasterOrchestratorService implements AgentUseCase {
 
         // Now start the durable Temporal B2B procurement workflow for the winning wholesaler
         B2BProcurementAgent.NegotiationAnalysis finalOutcome;
-        if (dailyCost >= 5.0) {
+        if (agentBudgetTracker.isBudgetExceeded()) {
             finalOutcome = bestAnalysis;
         } else {
             try {

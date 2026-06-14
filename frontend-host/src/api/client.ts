@@ -1,4 +1,6 @@
 import { useStore } from "../store";
+import { getActiveTraceParent, tracer } from "./telemetry";
+import { SpanStatusCode } from "@opentelemetry/api";
 
 export const BASE_URL =
 	import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -31,6 +33,13 @@ export class ApiClient {
 			"Content-Type": "application/json",
 			"X-Session-Id": SESSION_ID,
 		};
+
+		// Add OpenTelemetry traceparent header for distributed tracing
+		try {
+			headers["traceparent"] = getActiveTraceParent();
+		} catch (e) {
+			console.warn("Could not inject traceparent header:", e);
+		}
 
 		// Safely get authToken at runtime to avoid circular dependency
 		try {
@@ -91,17 +100,32 @@ export class ApiClient {
 		let retries = 3;
 		let delayMs = 1000;
 
+		// Start OTel span for network request
+		const method = options.method || "GET";
+		const span = tracer.startSpan(`HTTP ${method} ${path}`);
+		span.setAttributes({
+			"http.method": method,
+			"http.url": url,
+			"http.target": path,
+		});
+
 		while (retries >= 0) {
 			try {
 				const response = await fetch(url, mergedOptions);
 
+				span.setAttribute("http.status_code", response.status);
+
 				if (response.status === 401) {
 					this.handleUnauthorized();
+					span.setStatus({ code: SpanStatusCode.ERROR, message: "Unauthorized" });
+					span.end();
 					throw new Error("Unauthorized");
 				}
 
 				if (response.status === 429) {
 					if (retries === 0) {
+						span.setStatus({ code: SpanStatusCode.ERROR, message: "Rate limit exceeded" });
+						span.end();
 						throw new Error("Rate limit exceeded");
 					}
 					console.warn(`Rate limited (429). Retrying in ${delayMs}ms...`);
@@ -113,23 +137,33 @@ export class ApiClient {
 
 				if (!response.ok) {
 					const errorText = await response.text().catch(() => "Unknown error");
+					span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${response.status}: ${errorText}` });
+					span.end();
 					throw new Error(`HTTP ${response.status}: ${errorText}`);
 				}
 
 				// If response has no content (e.g. 204 or empty 200)
 				const text = await response.text();
+				span.setStatus({ code: SpanStatusCode.OK });
+				span.end();
 				return text ? (JSON.parse(text) as T) : ({} as T);
 			} catch (error) {
+				span.recordException(error as Error);
 				// Fallback to mock data on network error
 				if (mockFallback && !options.bypassMock) {
 					console.warn(
 						`API request to ${path} failed (${(error as Error).message}). Falling back to mock data.`,
 					);
+					span.setAttribute("api.fallback_to_mock", true);
+					span.setStatus({ code: SpanStatusCode.OK, message: "Fallback to mock data" });
+					span.end();
 					await this.delay(400); // Simulate network latency
 					return mockFallback();
 				}
 
 				if (retries === 0 || responseStatusNotRetryable(error)) {
+					span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+					span.end();
 					throw error;
 				}
 
@@ -138,6 +172,8 @@ export class ApiClient {
 			}
 		}
 
+		span.setStatus({ code: SpanStatusCode.ERROR, message: "Request failed after retries" });
+		span.end();
 		throw new Error("Request failed after retries");
 	}
 

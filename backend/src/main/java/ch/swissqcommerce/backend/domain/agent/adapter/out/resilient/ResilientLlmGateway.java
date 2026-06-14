@@ -2,8 +2,10 @@ package ch.swissqcommerce.backend.domain.agent.adapter.out.resilient;
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
+import ch.swissqcommerce.backend.domain.agent.adapter.out.kimi.KimiLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.pii.PiiPreScanner;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentBudgetTrackerPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -49,22 +51,45 @@ public class ResilientLlmGateway implements LlmGatewayPort {
 
     private final PythonGovernanceAdapter pythonGovernanceAdapter;
     private final GeminiFreeAdapter geminiFreeAdapter;
+    private final KimiLlmAdapter kimiLlmAdapter;
     private final MockLlmAdapter mockLlmAdapter;
     private final PiiPreScanner piiPreScanner;
+    private final AgentBudgetTrackerPort agentBudgetTracker;
 
     public ResilientLlmGateway(
             PythonGovernanceAdapter pythonGovernanceAdapter,
             GeminiFreeAdapter geminiFreeAdapter,
+            KimiLlmAdapter kimiLlmAdapter,
             MockLlmAdapter mockLlmAdapter,
-            PiiPreScanner piiPreScanner) {
+            PiiPreScanner piiPreScanner,
+            AgentBudgetTrackerPort agentBudgetTracker) {
         this.pythonGovernanceAdapter = pythonGovernanceAdapter;
         this.geminiFreeAdapter = geminiFreeAdapter;
+        this.kimiLlmAdapter = kimiLlmAdapter;
         this.mockLlmAdapter = mockLlmAdapter;
         this.piiPreScanner = piiPreScanner;
+        this.agentBudgetTracker = agentBudgetTracker;
     }
 
     @Override
     public LlmResponse callLlm(String prompt) {
+        // 0. Fail-fast budget check
+        if (agentBudgetTracker.isBudgetExceeded()) {
+            log.warn("Cost budget exceeded — blocking LLM call; returning governance-degraded.");
+            return governanceDegraded();
+        }
+
+        LlmResponse response = executeCallChain(prompt);
+
+        // Track the usage cost in the centralized budget tracker
+        if (response != null) {
+            agentBudgetTracker.trackUsage(response.getTokenCost());
+        }
+
+        return response;
+    }
+
+    private LlmResponse executeCallChain(String prompt) {
         // 1. Preferred: the governed path. It owns the PII gate, so raw prompts are safe here.
         if (pythonGovernanceAdapter.isConfigured()) {
             try {
@@ -78,18 +103,39 @@ public class ResilientLlmGateway implements LlmGatewayPort {
 
         // 2. Governance is unconfigured or down. A cloud model may only be used for
         //    PII-free prompts — the Java-side pre-scan is the fail-safe gate.
+        boolean isPromptPiiFree = !piiPreScanner.containsPii(prompt);
+
         if (geminiFreeAdapter.isConfigured()) {
-            if (piiPreScanner.containsPii(prompt)) {
+            if (!isPromptPiiFree) {
                 log.warn(
-                        "Governance degraded and PII detected — blocking cloud LLM; "
+                        "Governance degraded and PII detected — blocking Gemini cloud LLM; "
                                 + "returning governance-degraded response for HITL escalation.");
                 return governanceDegraded();
             }
-            log.info("Governance degraded — routing PII-free prompt to gated cloud fallback.");
+            log.info(
+                    "Governance degraded — routing PII-free prompt to gated Gemini cloud"
+                            + " fallback.");
             return geminiFreeAdapter.callLlm(prompt);
         }
 
-        // 3. No cloud configured: stay local. Mock keeps dev/CI off the cloud entirely.
+        // 3. Fallback to Kimi Moonshot AI (OpenAI compatible cloud model)
+        if (kimiLlmAdapter.isConfigured()) {
+            if (!isPromptPiiFree) {
+                log.warn(
+                        "Governance degraded and PII detected — blocking Kimi cloud LLM; "
+                                + "returning governance-degraded response for HITL escalation.");
+                return governanceDegraded();
+            }
+            log.info("Governance degraded — routing PII-free prompt to gated Kimi cloud fallback.");
+            try {
+                return kimiLlmAdapter.callLlm(prompt);
+            } catch (Exception e) {
+                log.warn(
+                        "Kimi Cloud fallback failed ({}). Dropping to local mock.", e.getMessage());
+            }
+        }
+
+        // 4. No cloud configured: stay local. Mock keeps dev/CI off the cloud entirely.
         log.debug("No governed or cloud gateway available — using local mock.");
         return mockLlmAdapter.callLlm(prompt);
     }

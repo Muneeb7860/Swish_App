@@ -17,6 +17,7 @@ public class CustomerSupportAgent {
 
     private final LlmGatewayPort llmGateway;
     private final LettaMemoryService lettaMemoryService;
+    private final AgentBudgetTracker budgetTracker;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentAnalysis analyze(AgentRequest request) {
@@ -84,6 +85,7 @@ public class CustomerSupportAgent {
                 if (lettaResponse != null) {
                     tokenCostOut[0] =
                             0.035; // Default cost estimate for Letta calls to prevent budget bypass
+                    budgetTracker.trackUsage(0.035); // Track the Letta call cost dynamically
                     return lettaResponse;
                 }
             }

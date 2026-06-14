@@ -37,10 +37,14 @@ public class CustomerSupportDynamicPricingTest {
     private CustomerSupportAgent customerSupportAgent;
     private AgentToolExecutor agentToolExecutor;
     private MasterOrchestratorService masterOrchestratorService;
+    private AgentBudgetTracker agentBudgetTracker;
 
     @BeforeEach
     public void setUp() {
-        customerSupportAgent = new CustomerSupportAgent(llmGateway, lettaMemoryService);
+        agentBudgetTracker =
+                new AgentBudgetTracker(mock(io.micrometer.core.instrument.MeterRegistry.class));
+        customerSupportAgent =
+                new CustomerSupportAgent(llmGateway, lettaMemoryService, agentBudgetTracker);
         agentToolExecutor = new AgentToolExecutor(agentOutPort, dynamicPricingAgent);
 
         masterOrchestratorService =
@@ -62,7 +66,8 @@ public class CustomerSupportDynamicPricingTest {
                         mock(io.micrometer.core.instrument.MeterRegistry.class),
                         mock(
                                 ch.swissqcommerce.backend.domain.agent.port.out
-                                        .NegotiationArchivePort.class));
+                                        .NegotiationArchivePort.class),
+                        agentBudgetTracker);
 
         org.springframework.test.util.ReflectionTestUtils.setField(
                 masterOrchestratorService, "b2BProcurementActivities", b2BProcurementActivities);

@@ -6,8 +6,10 @@ import static org.mockito.Mockito.*;
 
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
+import ch.swissqcommerce.backend.domain.agent.adapter.out.kimi.KimiLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.pii.PiiPreScanner;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentBudgetTrackerPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,9 @@ public class ResilientLlmGatewayTest {
 
     @Mock private PythonGovernanceAdapter pythonGovernanceAdapter;
     @Mock private GeminiFreeAdapter geminiFreeAdapter;
+    @Mock private KimiLlmAdapter kimiLlmAdapter;
     @Mock private MockLlmAdapter mockLlmAdapter;
+    @Mock private AgentBudgetTrackerPort agentBudgetTracker;
 
     // Real scanner — we want the genuine regex behaviour, not a mock.
     private final PiiPreScanner piiPreScanner = new PiiPreScanner();
@@ -42,7 +46,13 @@ public class ResilientLlmGatewayTest {
     public void setUp() {
         gateway =
                 new ResilientLlmGateway(
-                        pythonGovernanceAdapter, geminiFreeAdapter, mockLlmAdapter, piiPreScanner);
+                        pythonGovernanceAdapter,
+                        geminiFreeAdapter,
+                        kimiLlmAdapter,
+                        mockLlmAdapter,
+                        piiPreScanner,
+                        agentBudgetTracker);
+        lenient().when(agentBudgetTracker.isBudgetExceeded()).thenReturn(false);
     }
 
     // ─── Preferred path: governance configured ───────────────────────────────
@@ -149,5 +159,50 @@ public class ResilientLlmGatewayTest {
 
         assertEquals("mock", res.getContent());
         verify(mockLlmAdapter).callLlm(PII_PROMPT);
+    }
+
+    // ─── Budget Exceeded Fail-Fast ──────────────────────────────────────────
+
+    @Test
+    public void budgetExceeded_blocksGateway_returnsDegraded() {
+        reset(agentBudgetTracker);
+        when(agentBudgetTracker.isBudgetExceeded()).thenReturn(true);
+
+        LlmResponse res = gateway.callLlm(CLEAN_PROMPT);
+
+        assertEquals(ResilientLlmGateway.GOVERNANCE_DEGRADED, res.getContent());
+        verifyNoInteractions(pythonGovernanceAdapter);
+        verifyNoInteractions(geminiFreeAdapter);
+        verifyNoInteractions(kimiLlmAdapter);
+        verifyNoInteractions(mockLlmAdapter);
+    }
+
+    // ─── Kimi Fallback Tests ────────────────────────────────────────────────
+
+    @Test
+    public void governanceDown_geminiDown_cleanPrompt_usesKimi() {
+        when(pythonGovernanceAdapter.isConfigured()).thenReturn(false);
+        when(geminiFreeAdapter.isConfigured()).thenReturn(false);
+        when(kimiLlmAdapter.isConfigured()).thenReturn(true);
+        when(kimiLlmAdapter.callLlm(anyString()))
+                .thenReturn(LlmResponse.builder().content("kimi answer").tokenCost(0.15).build());
+
+        LlmResponse res = gateway.callLlm(CLEAN_PROMPT);
+
+        assertEquals("kimi answer", res.getContent());
+        verify(kimiLlmAdapter).callLlm(CLEAN_PROMPT);
+        verify(agentBudgetTracker).trackUsage(0.15);
+    }
+
+    @Test
+    public void governanceDown_kimiConfigured_withPii_blocksKimi_returnsDegraded() {
+        when(pythonGovernanceAdapter.isConfigured()).thenReturn(false);
+        when(geminiFreeAdapter.isConfigured()).thenReturn(false);
+        when(kimiLlmAdapter.isConfigured()).thenReturn(true);
+
+        LlmResponse res = gateway.callLlm(PII_PROMPT);
+
+        assertEquals(ResilientLlmGateway.GOVERNANCE_DEGRADED, res.getContent());
+        verify(kimiLlmAdapter, never()).callLlm(anyString());
     }
 }

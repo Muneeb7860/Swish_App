@@ -1,6 +1,6 @@
 # Agent Handover
 
-**Active Epic:** Redis Caching for Product Catalog complete. Next: Per user/system task.
+**Active Epic:** B2B Retailer Hub Integration & Onboarding (FR-01) complete.
 
 **Active Branch:** `Mac_Machine` (always — never create new branches)
 
@@ -74,7 +74,7 @@ git push origin Mac_Machine
 
 ---
 
-## Current State (2026-06-14)
+## Current State (2026-06-15)
 
 | Phase / Feature | Status |
 |-----------------|--------|
@@ -86,7 +86,8 @@ git push origin Mac_Machine
 | ArchUnit hexagonal enforcement | ✅ Done (`690d81f`) |
 | WebSocket Reconnect Guard (max 5) | ✅ Done (`4e025b6`) |
 | Redis Catalog Caching | ✅ Done (`527c895`) |
-| **Next** | Per task requirements / product roadmap |
+| B2B Retailer Hub MFE & Onboarding (FR-01) | ✅ Done |
+| **Next** | Work on new epic / task per user request |
 
 ---
 

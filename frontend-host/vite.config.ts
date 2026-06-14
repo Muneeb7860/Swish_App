@@ -18,6 +18,7 @@ export default defineConfig({
 				customer: "http://127.0.0.1:3001/assets/remoteEntry.js",
 				rider: "http://127.0.0.1:3002/assets/remoteEntry.js",
 				admin: "http://127.0.0.1:3003/assets/remoteEntry.js",
+				b2b: "http://127.0.0.1:5002/assets/remoteEntry.js",
 			},
 			exposes: {
 				"./api": "./src/api/endpoints.ts",

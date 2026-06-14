@@ -37,4 +37,19 @@ public class OutboxEntityTest {
         assertEquals(newTime, entity.getCreatedAt());
         assertEquals(newTime, entity.getProcessedAt());
     }
+
+    @Test
+    public void testAesEncryptionConverter() {
+        AesEncryptionConverter converter = new AesEncryptionConverter();
+        String original = "{\"amount\":100.00,\"customerId\":\"cust-1\"}";
+        String encrypted = converter.convertToDatabaseColumn(original);
+        assertNotNull(encrypted);
+        assertNotEquals(original, encrypted);
+
+        String decrypted = converter.convertToEntityAttribute(encrypted);
+        assertEquals(original, decrypted);
+        
+        assertNull(converter.convertToDatabaseColumn(null));
+        assertNull(converter.convertToEntityAttribute(null));
+    }
 }
