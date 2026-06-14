@@ -28,13 +28,12 @@ import org.junit.jupiter.api.Test;
 /**
  * Cross-domain onboarding journey for BRD FR-01 (retailer + sensor).
  *
- * <p>Proves the full backend flow end-to-end — self-service registration →
- * sequential 3-gate approval → one-time API key → sensor provisioning →
- * activation → key/device authentication — driving the real
- * {@link RetailerServiceImpl} and {@link SensorServiceImpl} over stateful
- * in-memory ports (fast and deterministic, no Spring context). Also pins the new
- * PENDING approval-queue listing. A full {@code @SpringBootTest} + MockMvc variant
- * could additionally cover the controllers' {@code @PreAuthorize} gates.
+ * <p>Proves the full backend flow end-to-end — self-service registration → sequential 3-gate
+ * approval → one-time API key → sensor provisioning → activation → key/device authentication —
+ * driving the real {@link RetailerServiceImpl} and {@link SensorServiceImpl} over stateful
+ * in-memory ports (fast and deterministic, no Spring context). Also pins the new PENDING
+ * approval-queue listing. A full {@code @SpringBootTest} + MockMvc variant could additionally cover
+ * the controllers' {@code @PreAuthorize} gates.
  */
 class RetailerOnboardingJourneyTest {
 
@@ -90,7 +89,9 @@ class RetailerOnboardingJourneyTest {
 
         @Override
         public List<Sensor> findByRetailerId(String retailerId) {
-            return store.values().stream().filter(s -> retailerId.equals(s.getRetailerId())).toList();
+            return store.values().stream()
+                    .filter(s -> retailerId.equals(s.getRetailerId()))
+                    .toList();
         }
 
         @Override
@@ -123,7 +124,8 @@ class RetailerOnboardingJourneyTest {
         SensorUseCase sensors = new SensorServiceImpl(sensorPort);
 
         // 1. Self-service registration → PENDING, visible in the approval queue.
-        Retailer r = retailers.register("Valora k-kiosk", "ops@valora.ch", "ZRH-HB", BillingTier.PRO);
+        Retailer r =
+                retailers.register("Valora k-kiosk", "ops@valora.ch", "ZRH-HB", BillingTier.PRO);
         String id = r.getRetailerId();
         assertEquals("PENDING", r.getStatus());
         assertTrue(
@@ -143,8 +145,7 @@ class RetailerOnboardingJourneyTest {
         assertTrue(retailers.listByStatus("PENDING").isEmpty());
 
         // 4. The issued key authenticates the now-active retailer.
-        assertEquals(
-                id, retailers.authenticateByApiKey(apiKey).orElseThrow().getRetailerId());
+        assertEquals(id, retailers.authenticateByApiKey(apiKey).orElseThrow().getRetailerId());
 
         // 5. Provision a sensor for the retailer's store.
         SensorUseCase.ProvisionResult prov =
@@ -154,13 +155,13 @@ class RetailerOnboardingJourneyTest {
         assertNotNull(deviceKey);
         assertEquals("PROVISIONED", prov.sensor().getStatus());
         assertTrue(
-                sensors.listByRetailer(id).stream().anyMatch(s -> s.getSensorId().equals(sensorId)));
+                sensors.listByRetailer(id).stream()
+                        .anyMatch(s -> s.getSensorId().equals(sensorId)));
 
         // 6. The device key only authenticates once the sensor is ACTIVE.
         assertTrue(sensors.authenticateByDeviceKey(deviceKey).isEmpty());
         sensors.activate(sensorId);
-        assertEquals(
-                id, sensors.authenticateByDeviceKey(deviceKey).orElseThrow().getRetailerId());
+        assertEquals(id, sensors.authenticateByDeviceKey(deviceKey).orElseThrow().getRetailerId());
     }
 
     @Test
