@@ -1,6 +1,6 @@
 # ADR-008: Multi-Agent Operating Model & Ownership Boundaries
 
-- **Status:** Proposed (awaiting ratification)
+- **Status:** Accepted (layer-based ownership map ratified 2026-06-14)
 - **Date:** 2026-06-14
 - **Author:** Agentic OS architect
 - **Relates:** [BRANCH_STRATEGY.md](../../BRANCH_STRATEGY.md), [ADR-001 Hexagonal](./adr_001_hexagonal_architecture.md), [ADR-007 Agentic Governance](./adr_007_agentic_governance_layering.md)
@@ -51,8 +51,8 @@ AI agents.
    Never `git add -A` / `git add .`; never leave the index dirty between commits.
    Always `SKIP_E2E=true` and `JAVA_HOME` pinned to Java 17.
 
-3. **Ownership map (proposed — ratify/adjust).** Owners edit their zone freely;
-   any cross-zone edit requires a claim (Decision 4).
+3. **Ownership map (ratified — by layer, 2026-06-14).** Owners edit their zone
+   freely; any cross-zone edit requires a claim (Decision 4).
 
    | Zone | Paths | Owner |
    | --- | --- | --- |
@@ -82,6 +82,7 @@ AI agents.
 
 ## Ratification
 
-Flip **Status → Accepted** once the ownership map (Decision 3) is confirmed or
-adjusted. Until then the *mechanism* (Decisions 1, 2, 4) should be adopted
-immediately — it is what prevents a repeat of the 2026-06-14 incident.
+**Accepted 2026-06-14** with the **layer-based** ownership map (Decision 3):
+Mac_Machine owns backend + AI spine + gateway + infra; Windows_Machine owns the
+micro-frontends; docs are shared/claim-first. The *mechanism* (Decisions 1, 2, 4)
+applies immediately and is what prevents a repeat of the 2026-06-14 incident.
