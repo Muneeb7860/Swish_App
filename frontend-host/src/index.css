@@ -2733,3 +2733,194 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 	transform-origin: center;
 	animation: ripple-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
+
+/* --- PREMIUM MFA SYSTEM STYLING --- */
+.mfa-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	background: rgba(4, 6, 12, 0.85);
+	backdrop-filter: blur(20px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+	animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mfa-card {
+	width: 100%;
+	max-width: 440px;
+	background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(7, 10, 19, 0.95) 100%);
+	backdrop-filter: blur(25px) saturate(180%);
+	border: 1px solid rgba(6, 182, 212, 0.2);
+	border-radius: 20px;
+	padding: 2.25rem 2rem;
+	box-shadow: 0 0 30px rgba(6, 182, 212, 0.15), 0 20px 40px rgba(0, 0, 0, 0.4);
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	position: relative;
+	overflow: hidden;
+	transition: var(--transition-smooth);
+}
+
+.mfa-card:hover {
+	border-color: rgba(6, 182, 212, 0.4);
+	box-shadow: 0 0 40px rgba(6, 182, 212, 0.25), 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.mfa-logo-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	margin-bottom: 0.5rem;
+}
+
+.mfa-logo-icon {
+	background: rgba(6, 182, 212, 0.1);
+	color: var(--color-engine);
+	border: 1px solid rgba(6, 182, 212, 0.25);
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+	margin-bottom: 0.5rem;
+}
+
+.mfa-form-layout {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.mfa-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.mfa-label {
+	font-size: 0.65rem;
+	font-weight: 800;
+	color: var(--text-secondary);
+	letter-spacing: 0.075em;
+	text-transform: uppercase;
+}
+
+.mfa-select {
+	width: 100%;
+	background: #020408 !important;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	color: var(--text-primary);
+	padding: 0.6rem 0.8rem;
+	font-size: 0.85rem;
+	font-family: var(--font-sans);
+	outline: none;
+	cursor: pointer;
+	transition: var(--transition-smooth);
+}
+
+.mfa-select:focus {
+	border-color: var(--color-engine);
+	box-shadow: 0 0 12px var(--color-engine-glow);
+}
+
+.mfa-input {
+	width: 100%;
+	background: #020408 !important;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	color: var(--text-primary);
+	padding: 0.6rem 0.8rem;
+	font-size: 0.85rem;
+	font-family: var(--font-mono);
+	outline: none;
+	transition: var(--transition-smooth);
+}
+
+.mfa-input:focus {
+	border-color: var(--color-engine);
+	box-shadow: 0 0 12px var(--color-engine-glow);
+}
+
+.mfa-input-otp {
+	font-size: 1.25rem !important;
+	letter-spacing: 6px;
+	text-align: center;
+	font-weight: 700;
+}
+
+.mfa-button-primary {
+	background: var(--color-engine) !important;
+	color: #070a13 !important;
+	border: 1px solid rgba(255, 255, 255, 0.15) !important;
+	padding: 0.65rem !important;
+	width: 100% !important;
+	border-radius: 8px !important;
+	cursor: pointer !important;
+	font-family: var(--font-sans) !important;
+	font-weight: 800 !important;
+	font-size: 0.85rem !important;
+	box-shadow: 0 4px 15px var(--color-engine-glow) !important;
+	transition: var(--transition-smooth) !important;
+}
+
+.mfa-button-primary:hover {
+	transform: translateY(-1px) !important;
+	box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4), 0 0 15px rgba(6, 182, 212, 0.3) !important;
+	border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.mfa-button-secondary {
+	background: rgba(255, 255, 255, 0.02) !important;
+	color: var(--text-secondary) !important;
+	border: 1px solid var(--border-color) !important;
+	padding: 0.6rem !important;
+	width: 100% !important;
+	border-radius: 8px !important;
+	cursor: pointer !important;
+	font-family: var(--font-sans) !important;
+	font-weight: 600 !important;
+	font-size: 0.85rem !important;
+	transition: var(--transition-smooth) !important;
+}
+
+.mfa-button-secondary:hover {
+	background: rgba(255, 255, 255, 0.05) !important;
+	color: var(--text-primary) !important;
+	border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.mfa-info-panel {
+	background: rgba(6, 182, 212, 0.03);
+	border: 1px dashed rgba(6, 182, 212, 0.25);
+	padding: 0.85rem;
+	border-radius: 8px;
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.mfa-info-text {
+	font-size: 0.75rem;
+	color: var(--text-secondary);
+	margin: 0;
+	line-height: 1.4;
+}
+
+.mfa-totp-token {
+	font-size: 0.95rem;
+	color: var(--color-engine);
+	font-weight: 800;
+	font-family: var(--font-mono);
+	text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+	margin-top: 0.25rem;
+}
+
