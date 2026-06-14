@@ -119,70 +119,21 @@ class LocalErrorBoundary extends React.Component<
 	render() {
 		if (this.state.hasError) {
 			return (
-				<div
-					className="glass-card"
-					style={{
-						padding: "2.5rem",
-						textAlign: "center",
-						borderColor: "#ef4444",
-						borderWidth: "1px",
-						borderStyle: "dashed",
-						borderRadius: "12px",
-						background: "rgba(239, 68, 68, 0.02)",
-					}}
-				>
-					<div
-						style={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							gap: "0.85rem",
-						}}
-					>
-						<div
-							style={{
-								color: "#ef4444",
-								background: "rgba(239, 68, 68, 0.1)",
-								padding: "0.6rem",
-								borderRadius: "50%",
-								display: "inline-flex",
-							}}
-						>
-							<Lucide.AlertOctagon size={24} />
+				<div className="circuit-breaker-panel max-w-lg mx-auto my-8">
+					<div className="flex flex-col items-center gap-4">
+						<div className="text-red-500 bg-red-500/10 p-3 rounded-full display-inline-flex animate-pulse">
+							<Lucide.AlertOctagon size={28} />
 						</div>
-						<h4
-							style={{
-								margin: 0,
-								color: "#f8fafc",
-								fontSize: "1.05rem",
-								fontWeight: 800,
-							}}
-						>
-							Micro-Frontend Load Failure
+						<h4 className="m-0 text-slate-100 text-lg font-extrabold uppercase tracking-wide">
+							{this.props.name} Circuit Breaker Tripped
 						</h4>
-						<p
-							style={{
-								margin: 0,
-								fontSize: "0.8rem",
-								color: "#94a3b8",
-								maxWidth: "440px",
-								lineHeight: "1.4",
-							}}
-						>
-							The federated remote panel [<strong>{this.props.name}</strong>]
-							failed to load or experienced a runtime crash. Downstream systems
-							and checkout capabilities remain operational.
+						<p className="m-0 text-xs text-slate-400 max-w-md leading-relaxed">
+							The federated micro-frontend [<strong>{this.props.name}</strong>] 
+							failed to load or crashed at runtime. The host shell has decoupled it 
+							using a circuit-breaker boundary to preserve main app availability.
 						</p>
 						{this.state.error && (
-							<code
-								style={{
-									fontSize: "0.75rem",
-									color: "#f87171",
-									background: "rgba(0,0,0,0.2)",
-									padding: "0.25rem 0.5rem",
-									borderRadius: "4px",
-								}}
-							>
+							<code className="text-[10px] text-rose-400 bg-black/45 px-3 py-1.5 rounded-lg border border-red-500/10 font-mono break-all max-w-md">
 								{this.state.error.toString()}
 							</code>
 						)}
@@ -191,28 +142,9 @@ class LocalErrorBoundary extends React.Component<
 								this.setState({ hasError: false, error: null });
 								window.location.reload();
 							}}
-							style={{
-								marginTop: "1rem",
-								padding: "0.5rem 1.25rem",
-								background: "rgba(239, 68, 68, 0.2)",
-								border: "1px solid #ef4444",
-								color: "#fca5a5",
-								borderRadius: "8px",
-								fontSize: "0.8rem",
-								fontWeight: 600,
-								cursor: "pointer",
-								transition: "all 0.2s ease",
-							}}
-							onMouseOver={(e) => {
-								e.currentTarget.style.background = "#ef4444";
-								e.currentTarget.style.color = "#fff";
-							}}
-							onMouseOut={(e) => {
-								e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
-								e.currentTarget.style.color = "#fca5a5";
-							}}
+							className="mt-3 px-5 py-2 text-xs font-bold text-red-200 border border-red-500/30 hover:border-red-400/60 bg-red-500/10 rounded-lg hover:bg-red-500/30 cursor-pointer transition"
 						>
-							Retry Loading
+							Retry Loading Remote MFE
 						</button>
 					</div>
 				</div>
@@ -518,6 +450,168 @@ export default function App() {
 		const timer = setTimeout(preloadMfes, 1500);
 		return () => clearTimeout(timer);
 	}, []);
+
+	useEffect(() => {
+		const handleSwishAction = (e: Event) => {
+			const customEvent = e as CustomEvent;
+			if (!customEvent.detail || typeof customEvent.detail !== "object") return;
+			const { type, payload } = customEvent.detail;
+			console.log(`[MfeEventBus] Received action: ${type}`, payload);
+
+			switch (type) {
+				case "SET_CART":
+					setCart(payload);
+					break;
+				case "SET_CUSTOMER_WALLET":
+					setCustomerWallet(payload);
+					break;
+				case "SET_CUSTOMER_POINTS":
+					setCustomerPoints(payload);
+					break;
+				case "SET_RIDER_WALLET":
+					setRiderWallet(payload);
+					break;
+				case "SET_MERCHANT_WALLET":
+					setMerchantWallet(payload);
+					break;
+				case "SET_BUSINESS_ONBOARD_STATUS":
+					setBusinessOnboardStatus(payload);
+					break;
+				case "SET_RIDER_ONBOARD_STATUS":
+					setRiderOnboardStatus(payload);
+					break;
+				case "SET_B2B_DISCOUNT_ACTIVE":
+					setB2bDiscountActive(payload);
+					break;
+				case "SET_CUSTOMER_TRUST_SCORE":
+					setCustomerTrustScore(payload);
+					break;
+				case "SET_RIDER_TRUST_SCORE":
+					setRiderTrustScore(payload);
+					break;
+				case "SET_PRODUCTS":
+					setProducts(payload);
+					break;
+				case "SET_ACTIVE_ORDER":
+					setActiveOrder(payload);
+					break;
+				case "SET_ORDER_HISTORY":
+					setOrderHistory(payload);
+					break;
+				case "SET_TIP_AMOUNT":
+					setTipAmount(payload);
+					break;
+				case "SET_ESG_CHECKBOX":
+					setEsgCheckbox(payload);
+					break;
+				case "SET_TOTAL_CO2_OFFSET":
+					setTotalCo2Offset(payload);
+					break;
+				case "SET_PICKER_SLA_DURATION":
+					setPickerSlaDuration(payload);
+					break;
+				case "SET_PICKER_BADGE":
+					setPickerBadge(payload);
+					break;
+				case "SET_BACKUP_PICKERS_COUNT":
+					setBackupPickersCount(payload);
+					break;
+				case "SET_PICKING_BACKLOG_QUEUE":
+					setPickingBacklogQueue(payload);
+					break;
+				case "SET_ACTIVE_PICKING_CONGESTED":
+					setActivePickingCongested(payload);
+					break;
+				case "SET_WEATHER":
+					setWeather(payload);
+					break;
+				case "SET_BOT_OPEN":
+					setBotOpen(payload);
+					break;
+				case "SET_BOT_MESSAGES":
+					setBotMessages(payload);
+					break;
+				case "TRIGGER_TOAST":
+					triggerToast(payload.message, payload.type);
+					break;
+				case "LOG_KAFKA":
+					logKafka(payload.source, payload.event, payload.meta);
+					break;
+				case "REGISTER_RETAILER":
+					setOnboardingQueue((prev: any) => {
+						const exists = prev.some((app: any) => app.id === payload.retailerId);
+						if (exists) return prev;
+						return [
+							...prev,
+							{
+								id: payload.retailerId,
+								name: payload.name,
+								type: "merchant",
+								approvals: {
+									l1: payload.approvalOps || false,
+									l2: payload.approvalCompliance || false,
+									l3: payload.approvalAdmin || false,
+								},
+							},
+						];
+					});
+					triggerToast(`B2B Retailer Application [${payload.name}] registered!`, "business");
+					break;
+				case "APPROVE_GATE":
+					setOnboardingQueue((prev: any) =>
+						prev.map((app: any) => {
+							if (app.id === payload.retailerId) {
+								const nextApprovals = { ...app.approvals };
+								if (payload.gate === "ops") nextApprovals.l1 = true;
+								if (payload.gate === "compliance") nextApprovals.l2 = true;
+								if (payload.gate === "admin") nextApprovals.l3 = true;
+								const active = nextApprovals.l1 && nextApprovals.l2 && nextApprovals.l3;
+								if (active) {
+									setBusinessOnboardStatus("active");
+									triggerToast("Onboarding Complete: Merchant is now ACTIVE!", "business");
+								}
+								return { ...app, approvals: nextApprovals };
+							}
+							return app;
+						})
+					);
+					break;
+				default:
+					console.warn(`[MfeEventBus] Unhandled action type: ${type}`);
+			}
+		};
+
+		window.addEventListener("swish:action", handleSwishAction);
+		return () => {
+			window.removeEventListener("swish:action", handleSwishAction);
+		};
+	}, [
+		setCart,
+		setCustomerWallet,
+		setCustomerPoints,
+		setRiderWallet,
+		setMerchantWallet,
+		setBusinessOnboardStatus,
+		setRiderOnboardStatus,
+		setB2bDiscountActive,
+		setCustomerTrustScore,
+		setRiderTrustScore,
+		setProducts,
+		setActiveOrder,
+		setOrderHistory,
+		setTipAmount,
+		setEsgCheckbox,
+		setTotalCo2Offset,
+		setPickerSlaDuration,
+		setPickerBadge,
+		setBackupPickersCount,
+		setPickingBacklogQueue,
+		setActivePickingCongested,
+		setWeather,
+		setBotOpen,
+		setBotMessages,
+		setOnboardingQueue,
+	]);
 
 	useEffect(() => {
 		// Start real-time Firebase syncing

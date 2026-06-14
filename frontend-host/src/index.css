@@ -2924,3 +2924,112 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 	margin-top: 0.25rem;
 }
 
+/* Premium Visual System & Glassmorphism Upgrades */
+.upgrade-glow-card {
+	background: linear-gradient(
+		135deg,
+		rgba(15, 23, 42, 0.6) 0%,
+		rgba(8, 12, 26, 0.8) 100%
+	);
+	backdrop-filter: blur(24px) saturate(170%);
+	-webkit-backdrop-filter: blur(24px) saturate(170%);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	border-radius: 16px;
+	box-shadow: 
+		0 8px 32px 0 rgba(0, 0, 0, 0.4),
+		inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+	transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+	will-change: transform, box-shadow;
+	transform: translate3d(0, 0, 0);
+}
+
+.upgrade-glow-card:hover {
+	transform: translate3d(0, -4px, 0) scale(1.01);
+	border-color: rgba(99, 102, 241, 0.3);
+	box-shadow: 
+		0 20px 40px 0 rgba(0, 0, 0, 0.6),
+		0 0 24px 0 rgba(99, 102, 241, 0.2),
+		inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.upgrade-neon-text-indigo {
+	text-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+	color: #a78bfa;
+}
+
+.upgrade-neon-text-emerald {
+	text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+	color: #34d399;
+}
+
+.upgrade-pulsing-halo {
+	position: relative;
+}
+
+.upgrade-pulsing-halo::after {
+	content: '';
+	position: absolute;
+	top: -4px;
+	left: -4px;
+	right: -4px;
+	bottom: -4px;
+	border: 2px solid var(--color-customer);
+	border-radius: 50%;
+	opacity: 0;
+	animation: mfe-halo-pulse 2s cubic-bezier(0.25, 0, 0, 1) infinite;
+}
+
+@keyframes mfe-halo-pulse {
+	0% {
+		transform: scale(0.95);
+		opacity: 0.8;
+	}
+	100% {
+		transform: scale(1.25);
+		opacity: 0;
+	}
+}
+
+.circuit-breaker-panel {
+	background: rgba(239, 68, 68, 0.04);
+	border: 1px solid rgba(239, 68, 68, 0.15);
+	border-radius: 12px;
+	padding: 1.5rem;
+	text-align: center;
+	backdrop-filter: blur(16px);
+	box-shadow: 0 0 30px rgba(239, 68, 68, 0.05);
+	animation: breaker-entrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes breaker-entrance {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 20px, 0);
+	}
+	to {
+		opacity: 1;
+		transform: translate3d(0, 0, 0);
+	}
+}
+
+.mfe-loading-shimmer {
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0.03) 25%,
+		rgba(255, 255, 255, 0.08) 37%,
+		rgba(255, 255, 255, 0.03) 63%
+	);
+	background-size: 400% 100%;
+	animation: shimmer-swipe 1.4s ease infinite;
+}
+
+@keyframes shimmer-swipe {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+

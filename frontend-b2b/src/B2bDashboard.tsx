@@ -68,6 +68,24 @@ const B2bDashboard: React.FC = () => {
 	const [isRegistering, setIsRegistering] = useState(false);
 	const [isProvisioning, setIsProvisioning] = useState(false);
 
+	const getRequestHeaders = (customHeaders: Record<string, string> = {}) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			...customHeaders,
+		};
+		if (accessToken && accessToken !== "mock_token_for_now") {
+			headers["Authorization"] = `Bearer ${accessToken}`;
+		}
+		if (typeof window !== "undefined" && (window as any).getActiveTraceParent) {
+			try {
+				headers["traceparent"] = (window as any).getActiveTraceParent();
+			} catch (e) {
+				console.warn("Failed to retrieve traceparent from window:", e);
+			}
+		}
+		return headers;
+	};
+
 	// ── Retailer / Wholesaler API Integrations ──
 	const handleRegisterRetailer = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -82,9 +100,7 @@ const B2bDashboard: React.FC = () => {
 		try {
 			const res = await fetch(`${gatewayUrl}/api/v1/retailers/register`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
+				headers: getRequestHeaders(),
 				body: JSON.stringify({
 					name: retailerName,
 					contactEmail: retailerEmail,
@@ -100,6 +116,13 @@ const B2bDashboard: React.FC = () => {
 			const data = await res.json();
 			setCurrentRetailer(data);
 			addLog(`Retailer registered successfully! ID: ${data.retailerId}. Status: ${data.status}`, "success");
+			
+			// Dispatch action to event bus for state decoupling
+			window.dispatchEvent(
+				new CustomEvent("swish:action", {
+					detail: { type: "REGISTER_RETAILER", payload: data },
+				})
+			);
 		} catch (err: any) {
 			addLog(`API Registration Failed: ${err.message}. Initializing Local Sandbox Mock.`, "warning");
 			// Local Mock Fallback
@@ -118,6 +141,13 @@ const B2bDashboard: React.FC = () => {
 			};
 			setCurrentRetailer(mockRetailer);
 			addLog(`[Local Sandbox Mock] Retailer registered. ID: ${mockId}. Awaiting 3-gate approval.`, "success");
+			
+			// Dispatch mock action to event bus for state decoupling
+			window.dispatchEvent(
+				new CustomEvent("swish:action", {
+					detail: { type: "REGISTER_RETAILER", payload: mockRetailer },
+				})
+			);
 		} finally {
 			setIsRegistering(false);
 		}
@@ -132,12 +162,7 @@ const B2bDashboard: React.FC = () => {
 		try {
 			const res = await fetch(`${gatewayUrl}/api/v1/retailers/${retailerId}/gates/${gate}/approve`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(accessToken && accessToken !== "mock_token_for_now"
-						? { Authorization: `Bearer ${accessToken}` }
-						: {}),
-				},
+				headers: getRequestHeaders(),
 			});
 
 			if (!res.ok) {
@@ -152,6 +177,16 @@ const B2bDashboard: React.FC = () => {
 			} else {
 				addLog(`Gate ${gate.toUpperCase()} approved successfully.`, "success");
 			}
+
+			// Dispatch action to event bus for state decoupling
+			window.dispatchEvent(
+				new CustomEvent("swish:action", {
+					detail: {
+						type: "APPROVE_GATE",
+						payload: { retailerId, gate, ...data.retailer },
+					},
+				})
+			);
 		} catch (err: any) {
 			addLog(`API Gate Approval Failed: ${err.message}. Simulating in local sandbox.`, "warning");
 			
@@ -168,10 +203,22 @@ const B2bDashboard: React.FC = () => {
 					setRevealedApiKey(mockApiKey);
 					addLog("Retailer fully activated! Plaintext API Key generated.", "success");
 				}
+
+				// Dispatch action to event bus for state decoupling
+				window.dispatchEvent(
+					new CustomEvent("swish:action", {
+						detail: {
+							type: "APPROVE_GATE",
+							payload: { retailerId, gate, ...updated },
+						},
+					})
+				);
+
 				return updated;
 			});
 		}
 	};
+
 
 	const handleProvisionSensor = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -188,12 +235,7 @@ const B2bDashboard: React.FC = () => {
 		try {
 			const res = await fetch(`${gatewayUrl}/api/v1/sensors`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(accessToken && accessToken !== "mock_token_for_now"
-						? { Authorization: `Bearer ${accessToken}` }
-						: {}),
-				},
+				headers: getRequestHeaders(),
 				body: JSON.stringify({
 					retailerId,
 					storeId,
@@ -247,11 +289,7 @@ const B2bDashboard: React.FC = () => {
 		try {
 			const res = await fetch(`${gatewayUrl}/api/v1/sensors/${sensorId}/verify-integrity`, {
 				method: "GET",
-				headers: {
-					...(accessToken && accessToken !== "mock_token_for_now"
-						? { Authorization: `Bearer ${accessToken}` }
-						: {}),
-				},
+				headers: getRequestHeaders(),
 			});
 
 			if (!res.ok) {
@@ -286,11 +324,7 @@ const B2bDashboard: React.FC = () => {
 		try {
 			const res = await fetch(`${gatewayUrl}/api/v1/sensors/${sensorId}/calibrate?success=true`, {
 				method: "POST",
-				headers: {
-					...(accessToken && accessToken !== "mock_token_for_now"
-						? { Authorization: `Bearer ${accessToken}` }
-						: {}),
-				},
+				headers: getRequestHeaders(),
 			});
 
 			if (!res.ok) {
@@ -318,11 +352,7 @@ const B2bDashboard: React.FC = () => {
 				try {
 					const res = await fetch(`${gatewayUrl}/api/v1/sensors?retailerId=${currentRetailer.retailerId}`, {
 						method: "GET",
-						headers: {
-							...(accessToken && accessToken !== "mock_token_for_now"
-								? { Authorization: `Bearer ${accessToken}` }
-								: {}),
-						},
+						headers: getRequestHeaders(),
 					});
 					if (res.ok) {
 						const data = await res.json();
@@ -434,13 +464,9 @@ const B2bDashboard: React.FC = () => {
 			addLog(`Calling Gateway: POST /api/v1/checkout/intents...`, "info");
 			const intentRes = await fetch(`${gatewayUrl}/api/v1/checkout/intents`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
+				headers: getRequestHeaders({
 					"X-Idempotency-Key": idempotencyKey,
-					...(accessToken && accessToken !== "mock_token_for_now"
-						? { Authorization: `Bearer ${accessToken}` }
-						: {}),
-				},
+				}),
 				body: JSON.stringify({
 					customerId: userId,
 					orderId: orderId,
@@ -672,7 +698,7 @@ const B2bDashboard: React.FC = () => {
 				/* Main Grid */
 				<div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
 					{/* Left Column: Order Flow */}
-					<div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col">
+					<div className="upgrade-glow-card p-6 flex flex-col">
 						<div className="flex justify-between items-center mb-2">
 							<h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100">
 								Wholesale Order Checkout
@@ -1034,7 +1060,7 @@ const B2bDashboard: React.FC = () => {
 					<div className="flex flex-col gap-6">
 						
 						{/* Retailer Self-Service Onboarding Form (FR-01) */}
-						<div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+						<div className="upgrade-glow-card p-6 flex flex-col gap-4">
 							<div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
 								<h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
 									🏢 Retailer Tenant Onboarding Portal
@@ -1243,7 +1269,7 @@ const B2bDashboard: React.FC = () => {
 
 						{/* IoT Device / Sensor Provisioning (FR-01 Device provisioning) */}
 						{currentRetailer && currentRetailer.status === "ACTIVE" && (
-							<div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+							<div className="upgrade-glow-card p-6 flex flex-col gap-4">
 								<h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
 									📡 IoT Sensor Device Provisioning
 								</h3>
@@ -1344,7 +1370,7 @@ const B2bDashboard: React.FC = () => {
 
 					{/* Right Column: Console Logs */}
 					<div className="flex flex-col gap-6">
-						<div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col h-[500px]">
+						<div className="upgrade-glow-card p-6 flex flex-col h-[500px]">
 							<h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100 mb-2 border-b border-slate-100 dark:border-slate-800 pb-3">
 								Sandbox Logs
 							</h3>
