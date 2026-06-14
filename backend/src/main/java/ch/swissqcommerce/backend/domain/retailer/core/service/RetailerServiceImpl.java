@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -108,6 +109,14 @@ public class RetailerServiceImpl implements RetailerUseCase {
     @Transactional(readOnly = true)
     public Optional<Retailer> getRetailer(String retailerId) {
         return port.findById(retailerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Retailer> listByStatus(String status) {
+        if (status == null || status.isBlank())
+            throw new IllegalArgumentException("status is required");
+        return port.findByStatus(status.toUpperCase());
     }
 
     @Override
