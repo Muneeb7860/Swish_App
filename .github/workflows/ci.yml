@@ -289,3 +289,31 @@ jobs:
           scan-ref: '.'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
+
+  governance-quality:
+    name: AI Governance Quality Gate (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./homelab-ai-governance
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: ./homelab-ai-governance/pyproject.toml
+
+      - name: Install governance package + dev deps
+        run: pip install -e ".[dev]"
+
+      # Runs the full governance suite, including the Java↔Python /api/v1/govern
+      # contract tests. No Ollama/Postgres needed — the pipeline degrades to its
+      # fail-safe stubs, so this gate validates the brain's logic deterministically.
+      - name: Run governance test suite
+        env:
+          SWISH_TRACING_ENABLED: 'false'
+        run: pytest tests/ -q

@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.domain.agent.adapter.out.governance;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -11,9 +12,12 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -124,5 +128,70 @@ public class PythonGovernanceAdapterTest {
                 .thenReturn(null);
 
         assertThrows(IllegalStateException.class, () -> adapter.callLlm("test prompt"));
+    }
+
+    // ── Request contract ──────────────────────────────────────────────────────
+    // The Python service binds a GovernRequest {query, expected_format?,
+    // local_only_override?}. These pin what the adapter actually sends, so a change
+    // to the body key or the JSON-format trigger fails here instead of silently in prod.
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testCallLlm_SendsQueryBodyAsJson() {
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:8000");
+
+        Map<String, Object> ok = new HashMap<>();
+        ok.put("status", "success");
+        ok.put("response", "x");
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> captor =
+                ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForObject(
+                        eq("http://localhost:8000/api/v1/govern"), captor.capture(), eq(Map.class)))
+                .thenReturn(ok);
+
+        adapter.callLlm("What are the Zurich delivery hours?");
+
+        HttpEntity<Map<String, Object>> sent = captor.getValue();
+        assertEquals("What are the Zurich delivery hours?", sent.getBody().get("query"));
+        // Plain prompt → no structured-output hint.
+        assertFalse(sent.getBody().containsKey("expected_format"));
+        assertEquals(MediaType.APPLICATION_JSON, sent.getHeaders().getContentType());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testCallLlm_RequestsJsonFormatWhenPromptDemandsIt() {
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:8000");
+
+        Map<String, Object> ok = new HashMap<>();
+        ok.put("status", "success");
+        ok.put("response", "{}");
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> captor =
+                ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForObject(anyString(), captor.capture(), eq(Map.class)))
+                .thenReturn(ok);
+
+        adapter.callLlm("Summarize. Response MUST be a valid JSON object.");
+
+        assertEquals("json", captor.getValue().getBody().get("expected_format"));
+    }
+
+    @Test
+    public void testCallLlm_NormalizesTrailingSlashInBaseUrl() {
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:8000/");
+
+        Map<String, Object> ok = new HashMap<>();
+        ok.put("status", "success");
+        ok.put("response", "x");
+
+        // Exact-match stub: if the trailing slash were not stripped the adapter would
+        // POST to a double-slashed path, this stub would miss, and the call would fail.
+        when(restTemplate.postForObject(
+                        eq("http://localhost:8000/api/v1/govern"), any(), eq(Map.class)))
+                .thenReturn(ok);
+
+        assertEquals("x", adapter.callLlm("hi").getContent());
     }
 }
