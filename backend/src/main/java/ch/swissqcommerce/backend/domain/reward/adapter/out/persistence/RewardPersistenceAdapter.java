@@ -68,7 +68,14 @@ public class RewardPersistenceAdapter implements RewardOutPort {
 
     @Override
     public void saveRewardPoints(RewardPoints rewardPoints) {
-        repository.save(toEntity(rewardPoints));
+        repository
+                .findById(rewardPoints.getCustomerId())
+                .ifPresentOrElse(
+                        entity -> {
+                            entity.setLoyaltyPoints(rewardPoints.getLoyaltyPoints());
+                            repository.save(entity);
+                        },
+                        () -> repository.save(toEntity(rewardPoints)));
     }
 
     @Override

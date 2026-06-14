@@ -75,7 +75,6 @@ class MemoryMesh:
                         logger.info("MemoryMesh: database connection pool initialized successfully (maxconn=10).")
                     except Exception as pool_err:
                         logger.error("MemoryMesh: failed to initialize database connection pool: %s", pool_err)
-                        MemoryMesh._db_failed_time = time.time()
         except Exception as e:
             logger.warning("MemoryMesh: failed to load RAG config: %s. RAG disabled.", e)
             self.enabled = False
@@ -107,6 +106,7 @@ class MemoryMesh:
                 if MemoryMesh._pool is None:
                     logger.warning("MemoryMesh: connection pool is unavailable. Falling back to in-memory stubs.")
                     MemoryMesh._db_failed_time = time.time()
+                    MemoryMesh.db_breaker_trips += 1
                     return self._retrieve_fallbacks(query)
 
             conn = MemoryMesh._pool.getconn()

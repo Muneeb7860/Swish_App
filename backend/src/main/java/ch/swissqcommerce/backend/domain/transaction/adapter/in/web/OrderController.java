@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController("transactionOrderController")
-@RequestMapping("/api/orders")
+@RequestMapping("/api/v1/orders")
 public class OrderController {
 
     @Autowired private OrderUseCase orderUseCase;
@@ -20,11 +20,31 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<?> placeOrder(
             @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-            @Valid @RequestBody OrderRequestDTO request) {
+            @Valid @RequestBody OrderRequestDTO request,
+            org.springframework.security.core.Authentication authentication) {
         try {
+            // Resolve the customer from the JWT subject when the body omits it, so
+            // the SPA need not echo its own id. Object-level authz (IDOR guard):
+            // a caller may only check out for themselves unless they are an admin.
+            String authId = authentication != null ? authentication.getName() : null;
+            String customerId =
+                    (request.getCustomerId() != null && !request.getCustomerId().isBlank())
+                            ? request.getCustomerId()
+                            : authId;
+            if (customerId == null || customerId.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "customerId is required"));
+            }
+            boolean isAdmin =
+                    authentication != null
+                            && authentication.getAuthorities().stream()
+                                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            if (!customerId.equals(authId) && !isAdmin) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("error", "Cannot place orders for another customer"));
+            }
             Order order =
                     orderUseCase.checkout(
-                            request.getCustomerId(),
+                            customerId,
                             request.getItems(),
                             request.getPaymentMethod(),
                             request.getTipAmount(),
@@ -56,10 +76,14 @@ public class OrderController {
             return ResponseEntity.status(403)
                     .body(Map.of("error", "Cannot access another customer's orders"));
         }
-        List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
-        List<OrderResponseDTO> responseDTOs =
-                orders.stream().map(this::mapToDTO).collect(Collectors.toList());
-        return ResponseEntity.ok(responseDTOs);
+        try {
+            List<Order> orders = orderUseCase.getCustomerOrders(effectiveCustomerId);
+            List<OrderResponseDTO> responseDTOs =
+                    orders.stream().map(this::mapToDTO).collect(Collectors.toList());
+            return ResponseEntity.ok(responseDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/refund")

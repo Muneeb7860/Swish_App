@@ -34,6 +34,7 @@ public class RedisCacheConfig {
     public GenericJackson2JsonRedisSerializer genericJackson2JsonRedisSerializer() {
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
+        om.registerModule(new com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule());
         om.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,

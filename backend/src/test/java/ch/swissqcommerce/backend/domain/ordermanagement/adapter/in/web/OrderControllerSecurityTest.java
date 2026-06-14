@@ -50,7 +50,7 @@ class OrderControllerSecurityTest {
     void ownerCanPlaceOwnOrder() throws Exception {
         authenticateAs("cust-1", "ROLE_CUSTOMER");
         mockMvc.perform(
-                        post("/api/v1/orders")
+                        post("/api/v1/orders/saga")
                                 .param("orderId", "o-1")
                                 .param("customerId", "cust-1"))
                 .andExpect(status().isAccepted());
@@ -61,7 +61,7 @@ class OrderControllerSecurityTest {
     void cannotPlaceOrderForAnotherCustomer() throws Exception {
         authenticateAs("cust-1", "ROLE_CUSTOMER");
         mockMvc.perform(
-                        post("/api/v1/orders")
+                        post("/api/v1/orders/saga")
                                 .param("orderId", "o-1")
                                 .param("customerId", "cust-2"))
                 .andExpect(status().isForbidden());
@@ -73,7 +73,7 @@ class OrderControllerSecurityTest {
     void adminMayActOnBehalfOfAnyCustomer() throws Exception {
         authenticateAs("ops-admin", "ROLE_ADMIN");
         mockMvc.perform(
-                        post("/api/v1/orders")
+                        post("/api/v1/orders/saga")
                                 .param("orderId", "o-9")
                                 .param("customerId", "cust-2"))
                 .andExpect(status().isAccepted());
@@ -83,7 +83,7 @@ class OrderControllerSecurityTest {
     @Test
     void blankParamsAreRejected() throws Exception {
         authenticateAs("cust-1", "ROLE_CUSTOMER");
-        mockMvc.perform(post("/api/v1/orders").param("orderId", "o-1").param("customerId", ""))
+        mockMvc.perform(post("/api/v1/orders/saga").param("orderId", "o-1").param("customerId", ""))
                 .andExpect(status().isBadRequest());
         verify(orderUseCase, never()).handleOrderCreated(anyString(), anyString());
     }

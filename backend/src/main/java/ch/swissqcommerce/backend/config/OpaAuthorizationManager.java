@@ -121,8 +121,11 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
             return new AuthorizationDecision(granted);
         }
         // Customer + admin paths — note: no trailing slash so /api/orders (list)
-        // and /api/orders/{id} (detail) are both matched correctly.
+        // and /api/orders/{id} (detail) are both matched correctly. /api/v1/orders
+        // is the canonical (versioned) customer checkout + order-history API; the
+        // controller enforces per-order ownership (IDOR) on top of this role gate.
         if (uri.startsWith("/api/orders")
+                || uri.startsWith("/api/v1/orders")
                 || uri.startsWith("/api/customer")
                 || uri.startsWith("/api/payments")) {
             return new AuthorizationDecision(

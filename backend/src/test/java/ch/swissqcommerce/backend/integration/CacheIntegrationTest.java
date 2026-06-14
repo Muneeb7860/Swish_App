@@ -2,6 +2,9 @@ package ch.swissqcommerce.backend.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.swissqcommerce.backend.domain.catalog.adapter.out.persistence.CatalogRepository;
+import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
+import ch.swissqcommerce.backend.domain.catalog.port.in.CatalogUseCase;
 import ch.swissqcommerce.backend.domain.enrollment.core.service.RiderServiceImpl;
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
 import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
@@ -16,6 +19,7 @@ import ch.swissqcommerce.backend.service.AdminService;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +68,7 @@ public class CacheIntegrationTest {
     @Autowired private WholesalerUseCase wholesalerUseCase;
     @Autowired private RiderServiceImpl riderService;
     @Autowired private AdminService adminService;
+    @Autowired private CatalogUseCase catalogUseCase;
     @Autowired private CacheManager cacheManager;
     @Autowired private TransactionTemplate transactionTemplate;
 
@@ -72,6 +77,7 @@ public class CacheIntegrationTest {
     @Autowired private DarkStoreRepository darkStoreRepository;
     @Autowired private WholesalerRepository wholesalerRepository;
     @Autowired private B2BRestockOrderRepository restockOrderRepository;
+    @Autowired private CatalogRepository catalogRepository;
 
     @MockBean private KafkaTemplate<String, String> kafkaTemplate;
     @MockBean private StringRedisTemplate stringRedisTemplate;
@@ -92,7 +98,8 @@ public class CacheIntegrationTest {
                         "wholesaler-restocks",
                         "wholesaler-invoices",
                         "academy-courses",
-                        "system-health")
+                        "system-health",
+                        "catalog")
                 .forEach(
                         name -> {
                             Cache c = cacheManager.getCache(name);
@@ -144,7 +151,8 @@ public class CacheIntegrationTest {
                         "wholesaler-restocks",
                         "wholesaler-invoices",
                         "academy-courses",
-                        "system-health")
+                        "system-health",
+                        "catalog")
                 .forEach(
                         name -> {
                             Cache c = cacheManager.getCache(name);
@@ -157,6 +165,7 @@ public class CacheIntegrationTest {
                     customerRepository.deleteById(CUSTOMER_ID);
                     wholesalerRepository.deleteById(WHOLESALER_ID);
                     darkStoreRepository.deleteById("cache-store-1");
+                    catalogRepository.deleteAll();
                 });
         seededOrderId = null;
     }
@@ -306,6 +315,63 @@ public class CacheIntegrationTest {
         // Second call is served from cache
         Map<String, Object> second = adminService.getSystemHealth();
         assertEquals(first.get("status"), second.get("status"));
+    }
+
+    // ─── Catalog cache tests ───────────────────────────────────────────────────
+
+    @Test
+    public void testGetProductListingIsCached() {
+        ProductListing listing =
+                ProductListing.builder()
+                        .productId("cat-prod-01")
+                        .title("Cache Product")
+                        .description("Cache product description")
+                        .basePrice(new BigDecimal("10.00"))
+                        .status("ACTIVE")
+                        .build();
+        catalogUseCase.createListing(listing);
+
+        // Clear cache manually to verify getListing populates it
+        Cache catalogCache = cacheManager.getCache("catalog");
+        assertNotNull(catalogCache, "catalog cache must exist");
+        catalogCache.clear();
+        assertNull(catalogCache.get("cat-prod-01"), "Cache must be empty before query");
+
+        // First call - populates cache
+        Optional<ProductListing> first = catalogUseCase.getListing("cat-prod-01");
+        assertTrue(first.isPresent());
+        assertNotNull(catalogCache.get("cat-prod-01"), "Product must be cached after getListing");
+
+        // Second call returns cached value
+        Optional<ProductListing> second = catalogUseCase.getListing("cat-prod-01");
+        assertTrue(second.isPresent());
+        assertEquals(first.get().getTitle(), second.get().getTitle());
+    }
+
+    @Test
+    public void testCreateProductListingPopulatesCache() {
+        ProductListing listing =
+                ProductListing.builder()
+                        .productId("cat-prod-02")
+                        .title("Cache Product 2")
+                        .description("Cache product 2 description")
+                        .basePrice(new BigDecimal("20.00"))
+                        .status("ACTIVE")
+                        .build();
+
+        Cache catalogCache = cacheManager.getCache("catalog");
+        assertNotNull(catalogCache, "catalog cache must exist");
+        assertNull(catalogCache.get("cat-prod-02"), "Cache must be empty before creation");
+
+        // Calling createListing should automatically put it in cache due to @CachePut
+        ProductListing created = catalogUseCase.createListing(listing);
+        assertNotNull(created);
+        assertNotNull(
+                catalogCache.get("cat-prod-02"), "Product must be cached after createListing");
+
+        Optional<ProductListing> retrieved = catalogUseCase.getListing("cat-prod-02");
+        assertTrue(retrieved.isPresent());
+        assertEquals("Cache Product 2", retrieved.get().getTitle());
     }
 
     // ─── Cache names sanity test ───────────────────────────────────────────────
