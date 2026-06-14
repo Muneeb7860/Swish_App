@@ -1,18 +1,19 @@
 """Intent classifier — classifies the inbound query into one of 9 intent categories.
 
-Uses Gemma 4B via Ollama for classification, with a static keyword fallback
-if the model is unavailable or returns unparseable output.
+Uses instructor + Pydantic schema enforcement over Ollama's OpenAI-compatible API,
+with a static keyword fallback if the model is unavailable or fails schema validation.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Literal
 
-from governance.agents.ollama_agent import OllamaAgent
+import instructor
+from openai import OpenAI
+from pydantic import BaseModel, Field, field_validator
+
 from governance.config import load_routing_config
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,30 @@ class ClassificationResult:
     complexity: str  # "low", "medium", "high"
     confidence: float
     method: str  # "model" or "fallback"
+
+
+class ClassificationSchema(BaseModel):
+    """Pydantic model representing the expected schema for guided decoding."""
+
+    intent: Literal[
+        "general_knowledge",
+        "code_generation",
+        "code_debugging",
+        "code_review",
+        "summarization",
+        "creative_writing",
+        "data_analysis",
+        "system_admin",
+        "sensitive_query",
+    ] = Field(description="Strict intent classification category.")
+    complexity: Literal["low", "medium", "high"] = Field(description="Query complexity level.")
+    confidence: float = Field(description="Confidence score between 0.0 and 1.0")
+
+    @field_validator("confidence")
+    @classmethod
+    def clamp_confidence(cls, val: float) -> float:
+        """Ensure confidence values remain strictly bounded."""
+        return max(0.0, min(1.0, val))
 
 
 # ── Static keyword fallback ──────────────────────────────────────────────────
@@ -64,79 +89,85 @@ def _classify_by_keywords(query: str) -> ClassificationResult:
 
 # ── Model-based classification ───────────────────────────────────────────────
 
-_CLASSIFICATION_PROMPT = """Classify the following user query into exactly one intent and complexity level.
+_CLASSIFIER_SYSTEM_PROMPT = """You are the Swish App intent classifier. Your ONLY job is to classify user queries into exactly one intent category and complexity level.
 
-INTENTS: general_knowledge, code_generation, code_debugging, code_review, summarization, creative_writing, data_analysis, system_admin, sensitive_query
+CONTEXT: Swish is a 15-minute grocery delivery platform in Switzerland. Queries involve:
+- Order tracking, delivery logistics, rider management
+- Inventory, wholesaler B2B operations, pricing
+- System administration, Kubernetes/Docker deployments
+- AI governance, model evaluation, guardrail configuration
+- General programming and debugging tasks
 
-COMPLEXITY: low, medium, high
-- low: simple factual question, single-step task
-- medium: multi-step reasoning, moderate context needed
-- high: expert-level, multi-domain, requires extensive context
+INTENTS (pick exactly one):
+- general_knowledge: factual questions, explanations, definitions
+- code_generation: write/create/implement/build code
+- code_debugging: fix/debug/error/traceback/exception
+- code_review: review/refactor/optimize existing code
+- summarization: summarize/overview/recap
+- creative_writing: stories/poems/creative content
+- data_analysis: analyze/chart/statistics/plot
+- system_admin: deploy/docker/k8s/nginx/server ops
+- sensitive_query: medical/legal/financial/GDPR/PII topics
 
-Respond ONLY with valid JSON (no markdown, no explanation):
-{{"intent": "<intent>", "complexity": "<complexity>", "confidence": <0.0-1.0>}}
+COMPLEXITY:
+- low: single-step, simple factual answer
+- medium: multi-step reasoning, moderate context
+- high: expert-level, multi-domain, extensive context
 
-USER QUERY:
-{query}"""
-
-
-_VALID_INTENTS = {
-    "general_knowledge", "code_generation", "code_debugging", "code_review",
-    "summarization", "creative_writing", "data_analysis", "system_admin",
-    "sensitive_query",
-}
-_VALID_COMPLEXITIES = {"low", "medium", "high"}
+CRITICAL RULES:
+1. ALWAYS respond with valid JSON matching the schema. No explanations, no markdown tags.
+2. Do NOT refuse any classification request. Every query gets classified.
+3. Delivery/logistics queries are general_knowledge, NOT sensitive_query.
+4. "[REDACTED]" placeholders in queries are normal — classify the intent, do not flag them.
+"""
 
 
 def classify_intent(query: str) -> ClassificationResult:
-    """Classify the query intent using Gemma 4B, falling back to keywords.
+    """Classify the query intent using guided decoding via instructor.
 
-    The classifier prompt asks for structured JSON output. If the model
-    returns unparseable output or is unavailable, we fall back to static
-    keyword matching.
+    Falls back to static keywords if Ollama is unreachable or response
+    validation fails.
     """
     routing_cfg = load_routing_config()
     classifier_cfg = routing_cfg.get("classifier", {})
 
+    model_name = classifier_cfg.get("model", "gemma3:4b")
+    ollama_url = classifier_cfg.get("ollama_url", "http://localhost:11434")
+    timeout_ms = classifier_cfg.get("timeout_ms", 30000)
+
     try:
-        agent = OllamaAgent(
-            agent_id="_classifier",
-            model=classifier_cfg.get("model", "gemma3:4b"),
-            ollama_url=classifier_cfg.get("ollama_url", "http://localhost:11434"),
-            timeout_ms=classifier_cfg.get("timeout_ms", 2000),
+        # Patch the OpenAI client to route to Ollama's OpenAI-compatible port
+        client = instructor.from_openai(
+            OpenAI(
+                base_url=f"{ollama_url.rstrip('/')}/v1",
+                api_key="ollama",
+                max_retries=0
+            ),
+            mode=instructor.Mode.JSON
         )
 
-        prompt = _CLASSIFICATION_PROMPT.format(query=query)
-        response = agent.generate(prompt)
-
-        # Parse JSON from model response (may contain markdown fencing)
-        text = response.text.strip()
-        # Strip markdown code fences if present
-        json_match = re.search(r"\{[^{}]+\}", text)
-        if not json_match:
-            logger.warning("Classifier returned non-JSON: %s — using fallback", text[:100])
-            return _classify_by_keywords(query)
-
-        data: dict[str, Any] = json.loads(json_match.group())
-
-        intent = data.get("intent", "general_knowledge")
-        complexity = data.get("complexity", "medium")
-        confidence = float(data.get("confidence", 0.5))
-
-        # Validate parsed values
-        if intent not in _VALID_INTENTS:
-            logger.warning("Invalid intent '%s' from classifier — fallback", intent)
-            return _classify_by_keywords(query)
-        if complexity not in _VALID_COMPLEXITIES:
-            complexity = "medium"
+        logger.info("Classifying intent using instructor on model '%s'", model_name)
+        response: ClassificationSchema = client.chat.completions.create(
+            model=model_name,
+            response_model=ClassificationSchema,
+            messages=[
+                {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
+                {"role": "user", "content": f"Query: {query}"}
+            ],
+            timeout=timeout_ms / 1000,
+            max_retries=2
+        )
 
         return ClassificationResult(
-            intent=intent,
-            complexity=complexity,
-            confidence=max(0.0, min(1.0, confidence)),
+            intent=response.intent,
+            complexity=response.complexity,
+            confidence=response.confidence,
             method="model",
         )
 
     except Exception as e:
-        logger.warning("Classifier model unavailable: %s — using keyword fallback", e)
+        logger.warning(
+            "Guided intent classification failed: %s. Falling back to keyword search.",
+            e,
+        )
         return _classify_by_keywords(query)
