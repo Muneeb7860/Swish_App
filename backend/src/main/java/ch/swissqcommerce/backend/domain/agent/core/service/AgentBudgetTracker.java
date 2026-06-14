@@ -1,12 +1,13 @@
 package ch.swissqcommerce.backend.domain.agent.core.service;
 
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentBudgetTrackerPort;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AgentBudgetTracker {
+public class AgentBudgetTracker implements AgentBudgetTrackerPort {
 
     private double dailyCost = 0.0;
     private int hourlyRequestCount = 0;

@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGover
 import ch.swissqcommerce.backend.domain.agent.adapter.out.kimi.KimiLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.pii.PiiPreScanner;
-import ch.swissqcommerce.backend.domain.agent.core.service.AgentBudgetTracker;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentBudgetTrackerPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -54,14 +54,14 @@ public class ResilientLlmGateway implements LlmGatewayPort {
     private final KimiLlmAdapter kimiLlmAdapter;
     private final MockLlmAdapter mockLlmAdapter;
     private final PiiPreScanner piiPreScanner;
-    private final AgentBudgetTracker agentBudgetTracker;
+    private final AgentBudgetTrackerPort agentBudgetTracker;
 
     public ResilientLlmGateway(PythonGovernanceAdapter pythonGovernanceAdapter,
                                GeminiFreeAdapter geminiFreeAdapter,
                                KimiLlmAdapter kimiLlmAdapter,
                                MockLlmAdapter mockLlmAdapter,
                                PiiPreScanner piiPreScanner,
-                               AgentBudgetTracker agentBudgetTracker) {
+                               AgentBudgetTrackerPort agentBudgetTracker) {
         this.pythonGovernanceAdapter = pythonGovernanceAdapter;
         this.geminiFreeAdapter = geminiFreeAdapter;
         this.kimiLlmAdapter = kimiLlmAdapter;

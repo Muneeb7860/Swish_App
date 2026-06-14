@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGover
 import ch.swissqcommerce.backend.domain.agent.adapter.out.kimi.KimiLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.mock.MockLlmAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.pii.PiiPreScanner;
-import ch.swissqcommerce.backend.domain.agent.core.service.AgentBudgetTracker;
+import ch.swissqcommerce.backend.domain.agent.port.out.AgentBudgetTrackerPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ public class ResilientLlmGatewayTest {
     @Mock private GeminiFreeAdapter geminiFreeAdapter;
     @Mock private KimiLlmAdapter kimiLlmAdapter;
     @Mock private MockLlmAdapter mockLlmAdapter;
-    @Mock private AgentBudgetTracker agentBudgetTracker;
+    @Mock private AgentBudgetTrackerPort agentBudgetTracker;
 
     // Real scanner — we want the genuine regex behaviour, not a mock.
     private final PiiPreScanner piiPreScanner = new PiiPreScanner();
