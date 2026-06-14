@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import B2bDashboard from "./B2bDashboard";
 import "./index.css";
-import "./App.css";
 
 function App() {
 	return (
