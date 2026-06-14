@@ -1,23 +1,26 @@
 package ch.swissqcommerce.backend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
 import ch.swissqcommerce.backend.domain.agent.core.service.*;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
 import ch.swissqcommerce.backend.domain.agent.port.out.AgentOutPort;
 import ch.swissqcommerce.backend.domain.event.port.in.EventUseCase;
+import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
+import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
+import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.model.Customer;
 import ch.swissqcommerce.backend.model.HitlQueue;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
-import ch.swissqcommerce.backend.model.DarkStore;
-import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
-import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
-import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
-import ch.swissqcommerce.backend.domain.governance.port.in.GovernanceUseCase;
-
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,15 +28,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.Collections;
-import java.util.Arrays;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MasterOrchestratorServiceTest {
@@ -54,11 +48,14 @@ public class MasterOrchestratorServiceTest {
     // @PostConstruct is NOT called by @InjectMocks so budgetGuardrailCounter
     // stays null — the null-guard in the service handles this gracefully.
     @Mock private MeterRegistry meterRegistry;
-    @Mock private ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort negotiationArchivePort;
+
+    @Mock
+    private ch.swissqcommerce.backend.domain.agent.port.out.NegotiationArchivePort
+            negotiationArchivePort;
+
     @Mock private AgentBudgetTracker agentBudgetTracker;
 
-    @InjectMocks
-    private MasterOrchestratorService masterOrchestratorService;
+    @InjectMocks private MasterOrchestratorService masterOrchestratorService;
 
     @BeforeEach
     public void setUp() {
@@ -68,10 +65,11 @@ public class MasterOrchestratorServiceTest {
 
     @Test
     public void testProcessMessage_NormalFlowHighConfidence() {
-        AgentRequest request = new AgentRequest("Hello, status of my orders?", "conv-123", "cust-456");
-        CustomerSupportAgent.AgentAnalysis analysis = new CustomerSupportAgent.AgentAnalysis(
-                "I am happy to assist you.", 0.95, null, null, 0.05
-        );
+        AgentRequest request =
+                new AgentRequest("Hello, status of my orders?", "conv-123", "cust-456");
+        CustomerSupportAgent.AgentAnalysis analysis =
+                new CustomerSupportAgent.AgentAnalysis(
+                        "I am happy to assist you.", 0.95, null, null, 0.05);
 
         when(customerSupportAgent.analyze(request)).thenReturn(analysis);
 
@@ -90,16 +88,17 @@ public class MasterOrchestratorServiceTest {
 
     @Test
     public void testProcessMessage_LowConfidenceEscalation() {
-        AgentRequest request = new AgentRequest("Refund my order immediately!", "conv-123", "cust-456");
-        CustomerSupportAgent.AgentAnalysis analysis = new CustomerSupportAgent.AgentAnalysis(
-                "Checking...", 0.60, null, null, 0.05
-        );
+        AgentRequest request =
+                new AgentRequest("Refund my order immediately!", "conv-123", "cust-456");
+        CustomerSupportAgent.AgentAnalysis analysis =
+                new CustomerSupportAgent.AgentAnalysis("Checking...", 0.60, null, null, 0.05);
 
-        Customer customer = Customer.builder()
-                .customerId("cust-456")
-                .fullName("John Doe")
-                .hashedEmail("hashed-email")
-                .build();
+        Customer customer =
+                Customer.builder()
+                        .customerId("cust-456")
+                        .fullName("John Doe")
+                        .hashedEmail("hashed-email")
+                        .build();
 
         when(customerSupportAgent.analyze(request)).thenReturn(analysis);
         when(agentOutPort.findCustomerById("cust-456")).thenReturn(Optional.of(customer));
@@ -128,14 +127,16 @@ public class MasterOrchestratorServiceTest {
     @Test
     public void testProcessMessage_DailyBudgetLimitExceeded() {
         AgentRequest request = new AgentRequest("Next query", "conv-2", "cust-2");
-        
+
         when(agentBudgetTracker.isBudgetExceeded()).thenReturn(true);
         when(agentBudgetTracker.markDailyBudgetEscalated()).thenReturn(true);
 
         AgentResponse response = masterOrchestratorService.processMessage(request);
 
         assertNotNull(response);
-        assertEquals("System limit reached. Your request is routed to a customer support agent.", response.getReply());
+        assertEquals(
+                "System limit reached. Your request is routed to a customer support agent.",
+                response.getReply());
         assertEquals(0.0, response.getConfidenceScore());
         assertEquals(0.0, response.getTokenCost());
         assertTrue(response.isHitlStatus());
@@ -175,23 +176,28 @@ public class MasterOrchestratorServiceTest {
         req.setBasePrice(1.50);
         req.setQuantity(100);
 
-        Wholesaler wholesaler = Wholesaler.builder()
-                .wholesalerId("wh-1")
-                .name("Wholesaler A")
-                .isActive(true)
-                .trustScore(80)
-                .build();
+        Wholesaler wholesaler =
+                Wholesaler.builder()
+                        .wholesalerId("wh-1")
+                        .name("Wholesaler A")
+                        .isActive(true)
+                        .trustScore(80)
+                        .build();
 
         when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
-        
-        B2BProcurementAgent.NegotiationAnalysis analysis = new B2BProcurementAgent.NegotiationAnalysis(
-            1.40, 0.90, "Bulk discount", "Bid matches requirement", 0.02
-        );
-        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any())).thenReturn(analysis);
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt())).thenReturn(analysis);
 
-        ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
-        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
+        B2BProcurementAgent.NegotiationAnalysis analysis =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        1.40, 0.90, "Bulk discount", "Bid matches requirement", 0.02);
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any()))
+                .thenReturn(analysis);
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt()))
+                .thenReturn(analysis);
+
+        ProcurementGuardrailsEngine.GuardrailResult guardrailResult =
+                new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt()))
+                .thenReturn(guardrailResult);
 
         AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
 
@@ -209,23 +215,28 @@ public class MasterOrchestratorServiceTest {
         req.setBasePrice(10.00);
         req.setQuantity(5);
 
-        Wholesaler wholesaler = Wholesaler.builder()
-                .wholesalerId("wh-1")
-                .name("Wholesaler A")
-                .isActive(true)
-                .trustScore(80)
-                .build();
+        Wholesaler wholesaler =
+                Wholesaler.builder()
+                        .wholesalerId("wh-1")
+                        .name("Wholesaler A")
+                        .isActive(true)
+                        .trustScore(80)
+                        .build();
 
         when(wholesalerPort.findAll()).thenReturn(Arrays.asList(wholesaler));
-        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any())).thenThrow(new RuntimeException("LLM offline"));
+        when(b2BProcurementActivities.callLlmNegotiation(any(), any(), anyDouble(), any()))
+                .thenThrow(new RuntimeException("LLM offline"));
 
-        B2BProcurementAgent.NegotiationAnalysis fallbackOutcome = new B2BProcurementAgent.NegotiationAnalysis(
-                9.00, 0.50, "Rule-based fallback (LLM offline)", "COUNTER_OFFER", 0.0
-        );
-        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt())).thenReturn(fallbackOutcome);
+        B2BProcurementAgent.NegotiationAnalysis fallbackOutcome =
+                new B2BProcurementAgent.NegotiationAnalysis(
+                        9.00, 0.50, "Rule-based fallback (LLM offline)", "COUNTER_OFFER", 0.0);
+        when(b2BProcurementAgent.negotiateRestock(any(), any(), anyDouble(), any(), anyInt()))
+                .thenReturn(fallbackOutcome);
 
-        ProcurementGuardrailsEngine.GuardrailResult guardrailResult = new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
-        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt())).thenReturn(guardrailResult);
+        ProcurementGuardrailsEngine.GuardrailResult guardrailResult =
+                new ProcurementGuardrailsEngine.GuardrailResult(true, "Price satisfies threshold.");
+        when(procurementGuardrailsEngine.validate(anyDouble(), anyDouble(), anyInt()))
+                .thenReturn(guardrailResult);
 
         AgentUseCase.NegotiationResponse resp = masterOrchestratorService.negotiateProcurement(req);
 

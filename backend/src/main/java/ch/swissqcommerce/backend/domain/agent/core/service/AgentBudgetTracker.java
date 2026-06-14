@@ -25,10 +25,13 @@ public class AgentBudgetTracker implements AgentBudgetTrackerPort {
     @PostConstruct
     public void registerMetrics() {
         if (meterRegistry != null) {
-            budgetGuardrailCounter = Counter.builder("agent.budget.guardrail.triggers")
-                    .description("Number of times the AI agent daily cost-budget guardrail was reached")
-                    .tag("service", "agent-budget-tracker")
-                    .register(meterRegistry);
+            budgetGuardrailCounter =
+                    Counter.builder("agent.budget.guardrail.triggers")
+                            .description(
+                                    "Number of times the AI agent daily cost-budget guardrail was"
+                                            + " reached")
+                            .tag("service", "agent-budget-tracker")
+                            .register(meterRegistry);
         }
     }
 

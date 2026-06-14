@@ -1,5 +1,9 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.out.resilient;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
 import ch.swissqcommerce.backend.domain.agent.adapter.out.gemini.GeminiFreeAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.governance.PythonGovernanceAdapter;
 import ch.swissqcommerce.backend.domain.agent.adapter.out.kimi.KimiLlmAdapter;
@@ -14,15 +18,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
 /**
  * Security-critical tests for the fail-safe fallback chain (ADR-007 #2).
  *
- * The invariant under test: a PII-bearing prompt is NEVER sent to the cloud
- * (Gemini) when governance is unavailable — it fails SAFE, not OPEN.
+ * <p>The invariant under test: a PII-bearing prompt is NEVER sent to the cloud (Gemini) when
+ * governance is unavailable — it fails SAFE, not OPEN.
  */
 @ExtendWith(MockitoExtension.class)
 public class ResilientLlmGatewayTest {
@@ -38,13 +38,20 @@ public class ResilientLlmGatewayTest {
 
     private ResilientLlmGateway gateway;
 
-    private static final String PII_PROMPT = "Contact the customer at john.doe@example.com about the refund.";
+    private static final String PII_PROMPT =
+            "Contact the customer at john.doe@example.com about the refund.";
     private static final String CLEAN_PROMPT = "Summarise the weather impact on delivery demand.";
 
     @BeforeEach
     public void setUp() {
-        gateway = new ResilientLlmGateway(
-                pythonGovernanceAdapter, geminiFreeAdapter, kimiLlmAdapter, mockLlmAdapter, piiPreScanner, agentBudgetTracker);
+        gateway =
+                new ResilientLlmGateway(
+                        pythonGovernanceAdapter,
+                        geminiFreeAdapter,
+                        kimiLlmAdapter,
+                        mockLlmAdapter,
+                        piiPreScanner,
+                        agentBudgetTracker);
         lenient().when(agentBudgetTracker.isBudgetExceeded()).thenReturn(false);
     }
 

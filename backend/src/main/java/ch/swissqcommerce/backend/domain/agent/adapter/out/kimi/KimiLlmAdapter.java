@@ -2,6 +2,8 @@ package ch.swissqcommerce.backend.domain.agent.adapter.out.kimi;
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
@@ -9,9 +11,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.List;
-import java.util.Map;
 
 @Component
 public class KimiLlmAdapter implements LlmGatewayPort {
@@ -47,14 +46,8 @@ public class KimiLlmAdapter implements LlmGatewayPort {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey.trim());
 
-        Map<String, Object> message = Map.of(
-                "role", "user",
-                "content", prompt
-        );
-        Map<String, Object> body = Map.of(
-                "model", modelName,
-                "messages", List.of(message)
-        );
+        Map<String, Object> message = Map.of("role", "user", "content", prompt);
+        Map<String, Object> body = Map.of("model", modelName, "messages", List.of(message));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
@@ -73,10 +66,7 @@ public class KimiLlmAdapter implements LlmGatewayPort {
                     // Kimi (Moonshot 8k) pricing: ~$0.0016 / 1K tokens input and output
                     double cost = ((inputTokens + outputTokens) / 1000.0) * 0.0016;
 
-                    return LlmResponse.builder()
-                            .content(text)
-                            .tokenCost(cost)
-                            .build();
+                    return LlmResponse.builder().content(text).tokenCost(cost).build();
                 }
             }
         } catch (Exception e) {
