@@ -146,7 +146,11 @@ To run the complete governed, stateful agent pipeline:
     ```bash
     export SWISH_GOVERNANCE_API_URL=http://localhost:8000
     export SWISH_LETTA_API_URL=http://localhost:8283
+<<<<<<< HEAD
     export JWT_SECRET=my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long
+=======
+    export JWT_SECRET_KEY=my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long
+>>>>>>> origin/develop
     cd backend
     mvn spring-boot:run
     ```
@@ -332,5 +336,34 @@ As the Lead Tester, I have verified and validated the entire application stack a
   - **Spring Boot Backend**: 100% green (`BUILD SUCCESS` with 335 tests). Hardened [CustomerSupportDynamicPricingTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) to inject mock dependencies and assert correct fallback ticket escalation.
   - **Multi-Module Microservice Engine**: 100% green (`BUILD SUCCESS` across all module reactors).
   - **Frontend Compilation**: Verified that React micro-frontends (host, customer, rider, and admin) build cleanly under Vite with 0 compilation errors (`npm run build:all` success).
+
+### Cycle Update (2026-06-13) — WebSocket Reconnection Loop Guards & Branching Strategy Alignment [DONE]
+
+* **WebSocket Reconnect Loop Guards**:
+  - Hard-limited websocket reconnect attempts default to 5 in B2B (`useResilientWebSocket.ts`) and Host (`websocket.ts`) clients.
+  - Added attempt counter map tracking in `OrderStatusSocket` to prevent infinite CPU/network-intensive reconnect storms, aborting reconnection loop after exactly 5 failures.
+* **Git Upstream Tracking**:
+  - Configured local environment branches (`Mac_Machine` and `Windows_Machine`) to track the integration developer branch (`origin/develop`) as their upstream.
+* **Verification**:
+  - **Backend Test Suite**: 100% green (`BUILD SUCCESS` with 337 tests), with Kafka integration mocked inside `RewardsAndGovernanceIntegrationTest.java` to prevent connection delays.
+  - **Platform Gateway Clean**: Resolved the `Unable to find a single main class` build failure by cleaning stale duplicate class files in target directories.
+
+### Cycle Update (2026-06-14) — Redis Caching for Product Catalog [DONE]
+
+* **Redis Caching implementation for Catalog Context**:
+  - Annotated catalog core service methods inside [CatalogServiceImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/catalog/core/service/CatalogServiceImpl.java):
+    - Added `@Cacheable(value = "catalog", key = "#productId")` to `getListing(productId)` to cache product detail queries.
+    - Added `@CachePut(value = "catalog", key = "#result.productId")` to `createListing(listing)` to populate the cache during product creation.
+  - Hardened [CacheIntegrationTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/CacheIntegrationTest.java):
+    - Wired `CatalogUseCase` and `CatalogRepository` to verify integration behaviors.
+    - Added `"catalog"` to the cache-clear set in `setUp()` and `tearDown()` and database cleaning hooks in `tearDown()` (`catalogRepository.deleteAll()`).
+    - Implemented integration tests `testGetProductListingIsCached()` and `testCreateProductListingPopulatesCache()` to assert correct Redis catalog caching and cache synchronization behavior.
+  - Restored original `@Cacheable` and `@CacheEvict` annotations for the `customer-orders` cache in `OrderServiceImpl.java` to repair and align with existing order integration tests.
+* **Verification**:
+  - **Backend Test Suite**: 100% green (339/339 tests passed, `BUILD SUCCESS` in 8m 48s).
+* **Git Sync**:
+  - Committed changes to branch `Mac_Machine` (pre-commit test hook passed successfully).
+  - Pushed to `origin/develop` integration branch from `Mac_Machine`.
+  - Synced local branch `develop` to track `origin/develop`.
 
 

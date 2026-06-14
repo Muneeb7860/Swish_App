@@ -12,6 +12,7 @@ import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.repository.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -146,7 +147,7 @@ public class TransactionPersistenceAdapter
     public List<Order> findByCustomerIdOrderByCreatedAtDesc(String customerId) {
         return orderRepository.findByCustomerCustomerIdOrderByCreatedAtDesc(customerId).stream()
                 .map(this::mapToDomain)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -159,8 +160,8 @@ public class TransactionPersistenceAdapter
         Order order =
                 Order.builder()
                         .orderId(entity.getOrderId())
-                        .customer(entity.getCustomer())
-                        .store(entity.getStore())
+                        .customer(detachCustomer(entity.getCustomer()))
+                        .store(detachStore(entity.getStore()))
                         .rider(mapToDomainRider(entity.getRider()))
                         .totalAmount(entity.getTotalAmount())
                         .weatherSurcharge(entity.getWeatherSurcharge())
@@ -192,7 +193,7 @@ public class TransactionPersistenceAdapter
                                                     ch.swissqcommerce.backend.domain.transaction
                                                             .core.model.OrderItem.builder()
                                                             .order(order)
-                                                            .item(itemEntity.getItem())
+                                                            .item(detachInventory(itemEntity.getItem()))
                                                             .quantity(itemEntity.getQuantity())
                                                             .price(itemEntity.getPrice())
                                                             .build())
@@ -201,13 +202,88 @@ public class TransactionPersistenceAdapter
         return order;
     }
 
+    private Customer detachCustomer(Customer customer) {
+        if (customer == null) return null;
+        String id = null;
+        try {
+            id = customer.getCustomerId();
+            return Customer.builder()
+                    .customerId(id)
+                    .fullName(customer.getFullName())
+                    .email(customer.getEmail())
+                    .hashedEmail(customer.getHashedEmail())
+                    .walletBalance(customer.getWalletBalance())
+                    .loyaltyPoints(customer.getLoyaltyPoints())
+                    .vipStatus(customer.getVipStatus())
+                    .trustScore(customer.getTrustScore())
+                    .isAnonymized(customer.getIsAnonymized())
+                    .isOnProbation(customer.getIsOnProbation())
+                    .consecutiveOrdersCompleted(customer.getConsecutiveOrdersCompleted())
+                    .build();
+        } catch (Exception e) {
+            return Customer.builder()
+                    .customerId(id)
+                    .build();
+        }
+    }
+
+    private DarkStore detachStore(DarkStore store) {
+        if (store == null) return null;
+        String id = null;
+        try {
+            id = store.getStoreId();
+            return DarkStore.builder()
+                    .storeId(id)
+                    .storeName(store.getStoreName())
+                    .address(store.getAddress())
+                    .latitude(store.getLatitude())
+                    .longitude(store.getLongitude())
+                    .freezerTempCelsius(store.getFreezerTempCelsius())
+                    .chillerTempCelsius(store.getChillerTempCelsius())
+                    .storageCapacityLimit(store.getStorageCapacityLimit())
+                    .lastIotHeartbeat(store.getLastIotHeartbeat())
+                    .lastSanitizationAudit(store.getLastSanitizationAudit())
+                    .build();
+        } catch (Exception e) {
+            return DarkStore.builder()
+                    .storeId(id)
+                    .build();
+        }
+    }
+
+    private Inventory detachInventory(Inventory inventory) {
+        if (inventory == null) return null;
+        String id = null;
+        try {
+            id = inventory.getItemId();
+            return Inventory.builder()
+                    .itemId(id)
+                    .store(detachStore(inventory.getStore()))
+                    .name(inventory.getName())
+                    .price(inventory.getPrice())
+                    .stock(inventory.getStock())
+                    .category(inventory.getCategory())
+                    .emoji(inventory.getEmoji())
+                    .perishable(inventory.getPerishable())
+                    .build();
+        } catch (Exception e) {
+            return Inventory.builder()
+                    .itemId(id)
+                    .build();
+        }
+    }
+
     private OrderEntity mapToEntity(Order domain) {
         if (domain == null) return null;
         OrderEntity entity =
                 OrderEntity.builder()
                         .orderId(domain.getOrderId())
-                        .customer(domain.getCustomer())
-                        .store(domain.getStore())
+                        .customer(domain.getCustomer() != null && domain.getCustomer().getCustomerId() != null
+                                ? customerRepository.getReferenceById(domain.getCustomer().getCustomerId())
+                                : null)
+                        .store(domain.getStore() != null && domain.getStore().getStoreId() != null
+                                ? darkStoreRepository.getReferenceById(domain.getStore().getStoreId())
+                                : null)
                         .rider(mapToEntityRider(domain.getRider()))
                         .totalAmount(domain.getTotalAmount())
                         .weatherSurcharge(
@@ -260,11 +336,13 @@ public class TransactionPersistenceAdapter
                                             domainItem -> {
                                                 OrderItemEntity itemEntity = new OrderItemEntity();
                                                 itemEntity.setOrder(entity);
-                                                itemEntity.setItem(domainItem.getItem());
+                                                itemEntity.setItem(domainItem.getItem() != null && domainItem.getItem().getItemId() != null
+                                                        ? inventoryRepository.getReferenceById(domainItem.getItem().getItemId())
+                                                        : null);
                                                 itemEntity.setQuantity(domainItem.getQuantity());
                                                 itemEntity.setPrice(domainItem.getPrice());
                                                 return itemEntity;
-                                            })
+                                              })
                                     .toList()));
         }
         return entity;
