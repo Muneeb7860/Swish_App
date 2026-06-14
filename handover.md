@@ -301,3 +301,23 @@ We successfully implemented and validated the board-mandated compliance and audi
   - **Platform Gateway Clean**: Resolved the `Unable to find a single main class` build failure by cleaning stale duplicate class files in target directories.
 
 
+### Cycle Update (2026-06-14) — Redis Caching for Product Catalog [DONE]
+
+* **Redis Caching implementation for Catalog Context**:
+  - Annotated catalog core service methods inside [CatalogServiceImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/catalog/core/service/CatalogServiceImpl.java):
+    - Added `@Cacheable(value = "catalog", key = "#productId")` to `getListing(productId)` to cache product detail queries.
+    - Added `@CachePut(value = "catalog", key = "#result.productId")` to `createListing(listing)` to populate the cache during product creation.
+  - Hardened [CacheIntegrationTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/CacheIntegrationTest.java):
+    - Wired `CatalogUseCase` and `CatalogRepository` to verify integration behaviors.
+    - Added `"catalog"` to the cache-clear set in `setUp()` and `tearDown()` and database cleaning hooks in `tearDown()` (`catalogRepository.deleteAll()`).
+    - Implemented integration tests `testGetProductListingIsCached()` and `testCreateProductListingPopulatesCache()` to assert correct Redis catalog caching and cache synchronization behavior.
+  - Restored original `@Cacheable` and `@CacheEvict` annotations for the `customer-orders` cache in `OrderServiceImpl.java` to repair and align with existing order integration tests.
+* **Verification**:
+  - **Backend Test Suite**: 100% green (339/339 tests passed, `BUILD SUCCESS` in 8m 48s).
+* **Git Sync**:
+  - Commited changes to branch `Mac_Machine` (pre-commit test hook passed successfully).
+  - Pushed to `origin/develop` integration branch from `Mac_Machine`.
+  - Synced local branch `develop` to track `origin/develop`.
+
+
+

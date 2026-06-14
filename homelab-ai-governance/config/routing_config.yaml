@@ -69,8 +69,15 @@ intents:
 
 rag:
   enabled: true
+  # Connection string is read from $SWISH_RAG_DATABASE_URL when set; the value
+  # below is a local-dev fallback only — do not put production creds here.
   database_url: postgresql://letta:lettapassword@localhost:5434/letta
   embedding_model: nomic-embed-text:latest
   embedding_url: http://localhost:11434/api/embeddings
   similarity_threshold: 0.60
+
+# Audit analytics run on DuckDB over the append-only JSONL log (see
+# audit_log_config paths) on demand — no separate audit server, credentials,
+# or config block needed.
+
 

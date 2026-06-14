@@ -1,7 +1,8 @@
-"""Unified audit logger — JSONL append-only log with counter aggregation and cost tracking."""
+"""Unified audit logger — JSONL append-only log with DuckDB analytics and cost tracking."""
 
 from __future__ import annotations
 
+import glob
 import json
 import logging
 import sys
@@ -19,9 +20,13 @@ logger = logging.getLogger("governance.audit")
 
 
 class AuditLogger:
-    """Append-only JSONL audit logger with non-match counter aggregation.
+    """Append-only JSONL audit logger with on-demand DuckDB analytics.
 
-    - Match events: logged per-event with full context.
+    - Match events: logged per-event with full context to a rotating JSONL file.
+    - Analytics: DuckDB queries the JSONL log files directly on demand — the log
+      is the single source of truth, so there is no second datastore to run,
+      batch into, or keep in sync. The optional `duckdb` dependency is imported
+      lazily; analytics degrade to empty results if it is not installed.
     - Non-match events: aggregated as hourly counters (rule_eval_counters).
     - Disk-full safety: falls back to stderr, sets logging_degraded flag.
     """
@@ -41,7 +46,9 @@ class AuditLogger:
             log_dir = Path(log_dir)
 
         log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / paths.get("log_file", "audit.jsonl")
+        self._log_dir = log_dir
+        self._log_file_name = paths.get("log_file", "audit.jsonl")
+        log_file = log_dir / self._log_file_name
 
         # Set up rotating file handler
         max_bytes = rotation.get("max_file_size_mb", 100) * 1024 * 1024
@@ -61,7 +68,6 @@ class AuditLogger:
         self._logger.propagate = False
 
         # In-memory non-match counters
-        # Structure: counters[rule_id][agent_id][phase] = count
         self._counters: dict[str, dict[str, dict[str, int]]] = defaultdict(
             lambda: defaultdict(lambda: defaultdict(int))
         )
@@ -90,6 +96,71 @@ class AuditLogger:
                 f"[AUDIT DEGRADED] Failed to write audit log: {e}. Entry: {entry}",
                 file=sys.stderr,
             )
+
+    # ── Analytics (DuckDB over the append-only JSONL) ─────────────────────────
+
+    def _log_files(self) -> list[str]:
+        """All current + rotated audit log files (newest content lives in the base file)."""
+        return sorted(glob.glob(str(self._log_dir / f"{self._log_file_name}*")))
+
+    def analytics_connection(self):
+        """Open an in-memory DuckDB connection exposing the audit log as the
+        ``pipeline_events`` relation.
+
+        Reads the rotating JSONL files directly, so there is no separate
+        analytics store to provision or synchronise. Requires the optional
+        ``duckdb`` dependency.
+        """
+        import duckdb
+
+        con = duckdb.connect()
+        files = self._log_files()
+        if not files:
+            # No logs yet — expose an empty, well-typed relation so queries don't crash.
+            con.execute("CREATE VIEW pipeline_events AS SELECT NULL AS type WHERE 1 = 0")
+        else:
+            # DuckDB forbids bind parameters in CREATE VIEW DDL, so the file list is
+            # inlined as a SQL list literal. Paths are internal glob results (not user
+            # input); single quotes are still escaped defensively.
+            files_sql = "[" + ", ".join("'" + f.replace("'", "''") + "'" for f in files) + "]"
+            con.execute(
+                f"CREATE VIEW pipeline_events AS SELECT * FROM "
+                f"read_json_auto({files_sql}, format='newline_delimited', "
+                f"union_by_name=true, ignore_errors=true)"
+            )
+        return con
+
+    def analytics_query(self, sql: str) -> list[dict[str, Any]]:
+        """Run a read-only SQL query over the audit log via DuckDB.
+
+        Audit events are available as the ``pipeline_events`` relation. Returns a
+        list of row dicts; returns an empty list (logging a warning) if DuckDB is
+        unavailable or the query fails, so callers never break on analytics.
+        """
+        try:
+            con = self.analytics_connection()
+        except Exception as e:
+            logger.warning("AuditLogger: DuckDB analytics unavailable (%s).", e)
+            return []
+        try:
+            cur = con.execute(sql)
+            columns = [d[0] for d in cur.description]
+            return [dict(zip(columns, row)) for row in cur.fetchall()]
+        except Exception as e:
+            logger.warning("AuditLogger: analytics query failed (%s).", e)
+            return []
+        finally:
+            con.close()
+
+    def event_type_counts(self) -> dict[str, int]:
+        """Convenience analytic: number of audit events grouped by event type."""
+        rows = self.analytics_query(
+            "SELECT type, COUNT(*) AS n FROM pipeline_events "
+            "WHERE type IS NOT NULL GROUP BY type ORDER BY n DESC"
+        )
+        return {r["type"]: int(r["n"]) for r in rows}
+
+    # ── Non-match counters ────────────────────────────────────────────────────
 
     def increment_counter(self, rule_id: str, agent_id: str, phase: str) -> None:
         """Increment the in-memory non-match counter for a rule evaluation."""
@@ -204,7 +275,6 @@ class RateLimiter:
         with self._lock:
             now = time.time()
             limit = self.get_limit()
-            # Clean up records older than 1 hour (3600 seconds)
             self.requests = [t for t in self.requests if now - t < 3600]
             return len(self.requests) < limit
 
@@ -214,7 +284,6 @@ class RateLimiter:
             self.requests.append(time.time())
 
 
-# Module-level singleton (lazy init)
 _audit_logger: AuditLogger | None = None
 _cost_tracker: CostTracker | None = None
 _rate_limiter: RateLimiter | None = None
@@ -242,4 +311,3 @@ def get_rate_limiter() -> RateLimiter:
     if _rate_limiter is None:
         _rate_limiter = RateLimiter()
     return _rate_limiter
-
