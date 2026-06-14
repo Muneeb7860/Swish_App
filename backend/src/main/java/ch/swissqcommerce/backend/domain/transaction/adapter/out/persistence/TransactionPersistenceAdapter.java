@@ -193,7 +193,9 @@ public class TransactionPersistenceAdapter
                                                     ch.swissqcommerce.backend.domain.transaction
                                                             .core.model.OrderItem.builder()
                                                             .order(order)
-                                                            .item(detachInventory(itemEntity.getItem()))
+                                                            .item(
+                                                                    detachInventory(
+                                                                            itemEntity.getItem()))
                                                             .quantity(itemEntity.getQuantity())
                                                             .price(itemEntity.getPrice())
                                                             .build())
@@ -221,9 +223,7 @@ public class TransactionPersistenceAdapter
                     .consecutiveOrdersCompleted(customer.getConsecutiveOrdersCompleted())
                     .build();
         } catch (Exception e) {
-            return Customer.builder()
-                    .customerId(id)
-                    .build();
+            return Customer.builder().customerId(id).build();
         }
     }
 
@@ -245,9 +245,7 @@ public class TransactionPersistenceAdapter
                     .lastSanitizationAudit(store.getLastSanitizationAudit())
                     .build();
         } catch (Exception e) {
-            return DarkStore.builder()
-                    .storeId(id)
-                    .build();
+            return DarkStore.builder().storeId(id).build();
         }
     }
 
@@ -267,9 +265,7 @@ public class TransactionPersistenceAdapter
                     .perishable(inventory.getPerishable())
                     .build();
         } catch (Exception e) {
-            return Inventory.builder()
-                    .itemId(id)
-                    .build();
+            return Inventory.builder().itemId(id).build();
         }
     }
 
@@ -278,12 +274,17 @@ public class TransactionPersistenceAdapter
         OrderEntity entity =
                 OrderEntity.builder()
                         .orderId(domain.getOrderId())
-                        .customer(domain.getCustomer() != null && domain.getCustomer().getCustomerId() != null
-                                ? customerRepository.getReferenceById(domain.getCustomer().getCustomerId())
-                                : null)
-                        .store(domain.getStore() != null && domain.getStore().getStoreId() != null
-                                ? darkStoreRepository.getReferenceById(domain.getStore().getStoreId())
-                                : null)
+                        .customer(
+                                domain.getCustomer() != null
+                                                && domain.getCustomer().getCustomerId() != null
+                                        ? customerRepository.getReferenceById(
+                                                domain.getCustomer().getCustomerId())
+                                        : null)
+                        .store(
+                                domain.getStore() != null && domain.getStore().getStoreId() != null
+                                        ? darkStoreRepository.getReferenceById(
+                                                domain.getStore().getStoreId())
+                                        : null)
                         .rider(mapToEntityRider(domain.getRider()))
                         .totalAmount(domain.getTotalAmount())
                         .weatherSurcharge(
@@ -336,13 +337,22 @@ public class TransactionPersistenceAdapter
                                             domainItem -> {
                                                 OrderItemEntity itemEntity = new OrderItemEntity();
                                                 itemEntity.setOrder(entity);
-                                                itemEntity.setItem(domainItem.getItem() != null && domainItem.getItem().getItemId() != null
-                                                        ? inventoryRepository.getReferenceById(domainItem.getItem().getItemId())
-                                                        : null);
+                                                itemEntity.setItem(
+                                                        domainItem.getItem() != null
+                                                                        && domainItem
+                                                                                        .getItem()
+                                                                                        .getItemId()
+                                                                                != null
+                                                                ? inventoryRepository
+                                                                        .getReferenceById(
+                                                                                domainItem
+                                                                                        .getItem()
+                                                                                        .getItemId())
+                                                                : null);
                                                 itemEntity.setQuantity(domainItem.getQuantity());
                                                 itemEntity.setPrice(domainItem.getPrice());
                                                 return itemEntity;
-                                              })
+                                            })
                                     .toList()));
         }
         return entity;
