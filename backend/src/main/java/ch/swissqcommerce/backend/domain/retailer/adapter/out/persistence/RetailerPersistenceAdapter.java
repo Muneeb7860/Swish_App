@@ -3,7 +3,9 @@ package ch.swissqcommerce.backend.domain.retailer.adapter.out.persistence;
 import ch.swissqcommerce.backend.domain.billing.core.model.BillingTier;
 import ch.swissqcommerce.backend.domain.retailer.core.model.Retailer;
 import ch.swissqcommerce.backend.domain.retailer.port.out.RetailerPort;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -40,6 +42,13 @@ public class RetailerPersistenceAdapter implements RetailerPort {
     @Override
     public Optional<Retailer> findByApiKeyHash(String apiKeyHash) {
         return repository.findByApiKeyHash(apiKeyHash).map(this::toDomain);
+    }
+
+    @Override
+    public List<Retailer> findByStatus(String status) {
+        return repository.findByStatusOrderByCreatedAtAsc(status).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
     }
 
     private Retailer toDomain(RetailerEntity e) {
