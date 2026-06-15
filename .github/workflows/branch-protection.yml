@@ -43,7 +43,7 @@ jobs:
           echo "Checking if PR description includes a selected Type of Change..."
           
           # Match a selected checkbox in the body (e.g. - [x] or * [x] with one of the change types)
-          if ! echo "$PR_BODY" | grep -Ei "^\s*[-*+]\s*\[x\]\s*(🎨|⚙️|🤖|🛠️|\*\*Frontend|\*\*Backend|\*\*AI|\*\*DevOps)" >/dev/null; then
+          if ! echo "$PR_BODY" | grep -Ei "^\s*[-*+]\s*\[x\].*\*\*(Frontend|Backend|AI|DevOps)" >/dev/null; then
             echo "❌ ERROR: You must select at least one Type of Change checkbox in the Pull Request checklist."
             echo "Please check one of the following in your PR description:"
             echo "  - [x] 🎨 **Frontend UI Fix / Refactor**"
@@ -72,7 +72,7 @@ jobs:
           fi
           
           backend_checked=false
-          if echo "$PR_BODY" | grep -Ei "^\s*[-*+]\s*\[x\]\s*(⚙️|\*\*Backend)" >/dev/null; then
+          if echo "$PR_BODY" | grep -Ei "^\s*[-*+]\s*\[x\].*\*\*Backend" >/dev/null; then
             backend_checked=true
           fi
           
