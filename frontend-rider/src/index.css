@@ -556,7 +556,8 @@ body {
 }
 
 /* Product Cards */
-.products-grid {
+.products-grid,
+.product-shelf-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 	gap: 1rem;
