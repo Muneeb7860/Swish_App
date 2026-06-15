@@ -16,8 +16,6 @@
 		"noImplicitAny": false,
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
 		"noFallthroughCasesInSwitch": true
 	},
 	"include": ["src"],
