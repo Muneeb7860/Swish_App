@@ -1,10 +1,11 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import http from "http";
-import net from "net";
-import path from "path";
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import http from "node:http";
+import net from "node:net";
+import path from "node:path";
 
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_DIR = path.resolve(path.join(__dirname, "../.."));
@@ -252,7 +253,7 @@ async function run() {
 				apiReady = true;
 				console.log("[E2E RUNNER] Backend API health check passed.");
 				break;
-			} catch (e) {
+			} catch (_e) {
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 			}
 		}

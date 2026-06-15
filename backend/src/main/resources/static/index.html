@@ -21,25 +21,25 @@
       if (msgs.includes('React DevTools') || msgs.includes('favicon')) { oldError.apply(console, arguments); return; }
       var div = document.createElement('div');
       div.style = "color:white; background:#ef4444; padding: 20px; font-size: 16px; position:absolute; z-index:99999; top:0; left:0; width:100%; font-family:sans-serif;";
-      div.innerHTML = '<h2>🚨 Console.Error Caught!</h2><pre style="background:#450a0a; padding:10px; overflow:auto;">' + msgs + '</pre>';
+      div.innerHTML = `<h2>🚨 Console.Error Caught!</h2><pre style="background:#450a0a; padding:10px; overflow:auto;">${msgs}</pre>`;
       document.body.appendChild(div);
       oldError.apply(console, arguments);
     };
-    window.onerror = (msg, url, lineNo, columnNo, error) => {
+    window.onerror = (msg, _url, lineNo, columnNo, error) => {
       if (msg === 'Script error.') return false; // Ignore masked CORS errors now
       var div = document.createElement('div');
       div.style = "color:white; background:#ef4444; padding: 20px; font-size: 16px; position:absolute; z-index:99999; top:0; left:0; width:100%; font-family:sans-serif;";
       div.innerHTML = '<h2>🚨 UI Execution Error</h2><p><strong>Message:</strong> ' + msg + '</p>' +
         '<p><strong>Location:</strong> Line ' + lineNo + ' Column ' + columnNo + '</p>' +
-        '<pre style="background:#450a0a; padding:10px; overflow:auto;">' + (error && error.stack ? error.stack : 'No stack trace') + '</pre>';
+        '<pre style="background:#450a0a; padding:10px; overflow:auto;">' + (error?.stack ? error.stack : 'No stack trace') + '</pre>';
       document.body.appendChild(div);
       return false;
     };
     window.addEventListener('unhandledrejection', (event) => {
       var div = document.createElement('div');
       div.style = "color:white; background:#ef4444; padding: 20px; font-size: 16px; position:absolute; z-index:99999; top:0; left:0; width:100%; font-family:sans-serif;";
-      div.innerHTML = '<h2>🚨 Unhandled Promise Rejection</h2><p><strong>Reason:</strong> ' + (event.reason && event.reason.message ? event.reason.message : event.reason) + '</p>' +
-        '<pre style="background:#450a0a; padding:10px; overflow:auto;">' + (event.reason && event.reason.stack ? event.reason.stack : '') + '</pre>';
+      div.innerHTML = '<h2>🚨 Unhandled Promise Rejection</h2><p><strong>Reason:</strong> ' + (event.reason?.message ? event.reason.message : event.reason) + '</p>' +
+        '<pre style="background:#450a0a; padding:10px; overflow:auto;">' + (event.reason?.stack ? event.reason.stack : '') + '</pre>';
       document.body.appendChild(div);
     });
   </script>

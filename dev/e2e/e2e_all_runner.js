@@ -1,10 +1,11 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import http from "http";
-import net from "net";
-import path from "path";
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import http from "node:http";
+import net from "node:net";
+import path from "node:path";
 
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_DIR = path.resolve(path.join(__dirname, "../.."));
@@ -252,7 +253,7 @@ async function run() {
 				apiReady = true;
 				console.log("[E2E ALL RUNNER] Backend API health check passed.");
 				break;
-			} catch (e) {
+			} catch (_e) {
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 			}
 		}
@@ -265,7 +266,7 @@ async function run() {
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 
 		// 8. Execute all test suites sequentially
-		let failures = [];
+		const failures = [];
 
 		try {
 			await runTest("Playwright Core E2E", "node", ["e2e_test.js"], LOGS_DIR);
@@ -297,7 +298,9 @@ async function run() {
 
 		if (failures.length > 0) {
 			console.error("\\n[E2E ALL RUNNER] Some test suites failed:");
-			failures.forEach((f) => console.error(` - ${f}`));
+			for (const f of failures) {
+				console.error(` - ${f}`);
+			}
 			process.exitCode = 1;
 		} else {
 			console.log("\\n[E2E ALL RUNNER] All test suites passed successfully!");
