@@ -290,3 +290,94 @@ code {
 	}
 }
 
+/* Stepper Timeline Styles */
+.timeline-visualizer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	position: relative;
+	width: 100%;
+}
+
+.timeline-step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	z-index: 20;
+	flex: 1;
+}
+
+.timeline-step .step-circle {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	font-weight: 700;
+	border: 2px solid var(--border, var(--border-color, rgba(255, 255, 255, 0.08)));
+	background: var(--bg, var(--bg-body, #0b0f19));
+	color: var(--text, var(--text-secondary, #94a3b8));
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeline-step .step-label {
+	font-size: 0.65rem;
+	font-weight: 600;
+	color: var(--text-muted, #64748b);
+	transition: color 0.3s ease;
+	text-align: center;
+	max-width: 80px;
+	word-wrap: break-word;
+}
+
+/* Active State */
+.timeline-step.active .step-circle {
+	border-color: var(--accent, var(--color-business, #8b5cf6));
+	background: var(--accent-bg, rgba(139, 92, 246, 0.1));
+	color: var(--accent, var(--color-business, #8b5cf6));
+	box-shadow: 0 0 10px var(--accent-border, rgba(139, 92, 246, 0.5));
+	animation: pulse-border 1.5s infinite alternate;
+}
+
+.timeline-step.active .step-label {
+	color: var(--accent, var(--color-business, #8b5cf6));
+	font-weight: 700;
+}
+
+/* Completed State */
+.timeline-step.completed .step-circle {
+	border-color: #10b981;
+	background: rgba(16, 185, 129, 0.1);
+	color: #10b981;
+	box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.timeline-step.completed .step-label {
+	color: #10b981;
+}
+
+/* Failed State */
+.timeline-step.failed .step-circle {
+	border-color: #ef4444;
+	background: rgba(239, 68, 68, 0.1);
+	color: #ef4444;
+	box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.timeline-step.failed .step-label {
+	color: #ef4444;
+}
+
+@keyframes pulse-border {
+	0% {
+		box-shadow: 0 0 4px var(--accent-border, rgba(139, 92, 246, 0.2));
+	}
+	100% {
+		box-shadow: 0 0 12px var(--accent-border, rgba(139, 92, 246, 0.6));
+	}
+}
+
+
