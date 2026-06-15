@@ -2,7 +2,8 @@
 // and frontend-admin had no auth, so this exchanges credentials for a token via
 // /api/v1/auth/login. No credentials are stored in source; the email is merely
 // pre-filled with the conventional dev admin for convenience.
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 
 interface Props {
 	onLogin: (email: string, password: string) => Promise<void>;

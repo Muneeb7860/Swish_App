@@ -1,6 +1,6 @@
+import { SpanStatusCode } from "@opentelemetry/api";
 import { useStore } from "../store";
 import { getActiveTraceParent, tracer } from "./telemetry";
-import { SpanStatusCode } from "@opentelemetry/api";
 
 export const BASE_URL =
 	import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -84,15 +84,15 @@ export class ApiClient {
 		const url = `${BASE_URL}${path}`;
 
 		// If explicitly in mock mode, return mock data
-		if (this.isMockMode() && !options.bypassMock && mockFallback) {
-			await this.delay(500); // Simulate network latency
+		if (ApiClient.isMockMode() && !options.bypassMock && mockFallback) {
+			await ApiClient.delay(500); // Simulate network latency
 			return mockFallback();
 		}
 
 		const mergedOptions: RequestInit = {
 			...options,
 			headers: {
-				...this.getHeaders(options),
+				...ApiClient.getHeaders(options),
 				...options.headers,
 			},
 		};
@@ -116,7 +116,7 @@ export class ApiClient {
 				span.setAttribute("http.status_code", response.status);
 
 				if (response.status === 401) {
-					this.handleUnauthorized();
+					ApiClient.handleUnauthorized();
 					span.setStatus({
 						code: SpanStatusCode.ERROR,
 						message: "Unauthorized",
@@ -135,7 +135,7 @@ export class ApiClient {
 						throw new Error("Rate limit exceeded");
 					}
 					console.warn(`Rate limited (429). Retrying in ${delayMs}ms...`);
-					await this.delay(delayMs);
+					await ApiClient.delay(delayMs);
 					retries--;
 					delayMs *= 2;
 					continue;
@@ -169,7 +169,7 @@ export class ApiClient {
 						message: "Fallback to mock data",
 					});
 					span.end();
-					await this.delay(400); // Simulate network latency
+					await ApiClient.delay(400); // Simulate network latency
 					return mockFallback();
 				}
 
@@ -182,7 +182,7 @@ export class ApiClient {
 					throw error;
 				}
 
-				await this.delay(500);
+				await ApiClient.delay(500);
 				retries--;
 			}
 		}
@@ -200,7 +200,11 @@ export class ApiClient {
 		options?: FetchOptions,
 		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
-		return this.request<T>(path, { ...options, method: "GET" }, mockFallback);
+		return ApiClient.request<T>(
+			path,
+			{ ...options, method: "GET" },
+			mockFallback,
+		);
 	}
 
 	public static async post<T>(
@@ -211,8 +215,10 @@ export class ApiClient {
 	): Promise<T> {
 		const idempotencyKey =
 			options?.idempotencyKey ||
-			(options?.method !== "GET" ? this.generateIdempotencyKey() : undefined);
-		return this.request<T>(
+			(options?.method !== "GET"
+				? ApiClient.generateIdempotencyKey()
+				: undefined);
+		return ApiClient.request<T>(
 			path,
 			{
 				...options,
@@ -231,8 +237,8 @@ export class ApiClient {
 		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
 		const idempotencyKey =
-			options?.idempotencyKey || this.generateIdempotencyKey();
-		return this.request<T>(
+			options?.idempotencyKey || ApiClient.generateIdempotencyKey();
+		return ApiClient.request<T>(
 			path,
 			{
 				...options,
@@ -250,8 +256,8 @@ export class ApiClient {
 		mockFallback?: () => T | Promise<T>,
 	): Promise<T> {
 		const idempotencyKey =
-			options?.idempotencyKey || this.generateIdempotencyKey();
-		return this.request<T>(
+			options?.idempotencyKey || ApiClient.generateIdempotencyKey();
+		return ApiClient.request<T>(
 			path,
 			{ ...options, method: "DELETE", idempotencyKey },
 			mockFallback,

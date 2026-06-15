@@ -225,10 +225,15 @@ export default function RiderApp({
 								<div className="flex justify-center my-2">
 									<div className="radar-sweep-container flex items-center justify-center">
 										<div className="radar-sweep-line" />
-										<Lucide.Bike size={32} className="text-amber-500 animate-pulse z-10" />
+										<Lucide.Bike
+											size={32}
+											className="text-amber-500 animate-pulse z-10"
+										/>
 									</div>
 								</div>
-								<h4 className="standby-title m-0 text-sm font-bold text-slate-200">Central Store Standby</h4>
+								<h4 className="standby-title m-0 text-sm font-bold text-slate-200">
+									Central Store Standby
+								</h4>
 								<p className="standby-desc m-0 text-xs text-slate-400 max-w-[220px]">
 									Scanning logistics gateway for active delivery dispatches...
 								</p>
