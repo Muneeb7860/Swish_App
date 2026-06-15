@@ -1,19 +1,35 @@
-## 📝 Description
+# 🚀 Pull Request Checklist
 
-Please provide a brief, clear summary of the changes introduced by this Pull Request, including the problem being solved or feature being added.
+Please fill out this checklist before submitting your PR. This helps the team and CI evaluate your changes efficiently.
 
-## ⚙️ Type of Change
+---
 
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 📚 Documentation update (no code changes)
-- [ ] 🧪 Testing & Quality improvements
+## 📋 1. Type of Change
+*Select the appropriate checkbox:*
+- [ ] 🎨 **Frontend UI Fix / Refactor** (Alignment, style, minor layout edits - *Bypasses backend test/coverage gates*)
+- [ ] ⚙️ **Backend Core Change** (Java domain, API, DB migrations - *Triggers JaCoCo 75% coverage check*)
+- [ ] 🤖 **AI / Governance Change** (Python microservice, RAG models)
+- [ ] 🛠️ **DevOps & Infra** (GitHub workflows, Docker Compose, Kubernetes)
 
-## 🛡️ Checklist
+---
 
-- [ ] My code follows the conventional commits message guidelines.
-- [ ] I have added robust unit/integration tests to verify my changes.
-- [ ] I have updated the walkthrough.md or other documentation files accordingly.
-- [ ] No console warnings or compile errors exist in my local development workspace.
-- [ ] All automated tests compile and pass successfully.
+## ✅ 2. Pre-Merge Verification
+*Ensure all of the following checks are complete before requesting review:*
+- [ ] **Conventional Commits:** All commits in this branch follow the Conventional Commits format (e.g., `fix(ui): adjust button alignment` or `feat(auth): add MFA verification`).
+- [ ] **Clean Lint & Build:** Local lints and builds pass without errors (e.g., `npm run lint` or `mvn compile`).
+- [ ] **No Dependency Bloat:** Checked that no local file links (like `file:..` or hardcoded paths) have leaked into `package.json` or lockfiles.
+- [ ] **Detailed Description:** The PR description field below contains a clear summary of the changes (min 10 characters to pass the branch protection check).
+
+---
+
+## 📝 3. Description & Context
+*Provide a brief summary of the changes and the problem they solve:*
+
+*(Write details here...)*
+
+---
+
+## 🧪 4. Testing & Coverage Status
+*If this is a backend change, state if tests were added or modified:*
+*   **New Unit Tests Added?** [Yes / No / N/A]
+*   **Local Coverage Percentage Verified?** [Yes / No]

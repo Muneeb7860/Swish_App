@@ -916,21 +916,24 @@ const B2bDashboard: React.FC = () => {
 									{/* Premium Credit Card Mockup */}
 									<div className="premium-card-wrapper flex justify-center mb-5">
 										<div className="premium-credit-card">
-											<div className="card-top">
-												<span className="card-logo-text">SWISH WHOLESALE</span>
-												<div className="card-chip"></div>
+											<div className="flex justify-between items-center w-full mb-2">
+												<span className="text-xs font-extrabold tracking-wider text-slate-300">SWISH WHOLESALE</span>
+												<div className="premium-credit-card-hologram" />
 											</div>
-											<div className="card-number-mock">
+											<div className="flex justify-start w-full">
+												<div className="premium-credit-card-chip" />
+											</div>
+											<div className="text-lg font-bold tracking-widest text-center my-3 text-slate-100 font-mono">
 												4242 •••• •••• 4242
 											</div>
-											<div className="card-bottom">
-												<div className="card-holder">
-													<span>Card Holder</span>
-													<strong>B2B Merchant Client</strong>
+											<div className="flex justify-between items-end w-full text-[10px] text-slate-400">
+												<div className="flex flex-col">
+													<span className="uppercase text-[8px] tracking-wider text-slate-500">Card Holder</span>
+													<strong className="text-slate-200">B2B Merchant Client</strong>
 												</div>
-												<div className="card-expiry">
-													<span>Expires</span>
-													<strong>12 / 28</strong>
+												<div className="flex flex-col items-end">
+													<span className="uppercase text-[8px] tracking-wider text-slate-500">Expires</span>
+													<strong className="text-slate-200">12 / 28</strong>
 												</div>
 											</div>
 										</div>

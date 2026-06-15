@@ -559,18 +559,7 @@ export default function CustomerApp({
 											}}
 										>
 											{streamData}
-											{isStreaming && (
-												<span
-													className="animate-ping"
-													style={{
-														color: "var(--color-customer)",
-														fontWeight: "bold",
-														marginLeft: "2px",
-													}}
-												>
-													▋
-												</span>
-											)}
+											{isStreaming && <span className="ai-type-cursor" />}
 										</div>
 									)}
 

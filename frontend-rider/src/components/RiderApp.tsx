@@ -221,14 +221,16 @@ export default function RiderApp({
 						</div>
 
 						{!activeOrder ? (
-							<div className="transit-standby-view">
-								<div className="standby-pulse-icon">
-									<Lucide.Bike size={32} className="bike-standby-icon" />
+							<div className="transit-standby-view flex flex-col items-center gap-4 py-8">
+								<div className="flex justify-center my-2">
+									<div className="radar-sweep-container flex items-center justify-center">
+										<div className="radar-sweep-line" />
+										<Lucide.Bike size={32} className="text-amber-500 animate-pulse z-10" />
+									</div>
 								</div>
-								<h4 className="standby-title">Central Store Standby</h4>
-								<p className="standby-desc">
-									Awaiting grocery dispatch dispatches from Swiss regional
-									logistics gateway...
+								<h4 className="standby-title m-0 text-sm font-bold text-slate-200">Central Store Standby</h4>
+								<p className="standby-desc m-0 text-xs text-slate-400 max-w-[220px]">
+									Scanning logistics gateway for active delivery dispatches...
 								</p>
 							</div>
 						) : (

@@ -91,7 +91,14 @@ const TypewriterText = ({ text, onComplete }) => {
 		return () => clearInterval(timer);
 	}, [text, onComplete]);
 
-	return <>{parseMarkdown(displayed)}</>;
+	const isComplete = displayed.length === text.length;
+
+	return (
+		<>
+			{parseMarkdown(displayed)}
+			{!isComplete && <span className="ai-type-cursor" />}
+		</>
+	);
 };
 
 export default function SupportBot({

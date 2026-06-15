@@ -2195,7 +2195,7 @@ export default function App() {
 
 	return (
 		<div
-			className="app-container"
+			className="app-container premium-background-glow"
 			data-active-role={activeRole}
 			style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
 		>
