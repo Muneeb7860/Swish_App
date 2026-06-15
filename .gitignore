@@ -98,6 +98,7 @@ coverage/
 *.lcov
 .nyc_output/
 # Cypress test artifacts (screenshots, videos) — generated, not source
+screenshots/
 frontend-host/cypress/screenshots/
 frontend-host/cypress/videos/
 frontend-customer/cypress/screenshots/
