@@ -117,14 +117,20 @@ export class ApiClient {
 
 				if (response.status === 401) {
 					this.handleUnauthorized();
-					span.setStatus({ code: SpanStatusCode.ERROR, message: "Unauthorized" });
+					span.setStatus({
+						code: SpanStatusCode.ERROR,
+						message: "Unauthorized",
+					});
 					span.end();
 					throw new Error("Unauthorized");
 				}
 
 				if (response.status === 429) {
 					if (retries === 0) {
-						span.setStatus({ code: SpanStatusCode.ERROR, message: "Rate limit exceeded" });
+						span.setStatus({
+							code: SpanStatusCode.ERROR,
+							message: "Rate limit exceeded",
+						});
 						span.end();
 						throw new Error("Rate limit exceeded");
 					}
@@ -137,7 +143,10 @@ export class ApiClient {
 
 				if (!response.ok) {
 					const errorText = await response.text().catch(() => "Unknown error");
-					span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${response.status}: ${errorText}` });
+					span.setStatus({
+						code: SpanStatusCode.ERROR,
+						message: `HTTP ${response.status}: ${errorText}`,
+					});
 					span.end();
 					throw new Error(`HTTP ${response.status}: ${errorText}`);
 				}
@@ -155,14 +164,20 @@ export class ApiClient {
 						`API request to ${path} failed (${(error as Error).message}). Falling back to mock data.`,
 					);
 					span.setAttribute("api.fallback_to_mock", true);
-					span.setStatus({ code: SpanStatusCode.OK, message: "Fallback to mock data" });
+					span.setStatus({
+						code: SpanStatusCode.OK,
+						message: "Fallback to mock data",
+					});
 					span.end();
 					await this.delay(400); // Simulate network latency
 					return mockFallback();
 				}
 
 				if (retries === 0 || responseStatusNotRetryable(error)) {
-					span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+					span.setStatus({
+						code: SpanStatusCode.ERROR,
+						message: (error as Error).message,
+					});
 					span.end();
 					throw error;
 				}
@@ -172,7 +187,10 @@ export class ApiClient {
 			}
 		}
 
-		span.setStatus({ code: SpanStatusCode.ERROR, message: "Request failed after retries" });
+		span.setStatus({
+			code: SpanStatusCode.ERROR,
+			message: "Request failed after retries",
+		});
 		span.end();
 		throw new Error("Request failed after retries");
 	}

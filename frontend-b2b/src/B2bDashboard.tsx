@@ -50,18 +50,24 @@ const B2bDashboard: React.FC = () => {
 	const [isSimulating, setIsSimulating] = useState(false);
 
 	// Navigation Tab
-	const [activeSubTab, setActiveSubTab] = useState<"wholesale" | "onboarding">("wholesale");
+	const [activeSubTab, setActiveSubTab] = useState<"wholesale" | "onboarding">(
+		"wholesale",
+	);
 
 	// Retailer Onboarding States (FR-01)
 	const [retailerName, setRetailerName] = useState("");
 	const [retailerEmail, setRetailerEmail] = useState("");
 	const [retailerStoreId, setRetailerStoreId] = useState("store-valora-01");
-	const [billingTier, setBillingTier] = useState<"BASIC" | "PRO" | "ENTERPRISE">("PRO");
+	const [billingTier, setBillingTier] = useState<
+		"BASIC" | "PRO" | "ENTERPRISE"
+	>("PRO");
 	const [currentRetailer, setCurrentRetailer] = useState<any>(null);
 	const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
 
 	// Sensor Provisioning States (FR-01 Device provisioning)
-	const [sensorType, setSensorType] = useState<"TEMPERATURE" | "HUMIDITY" | "GPS">("TEMPERATURE");
+	const [sensorType, setSensorType] = useState<
+		"TEMPERATURE" | "HUMIDITY" | "GPS"
+	>("TEMPERATURE");
 	const [sensorsList, setSensorsList] = useState<any[]>([]);
 
 	// Loading & Action Flags
@@ -115,16 +121,22 @@ const B2bDashboard: React.FC = () => {
 
 			const data = await res.json();
 			setCurrentRetailer(data);
-			addLog(`Retailer registered successfully! ID: ${data.retailerId}. Status: ${data.status}`, "success");
-			
+			addLog(
+				`Retailer registered successfully! ID: ${data.retailerId}. Status: ${data.status}`,
+				"success",
+			);
+
 			// Dispatch action to event bus for state decoupling
 			window.dispatchEvent(
 				new CustomEvent("swish:action", {
 					detail: { type: "REGISTER_RETAILER", payload: data },
-				})
+				}),
 			);
 		} catch (err: any) {
-			addLog(`API Registration Failed: ${err.message}. Initializing Local Sandbox Mock.`, "warning");
+			addLog(
+				`API Registration Failed: ${err.message}. Initializing Local Sandbox Mock.`,
+				"warning",
+			);
 			// Local Mock Fallback
 			const mockId = "RTL-" + Math.floor(100000 + Math.random() * 900000);
 			const mockRetailer = {
@@ -140,30 +152,38 @@ const B2bDashboard: React.FC = () => {
 				billingAccountId: "ACC-" + Math.floor(1000 + Math.random() * 9000),
 			};
 			setCurrentRetailer(mockRetailer);
-			addLog(`[Local Sandbox Mock] Retailer registered. ID: ${mockId}. Awaiting 3-gate approval.`, "success");
-			
+			addLog(
+				`[Local Sandbox Mock] Retailer registered. ID: ${mockId}. Awaiting 3-gate approval.`,
+				"success",
+			);
+
 			// Dispatch mock action to event bus for state decoupling
 			window.dispatchEvent(
 				new CustomEvent("swish:action", {
 					detail: { type: "REGISTER_RETAILER", payload: mockRetailer },
-				})
+				}),
 			);
 		} finally {
 			setIsRegistering(false);
 		}
 	};
 
-	const handleApproveOnboardingGate = async (gate: "ops" | "compliance" | "admin") => {
+	const handleApproveOnboardingGate = async (
+		gate: "ops" | "compliance" | "admin",
+	) => {
 		if (!currentRetailer) return;
 
 		const retailerId = currentRetailer.retailerId;
 		addLog(`Simulating approval for Gate: ${gate.toUpperCase()}...`, "info");
 
 		try {
-			const res = await fetch(`${gatewayUrl}/api/v1/retailers/${retailerId}/gates/${gate}/approve`, {
-				method: "POST",
-				headers: getRequestHeaders(),
-			});
+			const res = await fetch(
+				`${gatewayUrl}/api/v1/retailers/${retailerId}/gates/${gate}/approve`,
+				{
+					method: "POST",
+					headers: getRequestHeaders(),
+				},
+			);
 
 			if (!res.ok) {
 				throw new Error(`Gate Approval API returned status ${res.status}`);
@@ -173,7 +193,10 @@ const B2bDashboard: React.FC = () => {
 			setCurrentRetailer(data.retailer);
 			if (data.apiKey) {
 				setRevealedApiKey(data.apiKey);
-				addLog("Retailer fully activated! Plaintext API Key generated.", "success");
+				addLog(
+					"Retailer fully activated! Plaintext API Key generated.",
+					"success",
+				);
 			} else {
 				addLog(`Gate ${gate.toUpperCase()} approved successfully.`, "success");
 			}
@@ -185,11 +208,14 @@ const B2bDashboard: React.FC = () => {
 						type: "APPROVE_GATE",
 						payload: { retailerId, gate, ...data.retailer },
 					},
-				})
+				}),
 			);
 		} catch (err: any) {
-			addLog(`API Gate Approval Failed: ${err.message}. Simulating in local sandbox.`, "warning");
-			
+			addLog(
+				`API Gate Approval Failed: ${err.message}. Simulating in local sandbox.`,
+				"warning",
+			);
+
 			// Local Mock State Update
 			setCurrentRetailer((prev: any) => {
 				if (!prev) return null;
@@ -199,9 +225,15 @@ const B2bDashboard: React.FC = () => {
 				if (gate === "admin") {
 					updated.approvalAdmin = true;
 					updated.status = "ACTIVE";
-					const mockApiKey = "swish_live_" + Math.random().toString(36).substring(2, 18) + Math.random().toString(36).substring(2, 18);
+					const mockApiKey =
+						"swish_live_" +
+						Math.random().toString(36).substring(2, 18) +
+						Math.random().toString(36).substring(2, 18);
 					setRevealedApiKey(mockApiKey);
-					addLog("Retailer fully activated! Plaintext API Key generated.", "success");
+					addLog(
+						"Retailer fully activated! Plaintext API Key generated.",
+						"success",
+					);
 				}
 
 				// Dispatch action to event bus for state decoupling
@@ -211,14 +243,13 @@ const B2bDashboard: React.FC = () => {
 							type: "APPROVE_GATE",
 							payload: { retailerId, gate, ...updated },
 						},
-					})
+					}),
 				);
 
 				return updated;
 			});
 		}
 	};
-
 
 	const handleProvisionSensor = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -248,22 +279,31 @@ const B2bDashboard: React.FC = () => {
 			}
 
 			const data = await res.json();
-			addLog(`Sensor provisioned! ID: ${data.sensor.sensorId}. Key generated.`, "success");
-			
+			addLog(
+				`Sensor provisioned! ID: ${data.sensor.sensorId}. Key generated.`,
+				"success",
+			);
+
 			const newSensor = {
 				...data.sensor,
 				deviceKey: data.deviceKey,
 				integrityValid: true,
 			};
 			setSensorsList((prev) => [...prev, newSensor]);
-			
+
 			// Prompt to save key
-			alert(`IoT Device Key Provisioned Successfully:\n\n${data.deviceKey}\n\nRecord this key. It will not be displayed again.`);
+			alert(
+				`IoT Device Key Provisioned Successfully:\n\n${data.deviceKey}\n\nRecord this key. It will not be displayed again.`,
+			);
 		} catch (err: any) {
-			addLog(`API Provisioning Failed: ${err.message}. Fallback to Sandbox mock.`, "warning");
-			
+			addLog(
+				`API Provisioning Failed: ${err.message}. Fallback to Sandbox mock.`,
+				"warning",
+			);
+
 			const mockSensorId = "SNS-" + Math.floor(100000 + Math.random() * 900000);
-			const mockDeviceKey = "dev_key_" + Math.random().toString(36).substring(2, 15);
+			const mockDeviceKey =
+				"dev_key_" + Math.random().toString(36).substring(2, 15);
 			const newMockSensor = {
 				sensorId: mockSensorId,
 				retailerId,
@@ -276,56 +316,88 @@ const B2bDashboard: React.FC = () => {
 				integrityValid: true,
 			};
 			setSensorsList((prev) => [...prev, newMockSensor]);
-			addLog(`[Local Sandbox Mock] Sensor provisioned. ID: ${mockSensorId}`, "success");
-			
-			alert(`[Local Sandbox Mock] IoT Device Key Provisioned:\n\n${mockDeviceKey}\n\nRecord this key. It will not be displayed again.`);
+			addLog(
+				`[Local Sandbox Mock] Sensor provisioned. ID: ${mockSensorId}`,
+				"success",
+			);
+
+			alert(
+				`[Local Sandbox Mock] IoT Device Key Provisioned:\n\n${mockDeviceKey}\n\nRecord this key. It will not be displayed again.`,
+			);
 		} finally {
 			setIsProvisioning(false);
 		}
 	};
 
 	const handleVerifySensorIntegrity = async (sensorId: string) => {
-		addLog(`Verifying SHA-256 Telemetry Hash-Chain Integrity for ${sensorId}...`, "info");
+		addLog(
+			`Verifying SHA-256 Telemetry Hash-Chain Integrity for ${sensorId}...`,
+			"info",
+		);
 		try {
-			const res = await fetch(`${gatewayUrl}/api/v1/sensors/${sensorId}/verify-integrity`, {
-				method: "GET",
-				headers: getRequestHeaders(),
-			});
+			const res = await fetch(
+				`${gatewayUrl}/api/v1/sensors/${sensorId}/verify-integrity`,
+				{
+					method: "GET",
+					headers: getRequestHeaders(),
+				},
+			);
 
 			if (!res.ok) {
-				throw new Error(`Integrity verification API returned status ${res.status}`);
+				throw new Error(
+					`Integrity verification API returned status ${res.status}`,
+				);
 			}
 
 			const data = await res.json();
 			const isValid = data.valid;
-			
+
 			setSensorsList((prev) =>
-				prev.map((s) => (s.sensorId === sensorId ? { ...s, integrityValid: isValid } : s))
+				prev.map((s) =>
+					s.sensorId === sensorId ? { ...s, integrityValid: isValid } : s,
+				),
 			);
-			
+
 			if (isValid) {
-				addLog(`Verification PASSED: Telemetry chain for ${sensorId} is cryptographically secure.`, "success");
+				addLog(
+					`Verification PASSED: Telemetry chain for ${sensorId} is cryptographically secure.`,
+					"success",
+				);
 			} else {
-				addLog(`Verification FAILED: Hash-chain anomaly detected on device ${sensorId}!`, "error");
+				addLog(
+					`Verification FAILED: Hash-chain anomaly detected on device ${sensorId}!`,
+					"error",
+				);
 			}
 		} catch (err: any) {
-			addLog(`API Integrity check failed: ${err.message}. Simulating locally.`, "warning");
-			
+			addLog(
+				`API Integrity check failed: ${err.message}. Simulating locally.`,
+				"warning",
+			);
+
 			// Mock verification always succeeds unless simulated otherwise
 			setSensorsList((prev) =>
-				prev.map((s) => (s.sensorId === sensorId ? { ...s, integrityValid: true } : s))
+				prev.map((s) =>
+					s.sensorId === sensorId ? { ...s, integrityValid: true } : s,
+				),
 			);
-			addLog(`[Local Sandbox Mock] Verification PASSED: Telemetry chain for ${sensorId} is mathematically verified.`, "success");
+			addLog(
+				`[Local Sandbox Mock] Verification PASSED: Telemetry chain for ${sensorId} is mathematically verified.`,
+				"success",
+			);
 		}
 	};
 
 	const handleCalibrateSensor = async (sensorId: string) => {
 		addLog(`Calibrating sensor ${sensorId}...`, "info");
 		try {
-			const res = await fetch(`${gatewayUrl}/api/v1/sensors/${sensorId}/calibrate?success=true`, {
-				method: "POST",
-				headers: getRequestHeaders(),
-			});
+			const res = await fetch(
+				`${gatewayUrl}/api/v1/sensors/${sensorId}/calibrate?success=true`,
+				{
+					method: "POST",
+					headers: getRequestHeaders(),
+				},
+			);
 
 			if (!res.ok) {
 				throw new Error(`Calibration API returned status ${res.status}`);
@@ -333,15 +405,37 @@ const B2bDashboard: React.FC = () => {
 
 			const data = await res.json();
 			setSensorsList((prev) =>
-				prev.map((s) => (s.sensorId === sensorId ? { ...s, lastCalibratedAt: data.lastCalibratedAt, calibrationStatus: data.calibrationStatus } : s))
+				prev.map((s) =>
+					s.sensorId === sensorId
+						? {
+								...s,
+								lastCalibratedAt: data.lastCalibratedAt,
+								calibrationStatus: data.calibrationStatus,
+							}
+						: s,
+				),
 			);
 			addLog(`Sensor ${sensorId} calibrated successfully.`, "success");
 		} catch (err: any) {
-			addLog(`API Calibration failed: ${err.message}. Simulating locally.`, "warning");
-			setSensorsList((prev) =>
-				prev.map((s) => (s.sensorId === sensorId ? { ...s, lastCalibratedAt: new Date().toISOString(), calibrationStatus: "SUCCESS" } : s))
+			addLog(
+				`API Calibration failed: ${err.message}. Simulating locally.`,
+				"warning",
 			);
-			addLog(`[Local Sandbox Mock] Sensor ${sensorId} calibrated successfully.`, "success");
+			setSensorsList((prev) =>
+				prev.map((s) =>
+					s.sensorId === sensorId
+						? {
+								...s,
+								lastCalibratedAt: new Date().toISOString(),
+								calibrationStatus: "SUCCESS",
+							}
+						: s,
+				),
+			);
+			addLog(
+				`[Local Sandbox Mock] Sensor ${sensorId} calibrated successfully.`,
+				"success",
+			);
 		}
 	};
 
@@ -350,10 +444,13 @@ const B2bDashboard: React.FC = () => {
 		if (currentRetailer && currentRetailer.status === "ACTIVE") {
 			const fetchSensors = async () => {
 				try {
-					const res = await fetch(`${gatewayUrl}/api/v1/sensors?retailerId=${currentRetailer.retailerId}`, {
-						method: "GET",
-						headers: getRequestHeaders(),
-					});
+					const res = await fetch(
+						`${gatewayUrl}/api/v1/sensors?retailerId=${currentRetailer.retailerId}`,
+						{
+							method: "GET",
+							headers: getRequestHeaders(),
+						},
+					);
 					if (res.ok) {
 						const data = await res.json();
 						setSensorsList(data);
@@ -738,7 +835,9 @@ const B2bDashboard: React.FC = () => {
 						<div className="flex justify-between my-6 relative px-2.5 timeline-visualizer">
 							<div className="absolute top-4 left-[30px] right-[30px] h-[2px] bg-slate-200 dark:bg-slate-800/40 z-10"></div>
 
-							<div className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${orderStatus === "PENDING" ? "active" : "completed"}`}>
+							<div
+								className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${orderStatus === "PENDING" ? "active" : "completed"}`}
+							>
 								<div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition duration-300 border-2 step-circle">
 									1
 								</div>
@@ -747,15 +846,17 @@ const B2bDashboard: React.FC = () => {
 								</div>
 							</div>
 
-							<div className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
-								orderStatus === "PAYMENT_PROCESSING"
-									? "active"
-									: orderStatus === "PAYMENT_FAILED"
-										? "failed"
-										: orderStatus !== "PENDING"
-											? "completed"
-											: ""
-							}`}>
+							<div
+								className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
+									orderStatus === "PAYMENT_PROCESSING"
+										? "active"
+										: orderStatus === "PAYMENT_FAILED"
+											? "failed"
+											: orderStatus !== "PENDING"
+												? "completed"
+												: ""
+								}`}
+							>
 								<div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition duration-300 border-2 step-circle">
 									2
 								</div>
@@ -764,15 +865,20 @@ const B2bDashboard: React.FC = () => {
 								</div>
 							</div>
 
-							<div className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
-								orderStatus === "PROCESSING"
-									? "active"
-									: (orderStatus === "APPROVED" || orderStatus === "HUMAN_TRIAGE")
-										? "completed"
-										: orderStatus === "PAYMENT_FAILED"
-											? "failed"
-											: ""
-							}`}>
+							<div
+								className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
+									orderStatus === "PROCESSING"
+										? "active"
+										: (
+													orderStatus === "APPROVED" ||
+														orderStatus === "HUMAN_TRIAGE"
+												)
+											? "completed"
+											: orderStatus === "PAYMENT_FAILED"
+												? "failed"
+												: ""
+								}`}
+							>
 								<div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition duration-300 border-2 step-circle">
 									3
 								</div>
@@ -781,13 +887,15 @@ const B2bDashboard: React.FC = () => {
 								</div>
 							</div>
 
-							<div className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
-								orderStatus === "APPROVED"
-									? "completed"
-									: orderStatus === "HUMAN_TRIAGE"
-										? "failed" // We can treat human triage as warning or failed state styling
-										: ""
-							}`}>
+							<div
+								className={`flex flex-col items-center gap-2 z-20 flex-1 timeline-step ${
+									orderStatus === "APPROVED"
+										? "completed"
+										: orderStatus === "HUMAN_TRIAGE"
+											? "failed" // We can treat human triage as warning or failed state styling
+											: ""
+								}`}
+							>
 								<div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition duration-300 border-2 step-circle">
 									4
 								</div>
@@ -804,7 +912,7 @@ const B2bDashboard: React.FC = () => {
 									<h4 className="m-0 mb-3 text-xs font-bold text-text-secondary uppercase tracking-wider">
 										Secure Credit Card Input (Stripe Simulator)
 									</h4>
-									
+
 									{/* Premium Credit Card Mockup */}
 									<div className="premium-card-wrapper flex justify-center mb-5">
 										<div className="premium-credit-card">
@@ -812,7 +920,9 @@ const B2bDashboard: React.FC = () => {
 												<span className="card-logo-text">SWISH WHOLESALE</span>
 												<div className="card-chip"></div>
 											</div>
-											<div className="card-number-mock">4242 •••• •••• 4242</div>
+											<div className="card-number-mock">
+												4242 •••• •••• 4242
+											</div>
 											<div className="card-bottom">
 												<div className="card-holder">
 													<span>Card Holder</span>
@@ -984,7 +1094,8 @@ const B2bDashboard: React.FC = () => {
 							</div>
 						</div>
 						<p className="text-xs text-text-secondary mt-0 mb-4 leading-relaxed">
-							Messages received in real-time from the notification-engine via Gateway.
+							Messages received in real-time from the notification-engine via
+							Gateway.
 						</p>
 
 						<div className="notifications-list flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
@@ -1058,7 +1169,6 @@ const B2bDashboard: React.FC = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 animate-fade-in text-slate-800 dark:text-slate-200">
 					{/* Left Column: Register and Provision */}
 					<div className="flex flex-col gap-6">
-						
 						{/* Retailer Self-Service Onboarding Form (FR-01) */}
 						<div className="upgrade-glow-card p-6 flex flex-col gap-4">
 							<div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1066,23 +1176,36 @@ const B2bDashboard: React.FC = () => {
 									🏢 Retailer Tenant Onboarding Portal
 								</h3>
 								{currentRetailer && (
-									<span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-										currentRetailer.status === "ACTIVE" ? "bg-emerald-950/40 text-emerald-400 border border-emerald-500/20" :
-										currentRetailer.status === "PENDING" ? "bg-amber-950/40 text-amber-400 border border-amber-500/20" : "bg-slate-800 text-slate-400"
-									}`}>
+									<span
+										className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+											currentRetailer.status === "ACTIVE"
+												? "bg-emerald-950/40 text-emerald-400 border border-emerald-500/20"
+												: currentRetailer.status === "PENDING"
+													? "bg-amber-950/40 text-amber-400 border border-amber-500/20"
+													: "bg-slate-800 text-slate-400"
+										}`}
+									>
 										{currentRetailer.status}
 									</span>
 								)}
 							</div>
 
 							{!currentRetailer ? (
-								<form onSubmit={handleRegisterRetailer} className="flex flex-col gap-4">
+								<form
+									onSubmit={handleRegisterRetailer}
+									className="flex flex-col gap-4"
+								>
 									<p className="text-xs text-slate-500 mt-0 leading-relaxed">
-										Register your retail convenience-store network hub with Swish OS. Self-signup initiates a PENDING onboarding application that must pass 3 ops-gated compliance validations before activation.
+										Register your retail convenience-store network hub with
+										Swish OS. Self-signup initiates a PENDING onboarding
+										application that must pass 3 ops-gated compliance
+										validations before activation.
 									</p>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div className="flex flex-col gap-1">
-											<label className="text-xs font-semibold text-slate-500">Retailer Entity Name</label>
+											<label className="text-xs font-semibold text-slate-500">
+												Retailer Entity Name
+											</label>
 											<input
 												type="text"
 												required
@@ -1093,7 +1216,9 @@ const B2bDashboard: React.FC = () => {
 											/>
 										</div>
 										<div className="flex flex-col gap-1">
-											<label className="text-xs font-semibold text-slate-500">Corporate Billing Email</label>
+											<label className="text-xs font-semibold text-slate-500">
+												Corporate Billing Email
+											</label>
 											<input
 												type="email"
 												required
@@ -1106,7 +1231,9 @@ const B2bDashboard: React.FC = () => {
 									</div>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div className="flex flex-col gap-1">
-											<label className="text-xs font-semibold text-slate-500">Assigned Store Hub ID</label>
+											<label className="text-xs font-semibold text-slate-500">
+												Assigned Store Hub ID
+											</label>
 											<input
 												type="text"
 												required
@@ -1117,15 +1244,23 @@ const B2bDashboard: React.FC = () => {
 											/>
 										</div>
 										<div className="flex flex-col gap-1">
-											<label className="text-xs font-semibold text-slate-500">Select Subscription Tier</label>
+											<label className="text-xs font-semibold text-slate-500">
+												Select Subscription Tier
+											</label>
 											<select
 												className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
 												value={billingTier}
 												onChange={(e) => setBillingTier(e.target.value as any)}
 											>
-												<option value="BASIC">BASIC ($1,000/mo - IoT Telemetry only)</option>
-												<option value="PRO">PRO ($1,500/mo - Telemetry + Procurement)</option>
-												<option value="ENTERPRISE">ENTERPRISE (SLA Guarantees + Audits)</option>
+												<option value="BASIC">
+													BASIC ($1,000/mo - IoT Telemetry only)
+												</option>
+												<option value="PRO">
+													PRO ($1,500/mo - Telemetry + Procurement)
+												</option>
+												<option value="ENTERPRISE">
+													ENTERPRISE (SLA Guarantees + Audits)
+												</option>
 											</select>
 										</div>
 									</div>
@@ -1134,7 +1269,9 @@ const B2bDashboard: React.FC = () => {
 										disabled={isRegistering}
 										className="w-full mt-2 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg cursor-pointer transition shadow"
 									>
-										{isRegistering ? "Registering Tenant..." : "Register Retailer (Self-Service)"}
+										{isRegistering
+											? "Registering Tenant..."
+											: "Register Retailer (Self-Service)"}
 									</button>
 								</form>
 							) : (
@@ -1142,24 +1279,38 @@ const B2bDashboard: React.FC = () => {
 									<div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800/60 rounded-xl p-4 flex flex-col gap-2">
 										<div className="flex justify-between text-xs">
 											<span className="text-slate-500">Retailer tenantId:</span>
-											<strong className="font-mono text-slate-800 dark:text-slate-200">{currentRetailer.retailerId}</strong>
+											<strong className="font-mono text-slate-800 dark:text-slate-200">
+												{currentRetailer.retailerId}
+											</strong>
 										</div>
 										<div className="flex justify-between text-xs">
 											<span className="text-slate-500">Corporate Name:</span>
-											<span className="font-medium">{currentRetailer.name}</span>
+											<span className="font-medium">
+												{currentRetailer.name}
+											</span>
 										</div>
 										<div className="flex justify-between text-xs">
-											<span className="text-slate-500">Provisioned Store Hub:</span>
-											<span className="font-mono text-slate-700 dark:text-slate-300">{currentRetailer.storeId}</span>
+											<span className="text-slate-500">
+												Provisioned Store Hub:
+											</span>
+											<span className="font-mono text-slate-700 dark:text-slate-300">
+												{currentRetailer.storeId}
+											</span>
 										</div>
 										<div className="flex justify-between text-xs">
 											<span className="text-slate-500">Subscription Tier:</span>
-											<span className="font-semibold text-indigo-600 dark:text-indigo-400">{currentRetailer.tier}</span>
+											<span className="font-semibold text-indigo-600 dark:text-indigo-400">
+												{currentRetailer.tier}
+											</span>
 										</div>
 										{currentRetailer.billingAccountId && (
 											<div className="flex justify-between border-t border-slate-200 dark:border-slate-800/60 pt-2 mt-1 text-xs">
-												<span className="text-slate-500">Billing Account ID:</span>
-												<span className="font-mono text-slate-800 dark:text-slate-200">{currentRetailer.billingAccountId}</span>
+												<span className="text-slate-500">
+													Billing Account ID:
+												</span>
+												<span className="font-mono text-slate-800 dark:text-slate-200">
+													{currentRetailer.billingAccountId}
+												</span>
 											</div>
 										)}
 									</div>
@@ -1170,18 +1321,27 @@ const B2bDashboard: React.FC = () => {
 											Administrative Onboarding Gates
 										</h4>
 										<p className="text-[10px] text-slate-400 m-0 leading-relaxed">
-											In accordance with corporate governance protocols, new retailers are reviewed across three validation checkpoints. Activating the final Admin Gate activates database records and triggers billing accounts.
+											In accordance with corporate governance protocols, new
+											retailers are reviewed across three validation
+											checkpoints. Activating the final Admin Gate activates
+											database records and triggers billing accounts.
 										</p>
 										<div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
 											{/* Gate 1: Ops */}
-											<div className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
-												currentRetailer.approvalOps
-													? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
-													: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
-											}`}>
-												<span className="text-xs font-bold block mb-1.5">Ops Vetting</span>
+											<div
+												className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
+													currentRetailer.approvalOps
+														? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
+														: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
+												}`}
+											>
+												<span className="text-xs font-bold block mb-1.5">
+													Ops Vetting
+												</span>
 												{currentRetailer.approvalOps ? (
-													<span className="text-[10px] font-semibold">Approved ✅</span>
+													<span className="text-[10px] font-semibold">
+														Approved ✅
+													</span>
 												) : (
 													<button
 														className="px-2.5 py-1 text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/60 rounded bg-indigo-500/10 cursor-pointer"
@@ -1191,20 +1351,28 @@ const B2bDashboard: React.FC = () => {
 													</button>
 												)}
 											</div>
-											
+
 											{/* Gate 2: Compliance */}
-											<div className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
-												currentRetailer.approvalCompliance
-													? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
-													: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
-											}`}>
-												<span className="text-xs font-bold block mb-1.5">Compliance</span>
+											<div
+												className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
+													currentRetailer.approvalCompliance
+														? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
+														: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
+												}`}
+											>
+												<span className="text-xs font-bold block mb-1.5">
+													Compliance
+												</span>
 												{currentRetailer.approvalCompliance ? (
-													<span className="text-[10px] font-semibold">Approved ✅</span>
+													<span className="text-[10px] font-semibold">
+														Approved ✅
+													</span>
 												) : (
 													<button
 														className="px-2.5 py-1 text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/60 rounded bg-indigo-500/10 cursor-pointer"
-														onClick={() => handleApproveOnboardingGate("compliance")}
+														onClick={() =>
+															handleApproveOnboardingGate("compliance")
+														}
 													>
 														Approve
 													</button>
@@ -1212,14 +1380,20 @@ const B2bDashboard: React.FC = () => {
 											</div>
 
 											{/* Gate 3: Admin */}
-											<div className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
-												currentRetailer.approvalAdmin
-													? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
-													: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
-											}`}>
-												<span className="text-xs font-bold block mb-1.5">Admin Gate</span>
+											<div
+												className={`flex flex-col items-center justify-center p-3.5 rounded-lg border text-center transition ${
+													currentRetailer.approvalAdmin
+														? "bg-emerald-950/20 border-emerald-800 text-emerald-400"
+														: "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-400"
+												}`}
+											>
+												<span className="text-xs font-bold block mb-1.5">
+													Admin Gate
+												</span>
 												{currentRetailer.approvalAdmin ? (
-													<span className="text-[10px] font-semibold">Approved ✅</span>
+													<span className="text-[10px] font-semibold">
+														Approved ✅
+													</span>
 												) : (
 													<button
 														className="px-2.5 py-1 text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/60 rounded bg-indigo-500/10 cursor-pointer"
@@ -1239,13 +1413,16 @@ const B2bDashboard: React.FC = () => {
 													🔑 Secure API Authorization Key
 												</span>
 												<p className="text-[10px] text-slate-400 m-0 leading-relaxed">
-													This key will be hashed downstream. Record it securely to establish connection adapters.
+													This key will be hashed downstream. Record it securely
+													to establish connection adapters.
 												</p>
 												<div className="flex items-center gap-2 mt-1 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-indigo-300 break-all select-all">
 													<code>{revealedApiKey}</code>
 													<button
 														className="ml-auto px-2 py-0.5 border border-slate-700 bg-slate-800 rounded text-[10px] text-slate-200 hover:text-indigo-400 hover:border-indigo-400/30 cursor-pointer whitespace-nowrap"
-														onClick={() => copyToClipboard(revealedApiKey, "api-key")}
+														onClick={() =>
+															copyToClipboard(revealedApiKey, "api-key")
+														}
 													>
 														{copiedIndex === "api-key" ? "Copied!" : "Copy Key"}
 													</button>
@@ -1273,18 +1450,29 @@ const B2bDashboard: React.FC = () => {
 								<h3 className="m-0 text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
 									📡 IoT Sensor Device Provisioning
 								</h3>
-								
-								<form onSubmit={handleProvisionSensor} className="flex flex-col sm:flex-row items-end gap-4">
+
+								<form
+									onSubmit={handleProvisionSensor}
+									className="flex flex-col sm:flex-row items-end gap-4"
+								>
 									<div className="flex flex-col gap-1 flex-1">
-										<label className="text-xs font-semibold text-slate-500">Provision Device Type</label>
+										<label className="text-xs font-semibold text-slate-500">
+											Provision Device Type
+										</label>
 										<select
 											className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
 											value={sensorType}
 											onChange={(e) => setSensorType(e.target.value as any)}
 										>
-											<option value="TEMPERATURE">Cold-chain Temperature Sensor (TimescaleDB)</option>
-											<option value="HUMIDITY">Warehouse Ambient Humidity Sensor (RH%)</option>
-											<option value="GPS">Rider Fleet GPS Coordinate Tracker</option>
+											<option value="TEMPERATURE">
+												Cold-chain Temperature Sensor (TimescaleDB)
+											</option>
+											<option value="HUMIDITY">
+												Warehouse Ambient Humidity Sensor (RH%)
+											</option>
+											<option value="GPS">
+												Rider Fleet GPS Coordinate Tracker
+											</option>
 										</select>
 									</div>
 									<button
@@ -1303,7 +1491,8 @@ const B2bDashboard: React.FC = () => {
 									</h4>
 									{sensorsList.length === 0 ? (
 										<div className="text-center py-8 text-xs text-slate-400 italic bg-slate-50 dark:bg-slate-800/20 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-											No active sensors provisioned for store hub {currentRetailer.storeId} yet.
+											No active sensors provisioned for store hub{" "}
+											{currentRetailer.storeId} yet.
 										</div>
 									) : (
 										<div className="flex flex-col gap-3">
@@ -1321,43 +1510,80 @@ const B2bDashboard: React.FC = () => {
 																</span>
 															</span>
 															<span className="text-[10px] text-slate-400 font-mono">
-																Hub Owner: {sensor.retailerId} | Store: {sensor.storeId}
+																Hub Owner: {sensor.retailerId} | Store:{" "}
+																{sensor.storeId}
 															</span>
 														</div>
 														<div className="flex items-center gap-2">
 															<span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
-															<span className="text-xs font-medium text-emerald-400 capitalize">{sensor.status.toLowerCase()}</span>
-														</div>
-													</div>
-													
-													<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-t border-slate-200/50 dark:border-slate-800/40 pt-2 mt-1 gap-2 text-xs">
-														<div className="flex flex-col gap-0.5">
-															<span className="text-slate-500 text-[9px] uppercase tracking-wider">Last Calibration</span>
-															<span className="font-semibold text-slate-700 dark:text-slate-300">
-																{sensor.lastCalibratedAt ? new Date(sensor.lastCalibratedAt).toLocaleString() : "Never"}
+															<span className="text-xs font-medium text-emerald-400 capitalize">
+																{sensor.status.toLowerCase()}
 															</span>
 														</div>
-														
+													</div>
+
+													<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-t border-slate-200/50 dark:border-slate-800/40 pt-2 mt-1 gap-2 text-xs">
+														<div className="flex flex-col gap-0.5">
+															<span className="text-slate-500 text-[9px] uppercase tracking-wider">
+																Last Calibration
+															</span>
+															<span className="font-semibold text-slate-700 dark:text-slate-300">
+																{sensor.lastCalibratedAt
+																	? new Date(
+																			sensor.lastCalibratedAt,
+																		).toLocaleString()
+																	: "Never"}
+															</span>
+														</div>
+
 														<div className="flex gap-2 self-end">
 															<button
 																className="px-2.5 py-1 text-[10px] font-semibold text-indigo-400 border border-indigo-500/20 hover:border-indigo-400/40 bg-indigo-500/5 rounded hover:bg-indigo-500/10 cursor-pointer"
-																onClick={() => handleCalibrateSensor(sensor.sensorId)}
+																onClick={() =>
+																	handleCalibrateSensor(sensor.sensorId)
+																}
 															>
 																Calibrate
 															</button>
 															<button
 																className="px-2.5 py-1 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20 hover:border-emerald-400/40 bg-emerald-500/5 rounded hover:bg-emerald-500/10 cursor-pointer"
-																onClick={() => handleVerifySensorIntegrity(sensor.sensorId)}
+																onClick={() =>
+																	handleVerifySensorIntegrity(sensor.sensorId)
+																}
 															>
 																Verify Chain
 															</button>
 														</div>
 													</div>
-													
+
 													{/* Calibration and integrity status tags */}
 													<div className="flex gap-4 mt-1 border-t border-slate-200/20 dark:border-slate-800/20 pt-1.5 text-[9px] font-mono text-slate-500">
-														<span>Calibration status: <strong className={sensor.calibrationStatus === "SUCCESS" ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>{sensor.calibrationStatus}</strong></span>
-														<span>SHA-256 chain integrity: <strong className={sensor.integrityValid ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>{sensor.integrityValid ? "VALID (SECURE)" : "INVALID"}</strong></span>
+														<span>
+															Calibration status:{" "}
+															<strong
+																className={
+																	sensor.calibrationStatus === "SUCCESS"
+																		? "text-emerald-400 font-bold"
+																		: "text-amber-400 font-bold"
+																}
+															>
+																{sensor.calibrationStatus}
+															</strong>
+														</span>
+														<span>
+															SHA-256 chain integrity:{" "}
+															<strong
+																className={
+																	sensor.integrityValid
+																		? "text-emerald-400 font-bold"
+																		: "text-rose-400 font-bold"
+																}
+															>
+																{sensor.integrityValid
+																	? "VALID (SECURE)"
+																	: "INVALID"}
+															</strong>
+														</span>
 													</div>
 												</div>
 											))}

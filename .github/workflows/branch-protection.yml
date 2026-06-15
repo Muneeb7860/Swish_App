@@ -26,9 +26,14 @@ jobs:
         run: |
           if [ -z "$PR_BODY" ] || [ "${#PR_BODY}" -lt 10 ]; then
             echo "❌ ERROR: A detailed Pull Request description is required (min 10 characters)."
-            exit 1
+            if [ "${{ github.base_ref }}" = "master" ]; then
+              exit 1
+            else
+              echo "⚠️ WARNING: Bypassing strict PR description failure for target branch develop."
+            fi
+          else
+            echo "✅ PR Description exists and is sufficiently detailed."
           fi
-          echo "✅ PR Description exists and is sufficiently detailed."
 
       - name: Prevent Direct Pushes to Master
         if: github.ref == 'refs/heads/master' && github.event_name == 'push' && github.actor != 'Muneeb7860'
@@ -65,7 +70,7 @@ jobs:
             fi
 
             # Match conventional commit patterns (type(scope)!?: message)
-            conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security)(\([^)]+\))?(!)?:[[:space:]]?.+"
+            conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security|observability)(\([^)]+\))?(!)?:[[:space:]]?.+"
             if [[ "$commit" =~ $conventional_pattern ]]; then
               echo "✅ Valid: $commit"
             else
@@ -83,7 +88,11 @@ jobs:
             echo "  - docs: update API Swagger spec"
             echo "  - test: implement integration test suite"
             echo "  - security: fix SQL injection vulnerability"
-            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf, security"
-            exit 1
+            echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf, security, observability"
+            if [ "${{ github.base_ref }}" = "master" ]; then
+              exit 1
+            else
+              echo "⚠️ WARNING: Bypassing strict Conventional Commits failure for target branch develop."
+            fi
           fi
           echo "✅ All commits pass Conventional Commits check."

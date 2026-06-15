@@ -64,9 +64,7 @@ export default function MfaLoginPortal({
 				{mfaStep === "credentials" ? (
 					<div className="mfa-form-layout">
 						<div className="mfa-field-group">
-							<label className="mfa-label">
-								Authentication Profile (Role)
-							</label>
+							<label className="mfa-label">Authentication Profile (Role)</label>
 							<select
 								id="mfa-select-role"
 								aria-label="Select Authentication Profile"
@@ -83,9 +81,7 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">
-								Account Password
-							</label>
+							<label className="mfa-label">Account Password</label>
 							<input
 								id="input-mfa-password"
 								type="password"
@@ -97,9 +93,7 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">
-								MFA Verification Path
-							</label>
+							<label className="mfa-label">MFA Verification Path</label>
 							<select
 								id="select-mfa-method"
 								value={mfaMethod}
@@ -142,9 +136,7 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">
-								6-Digit Verification Code
-							</label>
+							<label className="mfa-label">6-Digit Verification Code</label>
 							<input
 								id="input-mfa-otp"
 								type="text"

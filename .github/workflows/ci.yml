@@ -15,9 +15,72 @@ on:
       - Windows_Machine
 
 jobs:
+  changes:
+    name: Detect File Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      microservices: ${{ steps.filter.outputs.microservices }}
+      frontend-host: ${{ steps.filter.outputs.frontend-host }}
+      frontend-admin: ${{ steps.filter.outputs.frontend-admin }}
+      frontend-customer: ${{ steps.filter.outputs.frontend-customer }}
+      frontend-rider: ${{ steps.filter.outputs.frontend-rider }}
+      frontend-b2b: ${{ steps.filter.outputs.frontend-b2b }}
+      governance: ${{ steps.filter.outputs.governance }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Path Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'pom.xml'
+              - '.github/workflows/ci.yml'
+            microservices:
+              - 'core-business-engine/**'
+              - 'notification-engine/**'
+              - 'platform-gateway/**'
+              - 'shared-async-services/**'
+              - 'pom.xml'
+              - '.github/workflows/ci.yml'
+            frontend-host:
+              - 'frontend-host/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            frontend-admin:
+              - 'frontend-admin/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            frontend-customer:
+              - 'frontend-customer/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            frontend-rider:
+              - 'frontend-rider/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            frontend-b2b:
+              - 'frontend-b2b/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            governance:
+              - 'homelab-ai-governance/**'
+              - '.github/workflows/ci.yml'
+
   backend-quality:
     name: Backend Quality Gate (Test & Security)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -67,6 +130,8 @@ jobs:
   microservices-quality:
     name: Microservices Quality Gate (Gateway, Core Business, Notification, Shared Async)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.microservices == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -92,12 +157,11 @@ jobs:
       - name: Build All Microservices
         run: mvn clean package -DskipTests
 
-  frontend-quality:
-    name: Frontend Quality Gate (Build & Lint)
+  frontend-host-quality:
+    name: Frontend Host Quality (Build & Lint)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mfe: [frontend-host, frontend-admin, frontend-customer, frontend-rider, frontend-b2b]
+    needs: [changes]
+    if: needs.changes.outputs.frontend-host == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -107,34 +171,143 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: ./${{ matrix.mfe }}/package-lock.json
+          cache-dependency-path: ./frontend-host/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./${{ matrix.mfe }}
+        working-directory: ./frontend-host
         run: npm ci
 
       - name: Run ESLint Standards Validation
-        working-directory: ./${{ matrix.mfe }}
+        working-directory: ./frontend-host
         run: npm run lint
 
       - name: Build MFE Assets for Production
-        working-directory: ./${{ matrix.mfe }}
+        working-directory: ./frontend-host
+        run: npm run build
+
+  frontend-admin-quality:
+    name: Frontend Admin Quality (Build & Lint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.frontend-admin == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend-admin/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend-admin
+        run: npm ci
+
+      - name: Run ESLint Standards Validation
+        working-directory: ./frontend-admin
+        run: npm run lint
+
+      - name: Build MFE Assets for Production
+        working-directory: ./frontend-admin
+        run: npm run build
+
+  frontend-customer-quality:
+    name: Frontend Customer Quality (Build & Lint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.frontend-customer == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend-customer/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend-customer
+        run: npm ci
+
+      - name: Run ESLint Standards Validation
+        working-directory: ./frontend-customer
+        run: npm run lint
+
+      - name: Build MFE Assets for Production
+        working-directory: ./frontend-customer
+        run: npm run build
+
+  frontend-rider-quality:
+    name: Frontend Rider Quality (Build & Lint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.frontend-rider == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend-rider/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend-rider
+        run: npm ci
+
+      - name: Run ESLint Standards Validation
+        working-directory: ./frontend-rider
+        run: npm run lint
+
+      - name: Build MFE Assets for Production
+        working-directory: ./frontend-rider
+        run: npm run build
+
+  frontend-b2b-quality:
+    name: Frontend B2B Quality (Build & Lint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.frontend-b2b == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend-b2b/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend-b2b
+        run: npm ci
+
+      - name: Run ESLint Standards Validation
+        working-directory: ./frontend-b2b
+        run: npm run lint
+
+      - name: Build MFE Assets for Production
+        working-directory: ./frontend-b2b
         run: npm run build
 
   cypress-e2e:
     name: Cypress E2E (auth, orders, rider, admin)
     runs-on: ubuntu-latest
-    # E2E requires the full stack. We spin up the backend against a real
-    # PostgreSQL service — the Flyway migrations use PostgreSQL PL/pgSQL
-    # functions and triggers that H2 cannot parse — plus a real Redis. The
-    # backend runs under the `staging` profile (Postgres datasource; GCP
-    # Secret Manager stays disabled). The Vite dev server runs against it.
-    needs: [backend-quality]
+    needs: [changes, backend-quality]
+    if: |
+      always() &&
+      needs.changes.result == 'success' &&
+      (needs.backend-quality.result == 'success' || needs.backend-quality.result == 'skipped') &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend-customer == 'true')
 
     services:
-      # Redis is needed by the Spring Boot app even in test mode
-      # (StringRedisTemplate is @MockBean'd but the autoconfiguration still fires)
-      # Use a real Redis so the app starts without connection errors.
       redis:
         image: redis:7-alpine
         ports:
@@ -145,12 +318,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      # PostgreSQL backs the `staging` profile. Host port 5420 matches the
-      # datasource URL in application-staging.properties (localhost:5420);
-      # credentials match the staging defaults (postgres / swisssecure2026).
       postgres:
-        # TimescaleDB image (drop-in PostgreSQL 16 + the timescaledb extension
-        # preloaded) so the V25 sensor_readings hypertable migration applies.
         image: timescale/timescaledb:latest-pg16
         env:
           POSTGRES_DB: swiss_db
@@ -201,7 +369,6 @@ jobs:
             -Dspring-boot.run.jvmArguments="-Dserver.port=8083" \
             -Dspring-boot.run.profiles=staging > backend_startup.log 2>&1 &
           echo "Backend PID: $!"
-          # Wait until /actuator/health returns UP (max 90s)
           for i in $(seq 1 30); do
             STATUS=$(curl -sf http://localhost:8083/actuator/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','?'))" 2>/dev/null || echo "?")
             echo "Attempt $i — health: $STATUS"
@@ -219,9 +386,6 @@ jobs:
       - name: Fetch admin JWT for Cypress
         id: admin-jwt
         run: |
-          # /actuator/health can report UP before DevAdminInitializer finishes
-          # seeding the admin user, so the first login may 401 (empty body →
-          # JSON parse crash). Retry the login until a token is returned.
           ADMIN_TOKEN=""
           for i in $(seq 1 20); do
             RESP=$(curl -s -X POST http://localhost:8083/api/v1/auth/login \
@@ -248,14 +412,10 @@ jobs:
       - name: Start Vite dev server (background)
         working-directory: ./frontend-customer
         env:
-          # Point the React app at the direct backend (no gateway in CI).
-          # AuthGate.tsx and App.tsx read import.meta.env.VITE_API_URL at
-          # build/dev time; without this the components would try port 8080
-          # (the full-stack gateway default) and fail to reach the backend.
           VITE_API_URL: http://localhost:8083
         run: |
           npm run dev -- --port 5173 &
-          sleep 8   # give Vite time to compile
+          sleep 8
 
       - name: Run Cypress E2E tests
         working-directory: ./frontend-customer
@@ -278,6 +438,16 @@ jobs:
   security-trivy:
     name: FileSystem Vulnerability Audit (Trivy)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.microservices == 'true' ||
+      needs.changes.outputs.frontend-host == 'true' ||
+      needs.changes.outputs.frontend-admin == 'true' ||
+      needs.changes.outputs.frontend-customer == 'true' ||
+      needs.changes.outputs.frontend-rider == 'true' ||
+      needs.changes.outputs.frontend-b2b == 'true' ||
+      needs.changes.outputs.governance == 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -293,6 +463,8 @@ jobs:
   governance-quality:
     name: AI Governance Quality Gate (Python)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.governance == 'true'
     defaults:
       run:
         working-directory: ./homelab-ai-governance
@@ -310,9 +482,6 @@ jobs:
       - name: Install governance package + dev deps
         run: pip install -e ".[dev]"
 
-      # Runs the full governance suite, including the Java↔Python /api/v1/govern
-      # contract tests. No Ollama/Postgres needed — the pipeline degrades to its
-      # fail-safe stubs, so this gate validates the brain's logic deterministically.
       - name: Run governance test suite
         env:
           SWISH_TRACING_ENABLED: 'false'

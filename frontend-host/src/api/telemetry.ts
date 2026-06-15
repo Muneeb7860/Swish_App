@@ -1,4 +1,7 @@
-import { WebTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-web";
+import {
+	WebTracerProvider,
+	SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-web";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { UserInteractionInstrumentation } from "@opentelemetry/instrumentation-user-interaction";
@@ -65,4 +68,3 @@ export function getActiveTraceParent(): string {
 if (typeof window !== "undefined") {
 	(window as any).getActiveTraceParent = getActiveTraceParent;
 }
-

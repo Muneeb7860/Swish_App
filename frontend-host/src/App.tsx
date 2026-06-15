@@ -128,9 +128,10 @@ class LocalErrorBoundary extends React.Component<
 							{this.props.name} Circuit Breaker Tripped
 						</h4>
 						<p className="m-0 text-xs text-slate-400 max-w-md leading-relaxed">
-							The federated micro-frontend [<strong>{this.props.name}</strong>] 
-							failed to load or crashed at runtime. The host shell has decoupled it 
-							using a circuit-breaker boundary to preserve main app availability.
+							The federated micro-frontend [<strong>{this.props.name}</strong>]
+							failed to load or crashed at runtime. The host shell has decoupled
+							it using a circuit-breaker boundary to preserve main app
+							availability.
 						</p>
 						{this.state.error && (
 							<code className="text-[10px] text-rose-400 bg-black/45 px-3 py-1.5 rounded-lg border border-red-500/10 font-mono break-all max-w-md">
@@ -539,7 +540,9 @@ export default function App() {
 					break;
 				case "REGISTER_RETAILER":
 					setOnboardingQueue((prev: any) => {
-						const exists = prev.some((app: any) => app.id === payload.retailerId);
+						const exists = prev.some(
+							(app: any) => app.id === payload.retailerId,
+						);
 						if (exists) return prev;
 						return [
 							...prev,
@@ -555,7 +558,10 @@ export default function App() {
 							},
 						];
 					});
-					triggerToast(`B2B Retailer Application [${payload.name}] registered!`, "business");
+					triggerToast(
+						`B2B Retailer Application [${payload.name}] registered!`,
+						"business",
+					);
 					break;
 				case "APPROVE_GATE":
 					setOnboardingQueue((prev: any) =>
@@ -565,15 +571,19 @@ export default function App() {
 								if (payload.gate === "ops") nextApprovals.l1 = true;
 								if (payload.gate === "compliance") nextApprovals.l2 = true;
 								if (payload.gate === "admin") nextApprovals.l3 = true;
-								const active = nextApprovals.l1 && nextApprovals.l2 && nextApprovals.l3;
+								const active =
+									nextApprovals.l1 && nextApprovals.l2 && nextApprovals.l3;
 								if (active) {
 									setBusinessOnboardStatus("active");
-									triggerToast("Onboarding Complete: Merchant is now ACTIVE!", "business");
+									triggerToast(
+										"Onboarding Complete: Merchant is now ACTIVE!",
+										"business",
+									);
 								}
 								return { ...app, approvals: nextApprovals };
 							}
 							return app;
-						})
+						}),
 					);
 					break;
 				default:

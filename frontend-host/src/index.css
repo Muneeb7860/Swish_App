@@ -2751,12 +2751,18 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 .mfa-card {
 	width: 100%;
 	max-width: 440px;
-	background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(7, 10, 19, 0.95) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(15, 23, 42, 0.8) 0%,
+		rgba(7, 10, 19, 0.95) 100%
+	);
 	backdrop-filter: blur(25px) saturate(180%);
 	border: 1px solid rgba(6, 182, 212, 0.2);
 	border-radius: 20px;
 	padding: 2.25rem 2rem;
-	box-shadow: 0 0 30px rgba(6, 182, 212, 0.15), 0 20px 40px rgba(0, 0, 0, 0.4);
+	box-shadow:
+		0 0 30px rgba(6, 182, 212, 0.15),
+		0 20px 40px rgba(0, 0, 0, 0.4);
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
@@ -2767,7 +2773,9 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 
 .mfa-card:hover {
 	border-color: rgba(6, 182, 212, 0.4);
-	box-shadow: 0 0 40px rgba(6, 182, 212, 0.25), 0 20px 40px rgba(0, 0, 0, 0.5);
+	box-shadow:
+		0 0 40px rgba(6, 182, 212, 0.25),
+		0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
 .mfa-logo-box {
@@ -2873,7 +2881,9 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 
 .mfa-button-primary:hover {
 	transform: translateY(-1px) !important;
-	box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4), 0 0 15px rgba(6, 182, 212, 0.3) !important;
+	box-shadow:
+		0 6px 20px rgba(6, 182, 212, 0.4),
+		0 0 15px rgba(6, 182, 212, 0.3) !important;
 	border-color: rgba(255, 255, 255, 0.35) !important;
 }
 
@@ -2935,10 +2945,13 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 	-webkit-backdrop-filter: blur(24px) saturate(170%);
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	border-radius: 16px;
-	box-shadow: 
+	box-shadow:
 		0 8px 32px 0 rgba(0, 0, 0, 0.4),
 		inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
-	transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+	transition:
+		transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+		border-color 0.4s ease,
+		box-shadow 0.4s ease;
 	will-change: transform, box-shadow;
 	transform: translate3d(0, 0, 0);
 }
@@ -2946,7 +2959,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 .upgrade-glow-card:hover {
 	transform: translate3d(0, -4px, 0) scale(1.01);
 	border-color: rgba(99, 102, 241, 0.3);
-	box-shadow: 
+	box-shadow:
 		0 20px 40px 0 rgba(0, 0, 0, 0.6),
 		0 0 24px 0 rgba(99, 102, 241, 0.2),
 		inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
@@ -2967,7 +2980,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 }
 
 .upgrade-pulsing-halo::after {
-	content: '';
+	content: "";
 	position: absolute;
 	top: -4px;
 	left: -4px;
@@ -3031,5 +3044,3 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 		background-position: 0% 50%;
 	}
 }
-
-
