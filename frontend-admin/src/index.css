@@ -2353,13 +2353,18 @@ body {
 
 /* Glassmorphic 3D Card Hover Effects */
 .glass-card-hover-3d {
-	transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease, border-color 0.3s ease;
+	transition:
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 0.5s ease,
+		border-color 0.3s ease;
 	perspective: 1000px;
 }
 .glass-card-hover-3d:hover {
 	transform: translateY(-4px) scale(1.02) rotateX(1deg) rotateY(1deg);
 	border-color: rgba(255, 255, 255, 0.18) !important;
-	box-shadow: 0 20px 35px rgba(0, 0, 0, 0.45), 0 0 15px rgba(255, 255, 255, 0.05);
+	box-shadow:
+		0 20px 35px rgba(0, 0, 0, 0.45),
+		0 0 15px rgba(255, 255, 255, 0.05);
 }
 
 /* Swipe text gradient glow */
@@ -2391,7 +2396,11 @@ body {
 	position: relative;
 	width: 310px;
 	height: 180px;
-	background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(255, 255, 255, 0.08) 0%,
+		rgba(255, 255, 255, 0.02) 100%
+	);
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	backdrop-filter: blur(20px);
 	-webkit-backdrop-filter: blur(20px);
@@ -2401,20 +2410,30 @@ body {
 	flex-direction: column;
 	justify-content: space-between;
 	color: #f8fafc;
-	box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+	box-shadow:
+		0 15px 30px rgba(0, 0, 0, 0.5),
+		inset 0 1px 1px rgba(255, 255, 255, 0.1);
 	overflow: hidden;
-	transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+	transition:
+		transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 0.5s ease;
 }
 .premium-credit-card:hover {
 	transform: translateY(-4px) rotateX(8deg) rotateY(8deg);
-	box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2), 0 0 25px rgba(6, 182, 212, 0.15);
+	box-shadow:
+		0 20px 40px rgba(99, 102, 241, 0.2),
+		0 0 25px rgba(6, 182, 212, 0.15);
 	border-color: rgba(255, 255, 255, 0.2);
 }
 .premium-credit-card::before {
 	content: "";
 	position: absolute;
 	inset: 0;
-	background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.15), transparent 70%);
+	background: radial-gradient(
+		circle at 100% 0%,
+		rgba(99, 102, 241, 0.15),
+		transparent 70%
+	);
 	pointer-events: none;
 }
 .premium-credit-card-hologram {
@@ -2465,15 +2484,24 @@ body {
 	left: 50%;
 	width: 50%;
 	height: 50%;
-	background: linear-gradient(45deg, rgba(245, 158, 11, 0.2) 0%, transparent 70%);
+	background: linear-gradient(
+		45deg,
+		rgba(245, 158, 11, 0.2) 0%,
+		transparent 70%
+	);
 	transform-origin: top left;
 	animation: sweep 3s linear infinite;
 }
 
 /* Flashing streaming prompt cursor */
 @keyframes blink {
-	0%, 100% { opacity: 0; }
-	50% { opacity: 1; }
+	0%,
+	100% {
+		opacity: 0;
+	}
+	50% {
+		opacity: 1;
+	}
 }
 .ai-type-cursor {
 	display: inline-block;
@@ -2531,4 +2559,3 @@ body {
 		justify-content: center;
 	}
 }
-

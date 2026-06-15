@@ -1,12 +1,12 @@
 import {
 	collection,
-	onSnapshot,
-	setDoc,
 	doc,
 	getDocs,
+	onSnapshot,
+	setDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { useStore, Product } from "./store";
+import { type Product, useStore } from "./store";
 
 const INITIAL_PRODUCTS = [
 	{

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ApiClient, BASE_URL } from "./client";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
+import { ApiClient, BASE_URL } from "./client";
 
 export type ConnectionStatus =
 	| "CONNECTED"
@@ -145,7 +145,7 @@ export const useResilientWebSocket = (
 					if (val !== null && typeof val === "object") {
 						const cleanObj: any = Array.isArray(val) ? [] : {};
 						for (const key in val) {
-							if (Object.prototype.hasOwnProperty.call(val, key)) {
+							if (Object.hasOwn(val, key)) {
 								cleanObj[key] = sanitizeValue(val[key]);
 							}
 						}
@@ -220,8 +220,7 @@ export const useResilientWebSocket = (
 
 	const handleReconnect = () => {
 		if (reconnectAttemptRef.current < maxReconnectAttempts) {
-			const backoff =
-				reconnectIntervalMin * Math.pow(2, reconnectAttemptRef.current);
+			const backoff = reconnectIntervalMin * 2 ** reconnectAttemptRef.current;
 			const jitter = Math.random() * 500;
 			const delay = Math.min(backoff + jitter, reconnectIntervalMax);
 
@@ -309,29 +308,29 @@ export class OrderStatusSocket {
 		orderId: number,
 		callback: OrderStatusCallback,
 	): () => void {
-		if (!this.listeners.has(orderId)) {
-			this.listeners.set(orderId, new Set());
+		if (!OrderStatusSocket.listeners.has(orderId)) {
+			OrderStatusSocket.listeners.set(orderId, new Set());
 		}
-		this.listeners.get(orderId)!.add(callback);
+		OrderStatusSocket.listeners.get(orderId)!.add(callback);
 
 		// Initialize socket connection or simulated flow
-		this.initForOrder(orderId);
+		OrderStatusSocket.initForOrder(orderId);
 
 		// Return unsubscribe function
 		return () => {
-			const orderListeners = this.listeners.get(orderId);
+			const orderListeners = OrderStatusSocket.listeners.get(orderId);
 			if (orderListeners) {
 				orderListeners.delete(callback);
 				if (orderListeners.size === 0) {
-					this.listeners.delete(orderId);
-					this.cleanupOrder(orderId);
+					OrderStatusSocket.listeners.delete(orderId);
+					OrderStatusSocket.cleanupOrder(orderId);
 				}
 			}
 		};
 	}
 
 	private static trigger(orderId: number, status: string, metadata?: any) {
-		const orderListeners = this.listeners.get(orderId);
+		const orderListeners = OrderStatusSocket.listeners.get(orderId);
 		if (orderListeners) {
 			for (const cb of orderListeners) {
 				try {
@@ -350,54 +349,55 @@ export class OrderStatusSocket {
 			console.log(
 				`[WebSocket Mock] Starting order tracker simulation for #${orderId}`,
 			);
-			if (this.simulatedTimers.has(orderId)) return;
+			if (OrderStatusSocket.simulatedTimers.has(orderId)) return;
 
-			this.trigger(orderId, "pending");
+			OrderStatusSocket.trigger(orderId, "pending");
 
 			const timer = setTimeout(() => {
-				this.trigger(orderId, "picking");
+				OrderStatusSocket.trigger(orderId, "picking");
 				const t2 = setTimeout(() => {
-					this.trigger(orderId, "shipped", {
+					OrderStatusSocket.trigger(orderId, "shipped", {
 						temperature: 4.2,
 						riderCoords: { lat: 12.971, lng: 77.594 },
 						riderName: "Rider Dave",
 					});
 					const t3 = setTimeout(() => {
-						this.trigger(orderId, "delivered");
+						OrderStatusSocket.trigger(orderId, "delivered");
 					}, 20000);
-					this.simulatedTimers.set(orderId, t3);
+					OrderStatusSocket.simulatedTimers.set(orderId, t3);
 				}, 15000);
-				this.simulatedTimers.set(orderId, t2);
+				OrderStatusSocket.simulatedTimers.set(orderId, t2);
 			}, 10000);
 
-			this.simulatedTimers.set(orderId, timer);
+			OrderStatusSocket.simulatedTimers.set(orderId, timer);
 		} else {
 			// Real WebSocket connection to backend gateway
-			if (this.ws) return;
+			if (OrderStatusSocket.ws) return;
 			const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 			const wsHost = BASE_URL_HOST(BASE_URL);
 			const url = `${wsProtocol}//${wsHost}/api/ws/orders`;
 
 			try {
-				this.ws = new WebSocket(url);
-				this.ws.onopen = () => {
-					this.reconnectAttempts.set(orderId, 0);
+				OrderStatusSocket.ws = new WebSocket(url);
+				OrderStatusSocket.ws.onopen = () => {
+					OrderStatusSocket.reconnectAttempts.set(orderId, 0);
 				};
-				this.ws.onmessage = (event) => {
+				OrderStatusSocket.ws.onmessage = (event) => {
 					const data = JSON.parse(event.data);
 					if (data && data.orderId) {
-						this.trigger(data.orderId, data.status, data.metadata);
+						OrderStatusSocket.trigger(data.orderId, data.status, data.metadata);
 					}
 				};
-				this.ws.onclose = () => {
-					this.ws = null;
-					const attempts = this.reconnectAttempts.get(orderId) || 0;
+				OrderStatusSocket.ws.onclose = () => {
+					OrderStatusSocket.ws = null;
+					const attempts =
+						OrderStatusSocket.reconnectAttempts.get(orderId) || 0;
 					if (attempts < 5) {
-						this.reconnectAttempts.set(orderId, attempts + 1);
+						OrderStatusSocket.reconnectAttempts.set(orderId, attempts + 1);
 						console.warn(
 							`[WebSocket] Order status reconnect attempt #${attempts + 1}/5 in 3000ms`,
 						);
-						setTimeout(() => this.initForOrder(orderId), 3000);
+						setTimeout(() => OrderStatusSocket.initForOrder(orderId), 3000);
 					} else {
 						console.error(
 							"[WebSocket] Order status reconnect: Max attempts (5) reached. Stopping reconnection.",
@@ -414,17 +414,17 @@ export class OrderStatusSocket {
 	}
 
 	private static cleanupOrder(orderId: number) {
-		this.reconnectAttempts.delete(orderId);
-		if (this.simulatedTimers.has(orderId)) {
-			clearTimeout(this.simulatedTimers.get(orderId));
-			this.simulatedTimers.delete(orderId);
+		OrderStatusSocket.reconnectAttempts.delete(orderId);
+		if (OrderStatusSocket.simulatedTimers.has(orderId)) {
+			clearTimeout(OrderStatusSocket.simulatedTimers.get(orderId));
+			OrderStatusSocket.simulatedTimers.delete(orderId);
 			console.log(
 				`[WebSocket Mock] Cleaned up order simulation for #${orderId}`,
 			);
 		}
-		if (this.listeners.size === 0 && this.ws) {
-			this.ws.close();
-			this.ws = null;
+		if (OrderStatusSocket.listeners.size === 0 && OrderStatusSocket.ws) {
+			OrderStatusSocket.ws.close();
+			OrderStatusSocket.ws = null;
 		}
 	}
 }

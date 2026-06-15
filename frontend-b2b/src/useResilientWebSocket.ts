@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface WebSocketOptions {
 	userId: string;
@@ -139,7 +139,7 @@ export const useResilientWebSocket = (
 					if (val !== null && typeof val === "object") {
 						const cleanObj: any = Array.isArray(val) ? [] : {};
 						for (const key in val) {
-							if (Object.prototype.hasOwnProperty.call(val, key)) {
+							if (Object.hasOwn(val, key)) {
 								cleanObj[key] = sanitizeValue(val[key]);
 							}
 						}
@@ -215,8 +215,7 @@ export const useResilientWebSocket = (
 
 	const handleReconnect = () => {
 		if (reconnectAttemptRef.current < maxReconnectAttempts) {
-			const backoff =
-				reconnectIntervalMin * Math.pow(2, reconnectAttemptRef.current);
+			const backoff = reconnectIntervalMin * 2 ** reconnectAttemptRef.current;
 			const jitter = Math.random() * 500;
 			const delay = Math.min(backoff + jitter, reconnectIntervalMax);
 

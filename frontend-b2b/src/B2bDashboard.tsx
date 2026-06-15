@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { useResilientWebSocket } from "./useResilientWebSocket";
 
 interface NotificationPayload {
@@ -917,7 +918,9 @@ const B2bDashboard: React.FC = () => {
 									<div className="premium-card-wrapper flex justify-center mb-5">
 										<div className="premium-credit-card">
 											<div className="flex justify-between items-center w-full mb-2">
-												<span className="text-xs font-extrabold tracking-wider text-slate-300">SWISH WHOLESALE</span>
+												<span className="text-xs font-extrabold tracking-wider text-slate-300">
+													SWISH WHOLESALE
+												</span>
 												<div className="premium-credit-card-hologram" />
 											</div>
 											<div className="flex justify-start w-full">
@@ -928,11 +931,17 @@ const B2bDashboard: React.FC = () => {
 											</div>
 											<div className="flex justify-between items-end w-full text-[10px] text-slate-400">
 												<div className="flex flex-col">
-													<span className="uppercase text-[8px] tracking-wider text-slate-500">Card Holder</span>
-													<strong className="text-slate-200">B2B Merchant Client</strong>
+													<span className="uppercase text-[8px] tracking-wider text-slate-500">
+														Card Holder
+													</span>
+													<strong className="text-slate-200">
+														B2B Merchant Client
+													</strong>
 												</div>
 												<div className="flex flex-col items-end">
-													<span className="uppercase text-[8px] tracking-wider text-slate-500">Expires</span>
+													<span className="uppercase text-[8px] tracking-wider text-slate-500">
+														Expires
+													</span>
 													<strong className="text-slate-200">12 / 28</strong>
 												</div>
 											</div>

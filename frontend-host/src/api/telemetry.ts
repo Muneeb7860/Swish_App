@@ -1,11 +1,11 @@
-import {
-	WebTracerProvider,
-	SimpleSpanProcessor,
-} from "@opentelemetry/sdk-trace-web";
+import { context, trace } from "@opentelemetry/api";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { UserInteractionInstrumentation } from "@opentelemetry/instrumentation-user-interaction";
-import { trace, context } from "@opentelemetry/api";
+import {
+	SimpleSpanProcessor,
+	WebTracerProvider,
+} from "@opentelemetry/sdk-trace-web";
 
 // Initialize WebTracerProvider
 const provider = new WebTracerProvider();
