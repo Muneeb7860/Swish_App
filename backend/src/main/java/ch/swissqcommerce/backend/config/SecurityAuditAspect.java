@@ -9,6 +9,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -24,8 +25,16 @@ public class SecurityAuditAspect {
     private static final Logger log = LoggerFactory.getLogger(SecurityAuditAspect.class);
     private final SecurityOutboxWriter securityOutboxWriter;
 
+    // @Lazy breaks an early-init ordering race: as an @Aspect, this bean is
+    // instantiated very early by the AspectJ auto-proxy creator (to harvest
+    // advisors), which would otherwise eagerly pull in SecurityOutboxWriter →
+    // OutboxEventRepository before the Spring Data JPA repositories have finished
+    // bootstrapping — intermittently failing context load with
+    // "NoSuchBeanDefinitionException: OutboxEventRepository" and cascading the
+    // whole @SpringBootTest suite. The writer is only needed when the advice fires
+    // at runtime (long after startup), so a lazy proxy is safe and behavior-neutral.
     @Autowired
-    public SecurityAuditAspect(SecurityOutboxWriter securityOutboxWriter) {
+    public SecurityAuditAspect(@Lazy SecurityOutboxWriter securityOutboxWriter) {
         this.securityOutboxWriter = securityOutboxWriter;
     }
 
