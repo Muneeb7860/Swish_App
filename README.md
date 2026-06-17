@@ -1,4 +1,8 @@
-Here is a comprehensive, world-class `README.md` for your **Swish App** repository. This version provides full structural clarity, fixes the Mermaid rendering issues that often break on GitHub, and highlights the technical depth of your 3-sided enterprise marketplace.
+[![Quality Gates](https://img.shields.io/badge/Quality%20Gates-Passed-success?style=flat-for-badge)](https://github.com/Muneeb7860/Swish_App/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-for-badge)](https://opensource.org/licenses/MIT)
+[![Java Version](https://img.shields.io/badge/Java-17-orange?style=flat-for-badge)](https://img.shields.io/badge/Java-17-orange)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green?style=flat-for-badge)](https://spring.io/projects/spring-boot)
+[![React](https://img.shields.io/badge/React-18-blue?style=flat-for-badge)](https://react.dev/)Here is a comprehensive, world-class `README.md` for your **Swish App** repository. This version provides full structural clarity, fixes the Mermaid rendering issues that often break on GitHub, and highlights the technical depth of your 3-sided enterprise marketplace.
 
 ---
 
