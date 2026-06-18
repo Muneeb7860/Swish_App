@@ -1,9 +1,13 @@
 package ch.swissqcommerce.backend.domain.agent.adapter.in.web;
 
+import ch.swissqcommerce.backend.agent.AgentOrchestrator;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
+import ch.swissqcommerce.backend.model.AgentEventLog;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +18,35 @@ public class AgentController {
 
     @Autowired private AgentUseCase agentUseCase;
 
+    @Autowired private AgentOrchestrator agentOrchestrator;
+
     @Autowired
     private ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent
             dynamicPricingAgent;
+
+    @PostMapping("/suggest/all")
+    public ResponseEntity<Map<String, String>> suggestAll(@RequestBody(required = false) Map<String, String> request) {
+        String inputSummary = (request != null && request.containsKey("inputSummary"))
+                ? request.get("inputSummary")
+                : "Manual trigger";
+        
+        agentOrchestrator.runOrchestrationAsync(inputSummary);
+        
+        return ResponseEntity.accepted().body(Map.of(
+                "status", "processing",
+                "message", "Agent orchestration started asynchronously"
+        ));
+    }
+
+    @PostMapping("/suggest/debug")
+    public ResponseEntity<List<AgentEventLog>> suggestDebug(@RequestBody(required = false) Map<String, String> request) {
+        String inputSummary = (request != null && request.containsKey("inputSummary"))
+                ? request.get("inputSummary")
+                : "Manual debug trigger";
+        
+        List<AgentEventLog> logs = agentOrchestrator.runOrchestrationSync(inputSummary);
+        return ResponseEntity.ok(logs);
+    }
 
     @PostMapping("/chat")
     public ResponseEntity<AgentResponse> chat(@RequestBody AgentRequest request) {
