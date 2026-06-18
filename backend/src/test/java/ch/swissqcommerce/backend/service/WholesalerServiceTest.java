@@ -1,8 +1,5 @@
-package ch.swissqcommerce.backend.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+package ch.swissqcommerce.backend.service;
 
 import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
 import ch.swissqcommerce.backend.domain.wholesaler.core.model.B2BRestockOrder;
@@ -10,15 +7,21 @@ import ch.swissqcommerce.backend.domain.wholesaler.core.model.Wholesaler;
 import ch.swissqcommerce.backend.domain.wholesaler.core.service.WholesalerServiceImpl;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.B2BRestockOrderPort;
 import ch.swissqcommerce.backend.domain.wholesaler.port.out.WholesalerPort;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.NoSuchElementException;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class WholesalerServiceTest {
@@ -74,12 +77,11 @@ public class WholesalerServiceTest {
     public void testCreateRestockOrder_IdempotencyKeyFound() {
         B2BRestockOrder existingOrder = new B2BRestockOrder();
         existingOrder.setIdempotencyKey("key-123");
-
-        when(restockOrderPort.findByIdempotencyKey("key-123"))
-                .thenReturn(Optional.of(existingOrder));
-
+        
+        when(restockOrderPort.findByIdempotencyKey("key-123")).thenReturn(Optional.of(existingOrder));
+        
         B2BRestockOrder result = wholesalerService.createRestockOrder("STORE-1", "W-1", "key-123");
-
+        
         assertNotNull(result);
         assertEquals("key-123", result.getIdempotencyKey());
         verify(wholesalerPort, never()).findById(anyString());
@@ -149,11 +151,9 @@ public class WholesalerServiceTest {
         when(wholesalerPort.findById("W-1")).thenReturn(Optional.of(preferred));
         when(wholesalerPort.findAll()).thenReturn(List.of(preferred));
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> {
-                    wholesalerService.createRestockOrder("STORE-1", "W-1", null);
-                });
+        assertThrows(IllegalStateException.class, () -> {
+            wholesalerService.createRestockOrder("STORE-1", "W-1", null);
+        });
     }
 
     @Test
@@ -163,11 +163,9 @@ public class WholesalerServiceTest {
 
         when(restockOrderPort.findById(1)).thenReturn(Optional.of(order));
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> {
-                    wholesalerService.fulfillRestock(1);
-                });
+        assertThrows(IllegalStateException.class, () -> {
+            wholesalerService.fulfillRestock(1);
+        });
     }
 
     @Test
@@ -175,7 +173,7 @@ public class WholesalerServiceTest {
         B2BRestockOrder order = new B2BRestockOrder();
         Wholesaler w = new Wholesaler();
         w.setWholesalerId("W-1");
-
+        
         when(wholesalerPort.findById("W-1")).thenReturn(Optional.of(w));
         when(restockOrderPort.findByWholesalerId("W-1")).thenReturn(List.of(order));
 
@@ -218,7 +216,7 @@ public class WholesalerServiceTest {
     @Test
     public void testCreateRestockOrder_reroutesWhenStoreHasFailedSensors() {
         // Mock a failed sensor on STORE-1
-        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor failedSensor =
+        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor failedSensor = 
                 ch.swissqcommerce.backend.domain.sensor.core.model.Sensor.builder()
                         .sensorId("SNS-BAD")
                         .storeId("STORE-1")
@@ -226,7 +224,7 @@ public class WholesalerServiceTest {
                         .build();
 
         // Mock a calibrated sensor on STORE-2
-        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor goodSensor =
+        ch.swissqcommerce.backend.domain.sensor.core.model.Sensor goodSensor = 
                 ch.swissqcommerce.backend.domain.sensor.core.model.Sensor.builder()
                         .sensorId("SNS-GOOD")
                         .storeId("STORE-2")
@@ -237,16 +235,10 @@ public class WholesalerServiceTest {
         when(sensorPort.findByStoreId("STORE-2")).thenReturn(List.of(goodSensor));
 
         // Mock stores
-        ch.swissqcommerce.backend.model.DarkStore s1 =
-                ch.swissqcommerce.backend.model.DarkStore.builder()
-                        .storeId("STORE-1")
-                        .storeName("Store 1")
-                        .build();
-        ch.swissqcommerce.backend.model.DarkStore s2 =
-                ch.swissqcommerce.backend.model.DarkStore.builder()
-                        .storeId("STORE-2")
-                        .storeName("Store 2")
-                        .build();
+        ch.swissqcommerce.backend.model.DarkStore s1 = ch.swissqcommerce.backend.model.DarkStore.builder()
+                .storeId("STORE-1").storeName("Store 1").build();
+        ch.swissqcommerce.backend.model.DarkStore s2 = ch.swissqcommerce.backend.model.DarkStore.builder()
+                .storeId("STORE-2").storeName("Store 2").build();
         when(darkStoreRepository.findAll()).thenReturn(List.of(s1, s2));
 
         Wholesaler w = new Wholesaler();

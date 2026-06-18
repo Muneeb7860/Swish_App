@@ -556,6 +556,8 @@ export default function CustomerApp({
 												overflowY: "auto",
 												whiteSpace: "pre-wrap",
 												position: "relative",
+												overflowWrap: "anywhere",
+												wordBreak: "break-word",
 											}}
 										>
 											{streamData}

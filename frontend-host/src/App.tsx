@@ -24,7 +24,7 @@ const MFE_WHITELIST = (
 	.split(",")
 	.map((host: string) => host.trim());
 
-const verifyMfeOrigin = (importPromise: Promise<any>, remoteName: string) => {
+const verifyMfeOrigin = (importPromise: Promise<unknown>, remoteName: string) => {
 	return importPromise.then((module) => {
 		const scriptElements = Array.from(document.querySelectorAll("script"));
 		const remoteScript = scriptElements.find(
@@ -139,6 +139,7 @@ class LocalErrorBoundary extends React.Component<
 							</code>
 						)}
 						<button
+							type="button"
 							onClick={() => {
 								this.setState({ hasError: false, error: null });
 								window.location.reload();
@@ -452,6 +453,7 @@ export default function App() {
 		return () => clearTimeout(timer);
 	}, []);
 
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	useEffect(() => {
 		const handleSwishAction = (e: Event) => {
 			const customEvent = e as CustomEvent;
@@ -621,6 +623,8 @@ export default function App() {
 		setBotOpen,
 		setBotMessages,
 		setOnboardingQueue,
+		triggerToast,
+		logKafka,
 	]);
 
 	useEffect(() => {
@@ -750,7 +754,7 @@ export default function App() {
 			closeSseStream();
 			clearInterval(riderTimerRef.current);
 		},
-		[],
+		[closeSseStream],
 	);
 
 	// Helper log triggers
@@ -779,7 +783,7 @@ export default function App() {
 			[
 				...prev,
 				{
-					id: "L-" + Date.now() + "-" + Math.random(),
+					id: `L-${Date.now()}-${Math.random()}`,
 					time: new Date().toLocaleTimeString(),
 					event: `${event.toUpperCase()}`,
 					source,
@@ -793,7 +797,7 @@ export default function App() {
 		setLedger((prev) => [
 			...prev,
 			{
-				id: "TX-" + Date.now() + "-" + Math.random(),
+				id: `TX-${Date.now()}-${Math.random()}`,
 				time: new Date().toLocaleTimeString(),
 				type,
 				ref,
@@ -857,7 +861,7 @@ export default function App() {
 
 	// Dynamic system timers effects
 	useEffect(() => {
-		let timer;
+		let timer: ReturnType<typeof setInterval> | undefined;
 		if (!isAuthenticated) {
 			const generateCode = () => {
 				const timeStep = Math.floor(Date.now() / 30000);
@@ -871,17 +875,17 @@ export default function App() {
 			}, 30000);
 		}
 		return () => clearInterval(timer);
-	}, [isAuthenticated]);
+	}, [isAuthenticated, setTotpSecretCode, setTotpTimer]);
 
 	useEffect(() => {
-		let timer;
+		let timer: ReturnType<typeof setInterval> | undefined;
 		if (!isAuthenticated) {
 			timer = setInterval(() => {
 				setTotpTimer((t) => (t <= 1 ? 30 : t - 1));
 			}, 1000);
 		}
 		return () => clearInterval(timer);
-	}, [isAuthenticated]);
+	}, [isAuthenticated, setTotpTimer]);
 
 	// Telemetry loop effect
 	useEffect(() => {
@@ -894,7 +898,7 @@ export default function App() {
 			setJwtFlash((f) => !f);
 		}, 1500);
 		return () => clearInterval(interval);
-	}, [dbLatencyActive, activeProfile?.dbLatencyDefault]);
+	}, [dbLatencyActive, activeProfile?.dbLatencyDefault, setOltpWriteLatency, setVaultTimer, setJwtFlash]);
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -911,7 +915,7 @@ export default function App() {
 			});
 		}, 1000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [setOlapSyncTimer, logKafka]);
 
 	const { data: metricsData } = useQuery({
 		queryKey: ["agentMetrics"],
@@ -1290,7 +1294,7 @@ export default function App() {
 				);
 			};
 
-			es.addEventListener("telemetry-update", (event: any) => {
+			es.addEventListener("telemetry-update", (event: MessageEvent<string>) => {
 				try {
 					const dataStr = event.data;
 					if (typeof dataStr !== "string") {
@@ -1330,7 +1334,7 @@ export default function App() {
 							? tick.temperature
 							: parseFloat(tick.temperature);
 
-					if (isNaN(latVal) || isNaN(lngVal) || isNaN(tempVal)) {
+					if (Number.isNaN(latVal) || Number.isNaN(lngVal) || Number.isNaN(tempVal)) {
 						throw new Error("Invalid numeric value in telemetry update");
 					}
 
@@ -1349,10 +1353,10 @@ export default function App() {
 						"sse.tick_received",
 						`Lat ${latVal.toFixed(4)} Lng ${lngVal.toFixed(4)} Temp ${tempVal.toFixed(1)}°C (Breach: ${!!tick.thermalBreachActive})`,
 					);
-				} catch (parseErr: any) {
+				} catch (parseErr: unknown) {
 					console.warn(
 						"[SSE] Telemetry tick validation/parse error:",
-						parseErr.message,
+						parseErr instanceof Error ? parseErr.message : String(parseErr),
 					);
 				}
 			});
@@ -2374,6 +2378,7 @@ export default function App() {
 
 				<nav className="role-navigation">
 					<button
+						type="button"
 						aria-label="Customer Tab"
 						id="tab-customer"
 						data-role="customer"
@@ -2384,6 +2389,7 @@ export default function App() {
 						<span>Customer Super App</span>
 					</button>
 					<button
+						type="button"
 						aria-label="Rider Tab"
 						id="tab-rider"
 						data-role="rider"
@@ -2394,6 +2400,7 @@ export default function App() {
 						<span>Rider Light</span>
 					</button>
 					<button
+						type="button"
 						aria-label="Inventory Tab"
 						id="tab-inventory"
 						data-role="inventory"
@@ -2404,6 +2411,7 @@ export default function App() {
 						<span>Dark Store Inventory</span>
 					</button>
 					<button
+						type="button"
 						aria-label="Business Tab"
 						id="tab-business"
 						data-role="business"
@@ -2414,6 +2422,7 @@ export default function App() {
 						<span>B2B Retailer Hub</span>
 					</button>
 					<button
+						type="button"
 						aria-label="Admin Tab"
 						id="tab-admin"
 						data-role="admin"
@@ -2425,6 +2434,7 @@ export default function App() {
 					</button>
 					{isAuthenticated && (
 						<button
+							type="button"
 							aria-label="Logout"
 							className="role-tab"
 							data-role="admin"
@@ -2499,7 +2509,8 @@ export default function App() {
 						>
 							{activeOrder.slaRemaining}s remaining
 						</span>
-						<svg width="20" height="20" viewBox="0 0 24 24">
+						<svg width="20" height="20" viewBox="0 0 24 24" aria-label="SLA countdown progress">
+							<title>SLA countdown progress</title>
 							<circle
 								cx="12"
 								cy="12"
@@ -2777,6 +2788,7 @@ export default function App() {
 								Swiss Loyalty Certificate Desk
 							</h4>
 							<button
+								type="button"
 								aria-label="Close"
 								className="ai-bot-close-btn"
 								onClick={() => setCertModalOpen(false)}
@@ -2794,6 +2806,7 @@ export default function App() {
 
 						<div className="cert-modal-actions">
 							<button
+								type="button"
 								aria-label="Download Certificate"
 								className="btn-primary-glow"
 								style={{
@@ -2806,6 +2819,7 @@ export default function App() {
 								Download Certificate (.PNG)
 							</button>
 							<button
+								type="button"
 								aria-label="Dismiss Modal"
 								className="btn-secondary-glow"
 								style={{ cursor: "pointer" }}
