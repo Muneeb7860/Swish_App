@@ -6,6 +6,7 @@ import ch.swissqcommerce.backend.domain.governance.adapter.in.scheduler.OutcomeJ
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -228,5 +229,115 @@ public class OutcomeJobTest {
 
         List<OutcomeRecord> outcomes = outcomeRecordRepository.findAll();
         assertEquals(3, outcomes.size());
+    }
+
+    @Test
+    public void testOutcomeEvaluation_PreCalculatedBaseline() {
+        OffsetDateTime executionTime = OffsetDateTime.now();
+        LocalDate yesterday = executionTime.toLocalDate().minusDays(1);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            // Seed a dynamic inventory SKU
+            Inventory dynamicProduct = Inventory.builder()
+                    .itemId("SKU-DYNAMIC")
+                    .store(store)
+                    .name("Dynamic Milk")
+                    .price(new BigDecimal("12.00"))
+                    .stock(50)
+                    .category("Dairy")
+                    .emoji("🥛")
+                    .perishable(true)
+                    .build();
+            entityManager.persist(dynamicProduct);
+
+            // Seed a pre-calculated baseline of 100.00 for SKU-DYNAMIC
+            AgentBaseline baseline = AgentBaseline.builder()
+                    .sku("SKU-DYNAMIC")
+                    .date(yesterday)
+                    .revenue7d(new BigDecimal("100.00"))
+                    .marginPct(new BigDecimal("0.20"))
+                    .orderCount7d(5)
+                    .lastOrderCreatedAt(executionTime.minusDays(2))
+                    .build();
+            entityManager.persist(baseline);
+
+            // Create suggestion & execution record
+            UUID suggestionId = UUID.randomUUID();
+            AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                    .id(suggestionId)
+                    .traceId(UUID.randomUUID())
+                    .agent(agentRegistry)
+                    .domain("pricing")
+                    .entityId("SKU-DYNAMIC")
+                    .recommendation("{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":12.00}")
+                    .confidence(new BigDecimal("0.95"))
+                    .reason("High demand dynamic")
+                    .impact("low")
+                    .status("executed")
+                    .expiresAt(OffsetDateTime.now().plusHours(1))
+                    .build();
+            entityManager.persist(suggestion);
+
+            PolicyDecision decision = PolicyDecision.builder()
+                    .suggestion(suggestion)
+                    .decision("approved")
+                    .policyVersion("v1")
+                    .reason("Within thresholds")
+                    .decidedBy("policy_engine_v1")
+                    .build();
+            entityManager.persist(decision);
+
+            ExecutionRecord execRecord = ExecutionRecord.builder()
+                    .suggestion(suggestion)
+                    .decision(decision)
+                    .executed(true)
+                    .executedBy("AgentOrchestrator")
+                    .build();
+            entityManager.persist(execRecord);
+
+            // Seed delivered order item in the future window (T+3d)
+            ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity order =
+                    ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity.builder()
+                            .customer(null)
+                            .store(store)
+                            .totalAmount(new BigDecimal("150.00"))
+                            .paymentMethod("Wallet")
+                            .status("delivered")
+                            .build();
+            entityManager.persist(order);
+            entityManager.flush();
+
+            entityManager.createNativeQuery("UPDATE oltp.orders SET created_at = :createdAt WHERE order_id = :id")
+                    .setParameter("createdAt", executionTime.plusDays(3))
+                    .setParameter("id", order.getOrderId())
+                    .executeUpdate();
+
+            ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity orderItem =
+                    ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity.builder()
+                            .order(order)
+                            .item(dynamicProduct)
+                            .quantity(10)
+                            .price(new BigDecimal("15.00")) // total 150.00 actual revenue
+                            .build();
+            entityManager.persist(orderItem);
+
+            entityManager.flush();
+        });
+
+        // Clear Persistence Context
+        entityManager.clear();
+
+        // Run evaluation: actual revenue is 150.00, baseline is 100.00 (from agent_baseline table), delta = 50.00 > 0 (success)
+        outcomeJob.runOutcomeEvaluation();
+
+        List<OutcomeRecord> outcomes = outcomeRecordRepository.findAll();
+        assertFalse(outcomes.isEmpty());
+        OutcomeRecord outcome = outcomes.stream()
+                .filter(o -> "SKU-DYNAMIC".equals(o.getSuggestion().getEntityId()))
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(outcome.getSuccess());
+        assertTrue(outcome.getMetrics().contains("50.0")); // revenue_delta = 50.0
     }
 }
