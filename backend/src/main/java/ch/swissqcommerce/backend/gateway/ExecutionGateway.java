@@ -3,12 +3,16 @@ package ch.swissqcommerce.backend.gateway;
 import ch.swissqcommerce.backend.agent.AgentSuggestion;
 import ch.swissqcommerce.backend.model.AgentEventLog;
 import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.policy.PolicyDecision;
 import ch.swissqcommerce.backend.repository.AgentEventLogRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.repository.InventoryRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,14 +39,17 @@ public class ExecutionGateway {
 
     private final AgentEventLogRepository eventLogRepo;
     private final HitlQueueRepository hitlQueueRepo;
+    private final InventoryRepository inventoryRepo;
     private final ObjectMapper objectMapper;
 
     public ExecutionGateway(
             AgentEventLogRepository eventLogRepo,
             HitlQueueRepository hitlQueueRepo,
+            InventoryRepository inventoryRepo,
             ObjectMapper objectMapper) {
         this.eventLogRepo = eventLogRepo;
         this.hitlQueueRepo = hitlQueueRepo;
+        this.inventoryRepo = inventoryRepo;
         this.objectMapper = objectMapper;
     }
 
@@ -97,23 +104,74 @@ public class ExecutionGateway {
 
     /**
      * Dispatch approved actions to the appropriate domain service.
-     * Phase 1: log-only for pricing/routing (no direct DB mutation yet).
-     * Inventory and risk actions will be wired to AdminService in Phase 2.
+     * Closed loop: pricing and inventory write directly to the database.
      */
-    private void executeApprovedAction(AgentSuggestion suggestion) {
+    public void executeApprovedAction(AgentSuggestion suggestion) {
         switch (suggestion.domain()) {
-            case "inventory" ->
-                log.info("Inventory action approved for execution: {}", suggestion.action());
-            case "pricing" ->
-                log.info("Pricing action approved for execution: {}", suggestion.action());
-            case "routing" ->
-                log.info("Routing action approved for execution: {}", suggestion.action());
-            case "risk" ->
-                log.info("Risk action approved for execution: {}", suggestion.action());
-            case "support" ->
-                log.info("Support draft generated: {}", suggestion.action());
-            default ->
-                log.warn("Unknown domain for execution: {}", suggestion.domain());
+            case "inventory" -> executeInventoryAction(suggestion);
+            case "pricing" -> executePricingAction(suggestion);
+            case "routing" -> log.info("Routing action approved for execution: {}", suggestion.action());
+            case "risk" -> log.info("Risk action approved for execution: {}", suggestion.action());
+            case "support" -> log.info("Support draft generated: {}", suggestion.action());
+            default -> log.warn("Unknown domain for execution: {}", suggestion.domain());
+        }
+    }
+
+    private void executePricingAction(AgentSuggestion suggestion) {
+        String action = suggestion.action();
+        double changePct = ch.swissqcommerce.backend.policy.PolicyEngine.extractPercentageChange(action);
+        if (changePct == 0.0) {
+            log.warn("ExecutionGateway: Price change percentage not found in action '{}'", action);
+            return;
+        }
+
+        List<Inventory> items = inventoryRepo.findAll();
+        boolean updated = false;
+        for (Inventory item : items) {
+            if (action.toLowerCase().contains(item.getName().toLowerCase())) {
+                BigDecimal oldPrice = item.getPrice();
+                BigDecimal multiplier = BigDecimal.valueOf(1.0 + (changePct / 100.0));
+                BigDecimal newPrice = oldPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+                item.setPrice(newPrice);
+                inventoryRepo.save(item);
+                log.info("ExecutionGateway: Price for item '{}' (ID: {}) updated from {} to {}",
+                        item.getName(), item.getItemId(), oldPrice, newPrice);
+                updated = true;
+                break;
+            }
+        }
+        if (!updated) {
+            log.warn("ExecutionGateway: No inventory item name matched in action '{}'", action);
+        }
+    }
+
+    private void executeInventoryAction(AgentSuggestion suggestion) {
+        String action = suggestion.action();
+        List<Inventory> items = inventoryRepo.findAll();
+        boolean updated = false;
+        for (Inventory item : items) {
+            if (action.toLowerCase().contains(item.getName().toLowerCase())) {
+                int addStock = 50; // default restock quantity
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
+                if (m.find()) {
+                    try {
+                        addStock = Integer.parseInt(m.group());
+                    } catch (NumberFormatException e) {
+                        // ignore
+                    }
+                }
+                int oldStock = item.getStock();
+                int newStock = oldStock + addStock;
+                item.setStock(newStock);
+                inventoryRepo.save(item);
+                log.info("ExecutionGateway: Stock for item '{}' (ID: {}) restocked from {} by adding {} to {}",
+                        item.getName(), item.getItemId(), oldStock, addStock, newStock);
+                updated = true;
+                break;
+            }
+        }
+        if (!updated) {
+            log.warn("ExecutionGateway: No inventory item name matched for restocking in action '{}'", action);
         }
     }
 

@@ -146,7 +146,7 @@ public class PolicyEngine {
      * Extracts percentage from agent action text, e.g. "increase price by 12.5%".
      * Returns 0.0 if no percentage is found.
      */
-    static double extractPercentageChange(String action) {
+    public static double extractPercentageChange(String action) {
         if (action == null) return 0.0;
         Matcher m = PERCENT_PATTERN.matcher(action);
         if (m.find()) {

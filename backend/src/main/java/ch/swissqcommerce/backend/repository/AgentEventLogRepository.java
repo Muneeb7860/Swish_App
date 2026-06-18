@@ -15,4 +15,7 @@ public interface AgentEventLogRepository extends JpaRepository<AgentEventLog, Lo
     List<AgentEventLog> findByPolicyStatusOrderByCreatedAtDesc(String policyStatus);
 
     long countByPolicyStatus(String policyStatus);
+
+    List<AgentEventLog> findByAgentAndDomainAndPolicyStatusAndExecutedOrderByCreatedAtDesc(
+            String agent, String domain, String policyStatus, Boolean executed);
 }

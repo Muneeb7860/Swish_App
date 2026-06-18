@@ -51,6 +51,15 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     private final HitlQueuePort hitlQueuePort;
     private final SecurityTrustLedgerRepository trustLedgerRepository;
 
+    @Autowired
+    private ch.swissqcommerce.backend.gateway.ExecutionGateway executionGateway;
+
+    @Autowired
+    private ch.swissqcommerce.backend.repository.AgentEventLogRepository agentEventLogRepo;
+
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     @Autowired(required = false)
     private WorkflowClient workflowClient;
 
@@ -580,6 +589,44 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
 
         if (!"pending".equalsIgnoreCase(ticket.getStatus())) {
             throw new TicketAlreadyResolvedException("Ticket is already " + ticket.getStatus());
+        }
+
+        if (approve) {
+            String domain = null;
+            if (ticket.getType() != null && ticket.getType().startsWith("agent_")) {
+                domain = ticket.getType().substring("agent_".length());
+            }
+            String agentName = null;
+            String desc = ticket.getDescription();
+            if (desc != null && desc.startsWith("[")) {
+                int closingBrace = desc.indexOf("]");
+                if (closingBrace > 1) {
+                    agentName = desc.substring(1, closingBrace);
+                }
+            }
+            if (agentName != null && domain != null) {
+                List<ch.swissqcommerce.backend.model.AgentEventLog> logs = agentEventLogRepo
+                        .findByAgentAndDomainAndPolicyStatusAndExecutedOrderByCreatedAtDesc(
+                                agentName, domain, "needs_human", false);
+                if (!logs.isEmpty()) {
+                    ch.swissqcommerce.backend.model.AgentEventLog latestLog = logs.get(0);
+                    try {
+                        ch.swissqcommerce.backend.agent.AgentSuggestion suggestion = objectMapper.readValue(
+                                latestLog.getOutputJson(), ch.swissqcommerce.backend.agent.AgentSuggestion.class);
+                        executionGateway.executeApprovedAction(suggestion);
+                        latestLog.setExecuted(true);
+                        agentEventLogRepo.save(latestLog);
+                        log.info("GovernanceServiceImpl: Executed approved suggestion from log ID {}", latestLog.getId());
+                    } catch (Exception e) {
+                        log.error("GovernanceServiceImpl: Failed to deserialize or execute approved suggestion", e);
+                        throw new RuntimeException("Execution of approved agent action failed: " + e.getMessage(), e);
+                    }
+                } else {
+                    log.warn("GovernanceServiceImpl: No matching pending AgentEventLog found for agent {} and domain {}", agentName, domain);
+                }
+            } else {
+                log.warn("GovernanceServiceImpl: Could not parse agentName ({}) or domain ({}) from ticket description: {}", agentName, domain, desc);
+            }
         }
 
         ticket.setStatus(approve ? "approved" : "voided");
