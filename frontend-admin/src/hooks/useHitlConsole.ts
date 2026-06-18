@@ -2,11 +2,11 @@
 import { useCallback, useEffect, useState } from "react";
 import {
 	adjustHitl,
-	fetchHitlQueue,
 	login as apiLogin,
+	fetchHitlQueue,
+	type HitlTicket,
 	mapItemToTicket,
 	resolveHitl,
-	type HitlTicket,
 } from "../api/governance";
 
 const TOKEN_KEY = "swish_admin_token";

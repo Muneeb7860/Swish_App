@@ -56,6 +56,28 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
+# Re-stage any files the formatters (Biome / Spotless) reformatted in the working
+# tree above. spotless:apply / biome run AFTER staging and do not re-stage, which
+# otherwise commits the pre-format version and leaves a spurious post-commit diff.
+# Only files ALREADY staged are re-added — this never pulls in another agent's
+# unstaged changes (ADR-008 safe).
+echo "\n> 📦 Re-staging formatter changes on already-staged files..."
+git diff --cached --name-only | while IFS= read -r staged_file; do
+    [ -n "$staged_file" ] && git add -- "$staged_file"
+done
+
+# Biome lint gate — block the commit ONLY if staged files contain lint ERRORS.
+# Warnings/infos are allowed (the repo carries pre-existing warning debt, and
+# noExplicitAny is advisory), so this prevents NEW errors without being blocked by
+# existing debt. --staged limits the scan to this commit; --no-errors-on-unmatched
+# keeps backend-only commits (no JS/TS staged) green.
+echo "\n> 🔍 Biome lint gate (staged files; errors block, warnings allowed)..."
+if ! npx @biomejs/biome check --staged --no-errors-on-unmatched; then
+    echo "❌ Biome found lint ERRORS in staged files. Fix them before committing"
+    echo "   (try: npx @biomejs/biome check --write --staged)."
+    exit 1
+fi
+
 # Skip E2E by default in pre-commit since it takes a long time, unless forced
 if [ "$SKIP_E2E" != "true" ]; then
     echo "\n> 🚦 Running E2E Test Suite Matrix (set SKIP_E2E=true to skip)..."

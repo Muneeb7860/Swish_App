@@ -8,14 +8,14 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+import * as api from "./api/endpoints";
 import MfaLoginPortal from "./components/MfaLoginPortal";
 import RbacBlocker from "./components/RbacBlocker";
 import RiderTrackingPanel from "./components/RiderTrackingPanel";
 import SupportBot from "./components/SupportBot";
+import { syncProductsFromFirebase } from "./firebaseSync";
 import { useEnvProfiles } from "./hooks/useEnvProfiles";
 import { useStore } from "./store";
-import { syncProductsFromFirebase } from "./firebaseSync";
-import * as api from "./api/endpoints";
 
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = (
