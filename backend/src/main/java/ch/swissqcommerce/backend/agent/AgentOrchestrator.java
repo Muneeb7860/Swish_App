@@ -182,6 +182,8 @@ public class AgentOrchestrator {
                 recommendationJson = parsePricingRecommendationJson(suggestion);
             } else if ("inventory".equalsIgnoreCase(suggestion.domain())) {
                 recommendationJson = parseInventoryRecommendationJson(suggestion);
+            } else if ("risk".equalsIgnoreCase(suggestion.domain()) && suggestion.action().toLowerCase().contains("hold_order")) {
+                recommendationJson = parseRiskRecommendationJson(suggestion);
             } else {
                 recommendationJson = objectMapper.writeValueAsString(Map.of("action", suggestion.action()));
             }
@@ -280,7 +282,41 @@ public class AgentOrchestrator {
         return "{\"action\":\"restock\",\"field\":\"stock\",\"old_value\":10,\"new_value\":60}";
     }
 
+    private String parseRiskRecommendationJson(AgentSuggestion s) {
+        String action = s.action();
+        int orderId = 0;
+        int version = 0;
+
+        java.util.regex.Matcher mOrderId = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(action);
+        if (mOrderId.find()) {
+            orderId = Integer.parseInt(mOrderId.group(1));
+        } else {
+            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
+            if (mNum.find()) {
+                orderId = Integer.parseInt(mNum.group());
+            }
+        }
+
+        java.util.regex.Matcher mVersion = java.util.regex.Pattern.compile("version=(\\d+)").matcher(action);
+        if (mVersion.find()) {
+            version = Integer.parseInt(mVersion.group(1));
+        }
+
+        return String.format("{\"action\":\"hold_order\",\"order_id\":%d,\"version\":%d}", orderId, version);
+    }
+
     private String extractEntityId(AgentSuggestion s) {
+        if ("risk".equalsIgnoreCase(s.domain())) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
+            if (m.find()) {
+                return "order_id=" + m.group(1);
+            }
+            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
+            if (mNum.find()) {
+                return "order_id=" + mNum.group();
+            }
+            return "order_id=0";
+        }
         String action = s.action();
         List<Inventory> items = inventoryRepo.findAll();
         for (Inventory item : items) {

@@ -149,6 +149,38 @@ public class ExecutionGateway {
                 saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_stock", currentStock, "new_stock", newVal, "rows_affected", 1)), executedBy);
                 log.info("ExecutionGateway executed stock suggestion for item: {} new stock: {}", suggestion.getEntityId(), newVal);
                 
+            } else if ("hold_order".equalsIgnoreCase(action)) {
+                if (!rec.has("order_id") || !rec.has("version")) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "INVALID_RECOMMENDATION", "hold_order requires order_id and version in recommendation", executedBy);
+                    throw new IllegalArgumentException("hold_order requires order_id and version in recommendation");
+                }
+                int orderId = rec.get("order_id").asInt();
+                int expectedVersion = rec.get("version").asInt();
+
+                int updated = entityManager.createNativeQuery("""
+                    UPDATE oltp.orders SET status='held', version=version+1, updated_at=NOW() 
+                    WHERE order_id=:orderId AND version=:oldVersion AND status='pending'
+                    """)
+                    .setParameter("orderId", orderId)
+                    .setParameter("oldVersion", expectedVersion)
+                    .executeUpdate();
+
+                if (updated == 0) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "STATE_DRIFT", 
+                        "Order hold failed: order_id=" + orderId + " version mismatch or not pending", executedBy);
+                    throw new OptimisticLockException("Order state changed since fraud suggestion");
+                }
+
+                suggestion.setStatus("executed");
+                agentSuggestionRepo.save(suggestion);
+                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(
+                    Map.of("order_id", orderId, "action", "held", "new_version", expectedVersion + 1)), executedBy);
+                log.info("ExecutionGateway executed fraud hold for order: {}", orderId);
+
             } else {
                 throw new IllegalArgumentException("Unknown recommendation action for execution: " + action);
             }

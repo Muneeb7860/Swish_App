@@ -125,4 +125,11 @@ public class OrderEntity {
 
     @Column(name = "rejection_photo_url")
     private String rejectionPhotoUrl;
+
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Integer version = 0;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

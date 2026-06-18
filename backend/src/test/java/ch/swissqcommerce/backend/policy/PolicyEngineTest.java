@@ -22,6 +22,9 @@ public class PolicyEngineTest {
     @Mock
     private PricingPolicy pricingPolicy;
 
+    @Mock
+    private FraudPolicy fraudPolicy;
+
     @InjectMocks
     private PolicyEngine policyEngine;
 
@@ -37,6 +40,20 @@ public class PolicyEngineTest {
         PolicyDecision result = policyEngine.evaluate(entity);
         assertEquals(expectedDecision, result);
         verify(pricingPolicy).evaluate(entity);
+    }
+
+    @Test
+    public void testEvaluateEntity_DelegatesRisk() {
+        ch.swissqcommerce.backend.model.AgentSuggestionEntity entity = ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
+                .domain("risk")
+                .recommendation("json")
+                .build();
+        PolicyDecision expectedDecision = PolicyDecision.approved("low risk");
+        when(fraudPolicy.evaluate(entity)).thenReturn(expectedDecision);
+
+        PolicyDecision result = policyEngine.evaluate(entity);
+        assertEquals(expectedDecision, result);
+        verify(fraudPolicy).evaluate(entity);
     }
 
     @Test

@@ -79,4 +79,14 @@ public class HexagonalArchitectureTest {
                     .as(
                             "Reward adapters must not depend on domain core service implementations"
                                     + " directly, except RewardsListener");
+
+    @ArchTest
+    public static final ArchRule schedulerShouldNotDependOnCoreServicesDirectly =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..scheduler..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage("ch.swissqcommerce.backend.domain.governance.core.service..")
+                    .as("Scheduler packages must not depend on domain governance core service implementations directly");
 }

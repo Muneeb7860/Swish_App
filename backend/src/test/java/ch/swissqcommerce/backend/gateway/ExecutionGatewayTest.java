@@ -229,4 +229,82 @@ public class ExecutionGatewayTest {
         verifyNoInteractions(inventoryRepo);
         verifyNoInteractions(executionRecordRepo);
     }
+
+    @Test
+    public void testExecute_HoldOrder_Success() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("risk")
+                .entityId("order_id=456")
+                .recommendation("{\"action\":\"hold_order\",\"order_id\":456,\"version\":0}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+
+        Query mockQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(mockQuery);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.executeUpdate()).thenReturn(1);
+
+        PolicyDecision decision = PolicyDecision.builder().id(52L).build();
+        when(policyDecisionRepo.findBySuggestionIdOrderByIdDesc(suggestionId)).thenReturn(List.of(decision));
+
+        executionGateway.execute(suggestionId, "analyst-bob");
+
+        assertEquals("executed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
+    }
+
+    @Test
+    public void testExecute_HoldOrder_StateDrift() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("risk")
+                .entityId("order_id=456")
+                .recommendation("{\"action\":\"hold_order\",\"order_id\":456,\"version\":0}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+
+        Query mockQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(mockQuery);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.executeUpdate()).thenReturn(0); // 0 rows updated (either version mismatch or not pending)
+
+        assertThrows(OptimisticLockException.class, () -> {
+            executionGateway.execute(suggestionId, "analyst-bob");
+        });
+
+        assertEquals("failed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
+    }
+
+    @Test
+    public void testExecute_HoldOrder_InvalidRecommendation() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("risk")
+                .entityId("order_id=456")
+                .recommendation("{\"action\":\"hold_order\"}") // missing order_id/version
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            executionGateway.execute(suggestionId, "analyst-bob");
+        });
+
+        assertEquals("failed", suggestion.getStatus());
+    }
 }

@@ -42,12 +42,17 @@ public class RiskOutcomeProcessor implements OutcomeProcessor {
 
         BigDecimal preventedLoss = BigDecimal.ZERO;
         if (orderId != null) {
+            java.time.OffsetDateTime holdDate = exec.getCreatedAt();
+            java.time.OffsetDateTime endDate = holdDate.plusDays(30);
             preventedLoss = jdbcTemplate.queryForObject("""
                 SELECT COALESCE(SUM(o.total_amount), 0)
                 FROM oltp.orders o
                 WHERE o.order_id = ?
                   AND o.status = 'held'
-                """, BigDecimal.class, orderId);
+                  AND o.updated_at >= ?
+                  AND o.updated_at < ?
+                  AND NOT EXISTS (SELECT 1 FROM oltp.chargebacks c WHERE c.order_id = o.order_id)
+                """, BigDecimal.class, orderId, holdDate, endDate);
         }
 
         if (preventedLoss == null) {
