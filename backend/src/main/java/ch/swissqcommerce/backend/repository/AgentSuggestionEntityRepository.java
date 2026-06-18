@@ -13,4 +13,10 @@ public interface AgentSuggestionEntityRepository extends JpaRepository<AgentSugg
             String agentName, String domain, String status);
 
     List<AgentSuggestionEntity> findByStatusOrderByCreatedAtDesc(String status);
+
+    org.springframework.data.domain.Page<AgentSuggestionEntity> findByStatusAndDomain(
+            String status, String domain, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<AgentSuggestionEntity> findByStatus(
+            String status, org.springframework.data.domain.Pageable pageable);
 }

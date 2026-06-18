@@ -5,7 +5,7 @@ import ch.swissqcommerce.backend.domain.agent.core.model.AgentMetrics;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentRequest;
 import ch.swissqcommerce.backend.domain.agent.core.model.AgentResponse;
 import ch.swissqcommerce.backend.domain.agent.port.in.AgentUseCase;
-import ch.swissqcommerce.backend.model.AgentEventLog;
+import ch.swissqcommerce.backend.model.AgentSuggestionEntity;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +39,12 @@ public class AgentController {
     }
 
     @PostMapping("/suggest/debug")
-    public ResponseEntity<List<AgentEventLog>> suggestDebug(@RequestBody(required = false) Map<String, String> request) {
+    public ResponseEntity<List<AgentSuggestionEntity>> suggestDebug(@RequestBody(required = false) Map<String, String> request) {
         String inputSummary = (request != null && request.containsKey("inputSummary"))
                 ? request.get("inputSummary")
                 : "Manual debug trigger";
         
-        List<AgentEventLog> logs = agentOrchestrator.runOrchestrationSync(inputSummary);
+        List<AgentSuggestionEntity> logs = agentOrchestrator.runOrchestrationSync(inputSummary);
         return ResponseEntity.ok(logs);
     }
 

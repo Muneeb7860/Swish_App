@@ -24,9 +24,23 @@ public class PolicyEngine {
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)%");
 
     private final SystemConfigurationRepository configRepo;
+    private final PricingPolicy pricingPolicy;
 
-    public PolicyEngine(SystemConfigurationRepository configRepo) {
+    public PolicyEngine(SystemConfigurationRepository configRepo, PricingPolicy pricingPolicy) {
         this.configRepo = configRepo;
+        this.pricingPolicy = pricingPolicy;
+    }
+
+    /**
+     * Evaluate an agent suggestion entity against business rules.
+     */
+    public PolicyDecision evaluate(ch.swissqcommerce.backend.model.AgentSuggestionEntity s) {
+        if ("pricing".equalsIgnoreCase(s.getDomain())) {
+            return pricingPolicy.evaluate(s);
+        }
+        ch.swissqcommerce.backend.agent.AgentSuggestion domainSuggestion = ch.swissqcommerce.backend.agent.AgentSuggestion.of(
+                s.getDomain(), "", s.getConfidence().doubleValue(), s.getReason(), s.getImpact());
+        return evaluate(domainSuggestion);
     }
 
     /**

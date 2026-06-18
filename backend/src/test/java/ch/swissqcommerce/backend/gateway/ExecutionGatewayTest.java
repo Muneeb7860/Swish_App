@@ -2,23 +2,29 @@ package ch.swissqcommerce.backend.gateway;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import ch.swissqcommerce.backend.agent.AgentSuggestion;
-import ch.swissqcommerce.backend.model.AgentEventLog;
-import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.AgentSuggestionEntity;
+import ch.swissqcommerce.backend.model.ExecutionRecord;
 import ch.swissqcommerce.backend.model.Inventory;
-import ch.swissqcommerce.backend.policy.PolicyDecision;
-import ch.swissqcommerce.backend.repository.AgentEventLogRepository;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.model.PolicyDecision;
+import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
+import ch.swissqcommerce.backend.repository.ExecutionRecordRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
+import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
+import jakarta.persistence.Query;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -26,153 +32,201 @@ import org.mockito.junit.jupiter.MockitoExtension;
 public class ExecutionGatewayTest {
 
     @Mock
-    private AgentEventLogRepository eventLogRepo;
-
-    @Mock
-    private HitlQueueRepository hitlQueueRepo;
-
-    @Mock
     private InventoryRepository inventoryRepo;
+
+    @Mock
+    private AgentSuggestionEntityRepository agentSuggestionRepo;
+
+    @Mock
+    private PolicyDecisionRepository policyDecisionRepo;
+
+    @Mock
+    private ExecutionRecordRepository executionRecordRepo;
+
+    @Mock
+    private EntityManager entityManager;
 
     private ExecutionGateway executionGateway;
 
     @BeforeEach
     public void setUp() {
-        executionGateway = new ExecutionGateway(eventLogRepo, hitlQueueRepo, inventoryRepo, new ObjectMapper());
+        executionGateway = new ExecutionGateway(
+                inventoryRepo,
+                new ObjectMapper(),
+                agentSuggestionRepo,
+                policyDecisionRepo,
+                executionRecordRepo,
+                entityManager
+        );
     }
 
     @Test
-    public void testProcess_Approved() {
-        AgentSuggestion suggestion = AgentSuggestion.of("pricing", "increase price of coffee by 2%", 0.9, "reason", "low");
-        PolicyDecision decision = PolicyDecision.approved("Within threshold");
-
-        when(inventoryRepo.findAll()).thenReturn(List.of());
-
-        AgentEventLog expectedLog = AgentEventLog.builder().id(1L).executed(true).build();
-        when(eventLogRepo.save(any(AgentEventLog.class))).thenReturn(expectedLog);
-
-        AgentEventLog result = executionGateway.process("PricingAgent", suggestion, decision, "Input");
-
-        assertNotNull(result);
-        assertEquals(expectedLog.getId(), result.getId());
-        
-        ArgumentCaptor<AgentEventLog> logCaptor = ArgumentCaptor.forClass(AgentEventLog.class);
-        verify(eventLogRepo).save(logCaptor.capture());
-        AgentEventLog saved = logCaptor.getValue();
-        assertEquals("PricingAgent", saved.getAgent());
-        assertEquals("pricing", saved.getDomain());
-        assertEquals("approved", saved.getPolicyStatus());
-        assertTrue(saved.getExecuted());
-
-        verifyNoInteractions(hitlQueueRepo);
-    }
-
-    @Test
-    public void testProcess_Approved_Pricing() {
-        AgentSuggestion suggestion = AgentSuggestion.of("pricing", "increase price of coffee by 5.5%", 0.9, "reason", "low");
-        PolicyDecision decision = PolicyDecision.approved("Within threshold");
-
-        Inventory item = Inventory.builder()
-                .itemId("item-1")
-                .name("Coffee")
-                .price(BigDecimal.valueOf(10.00))
-                .stock(10)
-                .category("beverage")
-                .emoji("☕")
+    public void testExecute_Pricing_Success() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("pricing")
+                .entityId("SKU-123")
+                .recommendation("{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":10.50}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
                 .build();
 
-        when(inventoryRepo.findAll()).thenReturn(List.of(item));
-
-        AgentEventLog expectedLog = AgentEventLog.builder().id(10L).executed(true).build();
-        when(eventLogRepo.save(any(AgentEventLog.class))).thenReturn(expectedLog);
-
-        AgentEventLog result = executionGateway.process("PricingAgent", suggestion, decision, "Input");
-
-        assertNotNull(result);
-        assertTrue(result.getExecuted());
-
-        // Assert price is updated to 10.55
-        assertEquals(BigDecimal.valueOf(10.55), item.getPrice());
-        verify(inventoryRepo).save(item);
-    }
-
-    @Test
-    public void testProcess_Approved_Inventory() {
-        AgentSuggestion suggestion = AgentSuggestion.of("inventory", "restock coffee by 20 units", 0.9, "reason", "low");
-        PolicyDecision decision = PolicyDecision.approved("Within threshold");
-
         Inventory item = Inventory.builder()
-                .itemId("item-1")
-                .name("Coffee")
-                .price(BigDecimal.valueOf(10.00))
-                .stock(10)
-                .category("beverage")
-                .emoji("☕")
+                .itemId("SKU-123")
+                .price(new BigDecimal("10.00"))
                 .build();
 
-        when(inventoryRepo.findAll()).thenReturn(List.of(item));
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+        when(inventoryRepo.findById("SKU-123")).thenReturn(Optional.of(item));
 
-        AgentEventLog expectedLog = AgentEventLog.builder().id(11L).executed(true).build();
-        when(eventLogRepo.save(any(AgentEventLog.class))).thenReturn(expectedLog);
+        Query mockQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(mockQuery);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.executeUpdate()).thenReturn(1);
 
-        AgentEventLog result = executionGateway.process("InventoryAgent", suggestion, decision, "Input");
+        PolicyDecision decision = PolicyDecision.builder().id(50L).build();
+        when(policyDecisionRepo.findBySuggestionIdOrderByIdDesc(suggestionId)).thenReturn(List.of(decision));
 
-        assertNotNull(result);
-        assertTrue(result.getExecuted());
+        executionGateway.execute(suggestionId, "manager-alice");
 
-        // Assert stock is restocked from 10 to 30
-        assertEquals(30, item.getStock());
-        verify(inventoryRepo).save(item);
+        assertEquals("executed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
     }
 
     @Test
-    public void testProcess_NeedsHuman() {
-        AgentSuggestion suggestion = AgentSuggestion.of("pricing", "increase price of coffee by 12%", 0.9, "reason", "medium");
-        PolicyDecision decision = PolicyDecision.needsHuman("Requires manager review");
+    public void testExecute_Pricing_StateDrift() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("pricing")
+                .entityId("SKU-123")
+                .recommendation("{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":10.50}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
 
-        AgentEventLog expectedLog = AgentEventLog.builder().id(2L).executed(false).build();
-        when(eventLogRepo.save(any(AgentEventLog.class))).thenReturn(expectedLog);
+        // Database value has drifted to 12.00!
+        Inventory item = Inventory.builder()
+                .itemId("SKU-123")
+                .price(new BigDecimal("12.00"))
+                .build();
 
-        AgentEventLog result = executionGateway.process("PricingAgent", suggestion, decision, "Input");
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+        when(inventoryRepo.findById("SKU-123")).thenReturn(Optional.of(item));
 
-        assertNotNull(result);
-        assertEquals(expectedLog.getId(), result.getId());
+        assertThrows(OptimisticLockException.class, () -> {
+            executionGateway.execute(suggestionId, "manager-alice");
+        });
 
-        ArgumentCaptor<AgentEventLog> logCaptor = ArgumentCaptor.forClass(AgentEventLog.class);
-        verify(eventLogRepo).save(logCaptor.capture());
-        AgentEventLog saved = logCaptor.getValue();
-        assertEquals("needs_human", saved.getPolicyStatus());
-        assertFalse(saved.getExecuted());
-
-        ArgumentCaptor<HitlQueue> ticketCaptor = ArgumentCaptor.forClass(HitlQueue.class);
-        verify(hitlQueueRepo).save(ticketCaptor.capture());
-        HitlQueue ticket = ticketCaptor.getValue();
-        assertNotNull(ticket.getTicketId());
-        assertTrue(ticket.getTicketId().startsWith("AGENT-"));
-        assertEquals("agent_pricing", ticket.getType());
-        assertEquals("pending", ticket.getStatus());
-        assertTrue(ticket.getDescription().contains("increase price of coffee"));
+        assertEquals("failed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
     }
 
     @Test
-    public void testProcess_Rejected() {
-        AgentSuggestion suggestion = AgentSuggestion.of("pricing", "increase price of coffee by 25%", 0.9, "reason", "high");
-        PolicyDecision decision = PolicyDecision.rejected("Exceeds max allowed");
+    public void testExecute_Pricing_Expired() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("pricing")
+                .entityId("SKU-123")
+                .recommendation("{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":10.50}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().minusMinutes(5)) // expired 5 minutes ago!
+                .build();
 
-        AgentEventLog expectedLog = AgentEventLog.builder().id(3L).executed(false).build();
-        when(eventLogRepo.save(any(AgentEventLog.class))).thenReturn(expectedLog);
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
 
-        AgentEventLog result = executionGateway.process("PricingAgent", suggestion, decision, "Input");
+        assertThrows(IllegalStateException.class, () -> {
+            executionGateway.execute(suggestionId, "manager-alice");
+        });
 
-        assertNotNull(result);
-        assertEquals(expectedLog.getId(), result.getId());
+        assertEquals("expired", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
+    }
 
-        ArgumentCaptor<AgentEventLog> logCaptor = ArgumentCaptor.forClass(AgentEventLog.class);
-        verify(eventLogRepo).save(logCaptor.capture());
-        AgentEventLog saved = logCaptor.getValue();
-        assertEquals("rejected", saved.getPolicyStatus());
-        assertFalse(saved.getExecuted());
+    @Test
+    public void testExecute_Stock_Success() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("inventory")
+                .entityId("SKU-123")
+                .recommendation("{\"action\":\"restock\",\"old_value\":10,\"new_value\":60}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
 
-        verifyNoInteractions(hitlQueueRepo);
+        Inventory item = Inventory.builder()
+                .itemId("SKU-123")
+                .stock(10)
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+        when(inventoryRepo.findById("SKU-123")).thenReturn(Optional.of(item));
+        when(inventoryRepo.updateStockOptimistically("SKU-123", 10, 60)).thenReturn(1);
+
+        PolicyDecision decision = PolicyDecision.builder().id(51L).build();
+        when(policyDecisionRepo.findBySuggestionIdOrderByIdDesc(suggestionId)).thenReturn(List.of(decision));
+
+        executionGateway.execute(suggestionId, "manager-alice");
+
+        assertEquals("executed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
+    }
+
+    @Test
+    public void testExecute_Stock_StateDrift() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("inventory")
+                .entityId("SKU-123")
+                .recommendation("{\"action\":\"restock\",\"old_value\":10,\"new_value\":60}")
+                .status("approved")
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
+
+        // Database value has drifted to 15!
+        Inventory item = Inventory.builder()
+                .itemId("SKU-123")
+                .stock(15)
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+        when(inventoryRepo.findById("SKU-123")).thenReturn(Optional.of(item));
+
+        assertThrows(OptimisticLockException.class, () -> {
+            executionGateway.execute(suggestionId, "manager-alice");
+        });
+
+        assertEquals("failed", suggestion.getStatus());
+        verify(agentSuggestionRepo).save(suggestion);
+        verify(executionRecordRepo).save(any(ExecutionRecord.class));
+    }
+
+    @Test
+    public void testExecute_NotApproved() {
+        UUID suggestionId = UUID.randomUUID();
+        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
+                .id(suggestionId)
+                .domain("pricing")
+                .entityId("SKU-123")
+                .status("pending") // not approved!
+                .expiresAt(OffsetDateTime.now().plusHours(1))
+                .build();
+
+        when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
+
+        assertThrows(IllegalStateException.class, () -> {
+            executionGateway.execute(suggestionId, "manager-alice");
+        });
+
+        verifyNoInteractions(inventoryRepo);
+        verifyNoInteractions(executionRecordRepo);
     }
 }

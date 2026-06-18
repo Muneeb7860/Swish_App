@@ -1,18 +1,21 @@
 package ch.swissqcommerce.backend.gateway;
 
-import ch.swissqcommerce.backend.agent.AgentSuggestion;
-import ch.swissqcommerce.backend.model.AgentEventLog;
-import ch.swissqcommerce.backend.model.HitlQueue;
+import ch.swissqcommerce.backend.model.AgentSuggestionEntity;
+import ch.swissqcommerce.backend.model.ExecutionRecord;
 import ch.swissqcommerce.backend.model.Inventory;
-import ch.swissqcommerce.backend.policy.PolicyDecision;
-import ch.swissqcommerce.backend.repository.AgentEventLogRepository;
-import ch.swissqcommerce.backend.repository.HitlQueueRepository;
+import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
+import ch.swissqcommerce.backend.repository.ExecutionRecordRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,181 +26,169 @@ import org.springframework.transaction.annotation.Transactional;
  * The ONLY layer that touches DB writes for agent-driven actions.
  *
  * <p>Rule: if it's not approved by the Policy Engine, it cannot execute.
- *
- * <p>Responsibilities:
- * <ul>
- *   <li>Validates that the policy decision is "approved"</li>
- *   <li>For "needs_human" → auto-creates a HITL queue task</li>
- *   <li>Logs every suggestion + decision to the agent_event_log</li>
- *   <li>Dispatches approved actions to the appropriate domain service</li>
- * </ul>
  */
 @Service
 public class ExecutionGateway {
 
     private static final Logger log = LoggerFactory.getLogger(ExecutionGateway.class);
 
-    private final AgentEventLogRepository eventLogRepo;
-    private final HitlQueueRepository hitlQueueRepo;
     private final InventoryRepository inventoryRepo;
     private final ObjectMapper objectMapper;
+    private final AgentSuggestionEntityRepository agentSuggestionRepo;
+    private final PolicyDecisionRepository policyDecisionRepo;
+    private final ExecutionRecordRepository executionRecordRepo;
+    private final EntityManager entityManager;
 
     public ExecutionGateway(
-            AgentEventLogRepository eventLogRepo,
-            HitlQueueRepository hitlQueueRepo,
             InventoryRepository inventoryRepo,
-            ObjectMapper objectMapper) {
-        this.eventLogRepo = eventLogRepo;
-        this.hitlQueueRepo = hitlQueueRepo;
+            ObjectMapper objectMapper,
+            AgentSuggestionEntityRepository agentSuggestionRepo,
+            PolicyDecisionRepository policyDecisionRepo,
+            ExecutionRecordRepository executionRecordRepo,
+            EntityManager entityManager) {
         this.inventoryRepo = inventoryRepo;
         this.objectMapper = objectMapper;
+        this.agentSuggestionRepo = agentSuggestionRepo;
+        this.policyDecisionRepo = policyDecisionRepo;
+        this.executionRecordRepo = executionRecordRepo;
+        this.entityManager = entityManager;
     }
 
-    /**
-     * Process an agent suggestion through the gateway.
-     * Always logs to the event log. Only executes if approved.
-     * Auto-creates HITL task if needs_human.
-     */
     @Transactional
-    public AgentEventLog process(
-            String agentName, AgentSuggestion suggestion, PolicyDecision decision, String inputSummary) {
+    public void execute(UUID suggestionId, String executedBy) {
+        AgentSuggestionEntity suggestion = agentSuggestionRepo.findById(suggestionId)
+                .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                        "Suggestion not found: " + suggestionId));
 
-        String outputJson;
+        // 1. Expiration check
+        if (OffsetDateTime.now().isAfter(suggestion.getExpiresAt())) {
+            suggestion.setStatus("expired");
+            agentSuggestionRepo.save(suggestion);
+            saveFailedRecord(suggestion, "EXPIRED", "Suggestion expired at " + suggestion.getExpiresAt(), executedBy);
+            throw new IllegalStateException("Suggestion is expired");
+        }
+
+        // 2. Status check
+        if (!"approved".equalsIgnoreCase(suggestion.getStatus())) {
+            throw new IllegalStateException("Suggestion must be in approved status to execute, but was: " 
+                    + suggestion.getStatus());
+        }
+
+        // 3. State-drift check and execution
         try {
-            outputJson = objectMapper.writeValueAsString(suggestion);
-        } catch (JsonProcessingException e) {
-            outputJson = "{\"error\": \"serialization_failed\", \"action\": \""
-                    + suggestion.action() + "\"}";
-        }
-
-        boolean executed = false;
-
-        // Gate: only approved actions get executed
-        if (decision.isApproved()) {
-            executeApprovedAction(suggestion);
-            executed = true;
-            log.info("ExecutionGateway EXECUTED: agent={}, domain={}, action={}",
-                    agentName, suggestion.domain(), suggestion.action());
-        } else if ("needs_human".equals(decision.status())) {
-            createHitlTask(agentName, suggestion, decision);
-            log.info("ExecutionGateway → HITL: agent={}, domain={}, reason={}",
-                    agentName, suggestion.domain(), decision.reason());
-        } else {
-            log.info("ExecutionGateway BLOCKED: agent={}, status={}, reason={}",
-                    agentName, decision.status(), decision.reason());
-        }
-
-        // Always log — every suggestion is audited
-        AgentEventLog entry = AgentEventLog.builder()
-                .eventType("agent_suggestion")
-                .agent(agentName)
-                .domain(suggestion.domain())
-                .inputSummary(inputSummary)
-                .outputJson(outputJson)
-                .policyStatus(decision.status())
-                .policyReason(decision.reason())
-                .executed(executed)
-                .build();
-
-        return eventLogRepo.save(entry);
-    }
-
-    /**
-     * Dispatch approved actions to the appropriate domain service.
-     * Closed loop: pricing and inventory write directly to the database.
-     */
-    public void executeApprovedAction(AgentSuggestion suggestion) {
-        switch (suggestion.domain()) {
-            case "inventory" -> executeInventoryAction(suggestion);
-            case "pricing" -> executePricingAction(suggestion);
-            case "routing" -> log.info("Routing action approved for execution: {}", suggestion.action());
-            case "risk" -> log.info("Risk action approved for execution: {}", suggestion.action());
-            case "support" -> log.info("Support draft generated: {}", suggestion.action());
-            default -> log.warn("Unknown domain for execution: {}", suggestion.domain());
-        }
-    }
-
-    private void executePricingAction(AgentSuggestion suggestion) {
-        String action = suggestion.action();
-        double changePct = ch.swissqcommerce.backend.policy.PolicyEngine.extractPercentageChange(action);
-        if (changePct == 0.0) {
-            log.warn("ExecutionGateway: Price change percentage not found in action '{}'", action);
-            return;
-        }
-
-        List<Inventory> items = inventoryRepo.findAll();
-        boolean updated = false;
-        for (Inventory item : items) {
-            if (action.toLowerCase().contains(item.getName().toLowerCase())) {
-                BigDecimal oldPrice = item.getPrice();
-                BigDecimal multiplier = BigDecimal.valueOf(1.0 + (changePct / 100.0));
-                BigDecimal newPrice = oldPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
-                item.setPrice(newPrice);
-                inventoryRepo.save(item);
-                log.info("ExecutionGateway: Price for item '{}' (ID: {}) updated from {} to {}",
-                        item.getName(), item.getItemId(), oldPrice, newPrice);
-                updated = true;
-                break;
-            }
-        }
-        if (!updated) {
-            log.warn("ExecutionGateway: No inventory item name matched in action '{}'", action);
-        }
-    }
-
-    private void executeInventoryAction(AgentSuggestion suggestion) {
-        String action = suggestion.action();
-        List<Inventory> items = inventoryRepo.findAll();
-        boolean updated = false;
-        for (Inventory item : items) {
-            if (action.toLowerCase().contains(item.getName().toLowerCase())) {
-                int addStock = 50; // default restock quantity
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
-                if (m.find()) {
-                    try {
-                        addStock = Integer.parseInt(m.group());
-                    } catch (NumberFormatException e) {
-                        // ignore
-                    }
+            JsonNode rec = objectMapper.readTree(suggestion.getRecommendation());
+            String action = rec.has("action") ? rec.get("action").asText() : "";
+            
+            if ("update_price".equalsIgnoreCase(action)) {
+                double expectedOldVal = rec.get("old_value").asDouble();
+                double newVal = rec.get("new_value").asDouble();
+                
+                Inventory item = inventoryRepo.findById(suggestion.getEntityId())
+                        .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                                "Inventory item not found for pricing execution: " + suggestion.getEntityId()));
+                                
+                BigDecimal currentPrice = item.getPrice();
+                BigDecimal expectedOldPrice = BigDecimal.valueOf(expectedOldVal).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal newPrice = BigDecimal.valueOf(newVal).setScale(2, RoundingMode.HALF_UP);
+                
+                if (currentPrice.compareTo(expectedOldPrice) != 0) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "STATE_DRIFT", 
+                            "STATE_DRIFT: expected=" + expectedOldPrice + " actual=" + currentPrice, executedBy);
+                    throw new OptimisticLockException("Price changed since suggestion");
                 }
-                int oldStock = item.getStock();
-                int newStock = oldStock + addStock;
-                item.setStock(newStock);
-                inventoryRepo.save(item);
-                log.info("ExecutionGateway: Stock for item '{}' (ID: {}) restocked from {} by adding {} to {}",
-                        item.getName(), item.getItemId(), oldStock, addStock, newStock);
-                updated = true;
-                break;
+                
+                // Atomic, single-write-path optimistic update to oltp.inventory
+                int updated = entityManager.createNativeQuery(
+                        "UPDATE oltp.inventory SET price = :newPrice, updated_at = NOW() WHERE item_id = :sku AND price = :oldPrice")
+                        .setParameter("newPrice", newPrice)
+                        .setParameter("sku", suggestion.getEntityId())
+                        .setParameter("oldPrice", currentPrice)
+                        .executeUpdate();
+
+                if (updated == 0) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
+                    throw new OptimisticLockException("Optimistic lock failure during price update");
+                }
+                
+                suggestion.setStatus("executed");
+                agentSuggestionRepo.save(suggestion);
+                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_price", currentPrice, "new_price", newPrice, "rows_affected", 1)), executedBy);
+                log.info("ExecutionGateway executed pricing suggestion for item: {} new price: {}", suggestion.getEntityId(), newPrice);
+                
+            } else if ("restock".equalsIgnoreCase(action)) {
+                int expectedOldVal = rec.get("old_value").asInt();
+                int newVal = rec.get("new_value").asInt();
+                
+                Inventory item = inventoryRepo.findById(suggestion.getEntityId())
+                        .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                                "Inventory item not found for stock execution: " + suggestion.getEntityId()));
+                                
+                int currentStock = item.getStock();
+                if (currentStock != expectedOldVal) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "STATE_DRIFT", 
+                            "STATE_DRIFT: expected=" + expectedOldVal + " actual=" + currentStock, executedBy);
+                    throw new OptimisticLockException("Stock changed since suggestion");
+                }
+                
+                int updated = inventoryRepo.updateStockOptimistically(suggestion.getEntityId(), currentStock, newVal);
+                if (updated == 0) {
+                    suggestion.setStatus("failed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
+                    throw new OptimisticLockException("Optimistic lock failure during stock update");
+                }
+                
+                suggestion.setStatus("executed");
+                agentSuggestionRepo.save(suggestion);
+                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_stock", currentStock, "new_stock", newVal, "rows_affected", 1)), executedBy);
+                log.info("ExecutionGateway executed stock suggestion for item: {} new stock: {}", suggestion.getEntityId(), newVal);
+                
+            } else {
+                throw new IllegalArgumentException("Unknown recommendation action for execution: " + action);
             }
-        }
-        if (!updated) {
-            log.warn("ExecutionGateway: No inventory item name matched for restocking in action '{}'", action);
+        } catch (OptimisticLockException | IllegalStateException | IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("ExecutionGateway error during execute for suggestion: {}", suggestionId, e);
+            suggestion.setStatus("failed");
+            agentSuggestionRepo.save(suggestion);
+            saveFailedRecord(suggestion, "EXECUTION_ERROR", e.getMessage(), executedBy);
+            throw new RuntimeException("Execution failed: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Auto-create a HITL queue task. Humans should never have to read logs
-     * to find things that need their attention.
-     */
-    private void createHitlTask(String agentName, AgentSuggestion suggestion, PolicyDecision decision) {
-        String ticketId = "AGENT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-
-        HitlQueue ticket = HitlQueue.builder()
-                .ticketId(ticketId)
-                .type("agent_" + suggestion.domain())
-                .description(String.format(
-                        "[%s] %s — Confidence: %.2f, Impact: %s. Policy: %s",
-                        agentName,
-                        suggestion.action(),
-                        suggestion.confidence(),
-                        suggestion.impact(),
-                        decision.reason()))
-                .amount(BigDecimal.ZERO)
-                .status("pending")
+    private void saveFailedRecord(AgentSuggestionEntity suggestion, String code, String message, String executedBy) {
+        ch.swissqcommerce.backend.model.PolicyDecision decision = getLatestDecision(suggestion);
+        ExecutionRecord record = ExecutionRecord.builder()
+                .suggestion(suggestion)
+                .decision(decision)
+                .executed(false)
+                .error(code + ": " + message)
+                .executedBy(executedBy)
                 .build();
+        executionRecordRepo.save(record);
+    }
 
-        hitlQueueRepo.save(ticket);
-        log.info("HITL task created: ticketId={}, agent={}, domain={}",
-                ticketId, agentName, suggestion.domain());
+    private void saveSuccessRecord(AgentSuggestionEntity suggestion, String resultJson, String executedBy) {
+        ch.swissqcommerce.backend.model.PolicyDecision decision = getLatestDecision(suggestion);
+        ExecutionRecord record = ExecutionRecord.builder()
+                .suggestion(suggestion)
+                .decision(decision)
+                .executed(true)
+                .executionResult(resultJson)
+                .executedBy(executedBy)
+                .build();
+        executionRecordRepo.save(record);
+    }
+
+    private ch.swissqcommerce.backend.model.PolicyDecision getLatestDecision(AgentSuggestionEntity suggestion) {
+        List<ch.swissqcommerce.backend.model.PolicyDecision> decisions = policyDecisionRepo.findBySuggestionIdOrderByIdDesc(suggestion.getId());
+        return decisions.isEmpty() ? null : decisions.get(0);
     }
 }

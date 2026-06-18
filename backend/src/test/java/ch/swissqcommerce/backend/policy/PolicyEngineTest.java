@@ -19,8 +19,39 @@ public class PolicyEngineTest {
     @Mock
     private SystemConfigurationRepository configRepo;
 
+    @Mock
+    private PricingPolicy pricingPolicy;
+
     @InjectMocks
     private PolicyEngine policyEngine;
+
+    @Test
+    public void testEvaluateEntity_DelegatesPricing() {
+        ch.swissqcommerce.backend.model.AgentSuggestionEntity entity = ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
+                .domain("pricing")
+                .recommendation("json")
+                .build();
+        PolicyDecision expectedDecision = PolicyDecision.approved("low impact");
+        when(pricingPolicy.evaluate(entity)).thenReturn(expectedDecision);
+
+        PolicyDecision result = policyEngine.evaluate(entity);
+        assertEquals(expectedDecision, result);
+        verify(pricingPolicy).evaluate(entity);
+    }
+
+    @Test
+    public void testEvaluateEntity_DelegatesNonPricing() {
+        mockConfig("inventory.auto_approve_confidence", "0.6");
+        ch.swissqcommerce.backend.model.AgentSuggestionEntity entity = ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
+                .domain("inventory")
+                .confidence(java.math.BigDecimal.valueOf(0.7))
+                .reason("restock")
+                .impact("medium")
+                .build();
+
+        PolicyDecision decision = policyEngine.evaluate(entity);
+        assertEquals("approved", decision.status());
+    }
 
     @Test
     public void testExtractPercentageChange() {
