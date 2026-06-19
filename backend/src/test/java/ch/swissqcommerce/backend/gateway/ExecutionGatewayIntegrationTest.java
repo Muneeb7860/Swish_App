@@ -107,16 +107,9 @@ public class ExecutionGatewayIntegrationTest {
                         .build();
         entityManager.persist(store);
 
-        // Seed Agent Registry
-        riskAgent =
-                AgentRegistry.builder()
-                        .name("FraudAgent")
-                        .domain("risk")
-                        .version("1.0.0")
-                        .status("active")
-                        .ownerTeam("Risk & Compliance")
-                        .build();
-        entityManager.persist(riskAgent);
+        // Reuse the FraudAgent already seeded by V35__fraud_agent.sql (agent_registry's PK
+        // is `name`, so persisting a second "FraudAgent" violates agent_registry_pkey).
+        riskAgent = entityManager.find(AgentRegistry.class, "FraudAgent");
 
         entityManager.flush();
     }
