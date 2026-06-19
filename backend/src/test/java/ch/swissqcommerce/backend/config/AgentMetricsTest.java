@@ -37,6 +37,7 @@ public class AgentMetricsTest {
 
         when(outcomeRecordRepo.sumPreventedLossUsd(any())).thenReturn(100.0);
         when(outcomeRecordRepo.sumRevenueDeltaUsd(any())).thenReturn(50.0);
+        when(outcomeRecordRepo.sumShippingSavingsUsd(any())).thenReturn(30.0);
 
         metricsConfig = new AgentMetricsConfiguration(
                 outcomeRecordRepo,
@@ -54,30 +55,42 @@ public class AgentMetricsTest {
 
         assertEquals(100.0, metricsConfig.getPreventedLossUsdTotal());
         assertEquals(50.0, metricsConfig.getRevenueDeltaUsdTotal());
+        assertEquals(30.0, metricsConfig.getShippingSavingsUsdTotal());
 
         assertEquals(100.0, meterRegistry.find("prevented_loss_usd_total").gauge().value());
         assertEquals(50.0, meterRegistry.find("revenue_delta_usd_total").gauge().value());
+        assertEquals(30.0, meterRegistry.find("shipping_savings_usd_total").gauge().value());
     }
 
     @Test
     public void testUpdateMetricsAsync_AccumulatesCorrectly() {
         metricsConfig.init();
 
-        metricsConfig.updateMetricsAsync(Map.of("prevented_chargeback_usd", 25.5, "revenue_delta", 10.2));
+        metricsConfig.updateMetricsAsync(Map.of(
+                "prevented_chargeback_usd", 25.5,
+                "revenue_delta", 10.2,
+                "shipping_savings_usd", 15.3
+        ));
 
         assertEquals(125.5, metricsConfig.getPreventedLossUsdTotal());
         assertEquals(60.2, metricsConfig.getRevenueDeltaUsdTotal());
+        assertEquals(45.3, metricsConfig.getShippingSavingsUsdTotal());
     }
 
     @Test
     public void testCalculateOutcomeSuccessRate() {
         when(outcomeRecordRepo.countByDomain("pricing")).thenReturn(10L);
         when(outcomeRecordRepo.countSuccessfulByDomain("pricing")).thenReturn(8L);
+        when(outcomeRecordRepo.countByDomain("routing")).thenReturn(5L);
+        when(outcomeRecordRepo.countSuccessfulByDomain("routing")).thenReturn(4L);
 
         metricsConfig.init();
 
         double successRate = meterRegistry.find("outcome_success_rate").tags("domain", "pricing").gauge().value();
         assertEquals(0.8, successRate, 0.001);
+
+        double logisticsSuccessRate = meterRegistry.find("outcome_success_rate").tags("domain", "logistics").gauge().value();
+        assertEquals(0.8, logisticsSuccessRate, 0.001);
     }
 
     @Test

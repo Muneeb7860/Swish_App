@@ -14,6 +14,7 @@ import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
 import ch.swissqcommerce.backend.repository.OutboxEventRepository;
 import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -181,7 +182,9 @@ public class AgentOrchestrator {
 
         String recommendationJson;
         try {
-            if ("pricing".equalsIgnoreCase(suggestion.domain())) {
+            if (suggestion.action() != null && suggestion.action().trim().startsWith("{")) {
+                recommendationJson = suggestion.action().trim();
+            } else if ("pricing".equalsIgnoreCase(suggestion.domain())) {
                 recommendationJson = parsePricingRecommendationJson(suggestion);
             } else if ("inventory".equalsIgnoreCase(suggestion.domain())) {
                 recommendationJson = parseInventoryRecommendationJson(suggestion);
@@ -321,6 +324,25 @@ public class AgentOrchestrator {
 
     private String extractEntityId(AgentSuggestion s) {
         if ("risk".equalsIgnoreCase(s.domain())) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
+            if (m.find()) {
+                return "order_id=" + m.group(1);
+            }
+            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
+            if (mNum.find()) {
+                return "order_id=" + mNum.group();
+            }
+            return "order_id=0";
+        }
+        if ("routing".equalsIgnoreCase(s.domain())) {
+            try {
+                JsonNode node = objectMapper.readTree(s.action());
+                if (node.has("order_id")) {
+                    return "order_id=" + node.get("order_id").asInt();
+                }
+            } catch (Exception e) {
+                // ignore, try regex
+            }
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
             if (m.find()) {
                 return "order_id=" + m.group(1);

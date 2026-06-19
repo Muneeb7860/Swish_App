@@ -51,4 +51,19 @@ public interface OutcomeRecordRepository extends JpaRepository<OutcomeRecord, UU
                     }
                 }).sum();
     }
+
+    default double sumShippingSavingsUsd(ObjectMapper objectMapper) {
+        return findAllMetrics().stream()
+                .mapToDouble(m -> {
+                    try {
+                        JsonNode node = objectMapper.readTree(m);
+                        if (node.has("shipping_savings_usd")) {
+                            return node.path("shipping_savings_usd").asDouble(0.0);
+                        }
+                        return 0.0;
+                    } catch (Exception e) {
+                        return 0.0;
+                    }
+                }).sum();
+    }
 }

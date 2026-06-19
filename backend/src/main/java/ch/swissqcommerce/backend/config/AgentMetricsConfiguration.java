@@ -35,6 +35,7 @@ public class AgentMetricsConfiguration {
 
     private final AtomicReference<Double> preventedLossUsdTotal = new AtomicReference<>(0.0);
     private final AtomicReference<Double> revenueDeltaUsdTotal = new AtomicReference<>(0.0);
+    private final AtomicReference<Double> shippingSavingsUsdTotal = new AtomicReference<>(0.0);
 
     public AgentMetricsConfiguration(
             OutcomeRecordRepository outcomeRecordRepo,
@@ -62,6 +63,9 @@ public class AgentMetricsConfiguration {
         double revenueDelta = outcomeRecordRepo.sumRevenueDeltaUsd(objectMapper);
         revenueDeltaUsdTotal.set(revenueDelta);
 
+        double shippingSavings = outcomeRecordRepo.sumShippingSavingsUsd(objectMapper);
+        shippingSavingsUsdTotal.set(shippingSavings);
+
         // 1. Expose total gauges for accumulated outcome USD values
         Gauge.builder("prevented_loss_usd_total", preventedLossUsdTotal, AtomicReference::get)
                 .description("Total prevented loss in USD")
@@ -73,6 +77,11 @@ public class AgentMetricsConfiguration {
                 .tag("domain", "pricing")
                 .register(meterRegistry);
 
+        Gauge.builder("shipping_savings_usd_total", shippingSavingsUsdTotal, AtomicReference::get)
+                .description("Total shipping savings in USD")
+                .tag("domain", "logistics")
+                .register(meterRegistry);
+
         // 2. Expose success rate gauges
         Gauge.builder("outcome_success_rate", this, s -> s.calculateOutcomeSuccessRate("pricing"))
                 .description("Outcome success rate")
@@ -82,6 +91,11 @@ public class AgentMetricsConfiguration {
         Gauge.builder("outcome_success_rate", this, s -> s.calculateOutcomeSuccessRate("risk"))
                 .description("Outcome success rate")
                 .tag("domain", "risk")
+                .register(meterRegistry);
+
+        Gauge.builder("outcome_success_rate", this, s -> s.calculateOutcomeSuccessRate("routing"))
+                .description("Outcome success rate")
+                .tag("domain", "logistics")
                 .register(meterRegistry);
 
         // 3. Expose baseline lag
@@ -113,6 +127,10 @@ public class AgentMetricsConfiguration {
             if (metrics.containsKey("revenue_delta")) {
                 double val = ((Number) metrics.get("revenue_delta")).doubleValue();
                 revenueDeltaUsdTotal.updateAndGet(current -> current + val);
+            }
+            if (metrics.containsKey("shipping_savings_usd")) {
+                double val = ((Number) metrics.get("shipping_savings_usd")).doubleValue();
+                shippingSavingsUsdTotal.updateAndGet(current -> current + val);
             }
         } catch (Exception e) {
             log.error("Failed to update metric buffers asynchronously: {}", e.getMessage());
@@ -165,5 +183,9 @@ public class AgentMetricsConfiguration {
 
     public double getRevenueDeltaUsdTotal() {
         return revenueDeltaUsdTotal.get();
+    }
+
+    public double getShippingSavingsUsdTotal() {
+        return shippingSavingsUsdTotal.get();
     }
 }

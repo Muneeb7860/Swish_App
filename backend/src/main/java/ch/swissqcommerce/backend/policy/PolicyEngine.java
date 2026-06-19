@@ -26,11 +26,13 @@ public class PolicyEngine {
     private final SystemConfigurationRepository configRepo;
     private final PricingPolicy pricingPolicy;
     private final FraudPolicy fraudPolicy;
+    private final LogisticsPolicy logisticsPolicy;
 
-    public PolicyEngine(SystemConfigurationRepository configRepo, PricingPolicy pricingPolicy, FraudPolicy fraudPolicy) {
+    public PolicyEngine(SystemConfigurationRepository configRepo, PricingPolicy pricingPolicy, FraudPolicy fraudPolicy, LogisticsPolicy logisticsPolicy) {
         this.configRepo = configRepo;
         this.pricingPolicy = pricingPolicy;
         this.fraudPolicy = fraudPolicy;
+        this.logisticsPolicy = logisticsPolicy;
     }
 
     /**
@@ -42,6 +44,9 @@ public class PolicyEngine {
         }
         if ("risk".equalsIgnoreCase(s.getDomain())) {
             return fraudPolicy.evaluate(s);
+        }
+        if ("routing".equalsIgnoreCase(s.getDomain())) {
+            return logisticsPolicy.evaluate(s);
         }
         ch.swissqcommerce.backend.agent.AgentSuggestion domainSuggestion = ch.swissqcommerce.backend.agent.AgentSuggestion.of(
                 s.getDomain(), "", s.getConfidence().doubleValue(), s.getReason(), s.getImpact());

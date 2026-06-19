@@ -25,6 +25,9 @@ public class PolicyEngineTest {
     @Mock
     private FraudPolicy fraudPolicy;
 
+    @Mock
+    private LogisticsPolicy logisticsPolicy;
+
     @InjectMocks
     private PolicyEngine policyEngine;
 
@@ -54,6 +57,20 @@ public class PolicyEngineTest {
         PolicyDecision result = policyEngine.evaluate(entity);
         assertEquals(expectedDecision, result);
         verify(fraudPolicy).evaluate(entity);
+    }
+
+    @Test
+    public void testEvaluateEntity_DelegatesRouting() {
+        ch.swissqcommerce.backend.model.AgentSuggestionEntity entity = ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
+                .domain("routing")
+                .recommendation("json")
+                .build();
+        PolicyDecision expectedDecision = PolicyDecision.approved("auto_approve_clear_savings");
+        when(logisticsPolicy.evaluate(entity)).thenReturn(expectedDecision);
+
+        PolicyDecision result = policyEngine.evaluate(entity);
+        assertEquals(expectedDecision, result);
+        verify(logisticsPolicy).evaluate(entity);
     }
 
     @Test

@@ -53,6 +53,14 @@ public class Inventory {
     @Builder.Default
     private Boolean perishable = false;
 
+    @Column(name = "fragile", nullable = false)
+    @Builder.Default
+    private Boolean fragile = false;
+
+    @Column(name = "reserved_qty", nullable = false)
+    @Builder.Default
+    private Integer reservedQty = 0;
+
     @Version private Long version;
 
     @Column(name = "updated_at", insertable = false, updatable = false)

@@ -126,6 +126,13 @@ public class OrderEntity {
     @Column(name = "rejection_photo_url")
     private String rejectionPhotoUrl;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "warehouse_id")
+    private DarkStore warehouse;
+
+    @Column(name = "estimated_shipping_cost", precision = 10, scale = 2)
+    private BigDecimal estimatedShippingCost;
+
     @Column(name = "version", nullable = false)
     @Builder.Default
     private Integer version = 0;

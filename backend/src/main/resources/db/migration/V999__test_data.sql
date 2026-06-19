@@ -21,3 +21,20 @@ INSERT INTO oltp.chargebacks (chargeback_id, order_id, amount, reason, filed_at,
 VALUES (999901, 999901, 150.00, 'fraudulent_card', NOW() - INTERVAL '10 days', 'lost'),
        (999902, 999902, 250.00, 'unauthorized_transaction', NOW() - INTERVAL '5 days', 'disputed')
 ON CONFLICT (chargeback_id) DO NOTHING;
+
+-- 5. Seed second test store for logistics routing choice
+INSERT INTO oltp.dark_stores (store_id, store_name, address, latitude, longitude, storage_capacity_limit)
+VALUES ('store-test-2', 'Second Test Store', 'Second Test Address', 47.4500, 8.6000, 5000)
+ON CONFLICT (store_id) DO NOTHING;
+
+-- 6. Seed warehouse baseline rates
+INSERT INTO oltp.warehouse_baseline (zip_prefix, warehouse_id, avg_shipping_cost, sample_size, last_updated)
+VALUES ('800', 'store-test-1', 5.50, 10, NOW()),
+       ('800', 'store-test-2', 6.20, 10, NOW())
+ON CONFLICT (zip_prefix, warehouse_id) DO NOTHING;
+
+-- 7. Seed region preference fallbacks
+INSERT INTO oltp.region_pref (zip_prefix, primary_warehouse_id, secondary_warehouse_id)
+VALUES ('800', 'store-test-1', 'store-test-2')
+ON CONFLICT (zip_prefix) DO NOTHING;
+

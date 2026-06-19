@@ -1,11 +1,17 @@
 package ch.swissqcommerce.backend.gateway;
 
+import ch.swissqcommerce.backend.domain.logistics.adapter.out.persistence.ShipmentEntity;
+import ch.swissqcommerce.backend.domain.logistics.adapter.out.persistence.ShipmentRepository;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity;
 import ch.swissqcommerce.backend.model.AgentSuggestionEntity;
 import ch.swissqcommerce.backend.model.ExecutionRecord;
 import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
+import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import ch.swissqcommerce.backend.repository.ExecutionRecordRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
+import ch.swissqcommerce.backend.repository.OrderRepository;
 import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +45,9 @@ public class ExecutionGateway {
     private final ExecutionRecordRepository executionRecordRepo;
     private final EntityManager entityManager;
     private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
+    private final OrderRepository orderRepo;
+    private final ShipmentRepository shipmentRepo;
+    private final DarkStoreRepository darkStoreRepo;
 
     public ExecutionGateway(
             InventoryRepository inventoryRepo,
@@ -47,7 +56,10 @@ public class ExecutionGateway {
             PolicyDecisionRepository policyDecisionRepo,
             ExecutionRecordRepository executionRecordRepo,
             EntityManager entityManager,
-            io.micrometer.core.instrument.MeterRegistry meterRegistry) {
+            io.micrometer.core.instrument.MeterRegistry meterRegistry,
+            OrderRepository orderRepo,
+            ShipmentRepository shipmentRepo,
+            DarkStoreRepository darkStoreRepo) {
         this.inventoryRepo = inventoryRepo;
         this.objectMapper = objectMapper;
         this.agentSuggestionRepo = agentSuggestionRepo;
@@ -55,6 +67,9 @@ public class ExecutionGateway {
         this.executionRecordRepo = executionRecordRepo;
         this.entityManager = entityManager;
         this.meterRegistry = meterRegistry;
+        this.orderRepo = orderRepo;
+        this.shipmentRepo = shipmentRepo;
+        this.darkStoreRepo = darkStoreRepo;
     }
 
     @Transactional
@@ -203,6 +218,154 @@ public class ExecutionGateway {
                         Map.of("order_id", orderId, "action", "held", "new_version", expectedVersion + 1)), executedBy);
                     log.info("ExecutionGateway executed fraud hold for order: {}", orderId);
 
+                } else if ("assign_warehouse".equalsIgnoreCase(action)) {
+                    if (!rec.has("order_id") || !rec.has("version")) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "INVALID_RECOMMENDATION", "assign_warehouse requires order_id and version in recommendation", executedBy);
+                        throw new IllegalArgumentException("assign_warehouse requires order_id and version in recommendation");
+                    }
+                    int orderId = rec.get("order_id").asInt();
+                    int expectedVersion = rec.get("version").asInt();
+                    boolean splitShipment = rec.has("split_shipment") && rec.get("split_shipment").asBoolean();
+                    String primaryWarehouseId = rec.has("primary_warehouse_id") ? rec.get("primary_warehouse_id").asText() : null;
+                    BigDecimal estimatedShippingCost = rec.has("estimated_shipping_cost") ? BigDecimal.valueOf(rec.get("estimated_shipping_cost").asDouble()) : BigDecimal.ZERO;
+                    String carrier = rec.has("carrier") ? rec.get("carrier").asText() : "USPS";
+
+                    OrderEntity order = orderRepo.findById(orderId)
+                            .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                                    "Order not found for logistics execution: " + orderId));
+
+                    if (!order.getVersion().equals(expectedVersion)) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", 
+                                "STATE_DRIFT: expected version=" + expectedVersion + " actual=" + order.getVersion(), executedBy);
+                        throw new OptimisticLockException("Order version changed since suggestion");
+                    }
+
+                    // 1. Decrement reserved_qty at original items
+                    for (OrderItemEntity oitem : order.getOrderItems()) {
+                        Inventory originalInv = oitem.getItem();
+                        int qty = oitem.getQuantity();
+                        int oldReserved = originalInv.getReservedQty() != null ? originalInv.getReservedQty() : 0;
+                        int newReserved = Math.max(0, oldReserved - qty);
+                        originalInv.setReservedQty(newReserved);
+                        inventoryRepo.save(originalInv);
+                    }
+
+                    // 2. Map target warehouse for each item, increment reserved_qty and update order_items
+                    if (splitShipment) {
+                        JsonNode splits = rec.get("warehouse_splits");
+                        if (splits == null || !splits.isArray()) {
+                            throw new IllegalArgumentException("Split shipment requires warehouse_splits array");
+                        }
+                        for (JsonNode split : splits) {
+                            String whId = split.get("warehouse_id").asText();
+                            JsonNode skuIdsNode = split.get("sku_ids");
+                            for (JsonNode skuIdNode : skuIdsNode) {
+                                String itemIdStr = skuIdNode.asText();
+                                OrderItemEntity matchedOrderItem = order.getOrderItems().stream()
+                                        .filter(oi -> oi.getItem().getItemId().equals(itemIdStr))
+                                        .findFirst()
+                                        .orElseThrow(() -> new IllegalArgumentException("Item " + itemIdStr + " not found in order items"));
+
+                                Inventory targetInv = findInventoryForStore(whId, matchedOrderItem.getItem());
+                                int available = targetInv.getStock() - (targetInv.getReservedQty() != null ? targetInv.getReservedQty() : 0);
+                                if (available < matchedOrderItem.getQuantity()) {
+                                    throw new OptimisticLockException("Insufficient stock in target warehouse " + whId + " for item " + targetInv.getName());
+                                }
+                                targetInv.setReservedQty((targetInv.getReservedQty() != null ? targetInv.getReservedQty() : 0) + matchedOrderItem.getQuantity());
+                                inventoryRepo.save(targetInv);
+
+                                entityManager.createNativeQuery("UPDATE oltp.order_items SET item_id = :newItemId WHERE order_id = :orderId AND item_id = :oldItemId")
+                                        .setParameter("newItemId", targetInv.getItemId())
+                                        .setParameter("orderId", orderId)
+                                        .setParameter("oldItemId", itemIdStr)
+                                        .executeUpdate();
+                            }
+                        }
+                    } else {
+                        for (OrderItemEntity oitem : order.getOrderItems()) {
+                            Inventory targetInv = findInventoryForStore(primaryWarehouseId, oitem.getItem());
+                            int available = targetInv.getStock() - (targetInv.getReservedQty() != null ? targetInv.getReservedQty() : 0);
+                            if (available < oitem.getQuantity()) {
+                                throw new OptimisticLockException("Insufficient stock in target warehouse " + primaryWarehouseId + " for item " + targetInv.getName());
+                            }
+                            targetInv.setReservedQty((targetInv.getReservedQty() != null ? targetInv.getReservedQty() : 0) + oitem.getQuantity());
+                            inventoryRepo.save(targetInv);
+
+                            entityManager.createNativeQuery("UPDATE oltp.order_items SET item_id = :newItemId WHERE order_id = :orderId AND item_id = :oldItemId")
+                                    .setParameter("newItemId", targetInv.getItemId())
+                                    .setParameter("orderId", orderId)
+                                    .setParameter("oldItemId", oitem.getItem().getItemId())
+                                    .executeUpdate();
+                        }
+                    }
+
+                    // 3. Update orders row
+                    int updated = entityManager.createNativeQuery("""
+                        UPDATE oltp.orders 
+                        SET warehouse_id = :primaryId, 
+                            estimated_shipping_cost = :estimatedCost, 
+                            version = version + 1, 
+                            updated_at = NOW() 
+                        WHERE order_id = :orderId AND version = :version
+                        """)
+                        .setParameter("primaryId", primaryWarehouseId)
+                        .setParameter("estimatedCost", estimatedShippingCost)
+                        .setParameter("orderId", orderId)
+                        .setParameter("version", expectedVersion)
+                        .executeUpdate();
+
+                    if (updated == 0) {
+                        throw new OptimisticLockException("Order state changed since suggestion");
+                    }
+
+                    // 4. Save shipment records
+                    ch.swissqcommerce.backend.model.DarkStore primaryWh = darkStoreRepo.findById(primaryWarehouseId)
+                            .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException("Warehouse not found: " + primaryWarehouseId));
+                    
+                    if (splitShipment) {
+                        JsonNode splits = rec.get("warehouse_splits");
+                        for (JsonNode split : splits) {
+                            String whId = split.get("warehouse_id").asText();
+                            ch.swissqcommerce.backend.model.DarkStore splitWh = darkStoreRepo.findById(whId)
+                                    .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException("Warehouse not found: " + whId));
+                            BigDecimal cost = split.has("estimated_cost") ? BigDecimal.valueOf(split.get("estimated_cost").asDouble()) : estimatedShippingCost;
+                            
+                            ShipmentEntity shipment = ShipmentEntity.builder()
+                                    .order(order)
+                                    .warehouse(splitWh)
+                                    .carrier(carrier)
+                                    .estimatedShippingCost(cost)
+                                    .status("pending")
+                                    .build();
+                            shipmentRepo.save(shipment);
+                        }
+                    } else {
+                        ShipmentEntity shipment = ShipmentEntity.builder()
+                                .order(order)
+                                .warehouse(primaryWh)
+                                .carrier(carrier)
+                                .estimatedShippingCost(estimatedShippingCost)
+                                .status("pending")
+                                .build();
+                        shipmentRepo.save(shipment);
+                    }
+
+                    suggestion.setStatus("executed");
+                    agentSuggestionRepo.save(suggestion);
+                    
+                    saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of(
+                            "order_id", orderId,
+                            "action", "assign_warehouse",
+                            "primary_warehouse_id", primaryWarehouseId,
+                            "split_shipment", splitShipment,
+                            "new_version", expectedVersion + 1
+                    )), executedBy);
+                    log.info("ExecutionGateway executed warehouse routing for order: {}", orderId);
+
                 } else {
                     throw new IllegalArgumentException("Unknown recommendation action for execution: " + action);
                 }
@@ -226,6 +389,21 @@ public class ExecutionGateway {
                 }
             }
         }
+    }
+
+    private Inventory findInventoryForStore(String storeId, Inventory originalItem) {
+        List<Inventory> targetInventory = inventoryRepo.findByStoreStoreId(storeId);
+        for (Inventory inv : targetInventory) {
+            if (inv.getName().equalsIgnoreCase(originalItem.getName())) {
+                return inv;
+            }
+        }
+        for (Inventory inv : targetInventory) {
+            if (inv.getItemId().equals(originalItem.getItemId())) {
+                return inv;
+            }
+        }
+        throw new OptimisticLockException("Inventory item " + originalItem.getName() + " not found in target store " + storeId);
     }
 
     private void saveFailedRecord(AgentSuggestionEntity suggestion, String code, String message, String executedBy) {
@@ -257,3 +435,4 @@ public class ExecutionGateway {
         return decisions.isEmpty() ? null : decisions.get(0);
     }
 }
+
