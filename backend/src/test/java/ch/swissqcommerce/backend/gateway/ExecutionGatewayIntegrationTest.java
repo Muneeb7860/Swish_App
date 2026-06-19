@@ -149,6 +149,7 @@ public class ExecutionGatewayIntegrationTest {
         AgentSuggestionEntity suggestion =
                 AgentSuggestionEntity.builder()
                         .id(suggestionId)
+                        .traceId(UUID.randomUUID())
                         .agent(riskAgent)
                         .domain("risk")
                         .entityId("order_id=" + order.getOrderId())
@@ -224,6 +225,7 @@ public class ExecutionGatewayIntegrationTest {
         AgentSuggestionEntity suggestion =
                 AgentSuggestionEntity.builder()
                         .id(suggestionId)
+                        .traceId(UUID.randomUUID())
                         .agent(riskAgent)
                         .domain("risk")
                         .entityId("order_id=" + order.getOrderId())
