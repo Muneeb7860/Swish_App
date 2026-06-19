@@ -22,11 +22,13 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
+@Import(TestConfig.class)
 public class PaymentIntegrationTest {
 
     @TestConfiguration
@@ -68,6 +70,8 @@ public class PaymentIntegrationTest {
     @Autowired private TransactionTemplate transactionTemplate;
 
     @org.springframework.boot.test.mock.mockito.MockBean private StringRedisTemplate redisTemplate;
+    @org.springframework.boot.test.mock.mockito.MockBean private org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
+
 
     private Customer customer;
     private DarkStore store;
