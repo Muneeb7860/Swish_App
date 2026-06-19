@@ -3,6 +3,7 @@ package ch.swissqcommerce.backend.gateway;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.domain.logistics.adapter.out.persistence.ShipmentRepository;
 import ch.swissqcommerce.backend.model.*;
 import ch.swissqcommerce.backend.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +61,15 @@ public class ExecutionGatewayIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private OrderRepository orderRepo;
+
+    @Autowired
+    private ShipmentRepository shipmentRepo;
+
+    @Autowired
+    private DarkStoreRepository darkStoreRepo;
+
     private ExecutionGateway executionGateway;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -75,7 +85,10 @@ public class ExecutionGatewayIntegrationTest {
                 policyDecisionRepo,
                 executionRecordRepo,
                 entityManager,
-                new io.micrometer.core.instrument.simple.SimpleMeterRegistry()
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                orderRepo,
+                shipmentRepo,
+                darkStoreRepo
         );
 
         executionRecordRepo.deleteAll();

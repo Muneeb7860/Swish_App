@@ -259,6 +259,17 @@
           "legendFormat": "Revenue Delta (Pricing)",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "shipping_savings_usd_total",
+          "legendFormat": "Shipping Savings (Logistics)",
+          "range": true,
+          "refId": "C"
         }
       ]
     },
@@ -290,6 +301,41 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 10,
+      "title": "Cumulative Shipping Savings MTD ($)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "shipping_savings_usd_total",
+          "legendFormat": "Savings ($)",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "value"
+      }
     }
   ],
   "refresh": "5s",
