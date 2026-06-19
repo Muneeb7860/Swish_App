@@ -23,6 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -30,9 +31,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestPropertySource(properties = {"spring.flyway.enabled=true", "spring.autoconfigure.exclude="})
 public class ExecutionGatewayIntegrationTest {
 
+    // V25__sensor_readings_timescale.sql runs CREATE EXTENSION timescaledb, which the
+    // vanilla postgres image doesn't ship; CI's own Postgres service (ci.yml) is already
+    // timescale/timescaledb:latest-pg16, so the Flyway migration history needs that here too.
     @Container
     static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>("postgres:15-alpine")
+            new PostgreSQLContainer<>(
+                            DockerImageName.parse("timescale/timescaledb:latest-pg16")
+                                    .asCompatibleSubstituteFor("postgres"))
                     .withDatabaseName("swiss_db")
                     .withUsername("sa")
                     .withPassword("test");
