@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -83,11 +85,34 @@ public class WarehouseSelectionService {
         CustomerAddress customerAddr = order.customerAddress();
         String zipPrefix = extractZipPrefix(customerAddr);
 
-        // 1. Identify which warehouses have 100% SKU availability
+        // Async pre-fetch carrier rates for all warehouses in parallel (timeout budget 300ms)
+        List<CompletableFuture<Void>> rateFutures = new ArrayList<>();
+        for (DarkStore wh : warehouses) {
+            rateFutures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    logisticsDataPort.getCarrierRate(wh.getStoreId(), zipPrefix);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }));
+        }
+
+        try {
+            CompletableFuture.allOf(rateFutures.toArray(new CompletableFuture[0]))
+                    .get(300, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // Proceed on timeout/exception and use fallback
+        }
+
+        // 1. Identify which warehouses have 100% SKU availability AND capacity remaining
         List<DarkStore> fullyStockedWarehouses = new ArrayList<>();
         for (DarkStore wh : warehouses) {
             if (hasAllStock(wh.getStoreId(), order.items())) {
-                fullyStockedWarehouses.add(wh);
+                int capacity = wh.getDailyOrderCapacity() != null ? wh.getDailyOrderCapacity() : 500;
+                int todayCount = logisticsDataPort.getTodayOrderCountForWarehouse(wh.getStoreId());
+                if (todayCount < capacity) {
+                    fullyStockedWarehouses.add(wh);
+                }
             }
         }
 
@@ -106,7 +131,13 @@ public class WarehouseSelectionService {
 
             if (bestWh != null) {
                 double distance = calculateDistance(customerAddr, bestWh);
-                String carrier = distance > 50.0 ? "UPS" : "USPS";
+                String carrier = "USPS";
+                Optional<LogisticsDataPort.CarrierRate> carrierRateOpt = logisticsDataPort.getCarrierRate(bestWh.getStoreId(), zipPrefix);
+                if (carrierRateOpt.isPresent()) {
+                    carrier = carrierRateOpt.get().carrier();
+                } else {
+                    carrier = distance > 50.0 ? "UPS" : "USPS";
+                }
                 return Optional.of(new RoutingResult(bestWh.getStoreId(), false, bestScore, Collections.emptyList(), carrier));
             }
         }
@@ -115,6 +146,33 @@ public class WarehouseSelectionService {
         Optional<RegionPreference> prefOpt = logisticsDataPort.findRegionPref(zipPrefix);
         if (prefOpt.isPresent()) {
             RegionPreference pref = prefOpt.get();
+
+            boolean primaryHasCapacity = true;
+            Optional<DarkStore> primaryStoreOpt = darkStoreRepo.findById(pref.primaryWarehouseId());
+            if (primaryStoreOpt.isPresent()) {
+                int capacity = primaryStoreOpt.get().getDailyOrderCapacity() != null ? primaryStoreOpt.get().getDailyOrderCapacity() : 500;
+                int todayCount = logisticsDataPort.getTodayOrderCountForWarehouse(pref.primaryWarehouseId());
+                if (todayCount >= capacity) {
+                    primaryHasCapacity = false;
+                }
+            } else {
+                primaryHasCapacity = false;
+            }
+
+            boolean secondaryHasCapacity = true;
+            if (pref.secondaryWarehouseId() != null) {
+                Optional<DarkStore> secondaryStoreOpt = darkStoreRepo.findById(pref.secondaryWarehouseId());
+                if (secondaryStoreOpt.isPresent()) {
+                    int capacity = secondaryStoreOpt.get().getDailyOrderCapacity() != null ? secondaryStoreOpt.get().getDailyOrderCapacity() : 500;
+                    int todayCount = logisticsDataPort.getTodayOrderCountForWarehouse(pref.secondaryWarehouseId());
+                    if (todayCount >= capacity) {
+                        secondaryHasCapacity = false;
+                    }
+                } else {
+                    secondaryHasCapacity = false;
+                }
+            }
+
             List<SplitInfo> splits = new ArrayList<>();
             List<String> unfulfilledItems = new ArrayList<>();
 
@@ -138,12 +196,26 @@ public class WarehouseSelectionService {
                 return Optional.empty();
             }
 
+            // Exceeding capacity fails auto-routing -> goes to HITL
+            if (!primaryItems.isEmpty() && !primaryHasCapacity) {
+                return Optional.empty();
+            }
+            if (!secondaryItems.isEmpty() && !secondaryHasCapacity) {
+                return Optional.empty();
+            }
+
             double totalCost = 0.0;
+            String carrier = "UPS";
             if (!primaryItems.isEmpty()) {
                 Optional<DarkStore> wh = darkStoreRepo.findById(pref.primaryWarehouseId());
                 double cost = wh.map(store -> scoreWarehouse(store, customerAddr, zipPrefix)).orElse(10.0);
                 splits.add(new SplitInfo(pref.primaryWarehouseId(), primaryItems, cost));
                 totalCost += cost;
+
+                Optional<LogisticsDataPort.CarrierRate> cr = logisticsDataPort.getCarrierRate(pref.primaryWarehouseId(), zipPrefix);
+                if (cr.isPresent()) {
+                    carrier = cr.get().carrier();
+                }
             }
             if (!secondaryItems.isEmpty()) {
                 Optional<DarkStore> wh = darkStoreRepo.findById(pref.secondaryWarehouseId());
@@ -152,7 +224,6 @@ public class WarehouseSelectionService {
                 totalCost += cost;
             }
 
-            String carrier = "UPS";
             return Optional.of(new RoutingResult(pref.primaryWarehouseId(), true, totalCost, splits, carrier));
         }
 
@@ -180,15 +251,27 @@ public class WarehouseSelectionService {
     }
 
     private double scoreWarehouse(DarkStore wh, CustomerAddress addr, String zipPrefix) {
-        List<BaselineCost> baselines = logisticsDataPort.findBaselinesByZipPrefix(zipPrefix);
+        Optional<LogisticsDataPort.CarrierRate> carrierRateOpt = Optional.empty();
+        try {
+            carrierRateOpt = logisticsDataPort.getCarrierRate(wh.getStoreId(), zipPrefix);
+        } catch (Exception e) {
+            // fallback
+        }
+
         double baselineCost = -1.0;
         int sampleSize = 0;
 
-        for (BaselineCost bc : baselines) {
-            if (bc.warehouseId().equals(wh.getStoreId())) {
-                baselineCost = bc.avgShippingCost().doubleValue();
-                sampleSize = bc.sampleSize();
-                break;
+        if (carrierRateOpt.isPresent()) {
+            baselineCost = carrierRateOpt.get().rate().doubleValue();
+            sampleSize = 10; // High confidence live rate
+        } else {
+            List<BaselineCost> baselines = logisticsDataPort.findBaselinesByZipPrefix(zipPrefix);
+            for (BaselineCost bc : baselines) {
+                if (bc.warehouseId().equals(wh.getStoreId())) {
+                    baselineCost = bc.avgShippingCost().doubleValue();
+                    sampleSize = bc.sampleSize();
+                    break;
+                }
             }
         }
 

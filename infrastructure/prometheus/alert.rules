@@ -207,3 +207,16 @@ groups:
             {{ $value | humanize }} webhook signature rejections in the last 5 minutes.
             Possible misconfigured n8n secret or unauthorized access attempt.
 
+  - name: swish_logistics
+    rules:
+      - alert: HighRoutingHitlRate
+        expr: |
+          rate(agent_suggestions_total{domain="routing",decision="needs_human"}[1h]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          domain: logistics
+        annotations:
+          summary: "High volume of routing tasks sent to HITL"
+          description: "Routing agent suggestions requiring human-in-the-loop is above 50/hour (current rate: {{ $value }}). Check for potential warehouse outages or capacity constraints."
+

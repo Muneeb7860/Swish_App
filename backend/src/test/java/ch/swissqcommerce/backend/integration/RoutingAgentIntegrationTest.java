@@ -27,6 +27,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Transactional
 public class RoutingAgentIntegrationTest {
 
+    @org.springframework.boot.test.context.TestConfiguration
+    static class TestCacheConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        public org.springframework.cache.CacheManager cacheManager() {
+            return new org.springframework.cache.concurrent.ConcurrentMapCacheManager("carrier-rates");
+        }
+    }
+
     @MockBean private OpsAgent opsAgent;
     @MockBean private RoutingAgent routingAgent;
     @MockBean private PricingAgent pricingAgent;

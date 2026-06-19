@@ -66,7 +66,8 @@ public class RedisCacheConfig {
                         "wholesaler-invoices", base.entryTtl(Duration.ofMinutes(10)),
                         "academy-courses", base.entryTtl(Duration.ofMinutes(60)),
                         "system-health", base.entryTtl(Duration.ofSeconds(30)),
-                        "catalog", base.entryTtl(Duration.ofMinutes(60)));
+                        "catalog", base.entryTtl(Duration.ofMinutes(60)),
+                        "carrier-rates", base.entryTtl(Duration.ofMinutes(5)));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(base.entryTtl(Duration.ofMinutes(10)))
