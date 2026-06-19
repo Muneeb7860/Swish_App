@@ -4,6 +4,22 @@ All notable changes to the **Swish Q-Commerce Platform** are documented in this 
 
 ---
 
+## [[`v0.3.0-routing-hardened`]](https://github.com/Muneeb7860/Swish_App/releases/tag/v0.3.0-routing-hardened) - 2026-06-19
+
+### 🚀 Added (Sprint 5 Routing Hardening & Quality Gate Gaps)
+*   **Warehouse Capacity Constraints**: Added `daily_order_capacity` to dark stores and disqualified overloaded facilities from warehouse routing selection.
+*   **Carrier Rate API Client**: Integrated a REST carrier rate service client with strict 200ms connection/read timeouts and a graceful straight-line Haversine math fallback.
+*   **5-Minute Redis Rate Cache**: Enabled a Redis-backed caching store with a 5-minute TTL to reduce repetitive high-latency network queries.
+*   **Asynchronous Parallel Pre-fetching**: Leveraged `CompletableFuture` to fetch warehouse rates in parallel under a strict 300ms budget limit.
+*   **Historical Scarcity Confidence Penalty**: Enforced a 20% baseline cost penalty on routing scores if a warehouse has fewer than 5 historical shipments.
+*   **Ops Alerting Rules**: Configured Prometheus alerts to page operations when the human-in-the-loop task rate exceeds 10/hour (Warning) or 50/hour (Critical).
+
+### 🛠️ Fixed
+*   **BUG-012 (Transactional Outbox Test Hang)**: Resolved Kafka connection blocks during integration test executions by declaring a mocked `KafkaTemplate` in [PaymentIntegrationTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and auto-loading [TestConfig.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) globally.
+*   **BUG-013 (Onboarding Null Constraint Violation)**: Resolved database crashes during E2E onboarding flows by wrapping boolean DTO fields with `Boolean.TRUE.equals(...)` in [EnrollmentPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java).
+
+---
+
 ## [[`v0.2.0`]](https://github.com/Muneeb7860/Swish_App/releases/tag/v0.2.0) - 2026-06-01
 
 ### 🛡️ Added (6-Hour Enterprise Hardening Campaign)

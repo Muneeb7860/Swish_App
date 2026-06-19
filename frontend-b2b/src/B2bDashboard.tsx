@@ -1428,10 +1428,10 @@ const B2bDashboard: React.FC = () => {
 													This key will be hashed downstream. Record it securely
 													to establish connection adapters.
 												</p>
-												<div className="flex items-center gap-2 mt-1 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-indigo-300 break-all select-all">
-													<code>{revealedApiKey}</code>
+												<div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-1 bg-slate-900 border border-slate-800 px-3 py-2.5 rounded-lg text-xs font-mono text-indigo-300">
+													<code className="break-all flex-1 select-all">{revealedApiKey}</code>
 													<button
-														className="ml-auto px-2 py-0.5 border border-slate-700 bg-slate-800 rounded text-[10px] text-slate-200 hover:text-indigo-400 hover:border-indigo-400/30 cursor-pointer whitespace-nowrap"
+														className="sm:ml-auto px-3 py-1 border border-slate-700 bg-slate-800 rounded text-[10px] text-slate-200 hover:text-indigo-400 hover:border-indigo-400/30 cursor-pointer whitespace-nowrap self-start sm:self-auto"
 														onClick={() =>
 															copyToClipboard(revealedApiKey, "api-key")
 														}

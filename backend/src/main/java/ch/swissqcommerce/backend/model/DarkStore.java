@@ -49,6 +49,12 @@ public class DarkStore {
     @Builder.Default
     private Integer storageCapacityLimit = 5000;
 
+    @Column(name = "daily_order_capacity", nullable = false)
+    @NotNull
+    @Min(0)
+    @Builder.Default
+    private Integer dailyOrderCapacity = 500;
+
     @Column(name = "last_iot_heartbeat")
     private OffsetDateTime lastIotHeartbeat;
 

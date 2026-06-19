@@ -89,6 +89,12 @@ Once your container instances report healthy, access the target entry points:
 
 ---
 
+## 🤖 Active AI Agents (Agentic OS)
+Swish operates a multi-domain agentic pipeline orchestration engine with automatic governance, dynamic thresholds, and human-in-the-loop fallback:
+- **FraudAgent (Fraud Detection)**: Monitors telemetry tick streams, trust scores, and transaction history to detect and prevent payment/identity fraud.
+- **PricingAgent (Dynamic Pricing)**: Evaluates temporal factors (weather, driver congestion, demand surge) to optimize restock/order pricing dynamically.
+- **RoutingAgent (Logistics Routing)**: Implements split-shipment logistics, capacity constraint validation, and cached carrier rate pre-fetching.
+
 ## 🏆 Epic Deliverables & Proof of Concept
 
 The platform is fortified across continuous optimization cycles to guarantee **Tier-1 Operational Readiness**.
