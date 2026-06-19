@@ -43,9 +43,9 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
                 .applicantType(app.getApplicantType())
                 .name(app.getName())
                 .details(app.getDetails())
-                .approvalOps(app.getApprovalOps())
-                .approvalCompliance(app.getApprovalCompliance())
-                .approvalAdmin(app.getApprovalAdmin())
+                .approvalOps(Boolean.TRUE.equals(app.getApprovalOps()))
+                .approvalCompliance(Boolean.TRUE.equals(app.getApprovalCompliance()))
+                .approvalAdmin(Boolean.TRUE.equals(app.getApprovalAdmin()))
                 .createdAt(app.getCreatedAt())
                 .build();
     }
@@ -57,9 +57,9 @@ public class EnrollmentPersistenceAdapter implements EnrollmentOutPort {
                 .applicantType(entity.getApplicantType())
                 .name(entity.getName())
                 .details(entity.getDetails())
-                .approvalOps(entity.getApprovalOps())
-                .approvalCompliance(entity.getApprovalCompliance())
-                .approvalAdmin(entity.getApprovalAdmin())
+                .approvalOps(Boolean.TRUE.equals(entity.getApprovalOps()))
+                .approvalCompliance(Boolean.TRUE.equals(entity.getApprovalCompliance()))
+                .approvalAdmin(Boolean.TRUE.equals(entity.getApprovalAdmin()))
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
