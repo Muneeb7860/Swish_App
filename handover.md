@@ -382,9 +382,15 @@ As the Lead Tester, I have verified and validated the entire application stack a
     - **Backend Unit Tests**: Verified `RetailerServiceTest` and `SensorServiceTest` pass successfully via `mvnw`.
     - **Frontend Compile**: Confirmed all 5 React micro-frontends (host, customer, rider, admin, b2b) build cleanly (`npm run build:all` success).
 
-### Cycle Update (2026-06-19) — Sprint 5 Hardening & BUG-012 Kafka Hang Squashed [DONE]
+### Cycle Update (2026-06-19) — Sprint 5 Hardening & BUG-012/BUG-013 Squashed [DONE]
 
 Sprint 5 is locked, tagged, and green. 434 tests passing, zero network hangs, and CI is clean.
+
+*   **BUG-013: Onboarding Application Null Constraint Violation Fix**:
+    - **Impact**: In staging and CI environments, creating onboarding applications (e.g. during E2E Cypress tests) could crash the database transaction with `null value in column "approval_ops" of relation "onboarding_applications" violates not-null constraint`.
+    - **Root Cause**: The domain model `OnboardingApplication` passed uninitialized boolean fields (like `approvalOps`, `approvalCompliance`, and `approvalAdmin`) as `null` through `EnrollmentPersistenceAdapter.java` to `OnboardingApplicationEntity.java`. Hibernate attempted to persist these fields explicitly as `null` instead of letting database defaults take over.
+    - **Fix**: Wrapped mapped values with `Boolean.TRUE.equals(...)` in the mapping logic of [EnrollmentPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java) to safely coerce null values to `false`.
+    - **Result**: Successfully resolved E2E database crashes on onboarding application creation.
 
 *   **BUG-012: Kafka Connection Hang Fix**:
     - **Impact**: `PaymentIntegrationTest` and tests invoking transactional outbox listener commits would block/hang for 60 seconds per event waiting for a local Kafka connection on `localhost:9092`.
