@@ -33,4 +33,13 @@ public interface LogisticsDataPort {
 
     /** Find order data required for routing optimization by order ID. */
     Optional<RoutingOrderData> findRoutingOrderData(Integer orderId);
+
+    /** Find the count of orders assigned to a warehouse today (since start of day). */
+    int getTodayOrderCountForWarehouse(String warehouseId);
+
+    /** Carrier rate quote wrapper. */
+    record CarrierRate(String carrier, java.math.BigDecimal rate) {}
+
+    /** Retrieve the carrier rate quote for a warehouse and destination zip. */
+    Optional<CarrierRate> getCarrierRate(String warehouseId, String destinationZip);
 }

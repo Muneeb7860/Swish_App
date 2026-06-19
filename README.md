@@ -49,6 +49,12 @@ You can launch the entire ecosystem (Micro-Frontends, Backend, Gateway, Postgres
 
 ---
 
+## 🤖 Active AI Agents (Agentic OS)
+Swish operates a multi-domain agentic pipeline orchestration engine with automatic governance, dynamic thresholds, and human-in-the-loop fallback:
+- **FraudAgent (Fraud Detection)**: Monitors telemetry tick streams, trust scores, and transaction history to detect and prevent payment/identity fraud.
+- **PricingAgent (Dynamic Pricing)**: Evaluates temporal factors (weather, driver congestion, demand surge) to optimize restock/order pricing dynamically.
+- **RoutingAgent (Logistics Routing)**: Implements split-shipment logistics, capacity constraint validation, and cached carrier rate pre-fetching.
+
 ## 🏆 Epic Deliverables & Proof of Concept
 
 This repository has been fully upgraded over multiple sprints to achieve Tier-1 Operational Readiness. **The code is here.**
