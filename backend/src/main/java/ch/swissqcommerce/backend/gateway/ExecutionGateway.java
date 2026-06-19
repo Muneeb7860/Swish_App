@@ -38,6 +38,7 @@ public class ExecutionGateway {
     private final PolicyDecisionRepository policyDecisionRepo;
     private final ExecutionRecordRepository executionRecordRepo;
     private final EntityManager entityManager;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     public ExecutionGateway(
             InventoryRepository inventoryRepo,
@@ -45,153 +46,185 @@ public class ExecutionGateway {
             AgentSuggestionEntityRepository agentSuggestionRepo,
             PolicyDecisionRepository policyDecisionRepo,
             ExecutionRecordRepository executionRecordRepo,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            io.micrometer.core.instrument.MeterRegistry meterRegistry) {
         this.inventoryRepo = inventoryRepo;
         this.objectMapper = objectMapper;
         this.agentSuggestionRepo = agentSuggestionRepo;
         this.policyDecisionRepo = policyDecisionRepo;
         this.executionRecordRepo = executionRecordRepo;
         this.entityManager = entityManager;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
     public void execute(UUID suggestionId, String executedBy) {
-        AgentSuggestionEntity suggestion = agentSuggestionRepo.findById(suggestionId)
-                .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
-                        "Suggestion not found: " + suggestionId));
-
-        // 1. Expiration check
-        if (OffsetDateTime.now().isAfter(suggestion.getExpiresAt())) {
-            suggestion.setStatus("expired");
-            agentSuggestionRepo.save(suggestion);
-            saveFailedRecord(suggestion, "EXPIRED", "Suggestion expired at " + suggestion.getExpiresAt(), executedBy);
-            throw new IllegalStateException("Suggestion is expired");
-        }
-
-        // 2. Status check
-        if (!"approved".equalsIgnoreCase(suggestion.getStatus())) {
-            throw new IllegalStateException("Suggestion must be in approved status to execute, but was: " 
-                    + suggestion.getStatus());
-        }
-
-        // 3. State-drift check and execution
+        long startTime = System.nanoTime();
+        AgentSuggestionEntity suggestion = null;
+        String action = "unknown";
         try {
-            JsonNode rec = objectMapper.readTree(suggestion.getRecommendation());
-            String action = rec.has("action") ? rec.get("action").asText() : "";
-            
-            if ("update_price".equalsIgnoreCase(action)) {
-                double expectedOldVal = rec.get("old_value").asDouble();
-                double newVal = rec.get("new_value").asDouble();
-                
-                Inventory item = inventoryRepo.findById(suggestion.getEntityId())
-                        .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
-                                "Inventory item not found for pricing execution: " + suggestion.getEntityId()));
-                                
-                BigDecimal currentPrice = item.getPrice();
-                BigDecimal expectedOldPrice = BigDecimal.valueOf(expectedOldVal).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal newPrice = BigDecimal.valueOf(newVal).setScale(2, RoundingMode.HALF_UP);
-                
-                if (currentPrice.compareTo(expectedOldPrice) != 0) {
-                    suggestion.setStatus("failed");
-                    agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "STATE_DRIFT", 
-                            "STATE_DRIFT: expected=" + expectedOldPrice + " actual=" + currentPrice, executedBy);
-                    throw new OptimisticLockException("Price changed since suggestion");
+            suggestion = agentSuggestionRepo.findById(suggestionId).orElse(null);
+            if (suggestion == null) {
+                throw new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                        "Suggestion not found: " + suggestionId);
+            }
+
+            final AgentSuggestionEntity finalSuggestion = suggestion;
+            try {
+                JsonNode rec = objectMapper.readTree(suggestion.getRecommendation());
+                action = rec.has("action") ? rec.get("action").asText() : "unknown";
+            } catch (Exception e) {
+                // ignore
+            }
+
+            // 1. Expiration check
+            if (OffsetDateTime.now().isAfter(suggestion.getExpiresAt())) {
+                suggestion.setStatus("expired");
+                agentSuggestionRepo.save(suggestion);
+                saveFailedRecord(suggestion, "EXPIRED", "Suggestion expired at " + suggestion.getExpiresAt(), executedBy);
+                if (meterRegistry != null) {
+                    meterRegistry.counter("agent_suggestions_total",
+                            "domain", suggestion.getDomain(),
+                            "decision", "expired",
+                            "agent_name", suggestion.getAgent() != null ? suggestion.getAgent().getName() : "UnknownAgent"
+                    ).increment();
                 }
-                
-                // Atomic, single-write-path optimistic update to oltp.inventory
-                int updated = entityManager.createNativeQuery(
-                        "UPDATE oltp.inventory SET price = :newPrice, updated_at = NOW() WHERE item_id = :sku AND price = :oldPrice")
-                        .setParameter("newPrice", newPrice)
-                        .setParameter("sku", suggestion.getEntityId())
-                        .setParameter("oldPrice", currentPrice)
+                throw new IllegalStateException("Suggestion is expired");
+            }
+
+            // 2. Status check
+            if (!"approved".equalsIgnoreCase(suggestion.getStatus())) {
+                throw new IllegalStateException("Suggestion must be in approved status to execute, but was: " 
+                        + suggestion.getStatus());
+            }
+
+            // 3. State-drift check and execution
+            try {
+                JsonNode rec = objectMapper.readTree(suggestion.getRecommendation());
+                if ("update_price".equalsIgnoreCase(action)) {
+                    double expectedOldVal = rec.get("old_value").asDouble();
+                    double newVal = rec.get("new_value").asDouble();
+                    
+                    Inventory item = inventoryRepo.findById(finalSuggestion.getEntityId())
+                            .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                                    "Inventory item not found for pricing execution: " + finalSuggestion.getEntityId()));
+                                    
+                    BigDecimal currentPrice = item.getPrice();
+                    BigDecimal expectedOldPrice = BigDecimal.valueOf(expectedOldVal).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal newPrice = BigDecimal.valueOf(newVal).setScale(2, RoundingMode.HALF_UP);
+                    
+                    if (currentPrice.compareTo(expectedOldPrice) != 0) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", 
+                                "STATE_DRIFT: expected=" + expectedOldPrice + " actual=" + currentPrice, executedBy);
+                        throw new OptimisticLockException("Price changed since suggestion");
+                    }
+                    
+                    // Atomic, single-write-path optimistic update to oltp.inventory
+                    int updated = entityManager.createNativeQuery(
+                            "UPDATE oltp.inventory SET price = :newPrice, updated_at = NOW() WHERE item_id = :sku AND price = :oldPrice")
+                            .setParameter("newPrice", newPrice)
+                            .setParameter("sku", suggestion.getEntityId())
+                            .setParameter("oldPrice", currentPrice)
+                            .executeUpdate();
+
+                    if (updated == 0) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
+                        throw new OptimisticLockException("Optimistic lock failure during price update");
+                    }
+                    
+                    suggestion.setStatus("executed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_price", currentPrice, "new_price", newPrice, "rows_affected", 1)), executedBy);
+                    log.info("ExecutionGateway executed pricing suggestion for item: {} new price: {}", suggestion.getEntityId(), newPrice);
+                    
+                } else if ("restock".equalsIgnoreCase(action)) {
+                    int expectedOldVal = rec.get("old_value").asInt();
+                    int newVal = rec.get("new_value").asInt();
+                    
+                    Inventory item = inventoryRepo.findById(finalSuggestion.getEntityId())
+                            .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
+                                    "Inventory item not found for stock execution: " + finalSuggestion.getEntityId()));
+                                    
+                    int currentStock = item.getStock();
+                    if (currentStock != expectedOldVal) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", 
+                                "STATE_DRIFT: expected=" + expectedOldVal + " actual=" + currentStock, executedBy);
+                        throw new OptimisticLockException("Stock changed since suggestion");
+                    }
+                    
+                    int updated = inventoryRepo.updateStockOptimistically(suggestion.getEntityId(), currentStock, newVal);
+                    if (updated == 0) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
+                        throw new OptimisticLockException("Optimistic lock failure during stock update");
+                    }
+                    
+                    suggestion.setStatus("executed");
+                    agentSuggestionRepo.save(suggestion);
+                    saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_stock", currentStock, "new_stock", newVal, "rows_affected", 1)), executedBy);
+                    log.info("ExecutionGateway executed stock suggestion for item: {} new stock: {}", suggestion.getEntityId(), newVal);
+                    
+                } else if ("hold_order".equalsIgnoreCase(action)) {
+                    if (!rec.has("order_id") || !rec.has("version")) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "INVALID_RECOMMENDATION", "hold_order requires order_id and version in recommendation", executedBy);
+                        throw new IllegalArgumentException("hold_order requires order_id and version in recommendation");
+                    }
+                    int orderId = rec.get("order_id").asInt();
+                    int expectedVersion = rec.get("version").asInt();
+
+                    int updated = entityManager.createNativeQuery("""
+                        UPDATE oltp.orders SET status='held', version=version+1, updated_at=NOW() 
+                        WHERE order_id=:orderId AND version=:oldVersion AND status='pending'
+                        """)
+                        .setParameter("orderId", orderId)
+                        .setParameter("oldVersion", expectedVersion)
                         .executeUpdate();
 
-                if (updated == 0) {
-                    suggestion.setStatus("failed");
+                    if (updated == 0) {
+                        suggestion.setStatus("failed");
+                        agentSuggestionRepo.save(suggestion);
+                        saveFailedRecord(suggestion, "STATE_DRIFT", 
+                            "Order hold failed: order_id=" + orderId + " version mismatch or not pending", executedBy);
+                        throw new OptimisticLockException("Order state changed since fraud suggestion");
+                    }
+
+                    suggestion.setStatus("executed");
                     agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
-                    throw new OptimisticLockException("Optimistic lock failure during price update");
+                    saveSuccessRecord(suggestion, objectMapper.writeValueAsString(
+                        Map.of("order_id", orderId, "action", "held", "new_version", expectedVersion + 1)), executedBy);
+                    log.info("ExecutionGateway executed fraud hold for order: {}", orderId);
+
+                } else {
+                    throw new IllegalArgumentException("Unknown recommendation action for execution: " + action);
                 }
-                
-                suggestion.setStatus("executed");
+            } catch (OptimisticLockException | IllegalStateException | IllegalArgumentException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("ExecutionGateway error during execute for suggestion: {}", suggestionId, e);
+                suggestion.setStatus("failed");
                 agentSuggestionRepo.save(suggestion);
-                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_price", currentPrice, "new_price", newPrice, "rows_affected", 1)), executedBy);
-                log.info("ExecutionGateway executed pricing suggestion for item: {} new price: {}", suggestion.getEntityId(), newPrice);
-                
-            } else if ("restock".equalsIgnoreCase(action)) {
-                int expectedOldVal = rec.get("old_value").asInt();
-                int newVal = rec.get("new_value").asInt();
-                
-                Inventory item = inventoryRepo.findById(suggestion.getEntityId())
-                        .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
-                                "Inventory item not found for stock execution: " + suggestion.getEntityId()));
-                                
-                int currentStock = item.getStock();
-                if (currentStock != expectedOldVal) {
-                    suggestion.setStatus("failed");
-                    agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "STATE_DRIFT", 
-                            "STATE_DRIFT: expected=" + expectedOldVal + " actual=" + currentStock, executedBy);
-                    throw new OptimisticLockException("Stock changed since suggestion");
-                }
-                
-                int updated = inventoryRepo.updateStockOptimistically(suggestion.getEntityId(), currentStock, newVal);
-                if (updated == 0) {
-                    suggestion.setStatus("failed");
-                    agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "STATE_DRIFT", "Optimistic update affected 0 rows", executedBy);
-                    throw new OptimisticLockException("Optimistic lock failure during stock update");
-                }
-                
-                suggestion.setStatus("executed");
-                agentSuggestionRepo.save(suggestion);
-                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(Map.of("old_stock", currentStock, "new_stock", newVal, "rows_affected", 1)), executedBy);
-                log.info("ExecutionGateway executed stock suggestion for item: {} new stock: {}", suggestion.getEntityId(), newVal);
-                
-            } else if ("hold_order".equalsIgnoreCase(action)) {
-                if (!rec.has("order_id") || !rec.has("version")) {
-                    suggestion.setStatus("failed");
-                    agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "INVALID_RECOMMENDATION", "hold_order requires order_id and version in recommendation", executedBy);
-                    throw new IllegalArgumentException("hold_order requires order_id and version in recommendation");
-                }
-                int orderId = rec.get("order_id").asInt();
-                int expectedVersion = rec.get("version").asInt();
-
-                int updated = entityManager.createNativeQuery("""
-                    UPDATE oltp.orders SET status='held', version=version+1, updated_at=NOW() 
-                    WHERE order_id=:orderId AND version=:oldVersion AND status='pending'
-                    """)
-                    .setParameter("orderId", orderId)
-                    .setParameter("oldVersion", expectedVersion)
-                    .executeUpdate();
-
-                if (updated == 0) {
-                    suggestion.setStatus("failed");
-                    agentSuggestionRepo.save(suggestion);
-                    saveFailedRecord(suggestion, "STATE_DRIFT", 
-                        "Order hold failed: order_id=" + orderId + " version mismatch or not pending", executedBy);
-                    throw new OptimisticLockException("Order state changed since fraud suggestion");
-                }
-
-                suggestion.setStatus("executed");
-                agentSuggestionRepo.save(suggestion);
-                saveSuccessRecord(suggestion, objectMapper.writeValueAsString(
-                    Map.of("order_id", orderId, "action", "held", "new_version", expectedVersion + 1)), executedBy);
-                log.info("ExecutionGateway executed fraud hold for order: {}", orderId);
-
-            } else {
-                throw new IllegalArgumentException("Unknown recommendation action for execution: " + action);
+                saveFailedRecord(suggestion, "EXECUTION_ERROR", e.getMessage(), executedBy);
+                throw new RuntimeException("Execution failed: " + e.getMessage(), e);
             }
-        } catch (OptimisticLockException | IllegalStateException | IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("ExecutionGateway error during execute for suggestion: {}", suggestionId, e);
-            suggestion.setStatus("failed");
-            agentSuggestionRepo.save(suggestion);
-            saveFailedRecord(suggestion, "EXECUTION_ERROR", e.getMessage(), executedBy);
-            throw new RuntimeException("Execution failed: " + e.getMessage(), e);
+        } finally {
+            long duration = System.nanoTime() - startTime;
+            if (meterRegistry != null && suggestion != null) {
+                var timer = meterRegistry.timer("agent_execution_duration_seconds",
+                        "domain", suggestion.getDomain(),
+                        "action", action);
+                if (timer != null) {
+                    timer.record(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
+                }
+            }
         }
     }
 

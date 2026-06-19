@@ -19,4 +19,14 @@ public interface AgentSuggestionEntityRepository extends JpaRepository<AgentSugg
 
     org.springframework.data.domain.Page<AgentSuggestionEntity> findByStatus(
             String status, org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT COUNT(s) FROM AgentSuggestionEntity s " +
+        "WHERE s.domain = :domain AND s.expiresAt < :now " +
+        "AND s.status IN ('pending', 'expired')"
+    )
+    long countSlaBreachByDomainAndNow(
+        @org.springframework.data.repository.query.Param("domain") String domain,
+        @org.springframework.data.repository.query.Param("now") java.time.OffsetDateTime now
+    );
 }

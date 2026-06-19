@@ -55,6 +55,9 @@ public class HitlTaskControllerTest {
     @MockBean
     private PolicyDecisionRepository policyDecisionRepo;
 
+    @MockBean
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+
     @Autowired
     private ObjectMapper objectMapper;
 

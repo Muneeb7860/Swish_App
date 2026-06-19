@@ -48,6 +48,7 @@ public class AgentOrchestrator {
     private final HitlQueueRepository hitlQueueRepo;
     private final InventoryRepository inventoryRepo;
     private final ObjectMapper objectMapper;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     public AgentOrchestrator(
             OpsAgent opsAgent,
@@ -63,7 +64,8 @@ public class AgentOrchestrator {
             PolicyDecisionRepository policyDecisionRepo,
             HitlQueueRepository hitlQueueRepo,
             InventoryRepository inventoryRepo,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            io.micrometer.core.instrument.MeterRegistry meterRegistry) {
         this.opsAgent = opsAgent;
         this.routingAgent = routingAgent;
         this.pricingAgent = pricingAgent;
@@ -78,6 +80,7 @@ public class AgentOrchestrator {
         this.hitlQueueRepo = hitlQueueRepo;
         this.inventoryRepo = inventoryRepo;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -218,6 +221,17 @@ public class AgentOrchestrator {
                 .decidedBy("policy_engine_v1")
                 .build();
         policyDecisionRepo.save(policyDecisionEntity);
+
+        if (meterRegistry != null) {
+            var counter = meterRegistry.counter("agent_suggestions_total",
+                    "domain", suggestionEntity.getDomain(),
+                    "decision", decision.status(),
+                    "agent_name", agentName
+            );
+            if (counter != null) {
+                counter.increment();
+            }
+        }
 
         if ("approved".equals(decision.status())) {
             suggestionEntity.setStatus("approved");

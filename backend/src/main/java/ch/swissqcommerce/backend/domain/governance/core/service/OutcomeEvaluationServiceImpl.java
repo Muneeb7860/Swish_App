@@ -12,6 +12,7 @@ import jakarta.persistence.PersistenceContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -26,23 +27,25 @@ public class OutcomeEvaluationServiceImpl implements OutcomeEvaluationUseCase {
     private static final Logger log = LoggerFactory.getLogger(OutcomeEvaluationServiceImpl.class);
 
     private final ExecutionRecordRepository executionRecordRepo;
-    private final OutcomeRecordRepository outcomeRecordRepo;
+    private final List<OutcomeProcessor> processorList;
+    private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
-    private final Map<String, OutcomeProcessor> processors;
-
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final Map<String, OutcomeProcessor> processors = new ConcurrentHashMap<>();
+    private final ch.swissqcommerce.backend.config.AgentMetricsConfiguration metricsConfig;
 
     public OutcomeEvaluationServiceImpl(
             ExecutionRecordRepository executionRecordRepo,
             OutcomeRecordRepository outcomeRecordRepo,
             ObjectMapper objectMapper,
-            List<OutcomeProcessor> processorList) {
+            List<OutcomeProcessor> processorList,
+            EntityManager entityManager,
+            ch.swissqcommerce.backend.config.AgentMetricsConfiguration metricsConfig) {
         this.executionRecordRepo = executionRecordRepo;
-        this.outcomeRecordRepo = outcomeRecordRepo;
+        this.processorList = processorList;
+        this.entityManager = entityManager;
         this.objectMapper = objectMapper;
-        this.processors = processorList.stream()
-                .collect(Collectors.toMap(OutcomeProcessor::domain, Function.identity()));
+        this.metricsConfig = metricsConfig;
+        processorList.forEach(p -> this.processors.put(p.domain(), p));
     }
 
     @Override
@@ -96,6 +99,7 @@ public class OutcomeEvaluationServiceImpl implements OutcomeEvaluationUseCase {
                 .build();
 
         entityManager.persist(outcome);
+        metricsConfig.updateMetricsAsync(result.getMetrics());
         log.info("OutcomeEvaluationService: Saved OutcomeRecord for suggestion ID: {}. Success: {}, Metrics: {}", 
                 suggestion.getId(), result.getSuccess(), metricsJson);
 

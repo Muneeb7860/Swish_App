@@ -74,7 +74,8 @@ public class ExecutionGatewayIntegrationTest {
                 agentSuggestionRepo,
                 policyDecisionRepo,
                 executionRecordRepo,
-                entityManager
+                entityManager,
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry()
         );
 
         executionRecordRepo.deleteAll();

@@ -40,18 +40,21 @@ public class HitlTaskController {
     private final HitlQueueRepository hitlQueueRepo;
     private final PolicyDecisionRepository policyDecisionRepo;
     private final ObjectMapper objectMapper;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     public HitlTaskController(
             AgentSuggestionEntityRepository agentSuggestionRepo,
             ExecutionGateway executionGateway,
             HitlQueueRepository hitlQueueRepo,
             PolicyDecisionRepository policyDecisionRepo,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            io.micrometer.core.instrument.MeterRegistry meterRegistry) {
         this.agentSuggestionRepo = agentSuggestionRepo;
         this.executionGateway = executionGateway;
         this.hitlQueueRepo = hitlQueueRepo;
         this.policyDecisionRepo = policyDecisionRepo;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     @GetMapping
@@ -119,6 +122,16 @@ public class HitlTaskController {
         if (OffsetDateTime.now().isAfter(suggestion.getExpiresAt())) {
             suggestion.setStatus("expired");
             agentSuggestionRepo.save(suggestion);
+            if (meterRegistry != null) {
+                var counter = meterRegistry.counter("agent_suggestions_total",
+                        "domain", suggestion.getDomain(),
+                        "decision", "expired",
+                        "agent_name", suggestion.getAgent() != null ? suggestion.getAgent().getName() : "UnknownAgent"
+                );
+                if (counter != null) {
+                    counter.increment();
+                }
+            }
             throw new IllegalStateException("Suggestion is expired");
         }
 
@@ -181,6 +194,16 @@ public class HitlTaskController {
         if (OffsetDateTime.now().isAfter(suggestion.getExpiresAt())) {
             suggestion.setStatus("expired");
             agentSuggestionRepo.save(suggestion);
+            if (meterRegistry != null) {
+                var counter = meterRegistry.counter("agent_suggestions_total",
+                        "domain", suggestion.getDomain(),
+                        "decision", "expired",
+                        "agent_name", suggestion.getAgent() != null ? suggestion.getAgent().getName() : "UnknownAgent"
+                );
+                if (counter != null) {
+                    counter.increment();
+                }
+            }
             throw new IllegalStateException("Suggestion is expired");
         }
 

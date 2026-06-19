@@ -56,7 +56,8 @@ public class ExecutionGatewayTest {
                 agentSuggestionRepo,
                 policyDecisionRepo,
                 executionRecordRepo,
-                entityManager
+                entityManager,
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry()
         );
     }
 
