@@ -382,4 +382,48 @@ As the Lead Tester, I have verified and validated the entire application stack a
     - **Backend Unit Tests**: Verified `RetailerServiceTest` and `SensorServiceTest` pass successfully via `mvnw`.
     - **Frontend Compile**: Confirmed all 5 React micro-frontends (host, customer, rider, admin, b2b) build cleanly (`npm run build:all` success).
 
+### Cycle Update (2026-06-19) — Sprint 5 Hardening & BUG-012 Kafka Hang Squashed [DONE]
+
+Sprint 5 is locked, tagged, and green. 434 tests passing, zero network hangs, and CI is clean.
+
+*   **BUG-012: Kafka Connection Hang Fix**:
+    - **Impact**: `PaymentIntegrationTest` and tests invoking transactional outbox listener commits would block/hang for 60 seconds per event waiting for a local Kafka connection on `localhost:9092`.
+    - **Root Cause**: `@TransactionalEventListener` triggers when the transaction commits, executing before test execution wraps up. Since the test context did not define a mocked `KafkaTemplate` bean, the default production configuration attempted to connect to a live broker.
+    - **Fix**: Added `@MockBean KafkaTemplate` in [PaymentIntegrationTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and changed [TestConfig.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) to `@AutoConfiguration` loaded globally via [AutoConfiguration.imports](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports).
+    - **Result**: Verification build (`mvn clean verify`) now runs all **434 tests** successfully in ~4 minutes instead of timing out at 30 minutes.
+
+*   **v0.3.0-routing-hardened: Final State**:
+    - **Capacity Limits**: Implemented `daily_order_capacity` (default 500) database column and JPA fields. `WarehouseSelectionService` now screens and disqualifies overloaded dark stores.
+    - **Carrier API Integration**: Integrated dynamic carrier rate adapter with 200ms read/connect timeouts and a 5-minute Redis cache backing store. Strict 300ms async pre-fetching budget using `CompletableFuture` with a fallback to baseline/Haversine distance logic (and a 20% sample size penalty if data is scarce).
+    - **HITL Alerts**: Configured Prometheus warning alerts when the human-in-the-loop task rate exceeds 10/hour, and critical alerts at 50/hour.
+    - **Tagging**: Tagged and pushed `v0.3.0-routing-hardened` to `develop`.
+
+*   **Bake Week Dashboard PromQL Rules**:
+    - **Latency p99 (SLA <40ms)**:
+      ```promql
+      histogram_quantile(0.99, sum(rate(agent_execution_duration_seconds_bucket{domain="routing",action="assign_warehouse"}[5m])) by (le))
+      ```
+    - **Cache Hit Rate (>90% target)**:
+      ```promql
+      sum(rate(cache_gets_total{cache="carrier-rates",result="hit"}[5m])) / sum(rate(cache_gets_total{cache="carrier-rates"}[5m]))
+      ```
+    - **HITL Suggestion Decision Warning (>10/hr)**:
+      ```promql
+      sum(rate(agent_suggestions_total{domain="routing",decision="needs_human"}[1h]))
+      ```
+    - **Accumulated Shipping Savings**:
+      ```promql
+      shipping_savings_usd_total{domain="logistics"}
+      ```
+
+*   **Bake Week Protocol**:
+    - **Day 1-2**: Monitor telemetry metrics from Grafana panels; make zero code adjustments.
+    - **Day 3**: If `outcome_success_rate` >95% and average savings >$1.80, lower auto-approve threshold to $1.50.
+    - **Day 4-7**: Analyze HITL rates. If rate >20/hr, tune `daily_order_capacity` in v0.3.1.
+
+*   **Sprint 6 Queue (Candidates)**:
+    1. **InventoryAgent**: Auto-rebalance stock when `reserved_qty / quantity > 0.8`.
+    2. **RoutingAgent v1.0**: Implement `carrier_sla` rules, ETA calculations, and multi-package support.
+    3. **Hardening v2**: Add `dark_stores.active` flags and circuit breakers on carrier API failures.
+
 
