@@ -42,6 +42,11 @@ public class ExecutionGatewayIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        // test/resources/application.properties pins org.h2.Driver for all other tests;
+        // override it here so Flyway/Hibernate use the real Postgres driver against the
+        // Testcontainers JDBC URL instead of failing with "Driver org.h2.Driver claims to
+        // not accept jdbcUrl".
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
     }
 
     @Autowired private InventoryRepository inventoryRepo;
