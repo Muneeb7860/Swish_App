@@ -24,7 +24,7 @@ const MFE_WHITELIST = (
 	.split(",")
 	.map((host: string) => host.trim());
 
-const verifyMfeOrigin = (importPromise: Promise<unknown>, remoteName: string) => {
+const verifyMfeOrigin = <T,>(importPromise: Promise<T>, remoteName: string): Promise<T> => {
 	return importPromise.then((module) => {
 		const scriptElements = Array.from(document.querySelectorAll("script"));
 		const remoteScript = scriptElements.find(
@@ -429,6 +429,42 @@ export default function App() {
 	const [isBotTyping, setIsBotTyping] = useState(false);
 	// customer, rider, business, inventory, admin
 
+	// Helper log triggers
+	const triggerToast = (msg: string, borderType = "system") => {
+		const id = Date.now() + Math.random();
+		setToasts((prev) => [...prev, { id, msg, borderType }]);
+		setTimeout(() => {
+			setToasts((prev) => prev.filter((t) => t.id !== id));
+		}, 4500);
+	};
+
+	const logKafka = (source: string, event: string, meta: any) => {
+		if (activeProfile.logLevel === "error") {
+			if (
+				source !== "admin" &&
+				!event.includes("error") &&
+				!event.includes("fail") &&
+				!event.includes("limit")
+			)
+				return;
+		} else if (activeProfile.logLevel === "info") {
+			if (event.includes("autocomplete") || event.includes("keystroke")) return;
+		}
+
+		setKafkaLogs((prev) =>
+			[
+				...prev,
+				{
+					id: `L-${Date.now()}-${Math.random()}`,
+					time: new Date().toLocaleTimeString(),
+					event: `${event.toUpperCase()}`,
+					source,
+					meta,
+				},
+			].slice(-40),
+		); // Keep last 40 logs
+	};
+
 	useEffect(() => {
 		// Programmatic preloading of all Micro-Frontends remote entries in the background
 		// to warm up cache and reduce tabs switching latency.
@@ -757,41 +793,6 @@ export default function App() {
 		[closeSseStream],
 	);
 
-	// Helper log triggers
-	const triggerToast = (msg, borderType = "system") => {
-		const id = Date.now() + Math.random();
-		setToasts((prev) => [...prev, { id, msg, borderType }]);
-		setTimeout(() => {
-			setToasts((prev) => prev.filter((t) => t.id !== id));
-		}, 4500);
-	};
-
-	const logKafka = (source, event, meta) => {
-		if (activeProfile.logLevel === "error") {
-			if (
-				source !== "admin" &&
-				!event.includes("error") &&
-				!event.includes("fail") &&
-				!event.includes("limit")
-			)
-				return;
-		} else if (activeProfile.logLevel === "info") {
-			if (event.includes("autocomplete") || event.includes("keystroke")) return;
-		}
-
-		setKafkaLogs((prev) =>
-			[
-				...prev,
-				{
-					id: `L-${Date.now()}-${Math.random()}`,
-					time: new Date().toLocaleTimeString(),
-					event: `${event.toUpperCase()}`,
-					source,
-					meta,
-				},
-			].slice(-40),
-		); // Keep last 40 logs
-	};
 
 	const logLedger = (type, ref, desc, debit, credit) => {
 		setLedger((prev) => [
