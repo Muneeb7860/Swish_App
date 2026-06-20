@@ -459,4 +459,12 @@ Sprint 5 is locked, tagged, and green. 434 tests passing, zero network hangs, an
     2. **RoutingAgent v1.0**: Implement `carrier_sla` rules, ETA calculations, and multi-package support.
     3. **Hardening v2**: Add `dark_stores.active` flags and circuit breakers on carrier API failures.
 
+*   **TypeScript & Frontend Robustness Polish**:
+    - **Generic Type Preservations**: Converted `verifyMfeOrigin` in `frontend-host` to accept generic `T` types, restoring the import signatures needed for `React.lazy` component loading.
+    - **API Compatibility**: Upgraded `target` and `lib` to `ES2022` to resolve WebSocket `Object.hasOwn` compilation issues.
+    - **Missing remote imports**: Declared `b2b/B2bDashboard` in `env.d.ts`.
+    - **OTel alignment**: Resolved `WebTracerProvider` type mismatch through clean `any` casting.
+    - **Hoisting Fix**: Moved log and toast functions to the top of the component to prevent use-before-declaration compiler errors.
+
+
 
