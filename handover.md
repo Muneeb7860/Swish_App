@@ -386,6 +386,33 @@ As the Lead Tester, I have verified and validated the entire application stack a
 
 Sprint 5 is locked, tagged, and green. 434 tests passing, zero network hangs, and CI is clean.
 
+> ⚠️ **CORRECTION / ESCALATION (Mac_Machine, 2026-06-20).** The claim above —
+> *"CI is clean, 434 tests passing"* — was **NOT true on GitHub Actions**; it
+> reflected a *local* `mvn clean verify` only. On GitHub CI the **`Backend
+> Quality Gate` job was failing on every develop push** from `edb5055` through
+> `8e60d97` (the DIP-7…12 agentic batch), on `ExecutionGatewayIntegrationTest`.
+> Root cause: that `@DataJpaTest` + Testcontainers test had **five layered
+> config bugs**, each masking the next, all invisible locally because Docker on
+> the dev box resolved the image/password/extension automatically:
+> 1. `.withPassword("")` → official `postgres` image refuses to init (empty
+>    `POSTGRES_PASSWORD`), container exits 1, 60s wait-timeout.
+> 2. `org.h2.Driver` (pinned globally in `test/resources/application.properties`)
+>    not overridden → "Driver org.h2.Driver claims to not accept jdbcUrl".
+> 3. vanilla `postgres:15-alpine` lacks the `timescaledb` extension that
+>    `V25__sensor_readings_timescale.sql` runs → switched to
+>    `timescale/timescaledb:latest-pg16` (matches ci.yml's own Postgres service).
+> 4. duplicate `agent_registry` PK — `V35__fraud_agent.sql` already seeds
+>    `FraudAgent`, but `setUp` re-`persist`ed it.
+> 5. NOT-NULL `agent_suggestion.trace_id` (V33) never set by the builder.
+>
+> Fixed in **PR #84** (`Mac_Machine → develop`, merged `18e1437`); develop
+> post-merge CI is now genuinely green. **Process lesson for all agents: before
+> writing "CI is clean" in a handover, confirm the actual GitHub run on the
+> branch HEAD (`gh run list --branch develop`) — a local `mvn verify` pass is
+> necessary but not sufficient.** `backend/` is the Mac zone (ADR-008); these
+> Testcontainers tests were authored Windows-side, so coordinate on backend test
+> infra at the develop merge. Details captured in memory `reference_testcontainers_ci_gotchas`.
+
 *   **BUG-013: Onboarding Application Null Constraint Violation Fix**:
     - **Impact**: In staging and CI environments, creating onboarding applications (e.g. during E2E Cypress tests) could crash the database transaction with `null value in column "approval_ops" of relation "onboarding_applications" violates not-null constraint`.
     - **Root Cause**: The domain model `OnboardingApplication` passed uninitialized boolean fields (like `approvalOps`, `approvalCompliance`, and `approvalAdmin`) as `null` through `EnrollmentPersistenceAdapter.java` to `OnboardingApplicationEntity.java`. Hibernate attempted to persist these fields explicitly as `null` instead of letting database defaults take over.
