@@ -16,7 +16,7 @@ const exporter = new OTLPTraceExporter({
 });
 
 // Process spans sequentially for low overhead in developer build
-provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+(provider as any).addSpanProcessor(new SimpleSpanProcessor(exporter as any));
 
 // Register the provider globally
 provider.register();
