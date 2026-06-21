@@ -77,7 +77,13 @@ public class AgentControlPlaneIntegrationTest {
         when(supportAgent.analyze()).thenThrow(new RuntimeException("Skip support agent"));
 
         transactionTemplate.executeWithoutResult(status -> {
-            // Clear tables in dependency order
+            // Clear tables in dependency order. Native deletes first for FK-child tables
+            // (chargebacks -> order_items -> orders) that have no JPA repo here; otherwise the
+            // inventory/dark_stores deleteAll below fails on leftover FKs from a prior test
+            // (order-dependent pollution in the full @SpringBootTest suite).
+            entityManager.createNativeQuery("DELETE FROM oltp.chargebacks").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM oltp.order_items").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM oltp.orders").executeUpdate();
             hitlQueueRepository.deleteAll();
             executionRecordRepository.deleteAll();
             policyDecisionRepository.deleteAll();
