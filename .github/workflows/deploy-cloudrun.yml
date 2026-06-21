@@ -153,11 +153,13 @@ jobs:
           image: ${{ needs.build-and-push.outputs.image }}
           flags: >-
             --port=8080
-            --memory=512Mi
+            --memory=1Gi
             --cpu=1
+            --cpu-boost
             --concurrency=80
             --min-instances=0
             --max-instances=5
+            --timeout=300
             --service-account=swish-backend-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
             --no-allow-unauthenticated
           env_vars: |
