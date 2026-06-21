@@ -57,6 +57,14 @@ public class FraudAgentE2ETest {
         when(supportAgent.analyze()).thenThrow(new RuntimeException("Skip support agent"));
 
         transactionTemplate.executeWithoutResult(status -> {
+            // Native deletes first for FK-child tables (chargebacks -> order_items -> orders ->
+            // inventory) with no JPA repo cleared here; otherwise the dark_stores deleteAll below
+            // fails on a leftover inventory FK from a prior test (order-dependent pollution in the
+            // full @SpringBootTest suite).
+            entityManager.createNativeQuery("DELETE FROM oltp.chargebacks").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM oltp.order_items").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM oltp.orders").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM oltp.inventory").executeUpdate();
             outcomeRecordRepository.deleteAll();
             hitlQueueRepository.deleteAll();
             executionRecordRepository.deleteAll();
