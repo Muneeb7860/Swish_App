@@ -56,6 +56,33 @@ export const useResilientWebSocket = (
 		onMessageReceived.current = options.onMessage;
 	}, [options.onMessage]);
 
+	const connectRef = useRef<() => void>(() => {});
+
+	const handleReconnect = useCallback(() => {
+		if (reconnectAttemptRef.current < maxReconnectAttempts) {
+			const backoff = reconnectIntervalMin * 2 ** reconnectAttemptRef.current;
+			const jitter = Math.random() * 500;
+			const delay = Math.min(backoff + jitter, reconnectIntervalMax);
+
+			reconnectAttemptRef.current += 1;
+			setReconnectAttempts(reconnectAttemptRef.current);
+			setStatus("RECONNECTING");
+
+			console.log(
+				`[WebSocket] Will attempt reconnect #${reconnectAttemptRef.current} in ${Math.round(delay)}ms`,
+			);
+
+			if (reconnectTimeoutRef.current)
+				clearTimeout(reconnectTimeoutRef.current);
+			reconnectTimeoutRef.current = setTimeout(() => {
+				connectRef.current();
+			}, delay);
+		} else {
+			console.error("[WebSocket] Max reconnection attempts reached.");
+			setStatus("ERROR");
+		}
+	}, [maxReconnectAttempts, reconnectIntervalMin, reconnectIntervalMax]);
+
 	const connect = useCallback(() => {
 		if (!userId) {
 			console.warn("[useResilientWebSocket] Missing userId, cannot connect");
@@ -204,39 +231,9 @@ export const useResilientWebSocket = (
 		};
 
 		wsRef.current = ws;
-	}, [
-		url,
-		userId,
-		accessToken,
-		maxReconnectAttempts,
-		reconnectIntervalMin,
-		reconnectIntervalMax,
-	]);
+	}, [url, userId, accessToken, handleReconnect]);
 
-	const handleReconnect = () => {
-		if (reconnectAttemptRef.current < maxReconnectAttempts) {
-			const backoff = reconnectIntervalMin * 2 ** reconnectAttemptRef.current;
-			const jitter = Math.random() * 500;
-			const delay = Math.min(backoff + jitter, reconnectIntervalMax);
-
-			reconnectAttemptRef.current += 1;
-			setReconnectAttempts(reconnectAttemptRef.current);
-			setStatus("RECONNECTING");
-
-			console.log(
-				`[WebSocket] Will attempt reconnect #${reconnectAttemptRef.current} in ${Math.round(delay)}ms`,
-			);
-
-			if (reconnectTimeoutRef.current)
-				clearTimeout(reconnectTimeoutRef.current);
-			reconnectTimeoutRef.current = setTimeout(() => {
-				connect();
-			}, delay);
-		} else {
-			console.error("[WebSocket] Max reconnection attempts reached.");
-			setStatus("ERROR");
-		}
-	};
+	connectRef.current = connect;
 
 	const disconnect = useCallback(() => {
 		console.log("[WebSocket] Manually disconnecting...");
