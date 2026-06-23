@@ -23,13 +23,21 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          is_promotion=false
+          if [ "$HEAD_REF" = "develop" ] || [[ "$PR_TITLE" =~ ^[Rr]elease: ]]; then
+            is_promotion=true
+          fi
+
           if [ -z "$PR_BODY" ] || [ "${#PR_BODY}" -lt 10 ]; then
             echo "❌ ERROR: A detailed Pull Request description is required (min 10 characters)."
-            if [ "${{ github.base_ref }}" = "master" ]; then
+            if [ "$BASE_REF" = "master" ] && [ "$is_promotion" = "false" ]; then
               exit 1
             else
-              echo "⚠️ WARNING: Bypassing strict PR description failure for target branch develop."
+              echo "⚠️ WARNING: Bypassing PR description failure for promotion/develop target branch."
             fi
           else
             echo "✅ PR Description exists and is sufficiently detailed."
@@ -39,7 +47,15 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          is_promotion=false
+          if [ "$HEAD_REF" = "develop" ] || [[ "$PR_TITLE" =~ ^[Rr]elease: ]]; then
+            is_promotion=true
+          fi
+
           echo "Checking if PR description includes a selected Type of Change..."
           
           # Match a selected checkbox in the body (e.g. - [x] or * [x] with one of the change types)
@@ -51,10 +67,10 @@ jobs:
             echo "  - [x] 🤖 **AI / Governance Change**"
             echo "  - [x] 🛠️ **DevOps & Infra**"
             
-            if [ "${{ github.base_ref }}" = "master" ]; then
+            if [ "$BASE_REF" = "master" ] && [ "$is_promotion" = "false" ]; then
               exit 1
             else
-              echo "⚠️ WARNING: Bypassing strict checklist enforcement for target branch develop."
+              echo "⚠️ WARNING: Bypassing strict checklist enforcement for promotion/develop target branch."
             fi
           else
             echo "✅ PR Checklist validation passed: A change type was selected."
@@ -79,10 +95,10 @@ jobs:
           if [ "$backend_changed" = true ] && [ "$backend_checked" = false ]; then
             echo "❌ ERROR: Backend files were modified, but 'Backend Core Change' was not selected in the PR checklist."
             echo "Please update your PR description checklist to select 'Backend Core Change'."
-            if [ "${{ github.base_ref }}" = "master" ]; then
+            if [ "$BASE_REF" = "master" ] && [ "$is_promotion" = "false" ]; then
               exit 1
             else
-              echo "⚠️ WARNING: Bypassing strict backend validation for target branch develop."
+              echo "⚠️ WARNING: Bypassing strict backend validation for promotion/develop target branch."
             fi
           else
             echo "✅ PR Checklist alignment with changed files verified."
@@ -96,7 +112,16 @@ jobs:
 
       - name: Validate Commit Messages (Conventional Commits)
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          is_promotion=false
+          if [ "$HEAD_REF" = "develop" ] || [[ "$PR_TITLE" =~ ^[Rr]elease: ]]; then
+            is_promotion=true
+          fi
+
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           echo "Auditing commits from $BASE_SHA to $HEAD_SHA..."
@@ -142,10 +167,10 @@ jobs:
             echo "  - test: implement integration test suite"
             echo "  - security: fix SQL injection vulnerability"
             echo "Supported types: feat, fix, docs, style, refactor, test, chore, ci, build, perf, security, observability"
-            if [ "${{ github.base_ref }}" = "master" ]; then
+            if [ "$BASE_REF" = "master" ] && [ "$is_promotion" = "false" ]; then
               exit 1
             else
-              echo "⚠️ WARNING: Bypassing strict Conventional Commits failure for target branch develop."
+              echo "⚠️ WARNING: Bypassing strict Conventional Commits failure for promotion/develop target branch."
             fi
           fi
           echo "✅ All commits pass Conventional Commits check."
