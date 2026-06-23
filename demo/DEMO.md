@@ -35,3 +35,14 @@ docker compose -f docker-compose.demo.yml restart frontend
 ## Security caveats (closed beta only — not public production)
 - Exposes a dev Mac via tunnel → keep invite-only (basic-auth), share the URL privately.
 - Not HA; single machine; data only in the local Postgres volume (back it up if the beta matters).
+
+## Hands-off backend (launchd KeepAlive) — survives crashes + login
+The native backend doesn't auto-restart by itself. Install it as a launchd service:
+```bash
+bash demo/install-launchd.sh     # stages jar+script to ~/swish-demo, loads KeepAlive agent
+bash demo/uninstall-launchd.sh   # remove the service
+```
+- **Staged in `~/swish-demo/` on purpose** — macOS **TCC** denies launchd processes access to `~/Documents` ("Operation not permitted"), so the jar/script must live outside it.
+- `KeepAlive` restarts the backend if it crashes; `RunAtLoad` starts it at login. It waits for the demo Postgres (5433) before starting.
+- Re-run `install-launchd.sh` after rebuilding the jar (it refreshes `~/swish-demo/backend.jar`).
+- ⚠️ Still need **colima auto-start** for full reboot survival (containers are `restart: unless-stopped` but colima itself isn't a boot service by default) + `caffeinate`/`pmset` so the Mac doesn't sleep.
