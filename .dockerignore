@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/target
+**/.vite
+.git
+*.log
+demo/backend.log
+demo/tunnel.log
+**/cypress/screenshots
+**/cypress/videos
+backend/target
