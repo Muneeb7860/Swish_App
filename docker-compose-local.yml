@@ -59,6 +59,9 @@ services:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
     environment:
+      # KRaft mode requires a CLUSTER_ID to format storage; without it the
+      # confluent image fails standalone `docker compose up` ("dub ensure CLUSTER_ID").
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'

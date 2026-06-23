@@ -15,10 +15,10 @@ export default defineConfig({
 		federation({
 			name: "host",
 			remotes: {
-				customer: "http://127.0.0.1:3001/assets/remoteEntry.js",
-				rider: "http://127.0.0.1:3002/assets/remoteEntry.js",
-				admin: "http://127.0.0.1:3003/assets/remoteEntry.js",
-				b2b: "http://127.0.0.1:5002/assets/remoteEntry.js",
+				customer: process.env.VITE_REMOTE_CUSTOMER || "http://127.0.0.1:3001/assets/remoteEntry.js",
+				rider: process.env.VITE_REMOTE_RIDER || "http://127.0.0.1:3002/assets/remoteEntry.js",
+				admin: process.env.VITE_REMOTE_ADMIN || "http://127.0.0.1:3003/assets/remoteEntry.js",
+				b2b: process.env.VITE_REMOTE_B2B || "http://127.0.0.1:5002/assets/remoteEntry.js",
 			},
 			exposes: {
 				"./api": "./src/api/endpoints.ts",
