@@ -3,16 +3,15 @@ package ch.swissqcommerce.backend.domain.logistics.core.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import ch.swissqcommerce.backend.model.DarkStore;
-import ch.swissqcommerce.backend.model.CustomerAddress;
-import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort.BaselineCost;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort.RegionPreference;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.RoutingOrderData;
+import ch.swissqcommerce.backend.model.CustomerAddress;
+import ch.swissqcommerce.backend.model.DarkStore;
+import ch.swissqcommerce.backend.model.Inventory;
 import ch.swissqcommerce.backend.repository.DarkStoreRepository;
 import ch.swissqcommerce.backend.repository.InventoryRepository;
-
 import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,34 +37,37 @@ public class WarehouseSelectionServiceTest {
 
         service = new WarehouseSelectionService(darkStoreRepo, inventoryRepo, logisticsDataPort);
 
-        store1 = DarkStore.builder()
-                .storeId("WH-NY-01")
-                .storeName("New York Store")
-                .latitude(new BigDecimal("40.7128"))
-                .longitude(new BigDecimal("-74.0060"))
-                .build();
+        store1 =
+                DarkStore.builder()
+                        .storeId("WH-NY-01")
+                        .storeName("New York Store")
+                        .latitude(new BigDecimal("40.7128"))
+                        .longitude(new BigDecimal("-74.0060"))
+                        .build();
 
-        store2 = DarkStore.builder()
-                .storeId("WH-CA-02")
-                .storeName("California Store")
-                .latitude(new BigDecimal("34.0522"))
-                .longitude(new BigDecimal("-118.2437"))
-                .build();
+        store2 =
+                DarkStore.builder()
+                        .storeId("WH-CA-02")
+                        .storeName("California Store")
+                        .latitude(new BigDecimal("34.0522"))
+                        .longitude(new BigDecimal("-118.2437"))
+                        .build();
 
         when(darkStoreRepo.findAll()).thenReturn(List.of(store1, store2));
 
-        address = CustomerAddress.builder()
-                .addressLine("123 Broadway, 80012")
-                .latitude(new BigDecimal("40.7306"))
-                .longitude(new BigDecimal("-73.9352")) // Near NY
-                .build();
+        address =
+                CustomerAddress.builder()
+                        .addressLine("123 Broadway, 80012")
+                        .latitude(new BigDecimal("40.7306"))
+                        .longitude(new BigDecimal("-73.9352")) // Near NY
+                        .build();
 
-        orderData = new RoutingOrderData(
-                101,
-                address,
-                null, // Original store not needed for selection tests
-                List.of(new RoutingOrderData.OrderItem("item-1", 2))
-        );
+        orderData =
+                new RoutingOrderData(
+                        101,
+                        address,
+                        null, // Original store not needed for selection tests
+                        List.of(new RoutingOrderData.OrderItem("item-1", 2)));
     }
 
     @Test
@@ -77,7 +79,8 @@ public class WarehouseSelectionServiceTest {
         BaselineCost baseline = new BaselineCost("WH-NY-01", new BigDecimal("5.50"), 10);
         when(logisticsDataPort.findBaselinesByZipPrefix("800")).thenReturn(List.of(baseline));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt = service.findOptimalWarehouse(orderData);
+        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+                service.findOptimalWarehouse(orderData);
 
         assertTrue(resultOpt.isPresent());
         WarehouseSelectionService.RoutingResult result = resultOpt.get();
@@ -95,7 +98,8 @@ public class WarehouseSelectionServiceTest {
         BaselineCost baseline = new BaselineCost("WH-NY-01", new BigDecimal("10.00"), 3);
         when(logisticsDataPort.findBaselinesByZipPrefix("800")).thenReturn(List.of(baseline));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt = service.findOptimalWarehouse(orderData);
+        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+                service.findOptimalWarehouse(orderData);
 
         assertTrue(resultOpt.isPresent());
         WarehouseSelectionService.RoutingResult result = resultOpt.get();
@@ -111,15 +115,14 @@ public class WarehouseSelectionServiceTest {
         when(inventoryRepo.findByStoreStoreId("WH-CA-02")).thenReturn(List.of(stockCA));
 
         // Create new OrderData for split shipment
-        RoutingOrderData splitOrderData = new RoutingOrderData(
-                101,
-                address,
-                null,
-                List.of(
-                        new RoutingOrderData.OrderItem("item-1", 2),
-                        new RoutingOrderData.OrderItem("item-2", 1)
-                )
-        );
+        RoutingOrderData splitOrderData =
+                new RoutingOrderData(
+                        101,
+                        address,
+                        null,
+                        List.of(
+                                new RoutingOrderData.OrderItem("item-1", 2),
+                                new RoutingOrderData.OrderItem("item-2", 1)));
 
         RegionPreference pref = new RegionPreference("800", "WH-NY-01", "WH-CA-02");
         when(logisticsDataPort.findRegionPref("800")).thenReturn(Optional.of(pref));
@@ -127,7 +130,8 @@ public class WarehouseSelectionServiceTest {
         when(darkStoreRepo.findById("WH-NY-01")).thenReturn(Optional.of(store1));
         when(darkStoreRepo.findById("WH-CA-02")).thenReturn(Optional.of(store2));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt = service.findOptimalWarehouse(splitOrderData);
+        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+                service.findOptimalWarehouse(splitOrderData);
 
         assertTrue(resultOpt.isPresent());
         WarehouseSelectionService.RoutingResult result = resultOpt.get();

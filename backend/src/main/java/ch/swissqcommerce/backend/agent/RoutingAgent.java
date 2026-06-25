@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Routing Agent: delivery optimization suggestions, ETA improvement ideas, clustering.
- */
+/** Routing Agent: delivery optimization suggestions, ETA improvement ideas, clustering. */
 @Component
 public class RoutingAgent {
 
@@ -26,21 +24,26 @@ public class RoutingAgent {
         try {
             long totalStores = darkStoreRepo.count();
             String prompt =
-                    "You are a routing and logistics optimizer for a quick-commerce delivery fleet with "
+                    "You are a routing and logistics optimizer for a quick-commerce delivery fleet"
+                            + " with "
                             + totalStores
                             + " dark stores. Suggest ONE specific dispatch or routing optimization."
-                            + " Respond in exactly this format:"
-                            + " ACTION: <routing optimization proposal> | CONFIDENCE: <0.0-1.0> | IMPACT: <low|medium|high>"
-                            + " | REASON: <why>";
+                            + " Respond in exactly this format: ACTION: <routing optimization"
+                            + " proposal> | CONFIDENCE: <0.0-1.0> | IMPACT: <low|medium|high> |"
+                            + " REASON: <why>";
 
-            String response = aiService.executeLocalTask(prompt)
-                    .collectList()
-                    .map(list -> String.join("", list))
-                    .block(Duration.ofSeconds(10));
+            String response =
+                    aiService
+                            .executeLocalTask(prompt)
+                            .collectList()
+                            .map(list -> String.join("", list))
+                            .block(Duration.ofSeconds(10));
 
             return parseResponse(response);
         } catch (Exception e) {
-            log.warn("RoutingAgent analysis failed, returning deterministic fallback: {}", e.getMessage());
+            log.warn(
+                    "RoutingAgent analysis failed, returning deterministic fallback: {}",
+                    e.getMessage());
             return AgentSuggestion.of(
                     "routing",
                     "Consolidate adjacent orders to optimize dispatch batches",
@@ -70,8 +73,12 @@ public class RoutingAgent {
     }
 
     private AgentSuggestion fallback(String reason) {
-        return AgentSuggestion.of("routing",
-                "Review peak hours routing configuration manually", 0.6, reason, "medium");
+        return AgentSuggestion.of(
+                "routing",
+                "Review peak hours routing configuration manually",
+                0.6,
+                reason,
+                "medium");
     }
 
     private static String extractField(String text, String field) {

@@ -19,16 +19,15 @@ public class CarrierRateAdapterTest {
 
     private CarrierRateAdapter adapter;
 
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock private RestTemplate restTemplate;
 
-    @Mock
-    private RestTemplateBuilder restTemplateBuilder;
+    @Mock private RestTemplateBuilder restTemplateBuilder;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(restTemplateBuilder.requestFactory(any(java.util.function.Supplier.class))).thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.requestFactory(any(java.util.function.Supplier.class)))
+                .thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
         adapter = new CarrierRateAdapter(restTemplateBuilder);
     }

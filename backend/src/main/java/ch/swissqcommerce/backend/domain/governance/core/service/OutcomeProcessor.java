@@ -5,5 +5,6 @@ import ch.swissqcommerce.backend.model.ExecutionRecord;
 
 public interface OutcomeProcessor {
     OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion) throws Exception;
+
     String domain();
 }

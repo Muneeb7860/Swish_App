@@ -3306,7 +3306,8 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 	justify-content: center;
 	font-size: 0.75rem;
 	font-weight: 700;
-	border: 2px solid var(--border, var(--border-color, rgba(255, 255, 255, 0.08)));
+	border: 2px solid
+		var(--border, var(--border-color, rgba(255, 255, 255, 0.08)));
 	background: var(--bg, var(--bg-body, #0b0f19));
 	color: var(--text, var(--text-secondary, #94a3b8));
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

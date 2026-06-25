@@ -9,7 +9,6 @@ import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -58,14 +57,15 @@ public class HitlTaskController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER', 'RISK_ANALYST', 'SUPPORT_LEAD')")
+    @PreAuthorize(
+            "hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER',"
+                    + " 'RISK_ANALYST', 'SUPPORT_LEAD')")
     public ResponseEntity<Page<HitlTaskResponse>> listTasks(
             @RequestParam(defaultValue = "pending") String status,
             @RequestParam(required = false, name = "assignee_role") String assigneeRole,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,asc") String sort
-    ) {
+            @RequestParam(defaultValue = "createdAt,asc") String sort) {
         String domain = null;
         if (assigneeRole != null && !assigneeRole.trim().isEmpty()) {
             AssigneeRole role = AssigneeRole.fromString(assigneeRole);
@@ -74,11 +74,11 @@ public class HitlTaskController {
 
         String[] sortParts = sort.split(",");
         String sortProperty = sortParts[0];
-        Sort.Direction sortDirection = 
-            (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1])) 
-                ? Sort.Direction.DESC 
-                : Sort.Direction.ASC;
-                
+        Sort.Direction sortDirection =
+                (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1]))
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortProperty));
 
         Page<AgentSuggestionEntity> entities;
@@ -93,29 +93,37 @@ public class HitlTaskController {
     }
 
     @PostMapping("/{suggestionId}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER', 'RISK_ANALYST', 'SUPPORT_LEAD')")
+    @PreAuthorize(
+            "hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER',"
+                    + " 'RISK_ANALYST', 'SUPPORT_LEAD')")
     @Transactional
     public ResponseEntity<?> approve(
-            @PathVariable UUID suggestionId,
-            @RequestBody TaskOverrideRequest request
-    ) {
-        AgentSuggestionEntity suggestion = agentSuggestionRepo.findById(suggestionId)
-                .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
-                        "Suggestion not found: " + suggestionId));
+            @PathVariable UUID suggestionId, @RequestBody TaskOverrideRequest request) {
+        AgentSuggestionEntity suggestion =
+                agentSuggestionRepo
+                        .findById(suggestionId)
+                        .orElseThrow(
+                                () ->
+                                        new ch.swissqcommerce.backend.exception
+                                                .ResourceNotFoundException(
+                                                "Suggestion not found: " + suggestionId));
 
         checkPermission(suggestion.getDomain());
 
         // Idempotency check
-        if ("approved".equalsIgnoreCase(suggestion.getStatus()) || "executed".equalsIgnoreCase(suggestion.getStatus())) {
+        if ("approved".equalsIgnoreCase(suggestion.getStatus())
+                || "executed".equalsIgnoreCase(suggestion.getStatus())) {
             return ResponseEntity.ok(toResponse(suggestion));
         }
-        
+
         if ("rejected".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task already rejected"));
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task already rejected"));
         }
-        
+
         if ("failed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task already failed"));
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task already failed"));
         }
 
         // Expiry check
@@ -123,11 +131,17 @@ public class HitlTaskController {
             suggestion.setStatus("expired");
             agentSuggestionRepo.save(suggestion);
             if (meterRegistry != null) {
-                var counter = meterRegistry.counter("agent_suggestions_total",
-                        "domain", suggestion.getDomain(),
-                        "decision", "expired",
-                        "agent_name", suggestion.getAgent() != null ? suggestion.getAgent().getName() : "UnknownAgent"
-                );
+                var counter =
+                        meterRegistry.counter(
+                                "agent_suggestions_total",
+                                "domain",
+                                suggestion.getDomain(),
+                                "decision",
+                                "expired",
+                                "agent_name",
+                                suggestion.getAgent() != null
+                                        ? suggestion.getAgent().getName()
+                                        : "UnknownAgent");
                 if (counter != null) {
                     counter.increment();
                 }
@@ -136,20 +150,26 @@ public class HitlTaskController {
         }
 
         if (!"pending".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
         }
 
         // Approve suggestion state
         suggestion.setStatus("approved");
         agentSuggestionRepo.save(suggestion);
 
-        PolicyDecision policyDecision = PolicyDecision.builder()
-                .suggestion(suggestion)
-                .decision("approved")
-                .policyVersion("v1")
-                .reason(request.getReason())
-                .decidedBy("user:" + (request.getOperator() != null ? request.getOperator() : "anonymous"))
-                .build();
+        PolicyDecision policyDecision =
+                PolicyDecision.builder()
+                        .suggestion(suggestion)
+                        .decision("approved")
+                        .policyVersion("v1")
+                        .reason(request.getReason())
+                        .decidedBy(
+                                "user:"
+                                        + (request.getOperator() != null
+                                                ? request.getOperator()
+                                                : "anonymous"))
+                        .build();
         policyDecisionRepo.save(policyDecision);
 
         // Resolve associated HitlQueue ticket
@@ -165,15 +185,20 @@ public class HitlTaskController {
     }
 
     @PostMapping("/{suggestionId}/reject")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER', 'RISK_ANALYST', 'SUPPORT_LEAD')")
+    @PreAuthorize(
+            "hasAnyRole('ADMIN', 'PRICING_MANAGER', 'OPS_MANAGER', 'LOGISTICS_MANAGER',"
+                    + " 'RISK_ANALYST', 'SUPPORT_LEAD')")
     @Transactional
     public ResponseEntity<?> reject(
-            @PathVariable UUID suggestionId,
-            @RequestBody TaskOverrideRequest request
-    ) {
-        AgentSuggestionEntity suggestion = agentSuggestionRepo.findById(suggestionId)
-                .orElseThrow(() -> new ch.swissqcommerce.backend.exception.ResourceNotFoundException(
-                        "Suggestion not found: " + suggestionId));
+            @PathVariable UUID suggestionId, @RequestBody TaskOverrideRequest request) {
+        AgentSuggestionEntity suggestion =
+                agentSuggestionRepo
+                        .findById(suggestionId)
+                        .orElseThrow(
+                                () ->
+                                        new ch.swissqcommerce.backend.exception
+                                                .ResourceNotFoundException(
+                                                "Suggestion not found: " + suggestionId));
 
         checkPermission(suggestion.getDomain());
 
@@ -182,12 +207,15 @@ public class HitlTaskController {
             return ResponseEntity.ok(toResponse(suggestion));
         }
 
-        if ("approved".equalsIgnoreCase(suggestion.getStatus()) || "executed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task already approved"));
+        if ("approved".equalsIgnoreCase(suggestion.getStatus())
+                || "executed".equalsIgnoreCase(suggestion.getStatus())) {
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task already approved"));
         }
 
         if ("failed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task already failed"));
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task already failed"));
         }
 
         // Expiry check
@@ -195,11 +223,17 @@ public class HitlTaskController {
             suggestion.setStatus("expired");
             agentSuggestionRepo.save(suggestion);
             if (meterRegistry != null) {
-                var counter = meterRegistry.counter("agent_suggestions_total",
-                        "domain", suggestion.getDomain(),
-                        "decision", "expired",
-                        "agent_name", suggestion.getAgent() != null ? suggestion.getAgent().getName() : "UnknownAgent"
-                );
+                var counter =
+                        meterRegistry.counter(
+                                "agent_suggestions_total",
+                                "domain",
+                                suggestion.getDomain(),
+                                "decision",
+                                "expired",
+                                "agent_name",
+                                suggestion.getAgent() != null
+                                        ? suggestion.getAgent().getName()
+                                        : "UnknownAgent");
                 if (counter != null) {
                     counter.increment();
                 }
@@ -208,20 +242,26 @@ public class HitlTaskController {
         }
 
         if (!"pending".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
+            return ResponseEntity.status(409)
+                    .body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
         }
 
         // Reject suggestion state
         suggestion.setStatus("rejected");
         agentSuggestionRepo.save(suggestion);
 
-        PolicyDecision policyDecision = PolicyDecision.builder()
-                .suggestion(suggestion)
-                .decision("rejected")
-                .policyVersion("v1")
-                .reason(request.getReason())
-                .decidedBy("user:" + (request.getOperator() != null ? request.getOperator() : "anonymous"))
-                .build();
+        PolicyDecision policyDecision =
+                PolicyDecision.builder()
+                        .suggestion(suggestion)
+                        .decision("rejected")
+                        .policyVersion("v1")
+                        .reason(request.getReason())
+                        .decidedBy(
+                                "user:"
+                                        + (request.getOperator() != null
+                                                ? request.getOperator()
+                                                : "anonymous"))
+                        .build();
         policyDecisionRepo.save(policyDecision);
 
         // Resolve associated HitlQueue ticket
@@ -233,35 +273,49 @@ public class HitlTaskController {
     private void checkPermission(String domain) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return;
-        
+
         java.util.Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
         boolean isAdmin = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (isAdmin) return;
-        
+
         if ("pricing".equals(domain)) {
-            boolean isPricingManager = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_PRICING_MANAGER"));
+            boolean isPricingManager =
+                    authorities.stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_PRICING_MANAGER"));
             if (!isPricingManager) {
-                throw new AccessDeniedException("User does not have permission to approve pricing suggestions");
+                throw new AccessDeniedException(
+                        "User does not have permission to approve pricing suggestions");
             }
         } else if ("inventory".equals(domain)) {
-            boolean isOpsManager = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_OPS_MANAGER"));
+            boolean isOpsManager =
+                    authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_OPS_MANAGER"));
             if (!isOpsManager) {
-                throw new AccessDeniedException("User does not have permission to approve inventory suggestions");
+                throw new AccessDeniedException(
+                        "User does not have permission to approve inventory suggestions");
             }
         } else if ("routing".equals(domain)) {
-            boolean isLogistics = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_LOGISTICS_MANAGER"));
+            boolean isLogistics =
+                    authorities.stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_LOGISTICS_MANAGER"));
             if (!isLogistics) {
-                throw new AccessDeniedException("User does not have permission to approve routing suggestions");
+                throw new AccessDeniedException(
+                        "User does not have permission to approve routing suggestions");
             }
         } else if ("risk".equals(domain)) {
-            boolean isRisk = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_RISK_ANALYST"));
+            boolean isRisk =
+                    authorities.stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_RISK_ANALYST"));
             if (!isRisk) {
-                throw new AccessDeniedException("User does not have permission to approve risk suggestions");
+                throw new AccessDeniedException(
+                        "User does not have permission to approve risk suggestions");
             }
         } else if ("support".equals(domain)) {
-            boolean isSupport = authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPPORT_LEAD"));
+            boolean isSupport =
+                    authorities.stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_SUPPORT_LEAD"));
             if (!isSupport) {
-                throw new AccessDeniedException("User does not have permission to approve support suggestions");
+                throw new AccessDeniedException(
+                        "User does not have permission to approve support suggestions");
             }
         }
     }
@@ -298,14 +352,15 @@ public class HitlTaskController {
                 .build();
     }
 
-    private void resolveHitlQueueTicket(AgentSuggestionEntity suggestion, boolean approve, String operator, String reason) {
+    private void resolveHitlQueueTicket(
+            AgentSuggestionEntity suggestion, boolean approve, String operator, String reason) {
         try {
             List<ch.swissqcommerce.backend.model.HitlQueue> tickets = hitlQueueRepo.findAll();
             for (ch.swissqcommerce.backend.model.HitlQueue ticket : tickets) {
-                if ("pending".equalsIgnoreCase(ticket.getStatus()) &&
-                        ticket.getType().equals("agent_" + suggestion.getDomain()) &&
-                        ticket.getDescription() != null &&
-                        ticket.getDescription().contains(suggestion.getReason())) {
+                if ("pending".equalsIgnoreCase(ticket.getStatus())
+                        && ticket.getType().equals("agent_" + suggestion.getDomain())
+                        && ticket.getDescription() != null
+                        && ticket.getDescription().contains(suggestion.getReason())) {
                     ticket.setStatus(approve ? "approved" : "voided");
                     ticket.setDescription(
                             ticket.getDescription()
@@ -320,7 +375,10 @@ public class HitlTaskController {
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to update HitlQueue ticket for suggestion ID: {}", suggestion.getId(), e);
+            log.warn(
+                    "Failed to update HitlQueue ticket for suggestion ID: {}",
+                    suggestion.getId(),
+                    e);
         }
     }
 
@@ -328,10 +386,21 @@ public class HitlTaskController {
         private String operator;
         private String reason;
 
-        public String getOperator() { return operator; }
-        public void setOperator(String operator) { this.operator = operator; }
-        public String getReason() { return reason; }
-        public void setReason(String reason) { this.reason = reason; }
+        public String getOperator() {
+            return operator;
+        }
+
+        public void setOperator(String operator) {
+            this.operator = operator;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
+        }
     }
 
     public static class ErrorResponse {
@@ -343,12 +412,18 @@ public class HitlTaskController {
             this.message = message;
         }
 
-        public String getError() { return error; }
-        public String getMessage() { return message; }
+        public String getError() {
+            return error;
+        }
+
+        public String getMessage() {
+            return message;
+        }
     }
 
     @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleStateDrift(jakarta.persistence.OptimisticLockException ex) {
+    public ResponseEntity<ErrorResponse> handleStateDrift(
+            jakarta.persistence.OptimisticLockException ex) {
         return ResponseEntity.status(409).body(new ErrorResponse("STATE_DRIFT", ex.getMessage()));
     }
 
@@ -361,10 +436,11 @@ public class HitlTaskController {
     }
 
     @ExceptionHandler(ch.swissqcommerce.backend.exception.ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ch.swissqcommerce.backend.exception.ResourceNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            ch.swissqcommerce.backend.exception.ResourceNotFoundException ex) {
         return ResponseEntity.status(404).body(new ErrorResponse("NOT_FOUND", ex.getMessage()));
     }
-    
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(403).body(new ErrorResponse("FORBIDDEN", ex.getMessage()));

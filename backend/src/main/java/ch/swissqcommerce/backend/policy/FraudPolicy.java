@@ -20,7 +20,10 @@ public class FraudPolicy {
     public PolicyDecision evaluate(AgentSuggestionEntity s) {
         try {
             JsonNode rec = objectMapper.readTree(s.getRecommendation());
-            double riskScore = rec.has("risk_score") ? rec.get("risk_score").asDouble() : s.getConfidence().doubleValue();
+            double riskScore =
+                    rec.has("risk_score")
+                            ? rec.get("risk_score").asDouble()
+                            : s.getConfidence().doubleValue();
             double velocity = rec.has("velocity") ? rec.get("velocity").asDouble() : 1.0;
 
             // Auto-approve: high velocity (3x+) AND high risk score (0.9+)
@@ -38,7 +41,10 @@ public class FraudPolicy {
             }
             return PolicyDecision.needsHuman("default_fraud_requires_hitl");
         } catch (Exception e) {
-            log.error("FraudPolicy: Failed to parse recommendation JSON for suggestion ID {}: {}", s.getId(), e.getMessage());
+            log.error(
+                    "FraudPolicy: Failed to parse recommendation JSON for suggestion ID {}: {}",
+                    s.getId(),
+                    e.getMessage());
             return PolicyDecision.rejected("malformed_recommendation_json");
         }
     }

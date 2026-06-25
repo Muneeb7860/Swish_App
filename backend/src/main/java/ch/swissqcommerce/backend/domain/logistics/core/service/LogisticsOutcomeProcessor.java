@@ -7,10 +7,6 @@ import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPor
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort.ShipmentCost;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.RoutingOrderData;
 import ch.swissqcommerce.backend.model.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
@@ -19,6 +15,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 @Component
 public class LogisticsOutcomeProcessor implements OutcomeProcessor {
@@ -37,7 +36,8 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
     }
 
     @Override
-    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion) throws Exception {
+    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion)
+            throws Exception {
         String entityId = suggestion.getEntityId();
         String orderIdStr = entityId;
         if (entityId != null && entityId.contains("=")) {
@@ -67,7 +67,8 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
         double baselineCost = calculateScoredCost(originalStore, customerAddr, zipPrefix);
 
         // 2. Fetch actual shipping cost from shipments via port
-        List<ShipmentCost> shipments = logisticsDataPort.findShipmentCostsByOrderId(order.orderId());
+        List<ShipmentCost> shipments =
+                logisticsDataPort.findShipmentCostsByOrderId(order.orderId());
         if (shipments.isEmpty()) {
             log.warn("LogisticsOutcomeProcessor: No shipments found for order {}", orderId);
             return emptyResult("no_shipments_found");
@@ -83,12 +84,16 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
             totalActual = totalActual.add(s.actualShippingCost());
         }
 
-        BigDecimal baselineCostBd = BigDecimal.valueOf(baselineCost).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal baselineCostBd =
+                BigDecimal.valueOf(baselineCost).setScale(2, RoundingMode.HALF_UP);
         BigDecimal savings;
         boolean success;
 
         if (!allSettled) {
-            log.info("LogisticsOutcomeProcessor: Not all shipments settled for order {}. Savings set to 0.", orderId);
+            log.info(
+                    "LogisticsOutcomeProcessor: Not all shipments settled for order {}. Savings set"
+                            + " to 0.",
+                    orderId);
             savings = BigDecimal.ZERO;
             success = false;
         } else {
@@ -96,9 +101,7 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
             success = savings.compareTo(BigDecimal.ZERO) > 0;
         }
 
-        Map<String, Object> metrics = Map.of(
-                "shipping_savings_usd", savings.doubleValue()
-        );
+        Map<String, Object> metrics = Map.of("shipping_savings_usd", savings.doubleValue());
 
         OffsetDateTime start = exec.getCreatedAt();
         OffsetDateTime end = start.plusDays(3);
@@ -107,8 +110,13 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
                 .metrics(metrics)
                 .success(success)
                 .measurementWindow(String.format("[%s, %s)", start, end))
-                .notes(String.format("Logistics assessment: baseline = %.2f, actual = %s, savings = %.2f",
-                        baselineCostBd, allSettled ? totalActual.toString() : "null", savings))
+                .notes(
+                        String.format(
+                                "Logistics assessment: baseline = %.2f, actual = %s, savings ="
+                                        + " %.2f",
+                                baselineCostBd,
+                                allSettled ? totalActual.toString() : "null",
+                                savings))
                 .build();
     }
 
@@ -151,19 +159,24 @@ public class LogisticsOutcomeProcessor implements OutcomeProcessor {
         if (addr == null || wh == null) {
             return 0.0;
         }
-        return calculateHaversineDistance(addr.getLatitude(), addr.getLongitude(), wh.getLatitude(), wh.getLongitude());
+        return calculateHaversineDistance(
+                addr.getLatitude(), addr.getLongitude(), wh.getLatitude(), wh.getLongitude());
     }
 
-    private double calculateHaversineDistance(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
+    private double calculateHaversineDistance(
+            BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
         if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
             return 0.0;
         }
         double r = 3958.8;
         double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
         double dLon = Math.toRadians(lon2.doubleValue() - lon1.doubleValue());
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                   Math.cos(Math.toRadians(lat1.doubleValue())) * Math.cos(Math.toRadians(lat2.doubleValue())) *
-                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                        + Math.cos(Math.toRadians(lat1.doubleValue()))
+                                * Math.cos(Math.toRadians(lat2.doubleValue()))
+                                * Math.sin(dLon / 2)
+                                * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return r * c;
     }
