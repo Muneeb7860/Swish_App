@@ -6,9 +6,11 @@ import ch.swissqcommerce.backend.domain.billing.core.model.Invoice;
 import ch.swissqcommerce.backend.domain.billing.port.in.BillingUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,36 +29,30 @@ public class BillingController {
 
     private final BillingUseCase billing;
 
-    public record SubscribeRequest(String storeId, BillingTier tier) {}
+    public record SubscribeRequest(
+            @NotBlank(message = "Store ID is required") String storeId,
+            @NotNull(message = "Billing tier is required") BillingTier tier) {}
 
-    public record TierRequest(BillingTier tier) {}
+    public record TierRequest(@NotNull(message = "Billing tier is required") BillingTier tier) {}
 
-    public record InvoicePeriodRequest(LocalDate periodStart, LocalDate periodEnd) {}
+    public record InvoicePeriodRequest(
+            @NotNull(message = "Period start date is required") LocalDate periodStart,
+            @NotNull(message = "Period end date is required") LocalDate periodEnd) {}
 
     @Operation(summary = "Subscribe a hub to a flat-tier billing plan")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/accounts")
-    public ResponseEntity<?> subscribe(@RequestBody SubscribeRequest req) {
-        try {
-            BillingAccount account = billing.subscribe(req.storeId(), req.tier());
-            return ResponseEntity.status(201).body(account);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<?> subscribe(@Valid @RequestBody SubscribeRequest req) {
+        BillingAccount account = billing.subscribe(req.storeId(), req.tier());
+        return ResponseEntity.status(201).body(account);
     }
 
     @Operation(summary = "Change a billing account's tier")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/accounts/{accountId}/tier")
     public ResponseEntity<?> changeTier(
-            @PathVariable String accountId, @RequestBody TierRequest req) {
-        try {
-            return ResponseEntity.ok(billing.changeTier(accountId, req.tier()));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+            @PathVariable String accountId, @Valid @RequestBody TierRequest req) {
+        return ResponseEntity.ok(billing.changeTier(accountId, req.tier()));
     }
 
     @Operation(summary = "Get a billing account")
@@ -65,26 +61,16 @@ public class BillingController {
     public ResponseEntity<?> getAccount(@PathVariable String accountId) {
         return billing.getAccount(accountId)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(
-                        () ->
-                                ResponseEntity.status(404)
-                                        .body(Map.of("error", "Billing account not found")));
+                .orElseThrow(() -> new NoSuchElementException("Billing account not found"));
     }
 
     @Operation(summary = "Generate a flat-tier invoice for a billing period")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/accounts/{accountId}/invoices")
     public ResponseEntity<?> generateInvoice(
-            @PathVariable String accountId, @RequestBody InvoicePeriodRequest req) {
-        try {
-            Invoice invoice =
-                    billing.generateInvoice(accountId, req.periodStart(), req.periodEnd());
-            return ResponseEntity.status(201).body(invoice);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+            @PathVariable String accountId, @Valid @RequestBody InvoicePeriodRequest req) {
+        Invoice invoice = billing.generateInvoice(accountId, req.periodStart(), req.periodEnd());
+        return ResponseEntity.status(201).body(invoice);
     }
 
     @Operation(summary = "List invoices for a billing account")
@@ -98,12 +84,6 @@ public class BillingController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/invoices/{invoiceId}/pay")
     public ResponseEntity<?> payInvoice(@PathVariable String invoiceId) {
-        try {
-            return ResponseEntity.ok(billing.markInvoicePaid(invoiceId));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        return ResponseEntity.ok(billing.markInvoicePaid(invoiceId));
     }
 }

@@ -9,6 +9,8 @@ import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -98,7 +100,7 @@ public class HitlTaskController {
                     + " 'RISK_ANALYST', 'SUPPORT_LEAD')")
     @Transactional
     public ResponseEntity<?> approve(
-            @PathVariable UUID suggestionId, @RequestBody TaskOverrideRequest request) {
+            @PathVariable UUID suggestionId, @Valid @RequestBody TaskOverrideRequest request) {
         AgentSuggestionEntity suggestion =
                 agentSuggestionRepo
                         .findById(suggestionId)
@@ -117,13 +119,11 @@ public class HitlTaskController {
         }
 
         if ("rejected".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task already rejected"));
+            throw new IllegalStateException("Task already rejected");
         }
 
         if ("failed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task already failed"));
+            throw new IllegalStateException("Task already failed");
         }
 
         // Expiry check
@@ -150,8 +150,7 @@ public class HitlTaskController {
         }
 
         if (!"pending".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
+            throw new IllegalStateException("Task not in pending status");
         }
 
         // Approve suggestion state
@@ -190,7 +189,7 @@ public class HitlTaskController {
                     + " 'RISK_ANALYST', 'SUPPORT_LEAD')")
     @Transactional
     public ResponseEntity<?> reject(
-            @PathVariable UUID suggestionId, @RequestBody TaskOverrideRequest request) {
+            @PathVariable UUID suggestionId, @Valid @RequestBody TaskOverrideRequest request) {
         AgentSuggestionEntity suggestion =
                 agentSuggestionRepo
                         .findById(suggestionId)
@@ -209,13 +208,11 @@ public class HitlTaskController {
 
         if ("approved".equalsIgnoreCase(suggestion.getStatus())
                 || "executed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task already approved"));
+            throw new IllegalStateException("Task already approved");
         }
 
         if ("failed".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task already failed"));
+            throw new IllegalStateException("Task already failed");
         }
 
         // Expiry check
@@ -242,8 +239,7 @@ public class HitlTaskController {
         }
 
         if (!"pending".equalsIgnoreCase(suggestion.getStatus())) {
-            return ResponseEntity.status(409)
-                    .body(new ErrorResponse("INVALID_STATE", "Task not in pending status"));
+            throw new IllegalStateException("Task not in pending status");
         }
 
         // Reject suggestion state
@@ -383,7 +379,10 @@ public class HitlTaskController {
     }
 
     public static class TaskOverrideRequest {
+        @NotBlank(message = "Operator is required")
         private String operator;
+
+        @NotBlank(message = "Reason is required")
         private String reason;
 
         public String getOperator() {
@@ -401,48 +400,5 @@ public class HitlTaskController {
         public void setReason(String reason) {
             this.reason = reason;
         }
-    }
-
-    public static class ErrorResponse {
-        private String error;
-        private String message;
-
-        public ErrorResponse(String error, String message) {
-            this.error = error;
-            this.message = message;
-        }
-
-        public String getError() {
-            return error;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-    }
-
-    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleStateDrift(
-            jakarta.persistence.OptimisticLockException ex) {
-        return ResponseEntity.status(409).body(new ErrorResponse("STATE_DRIFT", ex.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
-        if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("expired")) {
-            return ResponseEntity.status(410).body(new ErrorResponse("EXPIRED", ex.getMessage()));
-        }
-        return ResponseEntity.status(409).body(new ErrorResponse("INVALID_STATE", ex.getMessage()));
-    }
-
-    @ExceptionHandler(ch.swissqcommerce.backend.exception.ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(
-            ch.swissqcommerce.backend.exception.ResourceNotFoundException ex) {
-        return ResponseEntity.status(404).body(new ErrorResponse("NOT_FOUND", ex.getMessage()));
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(403).body(new ErrorResponse("FORBIDDEN", ex.getMessage()));
     }
 }

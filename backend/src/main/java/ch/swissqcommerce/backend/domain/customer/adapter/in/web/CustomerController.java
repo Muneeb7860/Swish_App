@@ -162,31 +162,15 @@ public class CustomerController {
             }
         }
         assertOwnership(req.getCustomerId());
-        try {
-            Order order =
-                    orderUseCase.checkout(
-                            req.getCustomerId(),
-                            req.getItems(),
-                            req.getPaymentMethod(),
-                            req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
-                            req.getBagsReturned() != null ? req.getBagsReturned() : 0,
-                            idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
-            return ResponseEntity.status(201).body(order);
-        } catch (AccessDeniedException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // Log the real cause: checkout owns the @Transactional boundary, so by the time
-            // we land here the transaction has already rolled back cleanly. Previously this
-            // controller was also @Transactional, which turned any checkout failure into an
-            // opaque commit-time UnexpectedRollbackException (HTTP 500) and swallowed the
-            // actual error — making checkout failures undiagnosable in production.
-            log.error("Checkout failed for customer {}: {}", req.getCustomerId(), e.toString(), e);
-            return ResponseEntity.badRequest()
-                    .body(
-                            Map.of(
-                                    "error",
-                                    e.getMessage() != null ? e.getMessage() : "Checkout failed"));
-        }
+        Order order =
+                orderUseCase.checkout(
+                        req.getCustomerId(),
+                        req.getItems(),
+                        req.getPaymentMethod(),
+                        req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
+                        req.getBagsReturned() != null ? req.getBagsReturned() : 0,
+                        idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
+        return ResponseEntity.status(201).body(order);
     }
 
     @Operation(summary = "List orders for a customer")
@@ -214,22 +198,16 @@ public class CustomerController {
     public ResponseEntity<?> requestRefund(
             @PathVariable Integer id, @Valid @RequestBody RefundRequest req) {
         // Resolve the order first so we can assert ownership before mutating state.
-        try {
-            Order order = orderUseCase.getOrderById(id);
-            assertOwnership(order.getCustomer().getCustomerId());
-            Map<String, Object> result =
-                    orderUseCase.requestRefund(
-                            id,
-                            req.getClaimReason(),
-                            req.getCustomerLatitude(),
-                            req.getCustomerLongitude());
-            Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
-            return ResponseEntity.status(statusCode).body(result);
-        } catch (AccessDeniedException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        }
+        Order order = orderUseCase.getOrderById(id);
+        assertOwnership(order.getCustomer().getCustomerId());
+        Map<String, Object> result =
+                orderUseCase.requestRefund(
+                        id,
+                        req.getClaimReason(),
+                        req.getCustomerLatitude(),
+                        req.getCustomerLongitude());
+        Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
+        return ResponseEntity.status(statusCode).body(result);
     }
 
     // ---- Ledger -----------------------------------------------------------------
