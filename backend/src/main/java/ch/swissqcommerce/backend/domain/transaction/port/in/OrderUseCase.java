@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface OrderUseCase {
+    /** All stocked catalog items for customer browsing. */
+    List<ch.swissqcommerce.backend.model.Inventory> browseCatalog();
+
     List<Order> getCustomerOrders(String customerId);
 
     Order getOrderById(Integer orderId);

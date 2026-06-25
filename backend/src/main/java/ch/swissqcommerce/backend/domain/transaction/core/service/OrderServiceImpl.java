@@ -480,6 +480,12 @@ public class OrderServiceImpl implements OrderUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public List<ch.swissqcommerce.backend.model.Inventory> browseCatalog() {
+        return inventoryPort.findAllInventory();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "customer-orders", key = "#customerId")
     public List<Order> getCustomerOrders(String customerId) {
         return orderPort.findByCustomerIdOrderByCreatedAtDesc(customerId);

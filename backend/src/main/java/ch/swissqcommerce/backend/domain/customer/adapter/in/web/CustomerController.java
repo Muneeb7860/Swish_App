@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(
         name = "Customer",
         description = "Customer catalog, orders, ledger, and GDPR profile operations")
@@ -49,9 +51,40 @@ public class CustomerController {
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        // Delegated to catalog/inventory service in full implementation.
-        // Stub returns empty list; replace with CatalogUseCase once wired.
-        return ResponseEntity.ok(List.of());
+        String cat = category == null ? null : category.trim().toLowerCase();
+        String term = search == null ? null : search.trim().toLowerCase();
+        List<Map<String, Object>> catalog =
+                orderUseCase.browseCatalog().stream()
+                        .filter(
+                                inv ->
+                                        cat == null
+                                                || (inv.getCategory() != null
+                                                        && inv.getCategory()
+                                                                .toLowerCase()
+                                                                .equals(cat)))
+                        .filter(
+                                inv ->
+                                        term == null
+                                                || (inv.getName() != null
+                                                        && inv.getName()
+                                                                .toLowerCase()
+                                                                .contains(term)))
+                        .skip((long) Math.max(0, page) * Math.max(1, size))
+                        .limit(Math.max(1, size))
+                        .map(
+                                inv -> {
+                                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                                    m.put("item_id", inv.getItemId());
+                                    m.put("name", inv.getName());
+                                    m.put("price", inv.getPrice());
+                                    m.put("stock", inv.getStock());
+                                    m.put("category", inv.getCategory());
+                                    m.put("emoji", inv.getEmoji());
+                                    m.put("perishable", inv.getPerishable());
+                                    return m;
+                                })
+                        .toList();
+        return ResponseEntity.ok(catalog);
     }
 
     // ---- Orders -----------------------------------------------------------------
@@ -119,7 +152,6 @@ public class CustomerController {
             summary = "Place a new order (checkout)",
             description = "Idempotency-Key header prevents duplicate orders on retry.")
     @PostMapping("/orders")
-    @Transactional
     public ResponseEntity<?> placeOrder(
             @Valid @RequestBody CheckoutRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
@@ -143,7 +175,17 @@ public class CustomerController {
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            // Log the real cause: checkout owns the @Transactional boundary, so by the time
+            // we land here the transaction has already rolled back cleanly. Previously this
+            // controller was also @Transactional, which turned any checkout failure into an
+            // opaque commit-time UnexpectedRollbackException (HTTP 500) and swallowed the
+            // actual error — making checkout failures undiagnosable in production.
+            log.error("Checkout failed for customer {}: {}", req.getCustomerId(), e.toString(), e);
+            return ResponseEntity.badRequest()
+                    .body(
+                            Map.of(
+                                    "error",
+                                    e.getMessage() != null ? e.getMessage() : "Checkout failed"));
         }
     }
 
