@@ -430,6 +430,7 @@ export default function App() {
 	const [catalogLoading, setCatalogLoading] = useState(false);
 	const [hitlLoading, setHitlLoading] = useState(false);
 	const [isBotTyping, setIsBotTyping] = useState(false);
+	const [showEngineRoom, setShowEngineRoom] = useState(true);
 	// customer, rider, business, inventory, admin
 
 	// Helper log triggers
@@ -2468,6 +2469,30 @@ export default function App() {
 							<span>Lock Cockpit</span>
 						</button>
 					)}
+					<button
+						type="button"
+						aria-label="Toggle Engine Room"
+						className="role-tab"
+						style={{
+							color: showEngineRoom ? "#070a13" : "var(--color-engine)",
+							background: showEngineRoom
+								? "var(--color-engine)"
+								: "transparent",
+							borderColor: "rgba(6, 182, 212, 0.2)",
+							boxShadow: showEngineRoom
+								? "0 0 10px rgba(6, 182, 212, 0.3)"
+								: "none",
+							marginLeft: "0.5rem",
+						}}
+						onClick={() => setShowEngineRoom(!showEngineRoom)}
+					>
+						{showEngineRoom ? (
+							<Lucide.EyeOff size={15} />
+						) : (
+							<Lucide.Eye size={15} />
+						)}
+						<span>{showEngineRoom ? "Hide Monitor" : "Show Monitor"}</span>
+					</button>
 				</nav>
 			</header>
 
@@ -2580,8 +2605,11 @@ export default function App() {
 				</div>
 			)}
 
-			<main className="cockpit-main-layout">
-				<section className="workspace-main-panel">
+			<main
+				className="cockpit-container"
+				style={!showEngineRoom ? { gridTemplateColumns: "1fr" } : undefined}
+			>
+				<section className="role-content-area">
 					{/* ── Live Rider Tracking Panel (Global — visible on all tabs during transit) ── */}
 					<RiderTrackingPanel
 						activeOrder={activeOrder}
@@ -2759,34 +2787,36 @@ export default function App() {
 					</Suspense>
 				</section>
 
-				<LocalErrorBoundary name="System Control Room">
-					<Suspense
-						fallback={
-							<div className="engine-room-loading">
-								Loading Telemetry Control Room...
-							</div>
-						}
-					>
-						<SystemEngineRoom
-							rateLimitActive={rateLimitActive}
-							dbLatencyActive={dbLatencyActive}
-							redisCrashActive={redisCrashActive}
-							paymentOutageActive={paymentOutageActive}
-							riderTrafficActive={riderTrafficActive}
-							circuitBreakerTripped={circuitBreakerTripped}
-							activeProfile={activeProfile}
-							oltpWriteLatency={oltpWriteLatency}
-							olapSyncTimer={olapSyncTimer}
-							jwtFlash={jwtFlash}
-							vaultTimer={vaultTimer}
-							latencyHistory={latencyHistory}
-							cacheHits={cacheHits}
-							cacheMisses={cacheMisses}
-							kafkaLogs={kafkaLogs}
-							agentMetrics={agentMetrics}
-						/>
-					</Suspense>
-				</LocalErrorBoundary>
+				{showEngineRoom && (
+					<LocalErrorBoundary name="System Control Room">
+						<Suspense
+							fallback={
+								<div className="engine-room-loading">
+									Loading Telemetry Control Room...
+								</div>
+							}
+						>
+							<SystemEngineRoom
+								rateLimitActive={rateLimitActive}
+								dbLatencyActive={dbLatencyActive}
+								redisCrashActive={redisCrashActive}
+								paymentOutageActive={paymentOutageActive}
+								riderTrafficActive={riderTrafficActive}
+								circuitBreakerTripped={circuitBreakerTripped}
+								activeProfile={activeProfile}
+								oltpWriteLatency={oltpWriteLatency}
+								olapSyncTimer={olapSyncTimer}
+								jwtFlash={jwtFlash}
+								vaultTimer={vaultTimer}
+								latencyHistory={latencyHistory}
+								cacheHits={cacheHits}
+								cacheMisses={cacheMisses}
+								kafkaLogs={kafkaLogs}
+								agentMetrics={agentMetrics}
+							/>
+						</Suspense>
+					</LocalErrorBoundary>
+				)}
 			</main>
 
 			{certModalOpen && (
