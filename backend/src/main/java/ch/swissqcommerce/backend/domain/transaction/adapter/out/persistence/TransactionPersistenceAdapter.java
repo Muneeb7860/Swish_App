@@ -95,6 +95,11 @@ public class TransactionPersistenceAdapter
     }
 
     @Override
+    public java.util.List<Inventory> findAllInventory() {
+        return inventoryRepository.findAll();
+    }
+
+    @Override
     public Inventory save(Inventory inventory) {
         return inventoryRepository.save(inventory);
     }
