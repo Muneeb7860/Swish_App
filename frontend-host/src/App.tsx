@@ -8,8 +8,9 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+import { AuthPortal, type AuthSession } from "@swish/shared-ui";
+import "@swish/shared-ui/tokens";
 import * as api from "./api/endpoints";
-import MfaLoginPortal from "./components/MfaLoginPortal";
 import RbacBlocker from "./components/RbacBlocker";
 import RiderTrackingPanel from "./components/RiderTrackingPanel";
 import SupportBot from "./components/SupportBot";
