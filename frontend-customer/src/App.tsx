@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { AuthPortal, type AuthSession as SharedAuthSession } from "@swish/shared-ui";
+import {
+	AuthPortal,
+	type AuthSession as SharedAuthSession,
+} from "@swish/shared-ui";
 import "@swish/shared-ui/tokens";
 import CustomerApp from "./components/CustomerApp";
 import "./index.css";
@@ -46,7 +49,13 @@ export default function App() {
 	};
 
 	if (!session) {
-		return <AuthPortal role="customer" mfaEnabled={true} onAuthSuccess={setSession} />;
+		return (
+			<AuthPortal
+				role="customer"
+				mfaEnabled={true}
+				onAuthSuccess={setSession}
+			/>
+		);
 	}
 
 	return (
