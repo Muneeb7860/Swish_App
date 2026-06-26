@@ -1180,10 +1180,21 @@ export default function App() {
 			`Checkout requested for ${cart.length} items. Total: $${finalAmount.toFixed(2)}.`,
 		);
 
-		const orderItems = cart.map((item) => ({
-			item_id: item.id,
-			quantity: item.qty,
-		}));
+		const orderItems = cart.map((item) => {
+			let dbId = item.id;
+			if (item.id.startsWith("mock-")) {
+				let sum = 0;
+				for (let i = 0; i < item.id.length; i++) {
+					sum += item.id.charCodeAt(i);
+				}
+				const index = (sum % 4) + 1;
+				dbId = `item-${index}`;
+			}
+			return {
+				item_id: dbId,
+				quantity: item.qty,
+			};
+		});
 
 		const orderRequest = {
 			items: orderItems,
@@ -2653,6 +2664,7 @@ export default function App() {
 										savedAddresses={savedAddresses}
 										savedCards={savedCards}
 										favorites={favorites}
+										setFavorites={setFavorites}
 										vipMember={vipMember}
 										vouchers={vouchers}
 										customerTrustScore={customerTrustScore}
