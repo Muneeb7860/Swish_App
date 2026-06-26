@@ -1,0 +1,12 @@
+/* Swish B2B Design System - Main Stylesheet Entry Point */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap");
+@import "tailwindcss";
+@import "./_ds_bundle.css";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SWISH B2B DESIGN SYSTEM
+   Cascade Layer Order: reset → tokens → base → components → utilities
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer reset, tokens, base, components, utilities;

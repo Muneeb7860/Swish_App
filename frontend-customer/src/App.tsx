@@ -1,5 +1,9 @@
+import {
+	AuthPortal,
+	type AuthSession as SharedAuthSession,
+} from "@swish/shared-ui";
 import { useState } from "react";
-import AuthGate from "./components/AuthGate";
+import "@swish/shared-ui/tokens";
 import CustomerApp from "./components/CustomerApp";
 import "./index.css";
 
@@ -24,7 +28,7 @@ const MOCK_PRODUCTS = [
 	},
 ];
 
-interface AuthSession {
+interface AuthSession extends SharedAuthSession {
 	token: string;
 	sessionId: string;
 }
@@ -45,7 +49,14 @@ export default function App() {
 	};
 
 	if (!session) {
-		return <AuthGate onAuth={setSession} />;
+		return (
+			<AuthPortal
+				role="customer"
+				mfaEnabled={true}
+				onAuthSuccess={setSession}
+				apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth`}
+			/>
+		);
 	}
 
 	return (

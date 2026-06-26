@@ -16,6 +16,7 @@
 		"@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
 		"@opentelemetry/instrumentation-user-interaction": "^0.63.0",
 		"@opentelemetry/sdk-trace-web": "^2.8.0",
+		"@swish/shared-ui": "file:../shared-ui",
 		"firebase": "^12.14.0",
 		"lucide-react": "^1.17.0",
 		"react": "^19.2.6",
