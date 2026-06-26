@@ -1,5 +1,6 @@
 import { useState } from "react";
-import AdminLogin from "./components/AdminLogin";
+import { AuthPortal, type AuthSession } from "@swish/shared-ui";
+import "@swish/shared-ui/tokens";
 import AdminPanel from "./components/AdminPanel";
 import BusinessApp from "./components/BusinessApp";
 import InventoryApp from "./components/InventoryApp";
@@ -8,8 +9,13 @@ import { useHitlConsole } from "./hooks/useHitlConsole";
 import "./index.css";
 
 export default function App() {
+	const [session, setSession] = useState<AuthSession | null>(null);
 	const [tab, setTab] = useState("admin"); // admin, business, inventory, system
 	const hitl = useHitlConsole();
+
+	if (!session) {
+		return <AuthPortal role="admin" onAuthSuccess={setSession} />;
+	}
 	const [products, setProducts] = useState([
 		{
 			id: "p1",
