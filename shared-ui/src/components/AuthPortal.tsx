@@ -53,7 +53,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 	role,
 	mfaEnabled = false,
 	mfaMethods = ["sms", "totp"],
-	apiUrl = `${import.meta.env.VITE_API_URL ?? window.location.origin}/api/v1/auth`,
+	apiUrl = `${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth`,
 	onAuthSuccess,
 	onAuthError,
 	defaultEmail = role === "admin" ? "admin@swish.local" : "",
@@ -260,6 +260,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 				)}
 
 				<button
+					type="button"
 					onClick={handleMfaVerify}
 					disabled={loading || mfaOtp.length < 6}
 					style={{
@@ -293,9 +294,24 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 				{formLabel}
 			</h2>
 
+			{role === "customer" && (
+				<p
+					style={{
+						textAlign: "center",
+						color: "var(--text-secondary)",
+						fontSize: "var(--text-sm)",
+						marginTop: "-0.5rem",
+						marginBottom: "1.5rem",
+					}}
+				>
+					15-minute grocery delivery
+				</p>
+			)}
+
 			<form onSubmit={handleSubmit}>
 				<div>
 					<label
+						htmlFor="email-input"
 						style={{
 							display: "block",
 							fontSize: "var(--text-sm)",
@@ -305,6 +321,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						Email
 					</label>
 					<input
+						id="email-input"
 						type="email"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
@@ -315,6 +332,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
 				<div style={{ marginTop: "1rem" }}>
 					<label
+						htmlFor="password-input"
 						style={{
 							display: "block",
 							fontSize: "var(--text-sm)",
@@ -324,6 +342,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						Password
 					</label>
 					<input
+						id="password-input"
 						type="password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
@@ -333,18 +352,19 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 				</div>
 
 				{error && (
-					<div
+					<p
 						style={{
 							marginTop: "1rem",
 							padding: "0.75rem",
 							background: "var(--error-muted)",
-							color: "var(--error)",
+							color: "rgb(239, 83, 80)",
 							borderRadius: "var(--radius-sm)",
 							fontSize: "var(--text-xs)",
+							margin: 0,
 						}}
 					>
 						{error}
-					</div>
+					</p>
 				)}
 
 				<button
@@ -364,7 +384,15 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						opacity: loading ? 0.6 : 1,
 					}}
 				>
-					{loading ? "Signing in..." : submitLabel}
+					{loading
+						? mode === "register"
+							? "Creating account..."
+							: "Signing in..."
+						: role === "customer"
+							? mode === "register"
+								? "Create account"
+								: "Log in"
+							: submitLabel}
 				</button>
 			</form>
 
@@ -381,6 +409,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						<>
 							Don't have an account?{" "}
 							<button
+								type="button"
 								onClick={() => setMode("register")}
 								style={{
 									background: "none",
@@ -397,6 +426,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						<>
 							Already have an account?{" "}
 							<button
+								type="button"
 								onClick={() => setMode("login")}
 								style={{
 									background: "none",

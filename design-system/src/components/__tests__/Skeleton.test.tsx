@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import {
-	Skeleton,
+	GenericCardSkeleton,
 	ProductCardSkeleton,
 	ProductGridSkeleton,
+	Skeleton,
 	TableRowsSkeleton,
-	GenericCardSkeleton,
 } from "../Skeleton";
 
 describe("Skeleton Component", () => {
@@ -31,7 +31,7 @@ describe("Skeleton Component", () => {
 
 		it("renders grid with custom count", () => {
 			const { container } = render(
-				<Skeleton variant="product-grid" count={5} />
+				<Skeleton variant="product-grid" count={5} />,
 			);
 			const cards = container.querySelectorAll(".product-card");
 			expect(cards).toHaveLength(5);
@@ -47,17 +47,17 @@ describe("Skeleton Component", () => {
 		it("renders table with default rows (5)", () => {
 			const { container } = render(<Skeleton variant="table-rows" />);
 			const rows = container.querySelectorAll(
-				"div[style*='flex'][style*='flexDirection']"
+				"div[style*='flex'][style*='flexDirection']",
 			);
 			expect(rows.length).toBeGreaterThan(0);
 		});
 
 		it("renders correct number of columns per row", () => {
 			const { container } = render(
-				<Skeleton variant="table-rows" rows={2} cols={3} />
+				<Skeleton variant="table-rows" rows={2} cols={3} />,
 			);
 			const rows = container.querySelectorAll(
-				"div[style*='flex'][style*='flexDirection']"
+				"div[style*='flex'][style*='flexDirection']",
 			);
 			expect(rows.length).toBeGreaterThan(0);
 		});

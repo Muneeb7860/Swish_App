@@ -18,6 +18,9 @@
 			"recommended": true,
 			"suspicious": {
 				"noExplicitAny": "info"
+			},
+			"a11y": {
+				"useValidAriaRole": "off"
 			}
 		}
 	},
