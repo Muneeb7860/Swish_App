@@ -22,8 +22,7 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
 
     private final AgentBaselineRepository baselineRepo;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
     public PricingOutcomeProcessor(AgentBaselineRepository baselineRepo) {
         this.baselineRepo = baselineRepo;
@@ -35,7 +34,8 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
     }
 
     @Override
-    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion) throws Exception {
+    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion)
+            throws Exception {
         String sku = suggestion.getEntityId();
         OffsetDateTime T = exec.getCreatedAt();
 
@@ -46,7 +46,10 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
         double actualRevenue = 0.0;
 
         // Fetch delivered order items in the T+1 to T+7 window
-        List<?> results = entityManager.createNativeQuery("""
+        List<?> results =
+                entityManager
+                        .createNativeQuery(
+                                """
                 SELECT COALESCE(SUM(oi.price * oi.quantity), 0)
                 FROM oltp.order_items oi
                 JOIN oltp.orders o ON oi.order_id = o.order_id
@@ -55,10 +58,10 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
                   AND o.created_at >= :startTime
                   AND o.created_at < :endTime
                 """)
-                .setParameter("sku", sku)
-                .setParameter("startTime", start)
-                .setParameter("endTime", end)
-                .getResultList();
+                        .setParameter("sku", sku)
+                        .setParameter("startTime", start)
+                        .setParameter("endTime", end)
+                        .getResultList();
 
         if (!results.isEmpty()) {
             Object res = results.get(0);
@@ -79,14 +82,25 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
                 AgentBaseline baseline = baselineOpt.get();
                 baselineRevenue = baseline.getRevenue7d().doubleValue();
                 productMarginPct = baseline.getMarginPct().doubleValue();
-                log.info("PricingOutcomeProcessor: Found pre-calculated baseline for SKU {} on date {}: revenue_7d={}", 
-                        sku, lookupDate, baselineRevenue);
+                log.info(
+                        "PricingOutcomeProcessor: Found pre-calculated baseline for SKU {} on date"
+                                + " {}: revenue_7d={}",
+                        sku,
+                        lookupDate,
+                        baselineRevenue);
             } else {
-                log.warn("PricingOutcomeProcessor: Pre-calculated baseline missing for SKU {} on date {}. Falling back to dynamic pre-execution range T-7 to T-1.", 
-                        sku, lookupDate);
-                // Dynamic fallback if pre-calculated baseline is not found (for back-compatibility/safety)
+                log.warn(
+                        "PricingOutcomeProcessor: Pre-calculated baseline missing for SKU {} on"
+                            + " date {}. Falling back to dynamic pre-execution range T-7 to T-1.",
+                        sku,
+                        lookupDate);
+                // Dynamic fallback if pre-calculated baseline is not found (for
+                // back-compatibility/safety)
                 OffsetDateTime baselineStart = T.minusDays(7);
-                List<?> baselineResults = entityManager.createNativeQuery("""
+                List<?> baselineResults =
+                        entityManager
+                                .createNativeQuery(
+                                        """
                         SELECT COALESCE(SUM(oi.price * oi.quantity), 0)
                         FROM oltp.order_items oi
                         JOIN oltp.orders o ON oi.order_id = o.order_id
@@ -95,10 +109,10 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
                           AND o.created_at >= :baselineStart
                           AND o.created_at < :T
                         """)
-                        .setParameter("sku", sku)
-                        .setParameter("baselineStart", baselineStart)
-                        .setParameter("T", T)
-                        .getResultList();
+                                .setParameter("sku", sku)
+                                .setParameter("baselineStart", baselineStart)
+                                .setParameter("T", T)
+                                .getResultList();
 
                 if (!baselineResults.isEmpty()) {
                     Object bRes = baselineResults.get(0);
@@ -119,10 +133,10 @@ public class PricingOutcomeProcessor implements OutcomeProcessor {
 
         boolean success = revenueDelta > 0;
 
-        Map<String, Object> metrics = Map.of(
-                "revenue_delta", Math.round(revenueDelta * 100.0) / 100.0,
-                "margin_delta", Math.round(marginDelta * 100.0) / 100.0
-        );
+        Map<String, Object> metrics =
+                Map.of(
+                        "revenue_delta", Math.round(revenueDelta * 100.0) / 100.0,
+                        "margin_delta", Math.round(marginDelta * 100.0) / 100.0);
 
         return OutcomeResult.builder()
                 .metrics(metrics)

@@ -8,13 +8,10 @@ import ch.swissqcommerce.backend.repository.ExecutionRecordRepository;
 import ch.swissqcommerce.backend.repository.OutcomeRecordRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -53,22 +50,28 @@ public class OutcomeEvaluationServiceImpl implements OutcomeEvaluationUseCase {
         OffsetDateTime twentyFourHoursAgo = OffsetDateTime.now().minusHours(24);
 
         // Find executed execution records created in the last 24 hours without outcomes
-        List<ExecutionRecord> records = entityManager.createQuery(
-                "SELECT er FROM ExecutionRecord er " +
-                "WHERE er.executed = true " +
-                "AND er.createdAt > :cutoff " +
-                "AND NOT EXISTS (SELECT o FROM OutcomeRecord o WHERE o.suggestionId = er.suggestion.id)",
-                ExecutionRecord.class)
-                .setParameter("cutoff", twentyFourHoursAgo)
-                .getResultList();
+        List<ExecutionRecord> records =
+                entityManager
+                        .createQuery(
+                                "SELECT er FROM ExecutionRecord er WHERE er.executed = true AND"
+                                    + " er.createdAt > :cutoff AND NOT EXISTS (SELECT o FROM"
+                                    + " OutcomeRecord o WHERE o.suggestionId = er.suggestion.id)",
+                                ExecutionRecord.class)
+                        .setParameter("cutoff", twentyFourHoursAgo)
+                        .getResultList();
 
-        log.info("OutcomeEvaluationService: Found {} execution records to evaluate.", records.size());
+        log.info(
+                "OutcomeEvaluationService: Found {} execution records to evaluate.",
+                records.size());
 
         for (ExecutionRecord er : records) {
             try {
                 evaluateRecord(er);
             } catch (Exception e) {
-                log.error("OutcomeEvaluationService: Failed to evaluate execution record ID: {}", er.getId(), e);
+                log.error(
+                        "OutcomeEvaluationService: Failed to evaluate execution record ID: {}",
+                        er.getId(),
+                        e);
             }
         }
     }
@@ -79,43 +82,56 @@ public class OutcomeEvaluationServiceImpl implements OutcomeEvaluationUseCase {
 
         OutcomeProcessor processor = processors.get(domain);
         if (processor == null) {
-            log.error("No OutcomeProcessor found for domain={} trace_id={}", 
-                    domain, suggestion.getTraceId());
+            log.error(
+                    "No OutcomeProcessor found for domain={} trace_id={}",
+                    domain,
+                    suggestion.getTraceId());
             return;
         }
 
-        log.info("OutcomeEvaluationService: Evaluating suggestion ID {} with domain processor {}", suggestion.getId(), domain);
+        log.info(
+                "OutcomeEvaluationService: Evaluating suggestion ID {} with domain processor {}",
+                suggestion.getId(),
+                domain);
         OutcomeResult result = processor.evaluate(er, suggestion);
 
         String metricsJson = objectMapper.writeValueAsString(result.getMetrics());
 
-        OutcomeRecord outcome = OutcomeRecord.builder()
-                .suggestionId(suggestion.getId())
-                .suggestion(suggestion)
-                .measurementWindow(result.getMeasurementWindow())
-                .metrics(metricsJson)
-                .success(result.getSuccess())
-                .notes(result.getNotes())
-                .build();
+        OutcomeRecord outcome =
+                OutcomeRecord.builder()
+                        .suggestionId(suggestion.getId())
+                        .suggestion(suggestion)
+                        .measurementWindow(result.getMeasurementWindow())
+                        .metrics(metricsJson)
+                        .success(result.getSuccess())
+                        .notes(result.getNotes())
+                        .build();
 
         entityManager.persist(outcome);
         metricsConfig.updateMetricsAsync(result.getMetrics());
-        log.info("OutcomeEvaluationService: Saved OutcomeRecord for suggestion ID: {}. Success: {}, Metrics: {}", 
-                suggestion.getId(), result.getSuccess(), metricsJson);
+        log.info(
+                "OutcomeEvaluationService: Saved OutcomeRecord for suggestion ID: {}. Success: {},"
+                        + " Metrics: {}",
+                suggestion.getId(),
+                result.getSuccess(),
+                metricsJson);
 
         // Alert check: last 3 suggestions from same agent
-        checkDegradedPerformance(suggestion.getAgent() != null ? suggestion.getAgent().getName() : "PricingAgent");
+        checkDegradedPerformance(
+                suggestion.getAgent() != null ? suggestion.getAgent().getName() : "PricingAgent");
     }
 
     private void checkDegradedPerformance(String agentName) {
-        List<OutcomeRecord> recentOutcomes = entityManager.createQuery(
-                "SELECT o FROM OutcomeRecord o " +
-                "WHERE o.suggestion.agent.name = :agentName " +
-                "ORDER BY o.evaluatedAt DESC",
-                OutcomeRecord.class)
-                .setParameter("agentName", agentName)
-                .setMaxResults(3)
-                .getResultList();
+        List<OutcomeRecord> recentOutcomes =
+                entityManager
+                        .createQuery(
+                                "SELECT o FROM OutcomeRecord o "
+                                        + "WHERE o.suggestion.agent.name = :agentName "
+                                        + "ORDER BY o.evaluatedAt DESC",
+                                OutcomeRecord.class)
+                        .setParameter("agentName", agentName)
+                        .setMaxResults(3)
+                        .getResultList();
 
         if (recentOutcomes.size() == 3) {
             boolean allFailed = recentOutcomes.stream().allMatch(o -> !o.getSuccess());

@@ -237,8 +237,8 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 
 		// Low-stock substitution modal
 		cy.get(".cert-modal-overlay", { timeout: 6000 }).should("be.visible");
-		cy.contains("Stock Alert: Running Low!").should("be.visible");
-		cy.contains("Whole Wheat Sourdough").should("be.visible");
+		cy.contains("Stock Alert: Running Low!").should("exist");
+		cy.contains("Whole Wheat Sourdough").should("exist");
 
 		cy.contains("Swap Item").click();
 

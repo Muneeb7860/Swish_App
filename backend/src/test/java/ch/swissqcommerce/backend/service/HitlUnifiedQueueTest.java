@@ -39,9 +39,14 @@ class HitlUnifiedQueueTest {
     @Mock private HitlQueuePort hitlQueuePort;
     @Mock private SecurityTrustLedgerRepository trustLedgerRepository;
     @Mock private ch.swissqcommerce.backend.gateway.ExecutionGateway executionGateway;
-    @Mock private ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository agentSuggestionRepo;
+
+    @Mock
+    private ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository
+            agentSuggestionRepo;
+
     @Mock private ch.swissqcommerce.backend.repository.PolicyDecisionRepository policyDecisionRepo;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     private GovernanceServiceImpl service;
 
@@ -56,10 +61,14 @@ class HitlUnifiedQueueTest {
                         hitlQueuePort,
                         trustLedgerRepository,
                         null);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "executionGateway", executionGateway);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "agentSuggestionRepo", agentSuggestionRepo);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "policyDecisionRepo", policyDecisionRepo);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "objectMapper", objectMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                service, "executionGateway", executionGateway);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                service, "agentSuggestionRepo", agentSuggestionRepo);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                service, "policyDecisionRepo", policyDecisionRepo);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                service, "objectMapper", objectMapper);
     }
 
     private ProcurementApproval approval(int id, String status) {
@@ -186,25 +195,30 @@ class HitlUnifiedQueueTest {
 
     @Test
     void resolveAgentEscalation_withAgentNameAndDomain_executesApprovedAction() throws Exception {
-        HitlQueue ticket = HitlQueue.builder()
-                .ticketId("HITL-ABC")
-                .type("agent_pricing")
-                .description("[PricingAgent] increase price of coffee by 5.5% — Confidence: 0.90, Impact: low")
-                .status("pending")
-                .build();
+        HitlQueue ticket =
+                HitlQueue.builder()
+                        .ticketId("HITL-ABC")
+                        .type("agent_pricing")
+                        .description(
+                                "[PricingAgent] increase price of coffee by 5.5% — Confidence:"
+                                        + " 0.90, Impact: low")
+                        .status("pending")
+                        .build();
         when(hitlQueuePort.findByTicketId("HITL-ABC")).thenReturn(Optional.of(ticket));
 
         java.util.UUID suggestionId = java.util.UUID.randomUUID();
-        ch.swissqcommerce.backend.model.AgentSuggestionEntity suggestion = ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .entityId("SKU-123")
-                .recommendation("{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":10.55}")
-                .status("pending")
-                .build();
+        ch.swissqcommerce.backend.model.AgentSuggestionEntity suggestion =
+                ch.swissqcommerce.backend.model.AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .entityId("SKU-123")
+                        .recommendation(
+                                "{\"action\":\"update_price\",\"old_value\":10.00,\"new_value\":10.55}")
+                        .status("pending")
+                        .build();
 
         when(agentSuggestionRepo.findByAgentNameAndDomainAndStatusOrderByCreatedAtDesc(
-                "PricingAgent", "pricing", "pending"))
+                        "PricingAgent", "pricing", "pending"))
                 .thenReturn(List.of(suggestion));
 
         service.resolveHitlItem("AQ-HITL-ABC", true, "swissadmin", "approved by manager");
@@ -213,7 +227,8 @@ class HitlUnifiedQueueTest {
         assertEquals("approved", suggestion.getStatus());
         verify(executionGateway, times(1)).execute(suggestionId, "swissadmin");
         verify(agentSuggestionRepo, times(1)).save(suggestion);
-        verify(policyDecisionRepo, times(1)).save(any(ch.swissqcommerce.backend.model.PolicyDecision.class));
+        verify(policyDecisionRepo, times(1))
+                .save(any(ch.swissqcommerce.backend.model.PolicyDecision.class));
         verify(hitlQueuePort, times(1)).save(ticket);
     }
 }

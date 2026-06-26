@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Pricing Agent: suggests price changes (does NOT apply them directly).
- * The output is evaluated by the PolicyEngine.
+ * Pricing Agent: suggests price changes (does NOT apply them directly). The output is evaluated by
+ * the PolicyEngine.
  */
 @Component
 public class PricingAgent {
@@ -29,19 +29,24 @@ public class PricingAgent {
             String prompt =
                     "You are a dynamic pricing analyst for a quick-commerce app with "
                             + itemCount
-                            + " items. Suggest ONE specific price change in percentage (e.g. increase or decrease price by X%)."
-                            + " Respond in exactly this format:"
-                            + " ACTION: <price change action with percent like 'increase price of coffee by 8.5%'> | CONFIDENCE: <0.0-1.0> | IMPACT: <low|medium|high>"
-                            + " | REASON: <why>";
+                            + " items. Suggest ONE specific price change in percentage (e.g."
+                            + " increase or decrease price by X%). Respond in exactly this format:"
+                            + " ACTION: <price change action with percent like 'increase price of"
+                            + " coffee by 8.5%'> | CONFIDENCE: <0.0-1.0> | IMPACT:"
+                            + " <low|medium|high> | REASON: <why>";
 
-            String response = aiService.executeLocalTask(prompt)
-                    .collectList()
-                    .map(list -> String.join("", list))
-                    .block(Duration.ofSeconds(10));
+            String response =
+                    aiService
+                            .executeLocalTask(prompt)
+                            .collectList()
+                            .map(list -> String.join("", list))
+                            .block(Duration.ofSeconds(10));
 
             return parseResponse(response);
         } catch (Exception e) {
-            log.warn("PricingAgent analysis failed, returning deterministic fallback: {}", e.getMessage());
+            log.warn(
+                    "PricingAgent analysis failed, returning deterministic fallback: {}",
+                    e.getMessage());
             return AgentSuggestion.of(
                     "pricing",
                     "Increase price of high-demand organic items by 4.5%",
@@ -71,8 +76,8 @@ public class PricingAgent {
     }
 
     private AgentSuggestion fallback(String reason) {
-        return AgentSuggestion.of("pricing",
-                "Increase price of hot beverages by 3.0%", 0.8, reason, "low");
+        return AgentSuggestion.of(
+                "pricing", "Increase price of hot beverages by 3.0%", 0.8, reason, "low");
     }
 
     private static String extractField(String text, String field) {

@@ -23,14 +23,15 @@ public class FraudPolicyTest {
     @Test
     public void testAutoApprove_HighVelocityHighRisk() {
         String recJson = "{\"risk_score\":0.95,\"velocity\":3.2}";
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(UUID.randomUUID())
-                .domain("risk")
-                .recommendation(recJson)
-                .confidence(BigDecimal.valueOf(0.95))
-                .impact("medium")
-                .reason("suspicious billing pattern")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(UUID.randomUUID())
+                        .domain("risk")
+                        .recommendation(recJson)
+                        .confidence(BigDecimal.valueOf(0.95))
+                        .impact("medium")
+                        .reason("suspicious billing pattern")
+                        .build();
 
         PolicyDecision decision = fraudPolicy.evaluate(suggestion);
         assertEquals("approved", decision.status());
@@ -41,14 +42,15 @@ public class FraudPolicyTest {
     @Test
     public void testHitl_HighImpact() {
         String recJson = "{\"risk_score\":0.85,\"velocity\":1.5}";
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(UUID.randomUUID())
-                .domain("risk")
-                .recommendation(recJson)
-                .confidence(BigDecimal.valueOf(0.85))
-                .impact("high")
-                .reason("very high transaction value")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(UUID.randomUUID())
+                        .domain("risk")
+                        .recommendation(recJson)
+                        .confidence(BigDecimal.valueOf(0.85))
+                        .impact("high")
+                        .reason("very high transaction value")
+                        .build();
 
         PolicyDecision decision = fraudPolicy.evaluate(suggestion);
         assertEquals("needs_human", decision.status());
@@ -59,14 +61,15 @@ public class FraudPolicyTest {
     @Test
     public void testReject_LowRiskScore() {
         String recJson = "{\"risk_score\":0.40,\"velocity\":1.1}";
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(UUID.randomUUID())
-                .domain("risk")
-                .recommendation(recJson)
-                .confidence(BigDecimal.valueOf(0.40))
-                .impact("low")
-                .reason("standard purchase pattern")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(UUID.randomUUID())
+                        .domain("risk")
+                        .recommendation(recJson)
+                        .confidence(BigDecimal.valueOf(0.40))
+                        .impact("low")
+                        .reason("standard purchase pattern")
+                        .build();
 
         PolicyDecision decision = fraudPolicy.evaluate(suggestion);
         assertEquals("rejected", decision.status());
@@ -77,14 +80,15 @@ public class FraudPolicyTest {
     @Test
     public void testHitl_DefaultMediumRisk() {
         String recJson = "{\"risk_score\":0.75,\"velocity\":1.2}";
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(UUID.randomUUID())
-                .domain("risk")
-                .recommendation(recJson)
-                .confidence(BigDecimal.valueOf(0.75))
-                .impact("medium")
-                .reason("unusual hours")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(UUID.randomUUID())
+                        .domain("risk")
+                        .recommendation(recJson)
+                        .confidence(BigDecimal.valueOf(0.75))
+                        .impact("medium")
+                        .reason("unusual hours")
+                        .build();
 
         PolicyDecision decision = fraudPolicy.evaluate(suggestion);
         assertEquals("needs_human", decision.status());

@@ -84,9 +84,7 @@ public class AgentOrchestrator {
         this.meterRegistry = meterRegistry;
     }
 
-    /**
-     * Synchronously execute the full agent pipeline for debugging or direct API requests.
-     */
+    /** Synchronously execute the full agent pipeline for debugging or direct API requests. */
     public List<AgentSuggestionEntity> runOrchestrationSync(String inputSummary) {
         log.info("AgentOrchestrator: Starting synchronous orchestration. Input: {}", inputSummary);
         List<AgentSuggestionEntity> logs = new ArrayList<>();
@@ -97,7 +95,8 @@ public class AgentOrchestrator {
         // 1. Ops Agent (Inventory)
         try {
             AgentSuggestion suggestion = opsAgent.analyze();
-            AgentSuggestionEntity entity = processAgentPipeline("OpsAgent", suggestion, inputSummary);
+            AgentSuggestionEntity entity =
+                    processAgentPipeline("OpsAgent", suggestion, inputSummary);
             if (entity != null) logs.add(entity);
         } catch (Exception e) {
             log.error("OpsAgent orchestration failed", e);
@@ -106,7 +105,8 @@ public class AgentOrchestrator {
         // 2. Routing Agent
         try {
             AgentSuggestion suggestion = routingAgent.analyze();
-            AgentSuggestionEntity entity = processAgentPipeline("RoutingAgent", suggestion, inputSummary);
+            AgentSuggestionEntity entity =
+                    processAgentPipeline("RoutingAgent", suggestion, inputSummary);
             if (entity != null) logs.add(entity);
         } catch (Exception e) {
             log.error("RoutingAgent orchestration failed", e);
@@ -115,7 +115,8 @@ public class AgentOrchestrator {
         // 3. Pricing Agent
         try {
             AgentSuggestion suggestion = pricingAgent.analyze();
-            AgentSuggestionEntity entity = processAgentPipeline("PricingAgent", suggestion, inputSummary);
+            AgentSuggestionEntity entity =
+                    processAgentPipeline("PricingAgent", suggestion, inputSummary);
             if (entity != null) logs.add(entity);
         } catch (Exception e) {
             log.error("PricingAgent orchestration failed", e);
@@ -124,7 +125,8 @@ public class AgentOrchestrator {
         // 4. Risk Agent
         try {
             AgentSuggestion suggestion = riskAgent.analyze();
-            AgentSuggestionEntity entity = processAgentPipeline("RiskAgent", suggestion, inputSummary);
+            AgentSuggestionEntity entity =
+                    processAgentPipeline("RiskAgent", suggestion, inputSummary);
             if (entity != null) logs.add(entity);
         } catch (Exception e) {
             log.error("RiskAgent orchestration failed", e);
@@ -133,46 +135,58 @@ public class AgentOrchestrator {
         // 5. Support Agent
         try {
             AgentSuggestion suggestion = supportAgent.analyze();
-            AgentSuggestionEntity entity = processAgentPipeline("SupportAgent", suggestion, inputSummary);
+            AgentSuggestionEntity entity =
+                    processAgentPipeline("SupportAgent", suggestion, inputSummary);
             if (entity != null) logs.add(entity);
         } catch (Exception e) {
             log.error("SupportAgent orchestration failed", e);
         }
 
-        log.info("AgentOrchestrator: Completed synchronous orchestration. Generated {} suggestion entities.", logs.size());
+        log.info(
+                "AgentOrchestrator: Completed synchronous orchestration. Generated {} suggestion"
+                        + " entities.",
+                logs.size());
         ch.swissqcommerce.backend.config.TraceContext.clear();
         return logs;
     }
 
     /**
-     * Asynchronously execute the full agent pipeline and write an AgentSuggestionCompleted event
-     * to the outbox event store when finished.
+     * Asynchronously execute the full agent pipeline and write an AgentSuggestionCompleted event to
+     * the outbox event store when finished.
      */
     public CompletableFuture<Void> runOrchestrationAsync(String inputSummary) {
-        log.info("AgentOrchestrator: Triggered asynchronous orchestration. Input: {}", inputSummary);
-        return CompletableFuture.runAsync(() -> {
-            try {
-                runOrchestrationSync(inputSummary);
+        log.info(
+                "AgentOrchestrator: Triggered asynchronous orchestration. Input: {}", inputSummary);
+        return CompletableFuture.runAsync(
+                () -> {
+                    try {
+                        runOrchestrationSync(inputSummary);
 
-                OutboxEvent event = OutboxEvent.builder()
-                        .aggregateType("AgentOrchestration")
-                        .aggregateId(UUID.randomUUID().toString())
-                        .eventType("AgentSuggestionCompleted")
-                        .payload("{\"inputSummary\":\"" + inputSummary + "\",\"completedAt\":\"" + OffsetDateTime.now() + "\"}")
-                        .status("PENDING")
-                        .build();
-                outboxEventRepo.save(event);
-                log.info("AgentOrchestrator: Successfully wrote AgentSuggestionCompleted to outbox.");
-            } catch (Exception e) {
-                log.error("AgentOrchestrator: Error during async orchestration", e);
-            }
-        });
+                        OutboxEvent event =
+                                OutboxEvent.builder()
+                                        .aggregateType("AgentOrchestration")
+                                        .aggregateId(UUID.randomUUID().toString())
+                                        .eventType("AgentSuggestionCompleted")
+                                        .payload(
+                                                "{\"inputSummary\":\""
+                                                        + inputSummary
+                                                        + "\",\"completedAt\":\""
+                                                        + OffsetDateTime.now()
+                                                        + "\"}")
+                                        .status("PENDING")
+                                        .build();
+                        outboxEventRepo.save(event);
+                        log.info(
+                                "AgentOrchestrator: Successfully wrote AgentSuggestionCompleted to"
+                                        + " outbox.");
+                    } catch (Exception e) {
+                        log.error("AgentOrchestrator: Error during async orchestration", e);
+                    }
+                });
     }
 
     private AgentSuggestionEntity processAgentPipeline(
-            String agentName,
-            AgentSuggestion suggestion,
-            String inputSummary) {
+            String agentName, AgentSuggestion suggestion, String inputSummary) {
 
         AgentRegistry registry = agentRegistryRepo.findById(agentName).orElse(null);
         if (registry != null && "inactive".equalsIgnoreCase(registry.getStatus())) {
@@ -188,10 +202,12 @@ public class AgentOrchestrator {
                 recommendationJson = parsePricingRecommendationJson(suggestion);
             } else if ("inventory".equalsIgnoreCase(suggestion.domain())) {
                 recommendationJson = parseInventoryRecommendationJson(suggestion);
-            } else if ("risk".equalsIgnoreCase(suggestion.domain()) && suggestion.action().toLowerCase().contains("hold_order")) {
+            } else if ("risk".equalsIgnoreCase(suggestion.domain())
+                    && suggestion.action().toLowerCase().contains("hold_order")) {
                 recommendationJson = parseRiskRecommendationJson(suggestion);
             } else {
-                recommendationJson = objectMapper.writeValueAsString(Map.of("action", suggestion.action()));
+                recommendationJson =
+                        objectMapper.writeValueAsString(Map.of("action", suggestion.action()));
             }
         } catch (Exception e) {
             recommendationJson = "{\"action\":\"" + suggestion.action() + "\"}";
@@ -199,38 +215,44 @@ public class AgentOrchestrator {
 
         OffsetDateTime expiresAt = OffsetDateTime.now().plusHours(3);
 
-        AgentSuggestionEntity suggestionEntity = AgentSuggestionEntity.builder()
-                .traceId(ch.swissqcommerce.backend.config.TraceContext.getTraceId())
-                .agent(registry)
-                .domain(suggestion.domain())
-                .entityId(extractEntityId(suggestion))
-                .recommendation(recommendationJson)
-                .confidence(BigDecimal.valueOf(suggestion.confidence()))
-                .reason(suggestion.reason())
-                .impact(suggestion.impact())
-                .status("pending")
-                .expiresAt(expiresAt)
-                .build();
+        AgentSuggestionEntity suggestionEntity =
+                AgentSuggestionEntity.builder()
+                        .traceId(ch.swissqcommerce.backend.config.TraceContext.getTraceId())
+                        .agent(registry)
+                        .domain(suggestion.domain())
+                        .entityId(extractEntityId(suggestion))
+                        .recommendation(recommendationJson)
+                        .confidence(BigDecimal.valueOf(suggestion.confidence()))
+                        .reason(suggestion.reason())
+                        .impact(suggestion.impact())
+                        .status("pending")
+                        .expiresAt(expiresAt)
+                        .build();
 
         suggestionEntity = agentSuggestionRepo.save(suggestionEntity);
 
         PolicyDecision decision = policyEngine.evaluate(suggestionEntity);
 
-        ch.swissqcommerce.backend.model.PolicyDecision policyDecisionEntity = ch.swissqcommerce.backend.model.PolicyDecision.builder()
-                .suggestion(suggestionEntity)
-                .decision(decision.status())
-                .policyVersion("v1")
-                .reason(decision.reason())
-                .decidedBy("policy_engine_v1")
-                .build();
+        ch.swissqcommerce.backend.model.PolicyDecision policyDecisionEntity =
+                ch.swissqcommerce.backend.model.PolicyDecision.builder()
+                        .suggestion(suggestionEntity)
+                        .decision(decision.status())
+                        .policyVersion("v1")
+                        .reason(decision.reason())
+                        .decidedBy("policy_engine_v1")
+                        .build();
         policyDecisionRepo.save(policyDecisionEntity);
 
         if (meterRegistry != null) {
-            var counter = meterRegistry.counter("agent_suggestions_total",
-                    "domain", suggestionEntity.getDomain(),
-                    "decision", decision.status(),
-                    "agent_name", agentName
-            );
+            var counter =
+                    meterRegistry.counter(
+                            "agent_suggestions_total",
+                            "domain",
+                            suggestionEntity.getDomain(),
+                            "decision",
+                            decision.status(),
+                            "agent_name",
+                            agentName);
             if (counter != null) {
                 counter.increment();
             }
@@ -242,7 +264,8 @@ public class AgentOrchestrator {
             try {
                 executionGateway.execute(suggestionEntity.getId(), "AgentOrchestrator");
             } catch (Exception e) {
-                log.error("ExecutionGateway failed for suggestion: {}", suggestionEntity.getId(), e);
+                log.error(
+                        "ExecutionGateway failed for suggestion: {}", suggestionEntity.getId(), e);
             }
         } else if ("needs_human".equals(decision.status())) {
             suggestionEntity.setStatus("pending");
@@ -265,7 +288,8 @@ public class AgentOrchestrator {
             if (action.toLowerCase().contains(item.getName().toLowerCase())) {
                 BigDecimal oldPrice = item.getPrice();
                 BigDecimal multiplier = BigDecimal.valueOf(1.0 + (percent / 100.0));
-                BigDecimal newPrice = oldPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal newPrice =
+                        oldPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
 
                 return String.format(
                         "{\"action\":\"update_price\",\"field\":\"base_price\",\"old_value\":%.2f,\"new_value\":%.2f}",
@@ -282,7 +306,8 @@ public class AgentOrchestrator {
             if (action.toLowerCase().contains(item.getName().toLowerCase())) {
                 int oldStock = item.getStock();
                 int addStock = 50;
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
+                java.util.regex.Matcher m =
+                        java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
                 if (m.find()) {
                     try {
                         addStock = Integer.parseInt(m.group());
@@ -304,31 +329,37 @@ public class AgentOrchestrator {
         int orderId = 0;
         int version = 0;
 
-        java.util.regex.Matcher mOrderId = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(action);
+        java.util.regex.Matcher mOrderId =
+                java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(action);
         if (mOrderId.find()) {
             orderId = Integer.parseInt(mOrderId.group(1));
         } else {
-            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
+            java.util.regex.Matcher mNum =
+                    java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(action);
             if (mNum.find()) {
                 orderId = Integer.parseInt(mNum.group());
             }
         }
 
-        java.util.regex.Matcher mVersion = java.util.regex.Pattern.compile("version=(\\d+)").matcher(action);
+        java.util.regex.Matcher mVersion =
+                java.util.regex.Pattern.compile("version=(\\d+)").matcher(action);
         if (mVersion.find()) {
             version = Integer.parseInt(mVersion.group(1));
         }
 
-        return String.format("{\"action\":\"hold_order\",\"order_id\":%d,\"version\":%d}", orderId, version);
+        return String.format(
+                "{\"action\":\"hold_order\",\"order_id\":%d,\"version\":%d}", orderId, version);
     }
 
     private String extractEntityId(AgentSuggestion s) {
         if ("risk".equalsIgnoreCase(s.domain())) {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
+            java.util.regex.Matcher m =
+                    java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
             if (m.find()) {
                 return "order_id=" + m.group(1);
             }
-            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
+            java.util.regex.Matcher mNum =
+                    java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
             if (mNum.find()) {
                 return "order_id=" + mNum.group();
             }
@@ -343,11 +374,13 @@ public class AgentOrchestrator {
             } catch (Exception e) {
                 // ignore, try regex
             }
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
+            java.util.regex.Matcher m =
+                    java.util.regex.Pattern.compile("order_id=(\\d+)").matcher(s.action());
             if (m.find()) {
                 return "order_id=" + m.group(1);
             }
-            java.util.regex.Matcher mNum = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
+            java.util.regex.Matcher mNum =
+                    java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(s.action());
             if (mNum.find()) {
                 return "order_id=" + mNum.group();
             }
@@ -363,25 +396,31 @@ public class AgentOrchestrator {
         return "SKU-12345";
     }
 
-    private void createHitlTask(String agentName, AgentSuggestionEntity suggestion, PolicyDecision decision) {
+    private void createHitlTask(
+            String agentName, AgentSuggestionEntity suggestion, PolicyDecision decision) {
         String ticketId = "AGENT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        HitlQueue ticket = HitlQueue.builder()
-                .ticketId(ticketId)
-                .type("agent_" + suggestion.getDomain())
-                .description(String.format(
-                        "[%s] %s — Confidence: %.2f, Impact: %s. Policy: %s",
-                        agentName,
-                        suggestion.getReason(),
-                        suggestion.getConfidence().doubleValue(),
-                        suggestion.getImpact(),
-                        decision.reason()))
-                .amount(BigDecimal.ZERO)
-                .status("pending")
-                .build();
+        HitlQueue ticket =
+                HitlQueue.builder()
+                        .ticketId(ticketId)
+                        .type("agent_" + suggestion.getDomain())
+                        .description(
+                                String.format(
+                                        "[%s] %s — Confidence: %.2f, Impact: %s. Policy: %s",
+                                        agentName,
+                                        suggestion.getReason(),
+                                        suggestion.getConfidence().doubleValue(),
+                                        suggestion.getImpact(),
+                                        decision.reason()))
+                        .amount(BigDecimal.ZERO)
+                        .status("pending")
+                        .build();
 
         hitlQueueRepo.save(ticket);
-        log.info("HITL task created: ticketId={}, agent={}, domain={}",
-                ticketId, agentName, suggestion.getDomain());
+        log.info(
+                "HITL task created: ticketId={}, agent={}, domain={}",
+                ticketId,
+                agentName,
+                suggestion.getDomain());
     }
 }

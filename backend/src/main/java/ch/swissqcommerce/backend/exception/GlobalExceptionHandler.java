@@ -1,5 +1,7 @@
 package ch.swissqcommerce.backend.exception;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -60,21 +62,57 @@ public class GlobalExceptionHandler {
                 .body(buildErrorBody(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
-    /** Handles illegal state errors (e.g. insufficient stock, unbalanced ledger). */
+    /**
+     * Handles illegal state errors (e.g. insufficient stock, unbalanced ledger, expired
+     * suggestions).
+     */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(buildErrorBody(HttpStatus.CONFLICT, ex.getMessage()));
+        if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("expired")) {
+            Map<String, Object> body = buildErrorBody(HttpStatus.GONE, ex.getMessage());
+            body.put("error", "EXPIRED");
+            return ResponseEntity.status(HttpStatus.GONE).body(body);
+        }
+        Map<String, Object> body = buildErrorBody(HttpStatus.CONFLICT, ex.getMessage());
+        if (ex.getMessage() != null
+                && (ex.getMessage().contains("already")
+                        || ex.getMessage().contains("pending")
+                        || ex.getMessage().contains("status"))) {
+            body.put("error", "INVALID_STATE");
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<Map<String, Object>> handleOptimisticLocking(
             OptimisticLockingFailureException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(
-                        buildErrorBody(
-                                HttpStatus.CONFLICT,
-                                "Concurrent modification detected. Please retry your request."));
+        Map<String, Object> body =
+                buildErrorBody(
+                        HttpStatus.CONFLICT,
+                        ex.getMessage() != null
+                                ? ex.getMessage()
+                                : "Concurrent modification detected. Please retry your request.");
+        body.put("error", "STATE_DRIFT");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<Map<String, Object>> handlePersistenceOptimisticLock(
+            OptimisticLockException ex) {
+        Map<String, Object> body =
+                buildErrorBody(
+                        HttpStatus.CONFLICT,
+                        ex.getMessage() != null
+                                ? ex.getMessage()
+                                : "Concurrent modification detected. Please retry your request.");
+        body.put("error", "STATE_DRIFT");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorBody(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

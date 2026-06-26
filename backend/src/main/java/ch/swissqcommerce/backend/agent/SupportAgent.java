@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Support Agent: generates support ticket draft replies and summarizations.
- */
+/** Support Agent: generates support ticket draft replies and summarizations. */
 @Component
 public class SupportAgent {
 
@@ -26,21 +24,26 @@ public class SupportAgent {
         try {
             long totalTickets = hitlRepo.count();
             String prompt =
-                    "You are a customer support automation agent for a quick-commerce platform with "
+                    "You are a customer support automation agent for a quick-commerce platform with"
+                            + " "
                             + totalTickets
-                            + " open tickets. Suggest ONE specific customer response improvement draft or summarization."
-                            + " Respond in exactly this format:"
-                            + " ACTION: <support response draft or summary suggestion> | CONFIDENCE: <0.0-1.0> | IMPACT: <low|medium|high>"
-                            + " | REASON: <why>";
+                            + " open tickets. Suggest ONE specific customer response improvement"
+                            + " draft or summarization. Respond in exactly this format: ACTION:"
+                            + " <support response draft or summary suggestion> | CONFIDENCE:"
+                            + " <0.0-1.0> | IMPACT: <low|medium|high> | REASON: <why>";
 
-            String response = aiService.executeLocalTask(prompt)
-                    .collectList()
-                    .map(list -> String.join("", list))
-                    .block(Duration.ofSeconds(10));
+            String response =
+                    aiService
+                            .executeLocalTask(prompt)
+                            .collectList()
+                            .map(list -> String.join("", list))
+                            .block(Duration.ofSeconds(10));
 
             return parseResponse(response);
         } catch (Exception e) {
-            log.warn("SupportAgent analysis failed, returning deterministic fallback: {}", e.getMessage());
+            log.warn(
+                    "SupportAgent analysis failed, returning deterministic fallback: {}",
+                    e.getMessage());
             return AgentSuggestion.of(
                     "support",
                     "Draft response for delayed order apology and voucher issue",
@@ -70,8 +73,8 @@ public class SupportAgent {
     }
 
     private AgentSuggestion fallback(String reason) {
-        return AgentSuggestion.of("support",
-                "Review open support tickets manually", 0.7, reason, "low");
+        return AgentSuggestion.of(
+                "support", "Review open support tickets manually", 0.7, reason, "low");
     }
 
     private static String extractField(String text, String field) {

@@ -10,14 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swissqcommerce.backend.domain.governance.adapter.in.web.HitlTaskController;
 import ch.swissqcommerce.backend.gateway.ExecutionGateway;
-import ch.swissqcommerce.backend.model.AgentRegistry;
 import ch.swissqcommerce.backend.model.AgentSuggestionEntity;
 import ch.swissqcommerce.backend.model.PolicyDecision;
 import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.PolicyDecisionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -40,26 +38,19 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc(addFilters = false)
 public class HitlTaskControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private AgentSuggestionEntityRepository agentSuggestionRepo;
+    @MockBean private AgentSuggestionEntityRepository agentSuggestionRepo;
 
-    @MockBean
-    private ExecutionGateway executionGateway;
+    @MockBean private ExecutionGateway executionGateway;
 
-    @MockBean
-    private HitlQueueRepository hitlQueueRepo;
+    @MockBean private HitlQueueRepository hitlQueueRepo;
 
-    @MockBean
-    private PolicyDecisionRepository policyDecisionRepo;
+    @MockBean private PolicyDecisionRepository policyDecisionRepo;
 
-    @MockBean
-    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+    @MockBean private io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
     @AfterEach
     void clearContext() {
@@ -77,16 +68,18 @@ public class HitlTaskControllerTest {
     public void testList_PricingManager_ReturnsOnlyPricingDomain() throws Exception {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(UUID.randomUUID())
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("pending")
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .createdAt(OffsetDateTime.now())
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(UUID.randomUUID())
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("pending")
+                        .expiresAt(OffsetDateTime.now().plusHours(1))
+                        .createdAt(OffsetDateTime.now())
+                        .build();
 
-        when(agentSuggestionRepo.findByStatusAndDomain(eq("pending"), eq("pricing"), any(Pageable.class)))
+        when(agentSuggestionRepo.findByStatusAndDomain(
+                        eq("pending"), eq("pricing"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(suggestion)));
 
         mockMvc.perform(get("/api/v1/hitl/tasks?status=pending&assignee_role=pricing_manager"))
@@ -101,28 +94,33 @@ public class HitlTaskControllerTest {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("pending")
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("pending")
+                        .expiresAt(OffsetDateTime.now().plusHours(1))
+                        .build();
 
         when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
         // Mock execute approved action
-        doAnswer(invocation -> {
-            suggestion.setStatus("executed");
-            return null;
-        }).when(executionGateway).execute(eq(suggestionId), eq("pricing_mgr"));
+        doAnswer(
+                        invocation -> {
+                            suggestion.setStatus("executed");
+                            return null;
+                        })
+                .when(executionGateway)
+                .execute(eq(suggestionId), eq("pricing_mgr"));
 
         HitlTaskController.TaskOverrideRequest req = new HitlTaskController.TaskOverrideRequest();
         req.setOperator("pricing_mgr");
         req.setReason("Competitor matches");
 
-        mockMvc.perform(post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("executed"));
 
@@ -135,27 +133,30 @@ public class HitlTaskControllerTest {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("pending")
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("pending")
+                        .expiresAt(OffsetDateTime.now().plusHours(1))
+                        .build();
 
         when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
-        
+
         // Throw OptimisticLockException to simulate state drift
         doThrow(new jakarta.persistence.OptimisticLockException("Price changed since suggestion"))
-                .when(executionGateway).execute(eq(suggestionId), eq("pricing_mgr"));
+                .when(executionGateway)
+                .execute(eq(suggestionId), eq("pricing_mgr"));
 
         HitlTaskController.TaskOverrideRequest req = new HitlTaskController.TaskOverrideRequest();
         req.setOperator("pricing_mgr");
         req.setReason("Competitor matches");
 
-        mockMvc.perform(post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("STATE_DRIFT"))
                 .andExpect(jsonPath("$.message").value("Price changed since suggestion"));
@@ -166,13 +167,14 @@ public class HitlTaskControllerTest {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("executed") // already executed!
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("executed") // already executed!
+                        .expiresAt(OffsetDateTime.now().plusHours(1))
+                        .build();
 
         when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
 
@@ -180,9 +182,10 @@ public class HitlTaskControllerTest {
         req.setOperator("pricing_mgr");
         req.setReason("Competitor matches");
 
-        mockMvc.perform(post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("executed"));
 
@@ -195,13 +198,14 @@ public class HitlTaskControllerTest {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("pending")
-                .expiresAt(OffsetDateTime.now().minusMinutes(5)) // expired!
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("pending")
+                        .expiresAt(OffsetDateTime.now().minusMinutes(5)) // expired!
+                        .build();
 
         when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
 
@@ -209,9 +213,10 @@ public class HitlTaskControllerTest {
         req.setOperator("pricing_mgr");
         req.setReason("Expired action");
 
-        mockMvc.perform(post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/v1/hitl/tasks/" + suggestionId + "/approve")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.error").value("EXPIRED"));
 
@@ -223,13 +228,14 @@ public class HitlTaskControllerTest {
         authenticateAs("pricing_mgr", "ROLE_PRICING_MANAGER");
 
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("pricing")
-                .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
-                .status("pending")
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("pricing")
+                        .recommendation("{\"old_value\":10.00,\"new_value\":10.50}")
+                        .status("pending")
+                        .expiresAt(OffsetDateTime.now().plusHours(1))
+                        .build();
 
         when(agentSuggestionRepo.findById(suggestionId)).thenReturn(Optional.of(suggestion));
 
@@ -237,9 +243,10 @@ public class HitlTaskControllerTest {
         req.setOperator("pricing_mgr");
         req.setReason("Bad pricing decision");
 
-        mockMvc.perform(post("/api/v1/hitl/tasks/" + suggestionId + "/reject")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(
+                        post("/api/v1/hitl/tasks/" + suggestionId + "/reject")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("rejected"));
 

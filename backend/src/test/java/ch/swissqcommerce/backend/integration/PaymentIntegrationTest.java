@@ -70,8 +70,9 @@ public class PaymentIntegrationTest {
     @Autowired private TransactionTemplate transactionTemplate;
 
     @org.springframework.boot.test.mock.mockito.MockBean private StringRedisTemplate redisTemplate;
-    @org.springframework.boot.test.mock.mockito.MockBean private org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
 
     private Customer customer;
     private DarkStore store;

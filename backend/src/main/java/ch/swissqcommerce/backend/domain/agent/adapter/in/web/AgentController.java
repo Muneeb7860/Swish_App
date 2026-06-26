@@ -25,25 +25,30 @@ public class AgentController {
             dynamicPricingAgent;
 
     @PostMapping("/suggest/all")
-    public ResponseEntity<Map<String, String>> suggestAll(@RequestBody(required = false) Map<String, String> request) {
-        String inputSummary = (request != null && request.containsKey("inputSummary"))
-                ? request.get("inputSummary")
-                : "Manual trigger";
-        
+    public ResponseEntity<Map<String, String>> suggestAll(
+            @RequestBody(required = false) Map<String, String> request) {
+        String inputSummary =
+                (request != null && request.containsKey("inputSummary"))
+                        ? request.get("inputSummary")
+                        : "Manual trigger";
+
         agentOrchestrator.runOrchestrationAsync(inputSummary);
-        
-        return ResponseEntity.accepted().body(Map.of(
-                "status", "processing",
-                "message", "Agent orchestration started asynchronously"
-        ));
+
+        return ResponseEntity.accepted()
+                .body(
+                        Map.of(
+                                "status", "processing",
+                                "message", "Agent orchestration started asynchronously"));
     }
 
     @PostMapping("/suggest/debug")
-    public ResponseEntity<List<AgentSuggestionEntity>> suggestDebug(@RequestBody(required = false) Map<String, String> request) {
-        String inputSummary = (request != null && request.containsKey("inputSummary"))
-                ? request.get("inputSummary")
-                : "Manual debug trigger";
-        
+    public ResponseEntity<List<AgentSuggestionEntity>> suggestDebug(
+            @RequestBody(required = false) Map<String, String> request) {
+        String inputSummary =
+                (request != null && request.containsKey("inputSummary"))
+                        ? request.get("inputSummary")
+                        : "Manual debug trigger";
+
         List<AgentSuggestionEntity> logs = agentOrchestrator.runOrchestrationSync(inputSummary);
         return ResponseEntity.ok(logs);
     }

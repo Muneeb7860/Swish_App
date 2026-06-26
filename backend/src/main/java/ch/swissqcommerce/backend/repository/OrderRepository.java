@@ -13,5 +13,6 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Integer> {
 
     Optional<OrderEntity> findByIdempotencyKey(String idempotencyKey);
 
-    long countByWarehouseStoreIdAndCreatedAtGreaterThanEqual(String storeId, OffsetDateTime startOfDay);
+    long countByWarehouseStoreIdAndCreatedAtGreaterThanEqual(
+            String storeId, OffsetDateTime startOfDay);
 }

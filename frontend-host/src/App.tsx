@@ -24,7 +24,10 @@ const MFE_WHITELIST = (
 	.split(",")
 	.map((host: string) => host.trim());
 
-const verifyMfeOrigin = <T,>(importPromise: Promise<T>, remoteName: string): Promise<T> => {
+const verifyMfeOrigin = <T,>(
+	importPromise: Promise<T>,
+	remoteName: string,
+): Promise<T> => {
 	return importPromise.then((module) => {
 		const scriptElements = Array.from(document.querySelectorAll("script"));
 		const remoteScript = scriptElements.find(
@@ -427,43 +430,51 @@ export default function App() {
 	const [catalogLoading, setCatalogLoading] = useState(false);
 	const [hitlLoading, setHitlLoading] = useState(false);
 	const [isBotTyping, setIsBotTyping] = useState(false);
+	const [showEngineRoom, setShowEngineRoom] = useState(true);
 	// customer, rider, business, inventory, admin
 
 	// Helper log triggers
-	const triggerToast = (msg: string, borderType = "system") => {
-		const id = Date.now() + Math.random();
-		setToasts((prev) => [...prev, { id, msg, borderType }]);
-		setTimeout(() => {
-			setToasts((prev) => prev.filter((t) => t.id !== id));
-		}, 4500);
-	};
+	const triggerToast = useCallback(
+		(msg: string, borderType = "system") => {
+			const id = Date.now() + Math.random();
+			setToasts((prev) => [...prev, { id, msg, borderType }]);
+			setTimeout(() => {
+				setToasts((prev) => prev.filter((t) => t.id !== id));
+			}, 4500);
+		},
+		[setToasts],
+	);
 
-	const logKafka = (source: string, event: string, meta: any) => {
-		if (activeProfile.logLevel === "error") {
-			if (
-				source !== "admin" &&
-				!event.includes("error") &&
-				!event.includes("fail") &&
-				!event.includes("limit")
-			)
-				return;
-		} else if (activeProfile.logLevel === "info") {
-			if (event.includes("autocomplete") || event.includes("keystroke")) return;
-		}
+	const logKafka = useCallback(
+		(source: string, event: string, meta: any) => {
+			if (activeProfile.logLevel === "error") {
+				if (
+					source !== "admin" &&
+					!event.includes("error") &&
+					!event.includes("fail") &&
+					!event.includes("limit")
+				)
+					return;
+			} else if (activeProfile.logLevel === "info") {
+				if (event.includes("autocomplete") || event.includes("keystroke"))
+					return;
+			}
 
-		setKafkaLogs((prev) =>
-			[
-				...prev,
-				{
-					id: `L-${Date.now()}-${Math.random()}`,
-					time: new Date().toLocaleTimeString(),
-					event: `${event.toUpperCase()}`,
-					source,
-					meta,
-				},
-			].slice(-40),
-		); // Keep last 40 logs
-	};
+			setKafkaLogs((prev) =>
+				[
+					...prev,
+					{
+						id: `L-${Date.now()}-${Math.random()}`,
+						time: new Date().toLocaleTimeString(),
+						event: `${event.toUpperCase()}`,
+						source,
+						meta,
+					},
+				].slice(-40),
+			); // Keep last 40 logs
+		},
+		[activeProfile.logLevel, setKafkaLogs],
+	);
 
 	useEffect(() => {
 		// Programmatic preloading of all Micro-Frontends remote entries in the background
@@ -777,12 +788,12 @@ export default function App() {
 	// { lat, lng, temperature, timestamp }
 
 	// Teardown SSE connection cleanly
-	const closeSseStream = () => {
+	const closeSseStream = useCallback(() => {
 		if (sseRef.current) {
 			(sseRef.current as any).close();
 			sseRef.current = null;
 		}
-	};
+	}, []);
 
 	// Cleanup on unmount
 	useEffect(
@@ -792,7 +803,6 @@ export default function App() {
 		},
 		[closeSseStream],
 	);
-
 
 	const logLedger = (type, ref, desc, debit, credit) => {
 		setLedger((prev) => [
@@ -899,7 +909,13 @@ export default function App() {
 			setJwtFlash((f) => !f);
 		}, 1500);
 		return () => clearInterval(interval);
-	}, [dbLatencyActive, activeProfile?.dbLatencyDefault, setOltpWriteLatency, setVaultTimer, setJwtFlash]);
+	}, [
+		dbLatencyActive,
+		activeProfile?.dbLatencyDefault,
+		setOltpWriteLatency,
+		setVaultTimer,
+		setJwtFlash,
+	]);
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -1164,10 +1180,21 @@ export default function App() {
 			`Checkout requested for ${cart.length} items. Total: $${finalAmount.toFixed(2)}.`,
 		);
 
-		const orderItems = cart.map((item) => ({
-			item_id: item.id,
-			quantity: item.qty,
-		}));
+		const orderItems = cart.map((item) => {
+			let dbId = item.id;
+			if (item.id.startsWith("mock-")) {
+				let sum = 0;
+				for (let i = 0; i < item.id.length; i++) {
+					sum += item.id.charCodeAt(i);
+				}
+				const index = (sum % 4) + 1;
+				dbId = `item-${index}`;
+			}
+			return {
+				item_id: dbId,
+				quantity: item.qty,
+			};
+		});
 
 		const orderRequest = {
 			items: orderItems,
@@ -1335,7 +1362,11 @@ export default function App() {
 							? tick.temperature
 							: parseFloat(tick.temperature);
 
-					if (Number.isNaN(latVal) || Number.isNaN(lngVal) || Number.isNaN(tempVal)) {
+					if (
+						Number.isNaN(latVal) ||
+						Number.isNaN(lngVal) ||
+						Number.isNaN(tempVal)
+					) {
 						throw new Error("Invalid numeric value in telemetry update");
 					}
 
@@ -2449,6 +2480,30 @@ export default function App() {
 							<span>Lock Cockpit</span>
 						</button>
 					)}
+					<button
+						type="button"
+						aria-label="Toggle Engine Room"
+						className="role-tab"
+						style={{
+							color: showEngineRoom ? "#070a13" : "var(--color-engine)",
+							background: showEngineRoom
+								? "var(--color-engine)"
+								: "transparent",
+							borderColor: "rgba(6, 182, 212, 0.2)",
+							boxShadow: showEngineRoom
+								? "0 0 10px rgba(6, 182, 212, 0.3)"
+								: "none",
+							marginLeft: "0.5rem",
+						}}
+						onClick={() => setShowEngineRoom(!showEngineRoom)}
+					>
+						{showEngineRoom ? (
+							<Lucide.EyeOff size={15} />
+						) : (
+							<Lucide.Eye size={15} />
+						)}
+						<span>{showEngineRoom ? "Hide Monitor" : "Show Monitor"}</span>
+					</button>
 				</nav>
 			</header>
 
@@ -2510,7 +2565,12 @@ export default function App() {
 						>
 							{activeOrder.slaRemaining}s remaining
 						</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" aria-label="SLA countdown progress">
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							aria-label="SLA countdown progress"
+						>
 							<title>SLA countdown progress</title>
 							<circle
 								cx="12"
@@ -2556,8 +2616,11 @@ export default function App() {
 				</div>
 			)}
 
-			<main className="cockpit-main-layout">
-				<section className="workspace-main-panel">
+			<main
+				className="cockpit-container"
+				style={!showEngineRoom ? { gridTemplateColumns: "1fr" } : undefined}
+			>
+				<section className="role-content-area">
 					{/* ── Live Rider Tracking Panel (Global — visible on all tabs during transit) ── */}
 					<RiderTrackingPanel
 						activeOrder={activeOrder}
@@ -2601,6 +2664,7 @@ export default function App() {
 										savedAddresses={savedAddresses}
 										savedCards={savedCards}
 										favorites={favorites}
+										setFavorites={setFavorites}
 										vipMember={vipMember}
 										vouchers={vouchers}
 										customerTrustScore={customerTrustScore}
@@ -2735,34 +2799,36 @@ export default function App() {
 					</Suspense>
 				</section>
 
-				<LocalErrorBoundary name="System Control Room">
-					<Suspense
-						fallback={
-							<div className="engine-room-loading">
-								Loading Telemetry Control Room...
-							</div>
-						}
-					>
-						<SystemEngineRoom
-							rateLimitActive={rateLimitActive}
-							dbLatencyActive={dbLatencyActive}
-							redisCrashActive={redisCrashActive}
-							paymentOutageActive={paymentOutageActive}
-							riderTrafficActive={riderTrafficActive}
-							circuitBreakerTripped={circuitBreakerTripped}
-							activeProfile={activeProfile}
-							oltpWriteLatency={oltpWriteLatency}
-							olapSyncTimer={olapSyncTimer}
-							jwtFlash={jwtFlash}
-							vaultTimer={vaultTimer}
-							latencyHistory={latencyHistory}
-							cacheHits={cacheHits}
-							cacheMisses={cacheMisses}
-							kafkaLogs={kafkaLogs}
-							agentMetrics={agentMetrics}
-						/>
-					</Suspense>
-				</LocalErrorBoundary>
+				{showEngineRoom && (
+					<LocalErrorBoundary name="System Control Room">
+						<Suspense
+							fallback={
+								<div className="engine-room-loading">
+									Loading Telemetry Control Room...
+								</div>
+							}
+						>
+							<SystemEngineRoom
+								rateLimitActive={rateLimitActive}
+								dbLatencyActive={dbLatencyActive}
+								redisCrashActive={redisCrashActive}
+								paymentOutageActive={paymentOutageActive}
+								riderTrafficActive={riderTrafficActive}
+								circuitBreakerTripped={circuitBreakerTripped}
+								activeProfile={activeProfile}
+								oltpWriteLatency={oltpWriteLatency}
+								olapSyncTimer={olapSyncTimer}
+								jwtFlash={jwtFlash}
+								vaultTimer={vaultTimer}
+								latencyHistory={latencyHistory}
+								cacheHits={cacheHits}
+								cacheMisses={cacheMisses}
+								kafkaLogs={kafkaLogs}
+								agentMetrics={agentMetrics}
+							/>
+						</Suspense>
+					</LocalErrorBoundary>
+				)}
 			</main>
 
 			{certModalOpen && (

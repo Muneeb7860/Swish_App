@@ -37,6 +37,10 @@ public class ExecutionRecord {
     @Column(name = "executed_by", length = 50, nullable = false)
     private String executedBy;
 
-    @Column(name = "created_at", insertable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
+    @Column(
+            name = "created_at",
+            insertable = false,
+            updatable = false,
+            columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime createdAt;
 }

@@ -51,17 +51,16 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
     private final HitlQueuePort hitlQueuePort;
     private final SecurityTrustLedgerRepository trustLedgerRepository;
 
-    @Autowired
-    private ch.swissqcommerce.backend.gateway.ExecutionGateway executionGateway;
+    @Autowired private ch.swissqcommerce.backend.gateway.ExecutionGateway executionGateway;
 
     @Autowired
-    private ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository agentSuggestionRepo;
+    private ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository
+            agentSuggestionRepo;
 
     @Autowired
     private ch.swissqcommerce.backend.repository.PolicyDecisionRepository policyDecisionRepo;
 
-    @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    @Autowired private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Autowired(required = false)
     private WorkflowClient workflowClient;
@@ -608,51 +607,78 @@ public class GovernanceServiceImpl implements GovernanceUseCase {
         }
 
         if (agentName != null && domain != null) {
-            List<ch.swissqcommerce.backend.model.AgentSuggestionEntity> suggestions = agentSuggestionRepo
-                    .findByAgentNameAndDomainAndStatusOrderByCreatedAtDesc(
+            List<ch.swissqcommerce.backend.model.AgentSuggestionEntity> suggestions =
+                    agentSuggestionRepo.findByAgentNameAndDomainAndStatusOrderByCreatedAtDesc(
                             agentName, domain, "pending");
             if (!suggestions.isEmpty()) {
-                ch.swissqcommerce.backend.model.AgentSuggestionEntity suggestion = suggestions.get(0);
+                ch.swissqcommerce.backend.model.AgentSuggestionEntity suggestion =
+                        suggestions.get(0);
                 if (approve) {
                     try {
                         suggestion.setStatus("approved");
                         agentSuggestionRepo.save(suggestion);
 
-                        ch.swissqcommerce.backend.model.PolicyDecision policyDecision = ch.swissqcommerce.backend.model.PolicyDecision.builder()
-                                .suggestion(suggestion)
-                                .decision("approved")
-                                .policyVersion("v1")
-                                .reason(reason)
-                                .decidedBy("user:" + (operator != null ? operator : "anonymous"))
-                                .build();
+                        ch.swissqcommerce.backend.model.PolicyDecision policyDecision =
+                                ch.swissqcommerce.backend.model.PolicyDecision.builder()
+                                        .suggestion(suggestion)
+                                        .decision("approved")
+                                        .policyVersion("v1")
+                                        .reason(reason)
+                                        .decidedBy(
+                                                "user:"
+                                                        + (operator != null
+                                                                ? operator
+                                                                : "anonymous"))
+                                        .build();
                         policyDecisionRepo.save(policyDecision);
 
                         executionGateway.execute(suggestion.getId(), operator);
-                        log.info("GovernanceServiceImpl: Executed approved suggestion ID {}", suggestion.getId());
+                        log.info(
+                                "GovernanceServiceImpl: Executed approved suggestion ID {}",
+                                suggestion.getId());
                     } catch (Exception e) {
-                        log.error("GovernanceServiceImpl: Failed to execute approved suggestion", e);
-                        throw new RuntimeException("Execution of approved agent action failed: " + e.getMessage(), e);
+                        log.error(
+                                "GovernanceServiceImpl: Failed to execute approved suggestion", e);
+                        throw new RuntimeException(
+                                "Execution of approved agent action failed: " + e.getMessage(), e);
                     }
                 } else {
                     suggestion.setStatus("rejected");
                     agentSuggestionRepo.save(suggestion);
 
-                    ch.swissqcommerce.backend.model.PolicyDecision policyDecision = ch.swissqcommerce.backend.model.PolicyDecision.builder()
-                            .suggestion(suggestion)
-                            .decision("rejected")
-                            .policyVersion("v1")
-                            .reason(reason)
-                            .decidedBy("user:" + (operator != null ? operator : "anonymous"))
-                            .build();
+                    ch.swissqcommerce.backend.model.PolicyDecision policyDecision =
+                            ch.swissqcommerce.backend.model.PolicyDecision.builder()
+                                    .suggestion(suggestion)
+                                    .decision("rejected")
+                                    .policyVersion("v1")
+                                    .reason(reason)
+                                    .decidedBy(
+                                            "user:" + (operator != null ? operator : "anonymous"))
+                                    .build();
                     policyDecisionRepo.save(policyDecision);
-                    log.info("GovernanceServiceImpl: Suggestion ID {} rejected by operator", suggestion.getId());
+                    log.info(
+                            "GovernanceServiceImpl: Suggestion ID {} rejected by operator",
+                            suggestion.getId());
                 }
             } else {
-                log.warn("GovernanceServiceImpl: No matching pending AgentSuggestionEntity found for agent {} and domain {}", agentName, domain);
-                throw new ResourceNotFoundException("No pending agent suggestion found for agent " + agentName + " and domain " + domain);
+                log.warn(
+                        "GovernanceServiceImpl: No matching pending AgentSuggestionEntity found for"
+                                + " agent {} and domain {}",
+                        agentName,
+                        domain);
+                throw new ResourceNotFoundException(
+                        "No pending agent suggestion found for agent "
+                                + agentName
+                                + " and domain "
+                                + domain);
             }
         } else {
-            log.warn("GovernanceServiceImpl: Could not parse agentName ({}) or domain ({}) from ticket description: {}", agentName, domain, desc);
+            log.warn(
+                    "GovernanceServiceImpl: Could not parse agentName ({}) or domain ({}) from"
+                            + " ticket description: {}",
+                    agentName,
+                    domain,
+                    desc);
         }
 
         ticket.setStatus(approve ? "approved" : "voided");

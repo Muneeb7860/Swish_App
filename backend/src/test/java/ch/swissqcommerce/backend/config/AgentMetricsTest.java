@@ -3,7 +3,6 @@ package ch.swissqcommerce.backend.config;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import ch.swissqcommerce.backend.domain.governance.core.model.AssigneeRole;
 import ch.swissqcommerce.backend.repository.AgentBaselineRepository;
 import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
@@ -11,7 +10,6 @@ import ch.swissqcommerce.backend.repository.OutcomeRecordRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,14 +37,14 @@ public class AgentMetricsTest {
         when(outcomeRecordRepo.sumRevenueDeltaUsd(any())).thenReturn(50.0);
         when(outcomeRecordRepo.sumShippingSavingsUsd(any())).thenReturn(30.0);
 
-        metricsConfig = new AgentMetricsConfiguration(
-                outcomeRecordRepo,
-                baselineRepo,
-                hitlQueueRepo,
-                agentSuggestionRepo,
-                meterRegistry,
-                objectMapper
-        );
+        metricsConfig =
+                new AgentMetricsConfiguration(
+                        outcomeRecordRepo,
+                        baselineRepo,
+                        hitlQueueRepo,
+                        agentSuggestionRepo,
+                        meterRegistry,
+                        objectMapper);
     }
 
     @Test
@@ -66,11 +64,11 @@ public class AgentMetricsTest {
     public void testUpdateMetricsAsync_AccumulatesCorrectly() {
         metricsConfig.init();
 
-        metricsConfig.updateMetricsAsync(Map.of(
-                "prevented_chargeback_usd", 25.5,
-                "revenue_delta", 10.2,
-                "shipping_savings_usd", 15.3
-        ));
+        metricsConfig.updateMetricsAsync(
+                Map.of(
+                        "prevented_chargeback_usd", 25.5,
+                        "revenue_delta", 10.2,
+                        "shipping_savings_usd", 15.3));
 
         assertEquals(125.5, metricsConfig.getPreventedLossUsdTotal());
         assertEquals(60.2, metricsConfig.getRevenueDeltaUsdTotal());
@@ -86,10 +84,20 @@ public class AgentMetricsTest {
 
         metricsConfig.init();
 
-        double successRate = meterRegistry.find("outcome_success_rate").tags("domain", "pricing").gauge().value();
+        double successRate =
+                meterRegistry
+                        .find("outcome_success_rate")
+                        .tags("domain", "pricing")
+                        .gauge()
+                        .value();
         assertEquals(0.8, successRate, 0.001);
 
-        double logisticsSuccessRate = meterRegistry.find("outcome_success_rate").tags("domain", "logistics").gauge().value();
+        double logisticsSuccessRate =
+                meterRegistry
+                        .find("outcome_success_rate")
+                        .tags("domain", "logistics")
+                        .gauge()
+                        .value();
         assertEquals(0.8, logisticsSuccessRate, 0.001);
     }
 
@@ -120,7 +128,12 @@ public class AgentMetricsTest {
 
         metricsConfig.init();
 
-        double depth = meterRegistry.find("hitl_queue_depth").tags("assignee_role", "risk_analyst").gauge().value();
+        double depth =
+                meterRegistry
+                        .find("hitl_queue_depth")
+                        .tags("assignee_role", "risk_analyst")
+                        .gauge()
+                        .value();
         assertEquals(5.0, depth);
     }
 
@@ -130,7 +143,12 @@ public class AgentMetricsTest {
 
         metricsConfig.init();
 
-        double breaches = meterRegistry.find("hitl_sla_breach_total").tags("assignee_role", "risk_analyst").gauge().value();
+        double breaches =
+                meterRegistry
+                        .find("hitl_sla_breach_total")
+                        .tags("assignee_role", "risk_analyst")
+                        .gauge()
+                        .value();
         assertEquals(3.0, breaches);
     }
 }

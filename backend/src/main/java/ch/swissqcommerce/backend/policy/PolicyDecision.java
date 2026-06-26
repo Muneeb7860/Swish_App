@@ -1,18 +1,15 @@
 package ch.swissqcommerce.backend.policy;
 
 /**
- * Output of the Policy Engine. Determines whether an agent suggestion
- * is allowed to proceed to the Execution Gateway.
+ * Output of the Policy Engine. Determines whether an agent suggestion is allowed to proceed to the
+ * Execution Gateway.
  *
- * @param status         approved | rejected | needs_human | expired
+ * @param status approved | rejected | needs_human | expired
  * @param modifiedAction optional override of the original action
- * @param reason         why this decision was made
+ * @param reason why this decision was made
  */
 public record PolicyDecision(
-        String status,
-        String modifiedAction,
-        String reason,
-        String assigneeRole) {
+        String status, String modifiedAction, String reason, String assigneeRole) {
 
     public PolicyDecision(String status, String modifiedAction, String reason) {
         this(status, modifiedAction, reason, null);

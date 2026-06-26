@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Risk Agent: evaluates security anomalies and fraud risk.
- */
+/** Risk Agent: evaluates security anomalies and fraud risk. */
 @Component
 public class RiskAgent {
 
@@ -24,26 +22,31 @@ public class RiskAgent {
 
     public AgentSuggestion analyze() {
         try {
-            long pendingAnomalies = outboxRepo.findByStatusOrderByCreatedAtAsc("PENDING").stream()
-                    .filter(e -> "security.anomaly".equalsIgnoreCase(e.getEventType()))
-                    .count();
+            long pendingAnomalies =
+                    outboxRepo.findByStatusOrderByCreatedAtAsc("PENDING").stream()
+                            .filter(e -> "security.anomaly".equalsIgnoreCase(e.getEventType()))
+                            .count();
 
             String prompt =
                     "You are a quick-commerce risk and fraud intelligence agent. We currently have "
                             + pendingAnomalies
-                            + " pending security anomalies. Suggest ONE specific risk mitigation action."
-                            + " Respond in exactly this format:"
-                            + " ACTION: <security risk mitigation action> | CONFIDENCE: <0.0-1.0> | IMPACT: <low|medium|high>"
-                            + " | REASON: <why>";
+                            + " pending security anomalies. Suggest ONE specific risk mitigation"
+                            + " action. Respond in exactly this format: ACTION: <security risk"
+                            + " mitigation action> | CONFIDENCE: <0.0-1.0> | IMPACT:"
+                            + " <low|medium|high> | REASON: <why>";
 
-            String response = aiService.executeLocalTask(prompt)
-                    .collectList()
-                    .map(list -> String.join("", list))
-                    .block(Duration.ofSeconds(10));
+            String response =
+                    aiService
+                            .executeLocalTask(prompt)
+                            .collectList()
+                            .map(list -> String.join("", list))
+                            .block(Duration.ofSeconds(10));
 
             return parseResponse(response);
         } catch (Exception e) {
-            log.warn("RiskAgent analysis failed, returning deterministic fallback: {}", e.getMessage());
+            log.warn(
+                    "RiskAgent analysis failed, returning deterministic fallback: {}",
+                    e.getMessage());
             return AgentSuggestion.of(
                     "risk",
                     "Flag high-frequency guest checkout accounts for validation",
@@ -73,8 +76,8 @@ public class RiskAgent {
     }
 
     private AgentSuggestion fallback(String reason) {
-        return AgentSuggestion.of("risk",
-                "Review recent security.anomaly events manually", 0.5, reason, "medium");
+        return AgentSuggestion.of(
+                "risk", "Review recent security.anomaly events manually", 0.5, reason, "medium");
     }
 
     private static String extractField(String text, String field) {

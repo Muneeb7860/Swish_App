@@ -2,6 +2,12 @@
 	"version": "0.0.1",
 	"configurations": [
 		{
+			"name": "uat-static-host",
+			"runtimeExecutable": "python3",
+			"runtimeArgs": ["/tmp/uat_serve.py"],
+			"port": 3100
+		},
+		{
 			"name": "frontend-host",
 			"runtimeExecutable": "npm",
 			"runtimeArgs": ["--prefix", "frontend-host", "run", "dev"],
