@@ -1,4 +1,4 @@
-import { AuthPortal, type AuthSession } from "@swish/shared-ui";
+import { AuthPortal, type AuthSession, Modal } from "@swish/shared-ui";
 import { useQuery } from "@tanstack/react-query";
 import * as Lucide from "lucide-react";
 import React, {
@@ -2833,73 +2833,50 @@ export default function App() {
 				)}
 			</main>
 
-			{certModalOpen && (
-				<div className="cert-modal-overlay">
-					<div className="cert-modal-content">
-						<div
+			<Modal
+				isOpen={certModalOpen}
+				onClose={() => setCertModalOpen(false)}
+				accentColor="var(--color-business)"
+				title={
+					<>
+						<Lucide.Sparkles size={18} />
+						Swiss Loyalty Certificate Desk
+					</>
+				}
+				actions={
+					<>
+						<button
+							type="button"
+							aria-label="Download Certificate"
+							className="btn-primary-glow"
 							style={{
-								width: "100%",
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
+								background: "var(--color-business)",
+								color: "#ffffff",
+								cursor: "pointer",
 							}}
+							onClick={handleDownloadCert}
 						>
-							<h4
-								style={{
-									fontWeight: 800,
-									color: "var(--color-business)",
-									display: "flex",
-									alignItems: "center",
-									gap: "0.4rem",
-								}}
-							>
-								<Lucide.Sparkles size={18} />
-								Swiss Loyalty Certificate Desk
-							</h4>
-							<button
-								type="button"
-								aria-label="Close"
-								className="ai-bot-close-btn"
-								onClick={() => setCertModalOpen(false)}
-							>
-								<Lucide.X size={18} />
-							</button>
-						</div>
-
-						<canvas
-							ref={canvasRef as any}
-							width="560"
-							height="360"
-							className="cert-canvas"
-						/>
-
-						<div className="cert-modal-actions">
-							<button
-								type="button"
-								aria-label="Download Certificate"
-								className="btn-primary-glow"
-								style={{
-									background: "var(--color-business)",
-									color: "#ffffff",
-									cursor: "pointer",
-								}}
-								onClick={handleDownloadCert}
-							>
-								Download Certificate (.PNG)
-							</button>
-							<button
-								type="button"
-								aria-label="Dismiss Modal"
-								className="btn-secondary-glow"
-								style={{ cursor: "pointer" }}
-								onClick={() => setCertModalOpen(false)}
-							>
-								Dismiss Desk
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+							Download Certificate (.PNG)
+						</button>
+						<button
+							type="button"
+							aria-label="Dismiss Modal"
+							className="btn-secondary-glow"
+							style={{ cursor: "pointer" }}
+							onClick={() => setCertModalOpen(false)}
+						>
+							Dismiss Desk
+						</button>
+					</>
+				}
+			>
+				<canvas
+					ref={canvasRef as any}
+					width="560"
+					height="360"
+					className="cert-canvas"
+				/>
+			</Modal>
 
 			<SupportBot
 				botOpen={botOpen}

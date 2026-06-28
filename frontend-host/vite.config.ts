@@ -1,9 +1,25 @@
+import { fileURLToPath } from "node:url";
 import federation from "@originjs/vite-plugin-federation";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	resolve: {
+		// @swish/shared-ui is consumed as TS source from a sibling dir with no
+		// node_modules. Federation shares bare `react`/`react-dom` but NOT subpaths,
+		// so the JSX transform's `react/jsx-runtime` import must be pinned to THIS
+		// app's react — otherwise the prod build (rolldown) only resolves it when a
+		// hoisted root node_modules happens to exist (passes locally, fails in CI).
+		alias: {
+			"react/jsx-runtime": fileURLToPath(
+				new URL("./node_modules/react/jsx-runtime", import.meta.url),
+			),
+			"react/jsx-dev-runtime": fileURLToPath(
+				new URL("./node_modules/react/jsx-dev-runtime", import.meta.url),
+			),
+		},
+	},
 	define: {
 		"import.meta.env.VITE_MOCK_MODE": JSON.stringify(
 			process.env.VITE_MOCK_MODE || "false",
