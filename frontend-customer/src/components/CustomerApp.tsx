@@ -1116,8 +1116,8 @@ export default function CustomerApp({
 				key={p.id}
 				className="product-card"
 				style={{
-					background: "var(--bg-card)",
-					border: "1px solid var(--border-color)",
+					background: "var(--bg-glass)",
+					border: "1px solid var(--border-default)",
 					borderRadius: "16px",
 					padding: "1rem",
 					position: "relative",
@@ -1199,7 +1199,7 @@ export default function CustomerApp({
 						alignItems: "center",
 						fontSize: "2.5rem",
 						marginBottom: "0.5rem",
-						border: "1px solid var(--border-color)",
+						border: "1px solid var(--border-default)",
 						position: "relative",
 						overflow: "hidden",
 					}}
@@ -1748,7 +1748,7 @@ export default function CustomerApp({
 												activeCategory === cat
 													? "rgba(16, 185, 129, 0.15)"
 													: "rgba(255, 255, 255, 0.02)",
-											border: `1px solid ${activeCategory === cat ? "var(--color-customer)" : "var(--border-color)"}`,
+											border: `1px solid ${activeCategory === cat ? "var(--color-customer)" : "var(--border-default)"}`,
 											color:
 												activeCategory === cat
 													? "var(--color-customer)"
@@ -1897,7 +1897,7 @@ export default function CustomerApp({
 									}}
 									style={{
 										background: "rgba(255, 255, 255, 0.05)",
-										border: "1px solid var(--border-color)",
+										border: "1px solid var(--border-default)",
 										color: "var(--text-primary)",
 										padding: "0.25rem 0.5rem",
 										borderRadius: "6px",
@@ -2045,7 +2045,7 @@ export default function CustomerApp({
 									<div
 										style={{
 											background: "rgba(255,255,255,0.01)",
-											border: "1px dashed var(--border-color)",
+											border: "1px dashed var(--border-default)",
 											borderRadius: "12px",
 											padding: "1.5rem",
 											textAlign: "center",
@@ -2095,7 +2095,7 @@ export default function CustomerApp({
 													padding: "1rem",
 													borderLeft: store.active
 														? "3px solid var(--color-customer)"
-														: "1px solid var(--border-color)",
+														: "1px solid var(--border-default)",
 													opacity: store.active ? 1 : 0.6,
 													display: "flex",
 													flexDirection: "column",
@@ -2501,7 +2501,7 @@ export default function CustomerApp({
 														display: "flex",
 														justifyContent: "space-between",
 														padding: "0.5rem",
-														borderBottom: "1px solid var(--border-color)",
+														borderBottom: "1px solid var(--border-default)",
 														fontSize: "0.8rem",
 													}}
 												>
@@ -2575,7 +2575,7 @@ export default function CustomerApp({
 													fontSize: "0.7rem",
 													padding: "0.3rem 0.65rem",
 													cursor: "pointer",
-													border: "1px solid var(--border-color)",
+													border: "1px solid var(--border-default)",
 													borderRadius: "6px",
 												}}
 												onClick={() => {
@@ -2629,7 +2629,7 @@ export default function CustomerApp({
 						alignItems: "center",
 						gap: "0.4rem",
 						fontWeight: 800,
-						borderBottom: "1px solid var(--border-color)",
+						borderBottom: "1px solid var(--border-default)",
 						paddingBottom: "0.5rem",
 						marginBottom: "0.75rem",
 					}}
@@ -2711,7 +2711,7 @@ export default function CustomerApp({
 						{/* Cart Calculations and checkout */}
 						<div
 							style={{
-								borderTop: "1px solid var(--border-color)",
+								borderTop: "1px solid var(--border-default)",
 								paddingTop: "0.75rem",
 								marginTop: "0.5rem",
 							}}
@@ -2750,7 +2750,7 @@ export default function CustomerApp({
 												borderColor:
 													tipAmount === tip
 														? "var(--color-customer)"
-														: "var(--border-color)",
+														: "var(--border-default)",
 											}}
 											onClick={() => setTipAmount(tip)}
 										>
@@ -2856,7 +2856,7 @@ export default function CustomerApp({
 									style={{
 										display: "flex",
 										justifyContent: "space-between",
-										borderTop: "1px dashed var(--border-color)",
+										borderTop: "1px dashed var(--border-default)",
 										paddingTop: "0.3rem",
 										fontSize: "0.85rem",
 										fontWeight: 800,

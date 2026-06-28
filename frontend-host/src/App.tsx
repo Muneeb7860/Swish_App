@@ -2356,7 +2356,7 @@ export default function App() {
 							background: "rgba(255,255,255,0.03)",
 							padding: "0.2rem 0.5rem",
 							borderRadius: "6px",
-							border: "1px solid var(--border-color)",
+							border: "1px solid var(--border-default)",
 						}}
 					>
 						<Lucide.Globe size={12} className="event-system" />
