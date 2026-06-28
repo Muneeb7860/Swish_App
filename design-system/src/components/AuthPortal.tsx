@@ -293,9 +293,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 				{formLabel}
 			</h2>
 
-			<form onSubmit={handleSubmit}>
+			<form onSubmit={handleSubmit} aria-label={formLabel}>
 				<div>
 					<label
+						htmlFor="authportal-email"
 						style={{
 							display: "block",
 							fontSize: "var(--text-sm)",
@@ -305,6 +306,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						Email
 					</label>
 					<input
+						id="authportal-email"
 						type="email"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
@@ -315,6 +317,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
 				<div style={{ marginTop: "1rem" }}>
 					<label
+						htmlFor="authportal-password"
 						style={{
 							display: "block",
 							fontSize: "var(--text-sm)",
@@ -324,6 +327,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 						Password
 					</label>
 					<input
+						id="authportal-password"
 						type="password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
