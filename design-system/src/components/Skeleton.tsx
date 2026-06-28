@@ -79,6 +79,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 					{Array.from({ length: rows }).map((_, r) => (
 						<div
 							key={r}
+							className="skeleton-table-row"
 							style={{
 								display: "flex",
 								gap: "1rem",
