@@ -303,7 +303,7 @@ export default function AdminPanel({
 									key={app.id}
 									style={{
 										background: "rgba(255,255,255,0.01)",
-										border: "1px solid var(--border-color)",
+										border: "1px solid var(--border-default)",
 										padding: "0.75rem",
 										borderRadius: "10px",
 									}}
@@ -446,7 +446,7 @@ export default function AdminPanel({
 									key={ticket.id}
 									style={{
 										background: "rgba(255,255,255,0.01)",
-										border: "1px solid var(--border-color)",
+										border: "1px solid var(--border-default)",
 										padding: "0.75rem",
 										borderRadius: "10px",
 										fontSize: "0.75rem",
