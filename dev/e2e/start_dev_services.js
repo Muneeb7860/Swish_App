@@ -138,6 +138,35 @@ function run() {
 		path.join(LOGS_DIR, "admin.log"),
 	);
 
+	// 7. Boot Homelab AI Governance service (Python / FastAPI).
+	// Optional: only starts if its virtualenv exists, so the rest of the stack
+	// still boots on machines that haven't set governance up. PYTHONPATH points
+	// at the package's src/ (src-layout) — this is required because the editable
+	// install's .pth entries are not reliably honored on this checkout, and is
+	// harmless when the editable install does work.
+	const governanceDir = path.join(WORKSPACE_DIR, "homelab-ai-governance");
+	const governanceUvicorn = path.join(
+		governanceDir,
+		".venv",
+		isWin ? "Scripts" : "bin",
+		isWin ? "uvicorn.exe" : "uvicorn",
+	);
+	if (fs.existsSync(governanceUvicorn)) {
+		runService(
+			"AI Governance",
+			governanceUvicorn,
+			["governance.server:app", "--host", "0.0.0.0", "--port", "8000"],
+			governanceDir,
+			path.join(LOGS_DIR, "governance.log"),
+			{ PYTHONPATH: path.join(governanceDir, "src") },
+		);
+	} else {
+		console.log(
+			"[START SERVICES] Skipping [AI Governance] — no virtualenv at homelab-ai-governance/.venv " +
+				"(set up with: python -m venv .venv && .venv/bin/pip install -e .)",
+		);
+	}
+
 	console.log(
 		"[START SERVICES] All services launched in background. Keeping process alive. Press Ctrl+C to terminate.",
 	);
