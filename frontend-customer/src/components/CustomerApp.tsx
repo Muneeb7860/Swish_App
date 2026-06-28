@@ -3009,115 +3009,111 @@ export default function CustomerApp({
 						}
 					>
 						<p
-								style={{
-									fontSize: "0.8rem",
-									color: "var(--text-secondary)",
-									marginBottom: "1.25rem",
-								}}
-							>
-								<strong>
-									{subTargetItem.emoji} {subTargetItem.name}
-								</strong>{" "}
-								is in high demand (Only {subTargetItem.stock} left!). Would you
-								like to select a high-availability backup substitute to ensure
-								your delivery isn't delayed?
-							</p>
+							style={{
+								fontSize: "0.8rem",
+								color: "var(--text-secondary)",
+								marginBottom: "1.25rem",
+							}}
+						>
+							<strong>
+								{subTargetItem.emoji} {subTargetItem.name}
+							</strong>{" "}
+							is in high demand (Only {subTargetItem.stock} left!). Would you
+							like to select a high-availability backup substitute to ensure
+							your delivery isn't delayed?
+						</p>
 
-							{(() => {
-								const subId = substitutionMap[subTargetItem.id];
-								const substitute = allProducts.find((p) => p.id === subId);
-								if (!substitute) return null;
+						{(() => {
+							const subId = substitutionMap[subTargetItem.id];
+							const substitute = allProducts.find((p) => p.id === subId);
+							if (!substitute) return null;
 
-								return (
+							return (
+								<div
+									style={{
+										background: "rgba(255,255,255,0.03)",
+										border: "1px solid rgba(255,255,255,0.05)",
+										borderRadius: "10px",
+										padding: "1rem",
+										marginBottom: "1.5rem",
+										display: "flex",
+										alignItems: "center",
+										gap: "1rem",
+										justifyContent: "space-between",
+									}}
+								>
 									<div
 										style={{
-											background: "rgba(255,255,255,0.03)",
-											border: "1px solid rgba(255,255,255,0.05)",
-											borderRadius: "10px",
-											padding: "1rem",
-											marginBottom: "1.5rem",
 											display: "flex",
 											alignItems: "center",
-											gap: "1rem",
-											justifyContent: "space-between",
+											gap: "0.75rem",
 										}}
 									>
-										<div
-											style={{
-												display: "flex",
-												alignItems: "center",
-												gap: "0.75rem",
-											}}
-										>
-											<span style={{ fontSize: "2rem" }}>
-												{substitute.emoji}
-											</span>
-											<div style={{ textAlign: "left" }}>
-												<div
-													style={{ fontSize: "0.85rem", fontWeight: "bold" }}
-												>
-													{substitute.name}
-												</div>
-												<div
-													style={{
-														fontSize: "0.7rem",
-														color: "var(--text-muted)",
-													}}
-												>
-													{substitute.category} • ${substitute.price.toFixed(2)}
-												</div>
+										<span style={{ fontSize: "2rem" }}>{substitute.emoji}</span>
+										<div style={{ textAlign: "left" }}>
+											<div style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
+												{substitute.name}
+											</div>
+											<div
+												style={{
+													fontSize: "0.7rem",
+													color: "var(--text-muted)",
+												}}
+											>
+												{substitute.category} • ${substitute.price.toFixed(2)}
 											</div>
 										</div>
-										<button
-											type="button"
-											className="btn-primary-glow"
-											style={{
-												background: "var(--color-customer)",
-												color: "#ffffff",
-												padding: "0.4rem 0.8rem",
-												fontSize: "0.75rem",
-												border: "none",
-												borderRadius: "6px",
-												cursor: "pointer",
-											}}
-											onClick={() => {
-												setCart((prev) => {
-													const targetInCart = prev.find(
-														(item) => item.id === subTargetItem.id,
-													);
-													if (targetInCart) {
-														const filtered = prev.filter(
-															(item) => item.id !== subTargetItem.id,
-														);
-														const subInCart = filtered.find(
-															(item) => item.id === substitute.id,
-														);
-														if (subInCart) {
-															return filtered.map((item) =>
-																item.id === substitute.id
-																	? {
-																			...item,
-																			qty: item.qty + targetInCart.qty,
-																		}
-																	: item,
-															);
-														}
-														return [
-															...filtered,
-															{ ...substitute, qty: targetInCart.qty },
-														];
-													}
-													return prev;
-												});
-												setShowSubstitutionModal(false);
-												setSubTargetItem(null);
-											}}
-										>
-											Swap Item
-										</button>
 									</div>
-								);
-							})()}
+									<button
+										type="button"
+										className="btn-primary-glow"
+										style={{
+											background: "var(--color-customer)",
+											color: "#ffffff",
+											padding: "0.4rem 0.8rem",
+											fontSize: "0.75rem",
+											border: "none",
+											borderRadius: "6px",
+											cursor: "pointer",
+										}}
+										onClick={() => {
+											setCart((prev) => {
+												const targetInCart = prev.find(
+													(item) => item.id === subTargetItem.id,
+												);
+												if (targetInCart) {
+													const filtered = prev.filter(
+														(item) => item.id !== subTargetItem.id,
+													);
+													const subInCart = filtered.find(
+														(item) => item.id === substitute.id,
+													);
+													if (subInCart) {
+														return filtered.map((item) =>
+															item.id === substitute.id
+																? {
+																		...item,
+																		qty: item.qty + targetInCart.qty,
+																	}
+																: item,
+														);
+													}
+													return [
+														...filtered,
+														{ ...substitute, qty: targetInCart.qty },
+													];
+												}
+												return prev;
+											});
+											setShowSubstitutionModal(false);
+											setSubTargetItem(null);
+										}}
+									>
+										Swap Item
+									</button>
+								</div>
+							);
+						})()}
 					</Modal>,
 					document.body,
 				)}
