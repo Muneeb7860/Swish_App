@@ -211,21 +211,21 @@ services:
       - frontend-tier
       - backend-tier
 
-# nginx service enabled
-  nginx:
-    image: nginx:alpine
-    container_name: swiss_nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      bff:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - frontend-tier
+# nginx service — disabled: depends on 'bff' which is defined in a separate compose stack
+#   nginx:
+#     image: nginx:alpine
+#     container_name: swiss_nginx
+#     ports:
+#       - "80:80"
+#     volumes:
+#       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#     depends_on:
+#       bff:
+#         condition: service_healthy
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - frontend-tier
 
   prometheus:
     image: prom/prometheus:v2.51.0
@@ -251,15 +251,16 @@ services:
     networks:
       - backend-tier
 
-#   alertmanager:
-#     # Disabled due to image pull issues; enable with a working image later
-#     # image: prom/alertmanager:latest
-#     # container_name: alertmanager
-#     # ports:
-#     #   - "9093:9093"
-#     # networks:
-#     #   - backend-tier
-      
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - backend-tier
+    restart: unless-stopped
+
+
   grafana:
     image: grafana/grafana:10.4.2
     container_name: swiss_grafana

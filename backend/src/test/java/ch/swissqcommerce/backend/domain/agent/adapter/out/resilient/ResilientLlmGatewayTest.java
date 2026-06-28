@@ -44,9 +44,14 @@ public class ResilientLlmGatewayTest {
 
     @BeforeEach
     public void setUp() {
+        // Real wrapper delegating to the mocked adapter. Its @CircuitBreaker is a no-op here
+        // (no Spring AOP proxy when constructed via new), so behaviour matches a direct call —
+        // exactly what these fail-safe-ordering tests assert.
+        GovernanceLlmClient governanceLlmClient = new GovernanceLlmClient(pythonGovernanceAdapter);
         gateway =
                 new ResilientLlmGateway(
                         pythonGovernanceAdapter,
+                        governanceLlmClient,
                         geminiFreeAdapter,
                         kimiLlmAdapter,
                         mockLlmAdapter,
