@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.domain.agent.core.service;
 
 import ch.swissqcommerce.backend.config.LettaConfig;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,19 @@ public class LettaMemoryService {
     private final LettaConfig lettaConfig;
     private final RestTemplate lettaRestTemplate;
     private final MeterRegistry meterRegistry;
+
+    /**
+     * Pre-register the letta.fallback.triggers counter at startup so Prometheus exposes
+     * letta_fallback_triggers_total{service="letta-memory"} with value 0 from the first scrape,
+     * even if no Letta failure has occurred yet. Without this the metric is invisible in Grafana
+     * until the first call to incrementFallbackCounter().
+     */
+    @PostConstruct
+    public void initMetrics() {
+        if (meterRegistry != null) {
+            meterRegistry.counter("letta.fallback.triggers", "service", "letta-memory");
+        }
+    }
 
     /**
      * Sends a message to a stateful Letta agent associated with the conversationId. If the agent

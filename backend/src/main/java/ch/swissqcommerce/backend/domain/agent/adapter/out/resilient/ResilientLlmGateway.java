@@ -50,6 +50,7 @@ public class ResilientLlmGateway implements LlmGatewayPort {
                     + "sensitive data that must not leave the homelab. Routing to a human agent.";
 
     private final PythonGovernanceAdapter pythonGovernanceAdapter;
+    private final GovernanceLlmClient governanceLlmClient;
     private final GeminiFreeAdapter geminiFreeAdapter;
     private final KimiLlmAdapter kimiLlmAdapter;
     private final MockLlmAdapter mockLlmAdapter;
@@ -58,12 +59,14 @@ public class ResilientLlmGateway implements LlmGatewayPort {
 
     public ResilientLlmGateway(
             PythonGovernanceAdapter pythonGovernanceAdapter,
+            GovernanceLlmClient governanceLlmClient,
             GeminiFreeAdapter geminiFreeAdapter,
             KimiLlmAdapter kimiLlmAdapter,
             MockLlmAdapter mockLlmAdapter,
             PiiPreScanner piiPreScanner,
             AgentBudgetTrackerPort agentBudgetTracker) {
         this.pythonGovernanceAdapter = pythonGovernanceAdapter;
+        this.governanceLlmClient = governanceLlmClient;
         this.geminiFreeAdapter = geminiFreeAdapter;
         this.kimiLlmAdapter = kimiLlmAdapter;
         this.mockLlmAdapter = mockLlmAdapter;
@@ -91,9 +94,12 @@ public class ResilientLlmGateway implements LlmGatewayPort {
 
     private LlmResponse executeCallChain(String prompt) {
         // 1. Preferred: the governed path. It owns the PII gate, so raw prompts are safe here.
+        //    Routed through GovernanceLlmClient so the "governance" circuit breaker actually
+        //    applies (AOP can't advise a self-invoked private method). When the breaker is OPEN it
+        //    throws CallNotPermittedException, caught below to drop to the next fail-safe tier.
         if (pythonGovernanceAdapter.isConfigured()) {
             try {
-                return pythonGovernanceAdapter.callLlm(prompt);
+                return governanceLlmClient.call(prompt);
             } catch (Exception e) {
                 log.warn(
                         "Python Governance service unavailable ({}). Applying fail-safe fallback.",
