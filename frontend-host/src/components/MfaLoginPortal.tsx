@@ -1,5 +1,4 @@
 import * as Lucide from "lucide-react";
-import React from "react";
 
 interface ActiveProfile {
 	logLevel: string;

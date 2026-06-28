@@ -1,11 +1,10 @@
-import { AuthPortal, type AuthSession, Modal } from "@swish/shared-ui";
+import { Modal } from "@swish/shared-ui";
 import { useQuery } from "@tanstack/react-query";
 import * as Lucide from "lucide-react";
 import React, {
 	Suspense,
 	useCallback,
 	useEffect,
-	useMemo,
 	useRef,
 	useState,
 } from "react";

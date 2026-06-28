@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AuthPortal, type AuthSession } from "../AuthPortal";
+import { AuthPortal } from "../AuthPortal";
 
 describe("AuthPortal Component", () => {
 	const mockOnAuthSuccess = vi.fn();

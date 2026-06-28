@@ -1,5 +1,5 @@
 import * as Lucide from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Enterprise Blueprint: Live Rider Tracking Panel
