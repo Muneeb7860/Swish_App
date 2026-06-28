@@ -1,5 +1,5 @@
 import * as Lucide from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface OnboardingApp {
 	id: string;
