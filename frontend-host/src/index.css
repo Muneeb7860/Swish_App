@@ -1928,50 +1928,13 @@ body {
 	color: var(--color-engine);
 }
 
-/* Digital Certificate Modal Overlay */
-.cert-modal-overlay {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.85);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	z-index: 1000;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	animation: fade-in-overlay 0.25s ease-out;
-}
-
-.cert-modal-content {
-	background: #0f1524;
-	border: 2px solid var(--color-business);
-	box-shadow: 0 0 30px rgba(139, 92, 246, 0.25);
-	border-radius: 20px;
-	padding: 1.5rem;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 1.25rem;
-	max-width: 620px;
-	width: 90%;
-	animation: scale-up-cert 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
+/* Certificate modal shell now uses shared <Modal> from @swish/shared-ui */
 .cert-canvas {
 	background: #060913;
 	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
 	max-width: 100%;
-}
-
-.cert-modal-actions {
-	display: flex;
-	gap: 0.75rem;
-	width: 100%;
 }
 
 /* MFA Login Lock Screen Portal Overlay */

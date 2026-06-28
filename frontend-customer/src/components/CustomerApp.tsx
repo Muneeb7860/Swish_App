@@ -1,3 +1,4 @@
+import { Modal } from "@swish/shared-ui";
 import * as Lucide from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -2973,27 +2974,41 @@ export default function CustomerApp({
 			{showSubstitutionModal &&
 				subTargetItem &&
 				createPortal(
-					<div className="cert-modal-overlay" style={{ zIndex: 2000 }}>
-						<div
-							className="cert-modal-content"
-							style={{
-								maxWidth: "420px",
-								padding: "1.5rem",
-								textAlign: "center",
-							}}
-						>
-							<h4
-								style={{
-									color: "var(--color-customer)",
-									fontWeight: 800,
-									margin: "0 0 0.5rem 0",
-									textAlign: "center",
-								}}
-							>
+					<Modal
+						isOpen
+						zIndex={2000}
+						maxWidth={420}
+						accentColor="var(--color-customer)"
+						title={
+							<>
 								<Lucide.Sparkles size={18} />
 								Stock Alert: Running Low!
-							</h4>
-							<p
+							</>
+						}
+						onClose={() => {
+							setShowSubstitutionModal(false);
+							setSubTargetItem(null);
+						}}
+						actions={
+							<button
+								type="button"
+								className="btn-secondary-glow"
+								style={{
+									flex: 1,
+									padding: "0.5rem",
+									fontSize: "0.8rem",
+									cursor: "pointer",
+								}}
+								onClick={() => {
+									setShowSubstitutionModal(false);
+									setSubTargetItem(null);
+								}}
+							>
+								Keep Original
+							</button>
+						}
+					>
+						<p
 								style={{
 									fontSize: "0.8rem",
 									color: "var(--text-secondary)",
@@ -3103,27 +3118,7 @@ export default function CustomerApp({
 									</div>
 								);
 							})()}
-
-							<div style={{ display: "flex", gap: "0.5rem" }}>
-								<button
-									type="button"
-									className="btn-secondary-glow"
-									style={{
-										flex: 1,
-										padding: "0.5rem",
-										fontSize: "0.8rem",
-										cursor: "pointer",
-									}}
-									onClick={() => {
-										setShowSubstitutionModal(false);
-										setSubTargetItem(null);
-									}}
-								>
-									Keep Original
-								</button>
-							</div>
-						</div>
-					</div>,
+					</Modal>,
 					document.body,
 				)}
 		</div>

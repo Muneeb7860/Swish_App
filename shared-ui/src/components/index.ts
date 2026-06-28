@@ -15,3 +15,7 @@ export type {
 	AuthRole,
 	MfaMethod,
 } from "./AuthPortal";
+
+// Tier 2 Components (Consolidated)
+export { Modal } from "./Modal";
+export type { ModalProps } from "./Modal";
