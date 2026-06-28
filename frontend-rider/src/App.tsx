@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "@swish/shared-ui/tokens";
 import RiderApp from "./components/RiderApp";
 import "./index.css";
 

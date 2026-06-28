@@ -1,8 +1,10 @@
 package ch.swissqcommerce.backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import ch.swissqcommerce.backend.domain.agent.port.out.LlmGatewayPort;
+import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -10,22 +12,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.openai.OpenAiChatModel;
 import reactor.core.publisher.Flux;
 
 @ExtendWith(MockitoExtension.class)
 public class AiOrchestrationServiceTest {
 
-    @Mock private OpenAiChatModel cloudChatModel;
-
-    @Mock private OllamaChatModel localChatModel;
+    @Mock private LlmGatewayPort llmGateway;
 
     @InjectMocks private AiOrchestrationService aiOrchestrationService;
 
     @Test
     public void testOrchestrateComplexTask_Success() {
-        when(cloudChatModel.stream("test prompt")).thenReturn(Flux.just("response token"));
+        LlmResponse response = LlmResponse.builder()
+                .content("response token")
+                .tokenCost(0.001)
+                .build();
+        when(llmGateway.callLlm("test prompt")).thenReturn(response);
 
         Flux<String> result = aiOrchestrationService.orchestrateComplexTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));
@@ -37,20 +39,23 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testOrchestrateComplexTask_Failure() {
-        when(cloudChatModel.stream("test prompt"))
-                .thenReturn(Flux.error(new RuntimeException("Cloud LLM offline")));
+        when(llmGateway.callLlm("test prompt")).thenThrow(new RuntimeException("Cloud LLM offline"));
 
         Flux<String> result = aiOrchestrationService.orchestrateComplexTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));
 
         assertNotNull(list);
         assertEquals(1, list.size());
-        assertEquals("Error: Cloud AI reasoning service connection failed.", list.get(0));
+        assertEquals("Error: AI reasoning service unavailable.", list.get(0));
     }
 
     @Test
     public void testExecuteLocalTask_Success() {
-        when(localChatModel.stream("test prompt")).thenReturn(Flux.just("local response"));
+        LlmResponse response = LlmResponse.builder()
+                .content("local response")
+                .tokenCost(0.0001)
+                .build();
+        when(llmGateway.callLlm("test prompt")).thenReturn(response);
 
         Flux<String> result = aiOrchestrationService.executeLocalTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));
@@ -62,14 +67,13 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testExecuteLocalTask_Failure() {
-        when(localChatModel.stream("test prompt"))
-                .thenReturn(Flux.error(new RuntimeException("Local Ollama crashed")));
+        when(llmGateway.callLlm("test prompt")).thenThrow(new RuntimeException("Local Ollama crashed"));
 
         Flux<String> result = aiOrchestrationService.executeLocalTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));
 
         assertNotNull(list);
         assertEquals(1, list.size());
-        assertEquals("Error: Local AI reasoning service connection failed.", list.get(0));
+        assertEquals("Error: Local AI reasoning service unavailable.", list.get(0));
     }
 }

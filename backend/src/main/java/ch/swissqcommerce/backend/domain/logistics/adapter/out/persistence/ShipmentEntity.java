@@ -1,7 +1,7 @@
 package ch.swissqcommerce.backend.domain.logistics.adapter.out.persistence;
 
-import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
+import ch.swissqcommerce.backend.model.DarkStore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;

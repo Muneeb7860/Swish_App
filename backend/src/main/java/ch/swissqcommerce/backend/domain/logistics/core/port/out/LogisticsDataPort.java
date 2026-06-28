@@ -1,15 +1,13 @@
 package ch.swissqcommerce.backend.domain.logistics.core.port.out;
 
-import ch.swissqcommerce.backend.model.CustomerAddress;
-import ch.swissqcommerce.backend.model.DarkStore;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Outbound port giving the logistics core access to warehouse baseline,
- * region preference, and shipment/order data without depending on adapter
- * persistence classes directly (hexagonal architecture / ADR-001).
+ * Outbound port giving the logistics core access to warehouse baseline, region preference, and
+ * shipment/order data without depending on adapter persistence classes directly (hexagonal
+ * architecture / ADR-001).
  */
 public interface LogisticsDataPort {
 
@@ -17,7 +15,8 @@ public interface LogisticsDataPort {
     record BaselineCost(String warehouseId, BigDecimal avgShippingCost, int sampleSize) {}
 
     /** Region-level preferred warehouse mapping. */
-    record RegionPreference(String zipPrefix, String primaryWarehouseId, String secondaryWarehouseId) {}
+    record RegionPreference(
+            String zipPrefix, String primaryWarehouseId, String secondaryWarehouseId) {}
 
     /** Shipment cost snapshot for outcome evaluation. */
     record ShipmentCost(Long shipmentId, BigDecimal actualShippingCost) {}

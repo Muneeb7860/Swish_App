@@ -28,9 +28,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_AutoApprove_ClearSavings() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 
@@ -40,9 +42,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_Hitl_SplitShipment() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":-3.50,\"split_shipment\":true,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":-3.50,\"split_shipment\":true,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 
@@ -53,9 +57,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_Hitl_LongHaul() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":600.0,\"has_fragile_high_value\":false}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":600.0,\"has_fragile_high_value\":false}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 
@@ -65,9 +71,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_Hitl_Fragile() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":true}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":-3.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":true}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 
@@ -77,9 +85,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_Hitl_CostIncrease() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":1.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":1.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 
@@ -89,9 +99,11 @@ public class LogisticsPolicyTest {
 
     @Test
     public void testEvaluate_Hitl_DefaultUnderThreshold() {
-        AgentSuggestionEntity s = AgentSuggestionEntity.builder()
-                .recommendation("{\"shipping_cost_delta\":-0.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
-                .build();
+        AgentSuggestionEntity s =
+                AgentSuggestionEntity.builder()
+                        .recommendation(
+                                "{\"shipping_cost_delta\":-0.50,\"split_shipment\":false,\"distance_miles\":120.0,\"has_fragile_high_value\":false}")
+                        .build();
 
         PolicyDecision decision = policy.evaluate(s);
 

@@ -14,9 +14,11 @@ public class CarrierMockController {
 
     @GetMapping("/api/carrier/rate")
     public Map<String, Object> getRate(
-            @RequestParam String warehouseId,
-            @RequestParam String destinationZip) {
-        log.info("CarrierMockController: rate requested for warehouse={} and zip={}", warehouseId, destinationZip);
+            @RequestParam String warehouseId, @RequestParam String destinationZip) {
+        log.info(
+                "CarrierMockController: rate requested for warehouse={} and zip={}",
+                warehouseId,
+                destinationZip);
 
         double zipMultiplier = 1.0;
         try {
@@ -28,9 +30,6 @@ public class CarrierMockController {
         }
 
         double rate = 5.0 + (zipMultiplier * 0.5);
-        return Map.of(
-                "carrier", "UPS",
-                "rate", rate
-        );
+        return Map.of("carrier", "UPS", "rate", rate);
     }
 }

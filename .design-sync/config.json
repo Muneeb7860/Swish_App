@@ -1,0 +1,66 @@
+{
+	"shape": "package",
+	"pkg": "frontend-b2b",
+	"storybookConfigDir": null,
+	"sourceDir": "frontend-b2b",
+	"buildOutput": "ds-bundle",
+	"components": [
+		"CheckoutPanel",
+		"ConnectionConfig",
+		"CreditCardMockup",
+		"NotificationInbox",
+		"OrderTimeline",
+		"RetailerOnboarding",
+		"SandboxLogs",
+		"SensorProvisioning",
+		"StatusIndicator"
+	],
+	"groups": {
+		"Forms & Input": ["ConnectionConfig"],
+		"Payment & Commerce": ["CheckoutPanel", "CreditCardMockup"],
+		"Status & Timeline": ["OrderTimeline", "StatusIndicator"],
+		"Notifications": ["NotificationInbox"],
+		"Dashboard": ["RetailerOnboarding", "SensorProvisioning", "SandboxLogs"]
+	},
+	"designTokens": {
+		"colors": [
+			"bg-root",
+			"bg-surface",
+			"bg-elevated",
+			"bg-muted",
+			"bg-glass",
+			"text-primary",
+			"text-secondary",
+			"text-muted",
+			"accent",
+			"success",
+			"warning",
+			"error",
+			"info",
+			"purple"
+		],
+		"spacing": [
+			"space-0",
+			"space-1",
+			"space-2",
+			"space-3",
+			"space-4",
+			"space-5",
+			"space-6",
+			"space-7",
+			"space-8"
+		],
+		"typography": [
+			"text-xs",
+			"text-sm",
+			"text-base",
+			"text-lg",
+			"text-xl",
+			"text-2xl"
+		],
+		"radii": ["radius-sm", "radius-md", "radius-lg", "radius-xl", "radius-full"]
+	},
+	"styling": "tailwindcss + css-custom-properties",
+	"status": "phase-1-prep",
+	"createdAt": "2026-06-26"
+}

@@ -34,7 +34,10 @@ public class PricingPolicy {
             }
             return PolicyDecision.needsHuman("default_requires_hitl");
         } catch (Exception e) {
-            log.error("PricingPolicy: Failed to parse recommendation JSON for suggestion ID {}: {}", s.getId(), e.getMessage());
+            log.error(
+                    "PricingPolicy: Failed to parse recommendation JSON for suggestion ID {}: {}",
+                    s.getId(),
+                    e.getMessage());
             return PolicyDecision.rejected("malformed_recommendation_json");
         }
     }

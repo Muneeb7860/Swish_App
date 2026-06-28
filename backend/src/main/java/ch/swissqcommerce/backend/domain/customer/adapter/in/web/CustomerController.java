@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(
         name = "Customer",
         description = "Customer catalog, orders, ledger, and GDPR profile operations")
@@ -49,9 +51,40 @@ public class CustomerController {
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        // Delegated to catalog/inventory service in full implementation.
-        // Stub returns empty list; replace with CatalogUseCase once wired.
-        return ResponseEntity.ok(List.of());
+        String cat = category == null ? null : category.trim().toLowerCase();
+        String term = search == null ? null : search.trim().toLowerCase();
+        List<Map<String, Object>> catalog =
+                orderUseCase.browseCatalog().stream()
+                        .filter(
+                                inv ->
+                                        cat == null
+                                                || (inv.getCategory() != null
+                                                        && inv.getCategory()
+                                                                .toLowerCase()
+                                                                .equals(cat)))
+                        .filter(
+                                inv ->
+                                        term == null
+                                                || (inv.getName() != null
+                                                        && inv.getName()
+                                                                .toLowerCase()
+                                                                .contains(term)))
+                        .skip((long) Math.max(0, page) * Math.max(1, size))
+                        .limit(Math.max(1, size))
+                        .map(
+                                inv -> {
+                                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                                    m.put("item_id", inv.getItemId());
+                                    m.put("name", inv.getName());
+                                    m.put("price", inv.getPrice());
+                                    m.put("stock", inv.getStock());
+                                    m.put("category", inv.getCategory());
+                                    m.put("emoji", inv.getEmoji());
+                                    m.put("perishable", inv.getPerishable());
+                                    return m;
+                                })
+                        .toList();
+        return ResponseEntity.ok(catalog);
     }
 
     // ---- Orders -----------------------------------------------------------------
@@ -119,7 +152,6 @@ public class CustomerController {
             summary = "Place a new order (checkout)",
             description = "Idempotency-Key header prevents duplicate orders on retry.")
     @PostMapping("/orders")
-    @Transactional
     public ResponseEntity<?> placeOrder(
             @Valid @RequestBody CheckoutRequest req,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
@@ -130,21 +162,15 @@ public class CustomerController {
             }
         }
         assertOwnership(req.getCustomerId());
-        try {
-            Order order =
-                    orderUseCase.checkout(
-                            req.getCustomerId(),
-                            req.getItems(),
-                            req.getPaymentMethod(),
-                            req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
-                            req.getBagsReturned() != null ? req.getBagsReturned() : 0,
-                            idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
-            return ResponseEntity.status(201).body(order);
-        } catch (AccessDeniedException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        Order order =
+                orderUseCase.checkout(
+                        req.getCustomerId(),
+                        req.getItems(),
+                        req.getPaymentMethod(),
+                        req.getTip() != null ? req.getTip() : BigDecimal.ZERO,
+                        req.getBagsReturned() != null ? req.getBagsReturned() : 0,
+                        idempotencyKey != null ? idempotencyKey : req.getIdempotencyKey());
+        return ResponseEntity.status(201).body(order);
     }
 
     @Operation(summary = "List orders for a customer")
@@ -172,22 +198,16 @@ public class CustomerController {
     public ResponseEntity<?> requestRefund(
             @PathVariable Integer id, @Valid @RequestBody RefundRequest req) {
         // Resolve the order first so we can assert ownership before mutating state.
-        try {
-            Order order = orderUseCase.getOrderById(id);
-            assertOwnership(order.getCustomer().getCustomerId());
-            Map<String, Object> result =
-                    orderUseCase.requestRefund(
-                            id,
-                            req.getClaimReason(),
-                            req.getCustomerLatitude(),
-                            req.getCustomerLongitude());
-            Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
-            return ResponseEntity.status(statusCode).body(result);
-        } catch (AccessDeniedException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        }
+        Order order = orderUseCase.getOrderById(id);
+        assertOwnership(order.getCustomer().getCustomerId());
+        Map<String, Object> result =
+                orderUseCase.requestRefund(
+                        id,
+                        req.getClaimReason(),
+                        req.getCustomerLatitude(),
+                        req.getCustomerLongitude());
+        Integer statusCode = (Integer) result.getOrDefault("httpStatus", 200);
+        return ResponseEntity.status(statusCode).body(result);
     }
 
     // ---- Ledger -----------------------------------------------------------------

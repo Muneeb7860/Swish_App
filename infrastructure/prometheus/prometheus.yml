@@ -11,8 +11,9 @@ rule_files:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
-          # - alertmanager:9093   # uncomment when alertmanager is enabled
+        - targets: ['alertmanager:9093']
+          # Uncomment the line below and remove the targets line above to disable alerting:
+          # targets: []
 
 scrape_configs:
 

@@ -34,34 +34,35 @@ public class LogisticsOutcomeProcessorTest {
     @Test
     public void testEvaluate_SavingsCalc_Success() throws Exception {
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("routing")
-                .entityId("order_id=101")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("routing")
+                        .entityId("order_id=101")
+                        .build();
 
-        ExecutionRecord exec = ExecutionRecord.builder()
-                .createdAt(OffsetDateTime.now())
-                .build();
+        ExecutionRecord exec = ExecutionRecord.builder().createdAt(OffsetDateTime.now()).build();
 
-        CustomerAddress address = CustomerAddress.builder()
-                .addressLine("123 Broadway, 80012")
-                .latitude(new BigDecimal("40.7306"))
-                .longitude(new BigDecimal("-73.9352"))
-                .build();
+        CustomerAddress address =
+                CustomerAddress.builder()
+                        .addressLine("123 Broadway, 80012")
+                        .latitude(new BigDecimal("40.7306"))
+                        .longitude(new BigDecimal("-73.9352"))
+                        .build();
 
-        DarkStore originalStore = DarkStore.builder()
-                .storeId("store-test-1")
-                .latitude(new BigDecimal("40.7128"))
-                .longitude(new BigDecimal("-74.0060"))
-                .build();
+        DarkStore originalStore =
+                DarkStore.builder()
+                        .storeId("store-test-1")
+                        .latitude(new BigDecimal("40.7128"))
+                        .longitude(new BigDecimal("-74.0060"))
+                        .build();
 
-        RoutingOrderData orderData = new RoutingOrderData(
-                101,
-                address,
-                originalStore,
-                List.of(new RoutingOrderData.OrderItem("item-1", 2))
-        );
+        RoutingOrderData orderData =
+                new RoutingOrderData(
+                        101,
+                        address,
+                        originalStore,
+                        List.of(new RoutingOrderData.OrderItem("item-1", 2)));
 
         BaselineCost baseline = new BaselineCost("store-test-1", new BigDecimal("10.00"), 10);
         ShipmentCost shipment = new ShipmentCost(1L, new BigDecimal("6.50"));
@@ -76,40 +77,42 @@ public class LogisticsOutcomeProcessorTest {
         double savings = (double) result.getMetrics().get("shipping_savings_usd");
         assertTrue(savings > 3.0);
         assertTrue(result.getMeasurementWindow().contains(exec.getCreatedAt().toString()));
-        assertTrue(result.getMeasurementWindow().contains(exec.getCreatedAt().plusDays(3).toString()));
+        assertTrue(
+                result.getMeasurementWindow().contains(exec.getCreatedAt().plusDays(3).toString()));
     }
 
     @Test
     public void testEvaluate_NullActualCost_Handling() throws Exception {
         UUID suggestionId = UUID.randomUUID();
-        AgentSuggestionEntity suggestion = AgentSuggestionEntity.builder()
-                .id(suggestionId)
-                .domain("routing")
-                .entityId("order_id=101")
-                .build();
+        AgentSuggestionEntity suggestion =
+                AgentSuggestionEntity.builder()
+                        .id(suggestionId)
+                        .domain("routing")
+                        .entityId("order_id=101")
+                        .build();
 
-        ExecutionRecord exec = ExecutionRecord.builder()
-                .createdAt(OffsetDateTime.now())
-                .build();
+        ExecutionRecord exec = ExecutionRecord.builder().createdAt(OffsetDateTime.now()).build();
 
-        CustomerAddress address = CustomerAddress.builder()
-                .addressLine("123 Broadway, 80012")
-                .latitude(new BigDecimal("40.7306"))
-                .longitude(new BigDecimal("-73.9352"))
-                .build();
+        CustomerAddress address =
+                CustomerAddress.builder()
+                        .addressLine("123 Broadway, 80012")
+                        .latitude(new BigDecimal("40.7306"))
+                        .longitude(new BigDecimal("-73.9352"))
+                        .build();
 
-        DarkStore originalStore = DarkStore.builder()
-                .storeId("store-test-1")
-                .latitude(new BigDecimal("40.7128"))
-                .longitude(new BigDecimal("-74.0060"))
-                .build();
+        DarkStore originalStore =
+                DarkStore.builder()
+                        .storeId("store-test-1")
+                        .latitude(new BigDecimal("40.7128"))
+                        .longitude(new BigDecimal("-74.0060"))
+                        .build();
 
-        RoutingOrderData orderData = new RoutingOrderData(
-                101,
-                address,
-                originalStore,
-                List.of(new RoutingOrderData.OrderItem("item-1", 2))
-        );
+        RoutingOrderData orderData =
+                new RoutingOrderData(
+                        101,
+                        address,
+                        originalStore,
+                        List.of(new RoutingOrderData.OrderItem("item-1", 2)));
 
         BaselineCost baseline = new BaselineCost("store-test-1", new BigDecimal("10.00"), 10);
         ShipmentCost shipment = new ShipmentCost(1L, null);

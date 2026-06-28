@@ -26,7 +26,8 @@ public class RiskOutcomeProcessor implements OutcomeProcessor {
     }
 
     @Override
-    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion) throws Exception {
+    public OutcomeResult evaluate(ExecutionRecord exec, AgentSuggestionEntity suggestion)
+            throws Exception {
         String entityId = suggestion.getEntityId();
         String orderIdStr = entityId;
         if (entityId != null && entityId.contains("=")) {
@@ -44,7 +45,9 @@ public class RiskOutcomeProcessor implements OutcomeProcessor {
         if (orderId != null) {
             java.time.OffsetDateTime holdDate = exec.getCreatedAt();
             java.time.OffsetDateTime endDate = holdDate.plusDays(30);
-            preventedLoss = jdbcTemplate.queryForObject("""
+            preventedLoss =
+                    jdbcTemplate.queryForObject(
+                            """
                 SELECT COALESCE(SUM(o.total_amount), 0)
                 FROM oltp.orders o
                 WHERE o.order_id = ?
@@ -52,7 +55,11 @@ public class RiskOutcomeProcessor implements OutcomeProcessor {
                   AND o.updated_at >= ?
                   AND o.updated_at < ?
                   AND NOT EXISTS (SELECT 1 FROM oltp.chargebacks c WHERE c.order_id = o.order_id)
-                """, BigDecimal.class, orderId, holdDate, endDate);
+                """,
+                            BigDecimal.class,
+                            orderId,
+                            holdDate,
+                            endDate);
         }
 
         if (preventedLoss == null) {
@@ -61,15 +68,19 @@ public class RiskOutcomeProcessor implements OutcomeProcessor {
 
         boolean success = preventedLoss.compareTo(BigDecimal.ZERO) > 0;
 
-        Map<String, Object> metrics = Map.of(
-                "prevented_chargeback_usd", preventedLoss.doubleValue()
-        );
+        Map<String, Object> metrics =
+                Map.of("prevented_chargeback_usd", preventedLoss.doubleValue());
 
         return OutcomeResult.builder()
                 .metrics(metrics)
                 .success(success)
-                .measurementWindow(String.format("[%s, %s)", exec.getCreatedAt(), exec.getCreatedAt().plusDays(30)))
-                .notes(String.format("Risk assessment for order ID %s: prevented loss = %.2f", orderIdStr, preventedLoss))
+                .measurementWindow(
+                        String.format(
+                                "[%s, %s)", exec.getCreatedAt(), exec.getCreatedAt().plusDays(30)))
+                .notes(
+                        String.format(
+                                "Risk assessment for order ID %s: prevented loss = %.2f",
+                                orderIdStr, preventedLoss))
                 .build();
     }
 }

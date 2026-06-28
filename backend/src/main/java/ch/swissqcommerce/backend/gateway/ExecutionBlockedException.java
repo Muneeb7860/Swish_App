@@ -1,8 +1,8 @@
 package ch.swissqcommerce.backend.gateway;
 
 /**
- * Thrown when the Execution Gateway refuses to execute an action
- * because the Policy Engine did not approve it.
+ * Thrown when the Execution Gateway refuses to execute an action because the Policy Engine did not
+ * approve it.
  */
 public class ExecutionBlockedException extends RuntimeException {
 

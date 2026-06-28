@@ -7,16 +7,18 @@ import {
 	WebTracerProvider,
 } from "@opentelemetry/sdk-trace-web";
 
-// Initialize WebTracerProvider
-const provider = new WebTracerProvider();
-
 // Configure the exporter to send traces to the OTel Collector
 const exporter = new OTLPTraceExporter({
 	url: "http://localhost:4318/v1/traces",
 });
 
-// Process spans sequentially for low overhead in developer build
-(provider as any).addSpanProcessor(new SimpleSpanProcessor(exporter as any));
+// Initialize WebTracerProvider. OTel SDK 2.x removed provider.addSpanProcessor();
+// span processors are passed to the constructor instead. (The previous
+// `(provider as any).addSpanProcessor(...)` threw a TypeError at load, crashing
+// the host shell.)
+const provider = new WebTracerProvider({
+	spanProcessors: [new SimpleSpanProcessor(exporter)],
+});
 
 // Register the provider globally
 provider.register();

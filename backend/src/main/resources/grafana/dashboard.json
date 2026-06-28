@@ -1,354 +1,354 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
-        "enable": true,
-        "hide": true,
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "liveNow": false,
-  "panels": [
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "title": "Suggestions by Decision Status",
-      "type": "piechart",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (decision) (agent_suggestions_total)",
-          "legendFormat": "{{decision}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "pieType": "donut",
-        "displayLabels": ["percent"]
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "id": 2,
-      "title": "Average Execution Duration (seconds)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(agent_execution_duration_seconds_sum[5m]) / rate(agent_execution_duration_seconds_count[5m])",
-          "legendFormat": "{{domain}} - {{action}}",
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 0
-      },
-      "id": 3,
-      "title": "Outcome Success Rate",
-      "type": "gauge",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "outcome_success_rate",
-          "legendFormat": "{{domain}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "fieldConfig": {
-          "defaults": {
-            "min": 0,
-            "max": 1,
-            "unit": "percentunit"
-          }
-        }
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 8
-      },
-      "id": 4,
-      "title": "HITL Queue Depth",
-      "type": "bargauge",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "hitl_queue_depth",
-          "legendFormat": "{{assignee_role}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "orientation": "horizontal"
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 8
-      },
-      "id": 5,
-      "title": "SLA Breach Count (Expiring HITL Tasks)",
-      "type": "bargauge",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "hitl_sla_breach_total",
-          "legendFormat": "{{assignee_role}}",
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 8
-      },
-      "id": 6,
-      "title": "Baseline Lag Hours",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "baseline_lag_hours",
-          "legendFormat": "Lag Hours",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "textMode": "value"
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 7,
-      "title": "Cumulative Business Impact ($)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "prevented_loss_usd_total",
-          "legendFormat": "Prevented Loss (Risk)",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "revenue_delta_usd_total",
-          "legendFormat": "Revenue Delta (Pricing)",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "shipping_savings_usd_total",
-          "legendFormat": "Shipping Savings (Logistics)",
-          "range": true,
-          "refId": "C"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 8,
-      "title": "Execution P95 Latency (P95 Histogram)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(agent_execution_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "P95 Execution Latency",
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "id": 10,
-      "title": "Cumulative Shipping Savings MTD ($)",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "shipping_savings_usd_total",
-          "legendFormat": "Savings ($)",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "textMode": "value"
-      }
-    }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 38,
-  "style": "dark",
-  "tags": ["agents", "observability", "metrics"],
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Agent Platform Observability Dashboard",
-  "uid": "agent_platform_observability",
-  "version": 1
+	"annotations": {
+		"list": [
+			{
+				"builtIn": 1,
+				"datasource": {
+					"type": "datasource",
+					"uid": "grafana"
+				},
+				"enable": true,
+				"hide": true,
+				"name": "Annotations & Alerts",
+				"type": "dashboard"
+			}
+		]
+	},
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 0,
+	"id": null,
+	"links": [],
+	"liveNow": false,
+	"panels": [
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 0
+			},
+			"id": 1,
+			"title": "Suggestions by Decision Status",
+			"type": "piechart",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "sum by (decision) (agent_suggestions_total)",
+					"legendFormat": "{{decision}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"options": {
+				"reduceOptions": {
+					"values": false,
+					"calcs": ["lastNotNull"],
+					"fields": ""
+				},
+				"pieType": "donut",
+				"displayLabels": ["percent"]
+			}
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 0
+			},
+			"id": 2,
+			"title": "Average Execution Duration (seconds)",
+			"type": "timeseries",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "rate(agent_execution_duration_seconds_sum[5m]) / rate(agent_execution_duration_seconds_count[5m])",
+					"legendFormat": "{{domain}} - {{action}}",
+					"range": true,
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 0
+			},
+			"id": 3,
+			"title": "Outcome Success Rate",
+			"type": "gauge",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "outcome_success_rate",
+					"legendFormat": "{{domain}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"options": {
+				"fieldConfig": {
+					"defaults": {
+						"min": 0,
+						"max": 1,
+						"unit": "percentunit"
+					}
+				}
+			}
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 8
+			},
+			"id": 4,
+			"title": "HITL Queue Depth",
+			"type": "bargauge",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "hitl_queue_depth",
+					"legendFormat": "{{assignee_role}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"options": {
+				"orientation": "horizontal"
+			}
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 8
+			},
+			"id": 5,
+			"title": "SLA Breach Count (Expiring HITL Tasks)",
+			"type": "bargauge",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "hitl_sla_breach_total",
+					"legendFormat": "{{assignee_role}}",
+					"range": true,
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 8
+			},
+			"id": 6,
+			"title": "Baseline Lag Hours",
+			"type": "stat",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "baseline_lag_hours",
+					"legendFormat": "Lag Hours",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"textMode": "value"
+			}
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 16
+			},
+			"id": 7,
+			"title": "Cumulative Business Impact ($)",
+			"type": "timeseries",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "prevented_loss_usd_total",
+					"legendFormat": "Prevented Loss (Risk)",
+					"range": true,
+					"refId": "A"
+				},
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "revenue_delta_usd_total",
+					"legendFormat": "Revenue Delta (Pricing)",
+					"range": true,
+					"refId": "B"
+				},
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "shipping_savings_usd_total",
+					"legendFormat": "Shipping Savings (Logistics)",
+					"range": true,
+					"refId": "C"
+				}
+			]
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 16
+			},
+			"id": 8,
+			"title": "Execution P95 Latency (P95 Histogram)",
+			"type": "timeseries",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "histogram_quantile(0.95, sum(rate(agent_execution_duration_seconds_bucket[5m])) by (le))",
+					"legendFormat": "P95 Execution Latency",
+					"range": true,
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"collapsed": false,
+			"gridPos": {
+				"h": 8,
+				"w": 24,
+				"x": 0,
+				"y": 24
+			},
+			"id": 10,
+			"title": "Cumulative Shipping Savings MTD ($)",
+			"type": "stat",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"editorMode": "code",
+					"expr": "shipping_savings_usd_total",
+					"legendFormat": "Savings ($)",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"textMode": "value"
+			}
+		}
+	],
+	"refresh": "5s",
+	"schemaVersion": 38,
+	"style": "dark",
+	"tags": ["agents", "observability", "metrics"],
+	"time": {
+		"from": "now-6h",
+		"to": "now"
+	},
+	"timepicker": {},
+	"timezone": "",
+	"title": "Agent Platform Observability Dashboard",
+	"uid": "agent_platform_observability",
+	"version": 1
 }

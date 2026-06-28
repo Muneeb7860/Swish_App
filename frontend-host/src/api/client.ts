@@ -2,18 +2,19 @@ import { SpanStatusCode } from "@opentelemetry/api";
 import { useStore } from "../store";
 import { getActiveTraceParent, tracer } from "./telemetry";
 
-export const BASE_URL =
-	import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+// Default to a same-origin relative base ("") so requests go to "/api/..." and are
+// proxied to the backend by the demo nginx (single-container, same-origin) and by the
+// vite dev server. The previous absolute "http://localhost:8080" default bypassed that
+// proxy, hit a dead port, and silently forced every call onto mock fallback. Set
+// VITE_API_BASE_URL to an absolute URL only for split-origin / API-gateway deployments.
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const generateSecureSessionId = (): string => {
 	try {
 		const array = new Uint8Array(16);
 		window.crypto.getRandomValues(array);
-		return (
-			"sess-" +
-			Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("")
-		);
-	} catch (e) {
-		return "sess-" + Math.random().toString(36).substring(2, 15);
+		return `sess-${Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+	} catch {
+		return `sess-${Math.random().toString(36).substring(2, 15)}`;
 	}
 };
 const SESSION_ID = generateSecureSessionId();
@@ -23,6 +24,7 @@ interface FetchOptions extends RequestInit {
 	bypassMock?: boolean;
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: ApiClient is an intentional static utility namespace for the HTTP layer; converting to free functions is out of scope.
 export class ApiClient {
 	private static async delay(ms: number): Promise<void> {
 		return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,7 +38,7 @@ export class ApiClient {
 
 		// Add OpenTelemetry traceparent header for distributed tracing
 		try {
-			headers["traceparent"] = getActiveTraceParent();
+			headers.traceparent = getActiveTraceParent();
 		} catch (e) {
 			console.warn("Could not inject traceparent header:", e);
 		}
@@ -44,8 +46,8 @@ export class ApiClient {
 		// Safely get authToken at runtime to avoid circular dependency
 		try {
 			const state = useStore.getState();
-			if (state && state.authToken) {
-				headers["Authorization"] = `Bearer ${state.authToken}`;
+			if (state?.authToken) {
+				headers.Authorization = `Bearer ${state.authToken}`;
 			}
 		} catch (e) {
 			console.warn("Could not retrieve token from store", e);
@@ -265,9 +267,7 @@ export class ApiClient {
 	}
 
 	private static generateIdempotencyKey(): string {
-		return (
-			"idem-" + Math.random().toString(36).substring(2, 15) + "-" + Date.now()
-		);
+		return `idem-${Math.random().toString(36).substring(2, 15)}-${Date.now()}`;
 	}
 }
 

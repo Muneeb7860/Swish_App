@@ -21,61 +21,57 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Transactional
 public class BaselineJobTest {
 
-    @Autowired
-    private BaselineJob baselineJob;
+    @Autowired private BaselineJob baselineJob;
 
-    @Autowired
-    private AgentBaselineRepository agentBaselineRepository;
+    @Autowired private AgentBaselineRepository agentBaselineRepository;
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @Autowired private OrderRepository orderRepository;
 
-    @Autowired
-    private InventoryRepository inventoryRepository;
+    @Autowired private InventoryRepository inventoryRepository;
 
-    @Autowired
-    private DarkStoreRepository darkStoreRepository;
+    @Autowired private DarkStoreRepository darkStoreRepository;
 
-    @Autowired
-    private TransactionTemplate transactionTemplate;
+    @Autowired private TransactionTemplate transactionTemplate;
 
-    @Autowired
-    private jakarta.persistence.EntityManager entityManager;
+    @Autowired private jakarta.persistence.EntityManager entityManager;
 
     private DarkStore store;
     private Inventory product;
 
     @BeforeEach
     public void setUp() {
-        transactionTemplate.executeWithoutResult(status -> {
-            agentBaselineRepository.deleteAll();
-            orderRepository.deleteAll();
-            inventoryRepository.deleteAll();
-            darkStoreRepository.deleteAll();
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    agentBaselineRepository.deleteAll();
+                    orderRepository.deleteAll();
+                    inventoryRepository.deleteAll();
+                    darkStoreRepository.deleteAll();
 
-            store = DarkStore.builder()
-                    .storeId("store-baseline")
-                    .storeName("Baseline DarkStore")
-                    .address("Lindenhof, Zurich")
-                    .latitude(new BigDecimal("47.3769"))
-                    .longitude(new BigDecimal("8.5417"))
-                    .build();
-            entityManager.persist(store);
+                    store =
+                            DarkStore.builder()
+                                    .storeId("store-baseline")
+                                    .storeName("Baseline DarkStore")
+                                    .address("Lindenhof, Zurich")
+                                    .latitude(new BigDecimal("47.3769"))
+                                    .longitude(new BigDecimal("8.5417"))
+                                    .build();
+                    entityManager.persist(store);
 
-            product = Inventory.builder()
-                    .itemId("SKU-BASE")
-                    .store(store)
-                    .name("Baseline Premium Milk")
-                    .price(new BigDecimal("10.00"))
-                    .stock(100)
-                    .category("Dairy")
-                    .emoji("🥛")
-                    .perishable(true)
-                    .build();
-            entityManager.persist(product);
+                    product =
+                            Inventory.builder()
+                                    .itemId("SKU-BASE")
+                                    .store(store)
+                                    .name("Baseline Premium Milk")
+                                    .price(new BigDecimal("10.00"))
+                                    .stock(100)
+                                    .category("Dairy")
+                                    .emoji("🥛")
+                                    .perishable(true)
+                                    .build();
+                    entityManager.persist(product);
 
-            entityManager.flush();
-        });
+                    entityManager.flush();
+                });
     }
 
     @Test
@@ -83,37 +79,47 @@ public class BaselineJobTest {
         LocalDate yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1);
         OffsetDateTime orderTime = yesterday.minusDays(3).atTime(12, 0).atOffset(ZoneOffset.UTC);
 
-        transactionTemplate.executeWithoutResult(status -> {
-            // Seed 10 orders of 1 item of SKU-BASE each (total 10 * 10.00 = 100.00 revenue)
-            for (int i = 0; i < 10; i++) {
-                ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity order =
-                        ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity.builder()
-                                .customer(null)
-                                .store(store)
-                                .totalAmount(new BigDecimal("10.00"))
-                                .paymentMethod("Wallet")
-                                .status("delivered")
-                                .build();
-                entityManager.persist(order);
-                entityManager.flush();
+        transactionTemplate.executeWithoutResult(
+                status -> {
+                    // Seed 10 orders of 1 item of SKU-BASE each (total 10 * 10.00 = 100.00 revenue)
+                    for (int i = 0; i < 10; i++) {
+                        ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence
+                                        .OrderEntity
+                                order =
+                                        ch.swissqcommerce.backend.domain.transaction.adapter.out
+                                                .persistence.OrderEntity.builder()
+                                                .customer(null)
+                                                .store(store)
+                                                .totalAmount(new BigDecimal("10.00"))
+                                                .paymentMethod("Wallet")
+                                                .status("delivered")
+                                                .build();
+                        entityManager.persist(order);
+                        entityManager.flush();
 
-                // Force creation time to orderTime using native update
-                entityManager.createNativeQuery("UPDATE oltp.orders SET created_at = :createdAt WHERE order_id = :id")
-                        .setParameter("createdAt", orderTime)
-                        .setParameter("id", order.getOrderId())
-                        .executeUpdate();
+                        // Force creation time to orderTime using native update
+                        entityManager
+                                .createNativeQuery(
+                                        "UPDATE oltp.orders SET created_at = :createdAt WHERE"
+                                                + " order_id = :id")
+                                .setParameter("createdAt", orderTime)
+                                .setParameter("id", order.getOrderId())
+                                .executeUpdate();
 
-                ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity orderItem =
-                        ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderItemEntity.builder()
-                                .order(order)
-                                .item(product)
-                                .quantity(1)
-                                .price(new BigDecimal("10.00"))
-                                .build();
-                entityManager.persist(orderItem);
-            }
-            entityManager.flush();
-        });
+                        ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence
+                                        .OrderItemEntity
+                                orderItem =
+                                        ch.swissqcommerce.backend.domain.transaction.adapter.out
+                                                .persistence.OrderItemEntity.builder()
+                                                .order(order)
+                                                .item(product)
+                                                .quantity(1)
+                                                .price(new BigDecimal("10.00"))
+                                                .build();
+                        entityManager.persist(orderItem);
+                    }
+                    entityManager.flush();
+                });
 
         entityManager.clear();
 

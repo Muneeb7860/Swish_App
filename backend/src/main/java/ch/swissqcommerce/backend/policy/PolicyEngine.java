@@ -11,9 +11,9 @@ import org.springframework.stereotype.Service;
 /**
  * Pure rule-based Policy Engine. Zero ML. Zero complexity.
  *
- * <p>Validates agent suggestions against configurable business rules stored in
- * the {@code system_configurations} table. This is the brain that protects
- * the commerce system from unsafe automation.
+ * <p>Validates agent suggestions against configurable business rules stored in the {@code
+ * system_configurations} table. This is the brain that protects the commerce system from unsafe
+ * automation.
  *
  * <p>Rule: if it's not approved here, it cannot execute.
  */
@@ -28,16 +28,18 @@ public class PolicyEngine {
     private final FraudPolicy fraudPolicy;
     private final LogisticsPolicy logisticsPolicy;
 
-    public PolicyEngine(SystemConfigurationRepository configRepo, PricingPolicy pricingPolicy, FraudPolicy fraudPolicy, LogisticsPolicy logisticsPolicy) {
+    public PolicyEngine(
+            SystemConfigurationRepository configRepo,
+            PricingPolicy pricingPolicy,
+            FraudPolicy fraudPolicy,
+            LogisticsPolicy logisticsPolicy) {
         this.configRepo = configRepo;
         this.pricingPolicy = pricingPolicy;
         this.fraudPolicy = fraudPolicy;
         this.logisticsPolicy = logisticsPolicy;
     }
 
-    /**
-     * Evaluate an agent suggestion entity against business rules.
-     */
+    /** Evaluate an agent suggestion entity against business rules. */
     public PolicyDecision evaluate(ch.swissqcommerce.backend.model.AgentSuggestionEntity s) {
         if ("pricing".equalsIgnoreCase(s.getDomain())) {
             return pricingPolicy.evaluate(s);
@@ -48,27 +50,37 @@ public class PolicyEngine {
         if ("routing".equalsIgnoreCase(s.getDomain())) {
             return logisticsPolicy.evaluate(s);
         }
-        ch.swissqcommerce.backend.agent.AgentSuggestion domainSuggestion = ch.swissqcommerce.backend.agent.AgentSuggestion.of(
-                s.getDomain(), "", s.getConfidence().doubleValue(), s.getReason(), s.getImpact());
+        ch.swissqcommerce.backend.agent.AgentSuggestion domainSuggestion =
+                ch.swissqcommerce.backend.agent.AgentSuggestion.of(
+                        s.getDomain(),
+                        "",
+                        s.getConfidence().doubleValue(),
+                        s.getReason(),
+                        s.getImpact());
         return evaluate(domainSuggestion);
     }
 
     /**
-     * Evaluate an agent suggestion against business rules.
-     * Returns a PolicyDecision: approved, rejected, needs_human, or expired.
+     * Evaluate an agent suggestion against business rules. Returns a PolicyDecision: approved,
+     * rejected, needs_human, or expired.
      */
     public PolicyDecision evaluate(AgentSuggestion suggestion) {
-        log.info("PolicyEngine evaluating: domain={}, confidence={}, impact={}",
-                suggestion.domain(), suggestion.confidence(), suggestion.impact());
+        log.info(
+                "PolicyEngine evaluating: domain={}, confidence={}, impact={}",
+                suggestion.domain(),
+                suggestion.confidence(),
+                suggestion.impact());
 
         return switch (suggestion.domain()) {
             case "pricing" -> evaluatePricing(suggestion);
             case "risk" -> evaluateRisk(suggestion);
             case "inventory" -> evaluateInventory(suggestion);
             case "routing" -> evaluateRouting(suggestion);
-            case "support" -> PolicyDecision.approved("Support suggestions are always safe to return");
-            default -> PolicyDecision.needsHuman(
-                    "Unknown domain '" + suggestion.domain() + "' — requires human review");
+            case "support" ->
+                    PolicyDecision.approved("Support suggestions are always safe to return");
+            default ->
+                    PolicyDecision.needsHuman(
+                            "Unknown domain '" + suggestion.domain() + "' — requires human review");
         };
     }
 
@@ -81,16 +93,19 @@ public class PolicyEngine {
 
         if (changePct > hitlPct) {
             return PolicyDecision.rejected(
-                    String.format("Price change %.1f%% exceeds maximum %.1f%%", changePct, hitlPct));
+                    String.format(
+                            "Price change %.1f%% exceeds maximum %.1f%%", changePct, hitlPct));
         }
         if (changePct > managerPct) {
             return PolicyDecision.needsHuman(
-                    String.format("Price change %.1f%% requires HITL approval (threshold: %.1f%%)",
+                    String.format(
+                            "Price change %.1f%% requires HITL approval (threshold: %.1f%%)",
                             changePct, managerPct));
         }
         if (changePct > autoApprovePct && s.confidence() < 0.7) {
             return PolicyDecision.needsHuman(
-                    String.format("Price change %.1f%% with low confidence %.2f requires review",
+                    String.format(
+                            "Price change %.1f%% with low confidence %.2f requires review",
                             changePct, s.confidence()));
         }
         return PolicyDecision.approved(
@@ -103,16 +118,19 @@ public class PolicyEngine {
 
         if (s.confidence() < ignoreBelow) {
             return PolicyDecision.rejected(
-                    String.format("Risk confidence %.2f below ignore threshold %.2f",
+                    String.format(
+                            "Risk confidence %.2f below ignore threshold %.2f",
                             s.confidence(), ignoreBelow));
         }
         if (s.confidence() >= autoApprove) {
             return PolicyDecision.approved(
-                    String.format("High-confidence risk alert %.2f — auto-approved for action",
+                    String.format(
+                            "High-confidence risk alert %.2f — auto-approved for action",
                             s.confidence()));
         }
         return PolicyDecision.needsHuman(
-                String.format("Risk confidence %.2f in review range — requires human decision",
+                String.format(
+                        "Risk confidence %.2f in review range — requires human decision",
                         s.confidence()));
     }
 
@@ -120,11 +138,13 @@ public class PolicyEngine {
         double threshold = getConfigDouble("inventory.auto_approve_confidence", 0.6);
         if (s.confidence() >= threshold) {
             return PolicyDecision.approved(
-                    String.format("Inventory suggestion confidence %.2f above threshold %.2f",
+                    String.format(
+                            "Inventory suggestion confidence %.2f above threshold %.2f",
                             s.confidence(), threshold));
         }
         return PolicyDecision.needsHuman(
-                String.format("Inventory suggestion confidence %.2f below threshold %.2f",
+                String.format(
+                        "Inventory suggestion confidence %.2f below threshold %.2f",
                         s.confidence(), threshold));
     }
 
@@ -138,37 +158,42 @@ public class PolicyEngine {
         }
         if (s.confidence() >= autoApprove) {
             return PolicyDecision.approved(
-                    String.format("Routing suggestion confidence %.2f — auto-approved", s.confidence()));
+                    String.format(
+                            "Routing suggestion confidence %.2f — auto-approved", s.confidence()));
         }
         return PolicyDecision.needsHuman(
-                String.format("Routing confidence %.2f below threshold %.2f",
+                String.format(
+                        "Routing confidence %.2f below threshold %.2f",
                         s.confidence(), autoApprove));
     }
 
     // --- Config helpers ---
 
     private double getConfigDouble(String key, double defaultValue) {
-        return configRepo.findById(key)
-                .map(c -> {
-                    try {
-                        return Double.parseDouble(c.getConfigValue());
-                    } catch (NumberFormatException e) {
-                        log.warn("Invalid numeric config for key={}: {}", key, c.getConfigValue());
-                        return defaultValue;
-                    }
-                })
+        return configRepo
+                .findById(key)
+                .map(
+                        c -> {
+                            try {
+                                return Double.parseDouble(c.getConfigValue());
+                            } catch (NumberFormatException e) {
+                                log.warn(
+                                        "Invalid numeric config for key={}: {}",
+                                        key,
+                                        c.getConfigValue());
+                                return defaultValue;
+                            }
+                        })
                 .orElse(defaultValue);
     }
 
     private String getConfigString(String key, String defaultValue) {
-        return configRepo.findById(key)
-                .map(c -> c.getConfigValue())
-                .orElse(defaultValue);
+        return configRepo.findById(key).map(c -> c.getConfigValue()).orElse(defaultValue);
     }
 
     /**
-     * Extracts percentage from agent action text, e.g. "increase price by 12.5%".
-     * Returns 0.0 if no percentage is found.
+     * Extracts percentage from agent action text, e.g. "increase price by 12.5%". Returns 0.0 if no
+     * percentage is found.
      */
     public static double extractPercentageChange(String action) {
         if (action == null) return 0.0;

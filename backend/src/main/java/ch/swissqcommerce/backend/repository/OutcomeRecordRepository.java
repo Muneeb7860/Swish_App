@@ -16,7 +16,9 @@ public interface OutcomeRecordRepository extends JpaRepository<OutcomeRecord, UU
     @Query("SELECT COUNT(o) FROM OutcomeRecord o WHERE o.suggestion.domain = :domain")
     long countByDomain(@Param("domain") String domain);
 
-    @Query("SELECT COUNT(o) FROM OutcomeRecord o WHERE o.suggestion.domain = :domain AND o.success = true")
+    @Query(
+            "SELECT COUNT(o) FROM OutcomeRecord o WHERE o.suggestion.domain = :domain AND o.success"
+                    + " = true")
     long countSuccessfulByDomain(@Param("domain") String domain);
 
     @Query("SELECT o.metrics FROM OutcomeRecord o")
@@ -24,46 +26,52 @@ public interface OutcomeRecordRepository extends JpaRepository<OutcomeRecord, UU
 
     default double sumPreventedLossUsd(ObjectMapper objectMapper) {
         return findAllMetrics().stream()
-                .mapToDouble(m -> {
-                    try {
-                        JsonNode node = objectMapper.readTree(m);
-                        if (node.has("prevented_chargeback_usd")) {
-                            return node.path("prevented_chargeback_usd").asDouble(0.0);
-                        }
-                        return 0.0;
-                    } catch (Exception e) {
-                        return 0.0;
-                    }
-                }).sum();
+                .mapToDouble(
+                        m -> {
+                            try {
+                                JsonNode node = objectMapper.readTree(m);
+                                if (node.has("prevented_chargeback_usd")) {
+                                    return node.path("prevented_chargeback_usd").asDouble(0.0);
+                                }
+                                return 0.0;
+                            } catch (Exception e) {
+                                return 0.0;
+                            }
+                        })
+                .sum();
     }
 
     default double sumRevenueDeltaUsd(ObjectMapper objectMapper) {
         return findAllMetrics().stream()
-                .mapToDouble(m -> {
-                    try {
-                        JsonNode node = objectMapper.readTree(m);
-                        if (node.has("revenue_delta")) {
-                            return node.path("revenue_delta").asDouble(0.0);
-                        }
-                        return 0.0;
-                    } catch (Exception e) {
-                        return 0.0;
-                    }
-                }).sum();
+                .mapToDouble(
+                        m -> {
+                            try {
+                                JsonNode node = objectMapper.readTree(m);
+                                if (node.has("revenue_delta")) {
+                                    return node.path("revenue_delta").asDouble(0.0);
+                                }
+                                return 0.0;
+                            } catch (Exception e) {
+                                return 0.0;
+                            }
+                        })
+                .sum();
     }
 
     default double sumShippingSavingsUsd(ObjectMapper objectMapper) {
         return findAllMetrics().stream()
-                .mapToDouble(m -> {
-                    try {
-                        JsonNode node = objectMapper.readTree(m);
-                        if (node.has("shipping_savings_usd")) {
-                            return node.path("shipping_savings_usd").asDouble(0.0);
-                        }
-                        return 0.0;
-                    } catch (Exception e) {
-                        return 0.0;
-                    }
-                }).sum();
+                .mapToDouble(
+                        m -> {
+                            try {
+                                JsonNode node = objectMapper.readTree(m);
+                                if (node.has("shipping_savings_usd")) {
+                                    return node.path("shipping_savings_usd").asDouble(0.0);
+                                }
+                                return 0.0;
+                            } catch (Exception e) {
+                                return 0.0;
+                            }
+                        })
+                .sum();
     }
 }

@@ -9,5 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PolicyDecisionRepository extends JpaRepository<PolicyDecision, Long> {
     List<PolicyDecision> findBySuggestionIdOrderByCreatedAtDesc(UUID suggestionId);
+
     List<PolicyDecision> findBySuggestionIdOrderByIdDesc(UUID suggestionId);
 }

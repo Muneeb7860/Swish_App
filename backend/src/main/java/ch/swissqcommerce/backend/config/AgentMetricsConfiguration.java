@@ -5,21 +5,20 @@ import ch.swissqcommerce.backend.repository.AgentBaselineRepository;
 import ch.swissqcommerce.backend.repository.AgentSuggestionEntityRepository;
 import ch.swissqcommerce.backend.repository.HitlQueueRepository;
 import ch.swissqcommerce.backend.repository.OutcomeRecordRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.Async;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.Async;
 
 @Configuration
 public class AgentMetricsConfiguration {
@@ -109,7 +108,7 @@ public class AgentMetricsConfiguration {
                     .description("Pending HITL tasks queue depth")
                     .tag("assignee_role", role.name().toLowerCase())
                     .register(meterRegistry);
-            
+
             Gauge.builder("hitl_sla_breach_total", this, s -> s.getHitlSlaBreachCount(role))
                     .description("Total expired HITL tasks")
                     .tag("assignee_role", role.name().toLowerCase())
@@ -170,7 +169,8 @@ public class AgentMetricsConfiguration {
 
     public double getHitlSlaBreachCount(AssigneeRole role) {
         try {
-            return agentSuggestionRepo.countSlaBreachByDomainAndNow(role.getDomain(), OffsetDateTime.now());
+            return agentSuggestionRepo.countSlaBreachByDomainAndNow(
+                    role.getDomain(), OffsetDateTime.now());
         } catch (Exception e) {
             return 0.0;
         }
