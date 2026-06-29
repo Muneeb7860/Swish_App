@@ -1,17 +1,20 @@
-// Unified components from Phase 2 consolidation
+// Components are re-exported from @swish/shared-ui — the single source of truth.
+// design-system previously kept its own copies of AuthPortal/Skeleton, which
+// drifted from shared-ui's. They now resolve to one implementation.
 export {
 	Skeleton,
 	ProductCardSkeleton,
 	ProductGridSkeleton,
 	TableRowsSkeleton,
 	GenericCardSkeleton,
-} from "./Skeleton";
-export type { SkeletonProps } from "./Skeleton";
-
-export { AuthPortal } from "./AuthPortal";
+	AuthPortal,
+	Modal,
+} from "@swish/shared-ui";
 export type {
+	SkeletonProps,
 	AuthPortalProps,
 	AuthSession,
 	AuthRole,
 	MfaMethod,
-} from "./AuthPortal";
+	ModalProps,
+} from "@swish/shared-ui";
