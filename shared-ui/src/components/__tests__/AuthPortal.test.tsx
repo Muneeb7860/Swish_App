@@ -177,7 +177,7 @@ describe("AuthPortal Component", () => {
 
 	describe("Error Handling", () => {
 		it("calls onAuthError callback on error", async () => {
-			const { container } = render(
+			render(
 				<AuthPortal
 					role="customer"
 					onAuthSuccess={mockOnAuthSuccess}

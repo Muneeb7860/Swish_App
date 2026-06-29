@@ -80,7 +80,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-overlay")!);
+			const overlay = container.querySelector(".swish-modal-overlay");
+			expect(overlay).not.toBeNull();
+			if (overlay) fireEvent.click(overlay);
 			expect(onClose).toHaveBeenCalledTimes(1);
 		});
 
@@ -91,7 +93,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-content")!);
+			const content = container.querySelector(".swish-modal-content");
+			expect(content).not.toBeNull();
+			if (content) fireEvent.click(content);
 			expect(onClose).not.toHaveBeenCalled();
 		});
 
@@ -102,7 +106,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-overlay")!);
+			const overlay = container.querySelector(".swish-modal-overlay");
+			expect(overlay).not.toBeNull();
+			if (overlay) fireEvent.click(overlay);
 			expect(onClose).not.toHaveBeenCalled();
 		});
 
