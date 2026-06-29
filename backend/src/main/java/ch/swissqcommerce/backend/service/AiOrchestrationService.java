@@ -9,8 +9,8 @@ import reactor.core.publisher.Flux;
 
 /**
  * AI orchestration facade — all calls are routed through {@link LlmGatewayPort} so they
- * automatically benefit from the ADR-007 fail-safe chain:
- * Python governance (PII gate) → Gemini (cloud, PII-free only) → Kimi → Mock → HITL.
+ * automatically benefit from the ADR-007 fail-safe chain: Python governance (PII gate) → Gemini
+ * (cloud, PII-free only) → Kimi → Mock → HITL.
  *
  * <p>Previously this service called {@code OpenAiChatModel} and {@code OllamaChatModel} directly,
  * bypassing the PII gate entirely. That gap is now closed.
@@ -20,13 +20,15 @@ import reactor.core.publisher.Flux;
 @Slf4j
 public class AiOrchestrationService {
 
-    /** Injected with the {@code @Primary} {@link
-     * ch.swissqcommerce.backend.domain.agent.adapter.out.resilient.ResilientLlmGateway}. */
+    /**
+     * Injected with the {@code @Primary} {@link
+     * ch.swissqcommerce.backend.domain.agent.adapter.out.resilient.ResilientLlmGateway}.
+     */
     private final LlmGatewayPort llmGateway;
 
     /**
-     * Route a complex reasoning task through the governed LLM gateway.
-     * Returns a single-element Flux for SSE-compatible streaming callers.
+     * Route a complex reasoning task through the governed LLM gateway. Returns a single-element
+     * Flux for SSE-compatible streaming callers.
      */
     public Flux<String> orchestrateComplexTask(String promptText) {
         try {
@@ -39,9 +41,9 @@ public class AiOrchestrationService {
     }
 
     /**
-     * Route a local/lightweight task through the governed LLM gateway.
-     * The gateway's fallback chain will prefer the homelab governance service
-     * (which may route to a local model) before touching cloud providers.
+     * Route a local/lightweight task through the governed LLM gateway. The gateway's fallback chain
+     * will prefer the homelab governance service (which may route to a local model) before touching
+     * cloud providers.
      */
     public Flux<String> executeLocalTask(String promptText) {
         try {

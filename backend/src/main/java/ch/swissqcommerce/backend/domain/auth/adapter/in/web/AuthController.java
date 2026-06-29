@@ -16,8 +16,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import java.util.Map;
 import java.util.UUID;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -148,8 +146,7 @@ public class AuthController {
                     "Exchanges the session_token (from /login) + 6-digit OTP for a full JWT. "
                             + "OTP is valid for 5 minutes and is single-use.")
     @PostMapping({"/mfa/verify", "/verify-mfa"})
-    public ResponseEntity<LoginResponse> verifyMfa(
-            @RequestBody MfaVerifyRequest request) {
+    public ResponseEntity<LoginResponse> verifyMfa(@RequestBody MfaVerifyRequest request) {
         if (request == null || !request.isValid()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(LoginResponse.builder().build());
@@ -158,7 +155,8 @@ public class AuthController {
         try {
             // 1. Verify OTP — returns userId on success, throws on wrong/expired
             String userId =
-                    mfaUseCase.verifyOtp(request.getEffectiveSessionToken(), request.getEffectiveOtpCode());
+                    mfaUseCase.verifyOtp(
+                            request.getEffectiveSessionToken(), request.getEffectiveOtpCode());
 
             // 2. Fetch role for JWT claim
             String role =

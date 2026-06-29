@@ -46,9 +46,7 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			expect(
-				screen.getByRole("button", { name: "Close" }),
-			).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
 		});
 
 		it("hides the close button when hideCloseButton is set", () => {
@@ -154,7 +152,12 @@ describe("Modal", () => {
 
 		it("applies accentColor and maxWidth to the content panel", () => {
 			const { container } = render(
-				<Modal isOpen onClose={() => {}} accentColor="rgb(1, 2, 3)" maxWidth={420}>
+				<Modal
+					isOpen
+					onClose={() => {}}
+					accentColor="rgb(1, 2, 3)"
+					maxWidth={420}
+				>
 					<p>x</p>
 				</Modal>,
 			);
