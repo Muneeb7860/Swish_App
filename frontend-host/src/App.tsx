@@ -975,13 +975,17 @@ export default function App() {
 					);
 				} else {
 					// Direct login
+					const jwtRegex =
+						/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+					const isMockToken =
+						typeof data.token === "string" && data.token.startsWith("mock.");
+					const tokenToSet =
+						data.token && (isMockToken || jwtRegex.test(data.token))
+							? data.token
+							: "";
 					setIsAuthenticated(true);
 					setCurrentUserSession({ role: mfaRole });
 					setActiveRole(mfaRole);
-					const jwtRegex =
-						/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-					const tokenToSet =
-						data.token && jwtRegex.test(data.token) ? data.token : "";
 					setAuthToken(tokenToSet);
 					if (tokenToSet) {
 						localStorage.setItem("jwt_token", tokenToSet);
@@ -1012,12 +1016,16 @@ export default function App() {
 				code: mfaOtpInput,
 			})
 			.then((data) => {
+				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+				const isMockToken =
+					typeof data.token === "string" && data.token.startsWith("mock.");
+				const tokenToSet =
+					data.token && (isMockToken || jwtRegex.test(data.token))
+						? data.token
+						: "";
 				setIsAuthenticated(true);
 				setCurrentUserSession({ role: mfaRole });
 				setActiveRole(mfaRole);
-				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-				const tokenToSet =
-					data.token && jwtRegex.test(data.token) ? data.token : "";
 				setAuthToken(tokenToSet);
 				if (tokenToSet) {
 					localStorage.setItem("jwt_token", tokenToSet);
@@ -1743,7 +1751,6 @@ export default function App() {
 			);
 		}
 	};
-
 
 	const fetchHitlQueues = useCallback(() => {
 		setHitlLoading(true);
