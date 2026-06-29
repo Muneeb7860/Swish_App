@@ -45,17 +45,17 @@ git push origin mac-machine
 git branch -a | grep mac-machine
 ```
 
-**Windows Branch:**
+**Macbook Branch (Secondary):**
 ```bash
 # Local rename
-git branch -m Windows_Machine windows-machine
+git branch -m Windows_Machine macbook_machine
 
 # Push to remote
 git push origin --delete Windows_Machine
-git push origin windows-machine
+git push origin macbook_machine
 
 # Verify
-git branch -a | grep windows-machine
+git branch -a | grep macbook_machine
 ```
 
 ### 2.2 Update Your Local Repository
@@ -105,7 +105,7 @@ git branch -a
 ```bash
 # Include:
 - How to work with feature branches
-- Platform-specific setup (mac-machine, windows-machine)
+- Platform-specific setup (mac-machine, macbook_machine)
 - Commit message conventions
 - PR workflow examples
 - CI/CD pipeline information
@@ -121,10 +121,10 @@ Add section: "Environment-Specific Setup"
 - Maven: `./backend/mvnw`
 - Docker: Docker Desktop
 
-### Windows Development
-- Branch: `windows-machine`
-- Maven: `backend/mvnw.cmd`
-- Docker: Docker Desktop or WSL2
+### Macbook Development (Secondary)
+- Branch: `macbook_machine`
+- Maven: `./backend/mvnw`
+- Docker: Docker Desktop
 
 ### Linux Development
 - Branch: `master` or `develop`
@@ -161,9 +161,9 @@ Add section: "Environment-Specific Setup"
 | Branch | Owner | Receives From | Contains |
 |--------|-------|---------------|----------|
 | **master** | Release Lead | develop, hotfix | Production-ready code |
-| **develop** | Team Lead | feature/*, mac-machine, windows-machine | Integrated features |
+| **develop** | Team Lead | feature/*, mac-machine, macbook_machine | Integrated features |
 | **mac-machine** | macOS Dev | feature/mac-* | macOS optimizations |
-| **windows-machine** | Windows Dev | feature/windows-* | Windows optimizations |
+| **macbook_machine** | Macbook Dev | feature/macbook-* | Macbook optimizations |
 | **feature/** | Developer | - | New features |
 | **hotfix/** | Urgent Fix | master | Emergency patches |
 
@@ -219,7 +219,7 @@ EXAMPLE:
 - [ ] BRANCH_STRATEGY.md in master
 - [ ] Maven wrapper files in master (mvnw, mvnw.cmd, properties)
 - [ ] Mac_Machine renamed to mac-machine locally
-- [ ] Windows_Machine renamed to windows-machine locally
+- [ ] Windows_Machine renamed to macbook_machine locally
 - [ ] Remote deletions pushed (old branch names)
 - [ ] New branch names pushed (lowercase versions)
 - [ ] Branch protection rules set on master

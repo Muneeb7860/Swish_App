@@ -13,16 +13,16 @@ This project uses a fixed, per-machine branching model. There are **exactly four
 ```
 mac-machine ─────┐
                  ├──> develop ──> master
-windows-machine ─┘
+macbook_machine ─┘
 ```
 
 - **`master`** — single source of truth for the whole project.
 - **`develop`** — the integration branch. It is the **ONLY** branch permitted to merge into `master`.
-- **`mac-machine`** — all work done on the Mac machine commits here.
-- **`windows-machine`** — all work done on the Windows machine commits here.
+- **`mac-machine`** — all work done on the primary Mac machine commits here.
+- **`macbook_machine`** — all work done on the secondary Macbook machine commits here.
 
 ### Rules
-1. **Commit only to your machine's branch.** On the Mac machine, every agent commits to `mac-machine`. On Windows, every agent commits to `windows-machine`. Never cross machine branches.
+1. **Commit only to your machine's branch.** On the primary Mac machine, every agent commits to `mac-machine`. On the secondary Macbook machine, every agent commits to `macbook_machine`. Never cross machine branches.
 2. **Machine branches pull from and push to `develop` only.** `develop` is where the two machines converge.
 3. **A machine branch must NEVER open a PR directly to `master`.** The only PR that targets `master` is `develop → master`.
 4. **Never create new branches.** No `feature/*`, no `agent/feat/*`, no `fix/*`. The four branches above are the complete set.
@@ -31,7 +31,7 @@ windows-machine ─┘
 | Head branch | PR base |
 |-------------|---------|
 | `mac-machine` | `develop` |
-| `windows-machine` | `develop` |
+| `macbook_machine` | `develop` |
 | `develop` | `master` |
 
 ## Pull Request Guidelines

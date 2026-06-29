@@ -24,10 +24,10 @@ git branch -m Mac_Machine mac-machine
 git push origin --delete Mac_Machine
 git push origin mac-machine
 
-# STEP 2: Rename Windows branch
-git branch -m Windows_Machine windows-machine
+# STEP 2: Rename Windows branch to macbook_machine
+git branch -m Windows_Machine macbook_machine
 git push origin --delete Windows_Machine
-git push origin windows-machine
+git push origin macbook_machine
 
 # STEP 3: Update your local repo
 git fetch --all --prune
@@ -53,7 +53,7 @@ git branch -a  # Verify both new branches exist
 **What**: Complete branching model documentation  
 **Contains**:
 - Branch hierarchy (master → develop → features)
-- Platform branch guidelines (mac-machine, windows-machine)
+- Platform branch guidelines (mac-machine, macbook_machine)
 - Commit message conventions
 - Branch protection recommendations
 
@@ -81,7 +81,7 @@ master ←→ Mac_Machine ←→ Windows_Machine
 ```
 feature/*
 mac-machine  ─┐
-windows-machine┤→ develop → master (Production)
+macbook_machine┤→ develop → master (Production)
 fix/*         ┘
 
 hotfix/ ──────────────→ master (Emergency)
@@ -126,14 +126,14 @@ Run these commands in your local repo:
 ```bash
 # 1. Rename branches
 git branch -m Mac_Machine mac-machine
-git branch -m Windows_Machine windows-machine
+git branch -m Windows_Machine macbook_machine
 
 # 2. Push changes
 git push origin --delete Mac_Machine
-git push origin windows-machine  
+git push origin macbook_machine  
 
 git push origin mac-machine
-git push origin windows-machine
+git push origin macbook_machine
 
 # 3. Clean up
 git fetch --all --prune
@@ -221,7 +221,7 @@ Repository: Muneeb7860/Swish_App
   ✅ master (updated with Maven wrapper)
   ✅ develop (newly created)
   ⏳ mac-machine (renamed from Mac_Machine - pending CLI)
-  ⏳ windows-machine (renamed from Windows_Machine - pending CLI)
+  ⏳ macbook_machine (renamed from Windows_Machine - pending CLI)
   🔴 Mac_Machine (old - DELETE AFTER RENAME)
   🔴 Windows_Machine (old - DELETE AFTER RENAME)
 
@@ -239,7 +239,7 @@ Repository: Muneeb7860/Swish_App
 🎯 **Eliminated circular merge history** - Now linear flow  
 🎯 **Standardized Maven wrapper** - Consistent builds  
 🎯 **Clear documentation** - Self-explanatory system  
-🎯 **Platform separation** - macOS & Windows work isolated  
+🎯 **Platform separation** - macOS & Macbook work isolated  
 🎯 **Future-proof structure** - Easy onboarding for new devs  
 
 ---
