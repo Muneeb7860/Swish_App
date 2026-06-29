@@ -864,13 +864,16 @@ export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (
 	authToken: (() => {
 		const token = localStorage.getItem("jwt_token") || "";
 		const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-		return jwtRegex.test(token) ? token : "";
+		const isMockToken = token.startsWith("mock.");
+		return isMockToken || jwtRegex.test(token) ? token : "";
 	})(),
 	setAuthToken: (val) =>
 		set((state: any) => {
 			const rawToken = typeof val === "function" ? val(state.authToken) : val;
 			const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-			const cleanToken = jwtRegex.test(rawToken) ? rawToken : "";
+			const isMockToken =
+				typeof rawToken === "string" && rawToken.startsWith("mock.");
+			const cleanToken = isMockToken || jwtRegex.test(rawToken) ? rawToken : "";
 			if (cleanToken) {
 				localStorage.setItem("jwt_token", cleanToken);
 			} else {
