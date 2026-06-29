@@ -8,12 +8,7 @@ import {
 	type LedgerLine,
 	type OnboardingApplication,
 	type Order,
-	Payment,
-	PickerHandoverResponse,
-	RebalanceResponse,
-	RefundResponse,
 	type RiderCourse,
-	RiderOnboardResponse,
 } from "./types";
 
 export const MOCK_PRODUCTS: CatalogItem[] = [

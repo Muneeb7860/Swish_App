@@ -264,14 +264,16 @@ services:
   grafana:
     image: grafana/grafana:10.4.2
     container_name: swiss_grafana
+    # Host port 3009 (not 3000-3003/5002 — those are the frontend dev/preview
+    # servers; 3000 was the original collision, 3002 collides with rider).
     ports:
-      - "3000:3000"
+      - "3009:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=swish123
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/swish-overview.json
-      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_ROOT_URL=http://localhost:3009
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

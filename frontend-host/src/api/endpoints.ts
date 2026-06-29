@@ -74,7 +74,7 @@ export const login = (data: LoginRequest): Promise<LoginResponse> => {
 					session_token: "mock-sess-wholesaler",
 				};
 			}
-			return { token: "mock-jwt-token-bypass" };
+			return { token: "mock.jwt.token-bypass" };
 		},
 	);
 };
@@ -86,7 +86,7 @@ export const verifyMfa = (
 		"/api/v1/auth/mfa/verify",
 		data,
 		{},
-		() => ({ token: "mock-jwt-token-verified-" + data.session_token }),
+		() => ({ token: "mock.jwt.token-verified-" + data.session_token }),
 	);
 };
 

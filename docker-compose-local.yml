@@ -231,7 +231,7 @@ services:
       POSTGRES_PASSWORD: temporalpassword
       POSTGRES_DB: temporal
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - temporal_pgdata:/var/lib/postgresql/data
     networks:
@@ -252,8 +252,8 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PASSWORD=temporalpassword
+      - POSTGRES_PWD=temporalpassword
       - POSTGRES_SEEDS=postgres-temporal
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     depends_on:
       - postgres-temporal
     networks:

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useStore } from "../store";
 import { ApiClient, BASE_URL } from "./client";
 
 export type ConnectionStatus =

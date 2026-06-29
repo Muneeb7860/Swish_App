@@ -1,5 +1,4 @@
 import * as Lucide from "lucide-react";
-import React from "react";
 
 interface KafkaLog {
 	id: string | number;
@@ -371,7 +370,7 @@ export default function SystemEngineRoom({
 						height: "50px",
 						background: "#020408",
 						borderRadius: "6px",
-						border: "1px solid var(--border-color)",
+						border: "1px solid var(--border-default)",
 					}}
 				>
 					{latencyHistory.length > 1 && (

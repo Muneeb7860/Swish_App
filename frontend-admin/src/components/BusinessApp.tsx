@@ -1,5 +1,5 @@
 import * as Lucide from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAiStream } from "../hooks/useAiStream";
 
 export default function BusinessApp({

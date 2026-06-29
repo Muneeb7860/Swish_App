@@ -60,9 +60,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 	formLabel = `${role.charAt(0).toUpperCase() + role.slice(1)} Login`,
 	submitLabel = "Sign In",
 }) => {
-	const [mode, setMode] = useState<"login" | "register">(
-		role === "customer" ? "login" : "credentials",
-	);
+	// All roles start in "login"; only the customer role exposes the register toggle.
+	// (Previously initialised to an invalid "credentials" value for non-customer roles,
+	// which mistyped the state and made the rider role POST to /register on submit.)
+	const [mode, setMode] = useState<"login" | "register">("login");
 	const [step, setStep] = useState<"credentials" | "mfa">("credentials");
 
 	const [email, setEmail] = useState(defaultEmail);

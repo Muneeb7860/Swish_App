@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
 	GenericCardSkeleton,
@@ -46,20 +46,18 @@ describe("Skeleton Component", () => {
 	describe("table-rows variant", () => {
 		it("renders table with default rows (5)", () => {
 			const { container } = render(<Skeleton variant="table-rows" />);
-			const rows = container.querySelectorAll(
-				"div[style*='flex'][style*='flexDirection']",
-			);
-			expect(rows.length).toBeGreaterThan(0);
+			const rows = container.querySelectorAll(".skeleton-table-row");
+			expect(rows).toHaveLength(5);
 		});
 
 		it("renders correct number of columns per row", () => {
 			const { container } = render(
 				<Skeleton variant="table-rows" rows={2} cols={3} />,
 			);
-			const rows = container.querySelectorAll(
-				"div[style*='flex'][style*='flexDirection']",
-			);
-			expect(rows.length).toBeGreaterThan(0);
+			const rows = container.querySelectorAll(".skeleton-table-row");
+			expect(rows).toHaveLength(2);
+			// each row holds `cols` shimmer cells
+			expect(rows[0].querySelectorAll(".skeleton-shimmer")).toHaveLength(3);
 		});
 	});
 

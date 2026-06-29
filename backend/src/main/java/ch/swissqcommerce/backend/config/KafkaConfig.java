@@ -47,7 +47,11 @@ public class KafkaConfig {
 
     @Bean
     public KafkaTemplate<String, String> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+        KafkaTemplate<String, String> template = new KafkaTemplate<>(producerFactory());
+        // Propagate the W3C traceparent context onto produced records so the trace
+        // spans the request path BFF → Kafka → backend → governance → Ollama.
+        template.setObservationEnabled(true);
+        return template;
     }
 
     @Bean
@@ -67,6 +71,9 @@ public class KafkaConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.setAutoStartup(listenerAutoStartup);
+        // Continue the distributed trace on the consumer side by reading the
+        // traceparent header off each record (pairs with the template above).
+        factory.getContainerProperties().setObservationEnabled(true);
 
         // Dead Letter Topic (DLT) error handling: retry 3 times with 1s backoff,
         // then forward to <original-topic>.DLT for manual inspection.

@@ -1,11 +1,10 @@
-import { AuthPortal, type AuthSession, Modal } from "@swish/shared-ui";
+import { Modal } from "@swish/shared-ui";
 import { useQuery } from "@tanstack/react-query";
 import * as Lucide from "lucide-react";
 import React, {
 	Suspense,
 	useCallback,
 	useEffect,
-	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -864,14 +863,6 @@ export default function App() {
 		});
 	};
 
-	const updateWholesalerTrust = (delta, event) => {
-		setWholesalerTrustScore((prev) => {
-			const next = Math.max(0, Math.min(100, prev + delta));
-			logTrust("wholesaler", event, delta, next);
-			return next;
-		});
-	};
-
 	// Dynamic system timers effects
 	useEffect(() => {
 		let timer: ReturnType<typeof setInterval> | undefined;
@@ -984,13 +975,17 @@ export default function App() {
 					);
 				} else {
 					// Direct login
+					const jwtRegex =
+						/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+					const isMockToken =
+						typeof data.token === "string" && data.token.startsWith("mock.");
+					const tokenToSet =
+						data.token && (isMockToken || jwtRegex.test(data.token))
+							? data.token
+							: "";
 					setIsAuthenticated(true);
 					setCurrentUserSession({ role: mfaRole });
 					setActiveRole(mfaRole);
-					const jwtRegex =
-						/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-					const tokenToSet =
-						data.token && jwtRegex.test(data.token) ? data.token : "";
 					setAuthToken(tokenToSet);
 					if (tokenToSet) {
 						localStorage.setItem("jwt_token", tokenToSet);
@@ -1021,12 +1016,16 @@ export default function App() {
 				code: mfaOtpInput,
 			})
 			.then((data) => {
+				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
+				const isMockToken =
+					typeof data.token === "string" && data.token.startsWith("mock.");
+				const tokenToSet =
+					data.token && (isMockToken || jwtRegex.test(data.token))
+						? data.token
+						: "";
 				setIsAuthenticated(true);
 				setCurrentUserSession({ role: mfaRole });
 				setActiveRole(mfaRole);
-				const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_+/=]+$/;
-				const tokenToSet =
-					data.token && jwtRegex.test(data.token) ? data.token : "";
 				setAuthToken(tokenToSet);
 				if (tokenToSet) {
 					localStorage.setItem("jwt_token", tokenToSet);
@@ -1753,45 +1752,6 @@ export default function App() {
 		}
 	};
 
-	const handleScaleCapacity = (store) => {
-		const isCentral = store === "Central";
-		const count = isCentral ? centralScalingCount : eastScalingCount;
-		const fee =
-			count === 0 ? 15.0 : count === 1 ? 25.0 : count === 2 ? 35.0 : 0;
-
-		if (fee === 0 || count >= 3) {
-			triggerToast(`${store} Capacity max scaled!`, "admin");
-			return;
-		}
-
-		setMerchantWallet((w) => w - fee);
-		logLedger(
-			"system",
-			"SYS-SCALING-DEBIT",
-			"Merchant rented virtual overflow warehouse bay due to capacity bottleneck",
-			fee,
-			0,
-		);
-
-		const nextCount = count + 1;
-		if (isCentral) {
-			setCentralCapacity((c) => c + 40);
-			setCentralScalingCount(nextCount);
-		} else {
-			setEastCapacity((e) => e + 40);
-			setEastScalingCount(nextCount);
-		}
-		logKafka(
-			"system",
-			"capacity_scaled",
-			`${store} MFC Scaled: Rented overflow bay. Capacity increased by +40.`,
-		);
-		triggerToast(
-			`MANUAL SCALE: ${store} capacity expanded! (Charged $${fee})`,
-			"inventory",
-		);
-	};
-
 	const fetchHitlQueues = useCallback(() => {
 		setHitlLoading(true);
 		const fetchB2b = api
@@ -2136,22 +2096,6 @@ export default function App() {
 		}
 	};
 
-	const downloadRegulatoryReport = () => {
-		let csvContent = "data:text/csv;charset=utf-8,";
-		csvContent += "ID,Time,Type,Ref Code,Description,Debit,Credit\n";
-		ledger.forEach((l) => {
-			csvContent += `"${l.id}","${l.time}","${l.type}","${l.ref}","${l.desc}","${l.debit.toFixed(2)}","${l.credit.toFixed(2)}"\n`;
-		});
-		const encodedUri = encodeURI(csvContent);
-		const link = document.createElement("a");
-		link.setAttribute("href", encodedUri);
-		link.setAttribute("download", "swiss-audit-ledger.csv");
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		triggerToast("OLAP CSV Regulatory Export download successful.", "business");
-	};
-
 	const generateCertificate = (role) => {
 		setSelectedCertRole(role);
 		setCertModalOpen(true);
@@ -2357,7 +2301,7 @@ export default function App() {
 							background: "rgba(255,255,255,0.03)",
 							padding: "0.2rem 0.5rem",
 							borderRadius: "6px",
-							border: "1px solid var(--border-color)",
+							border: "1px solid var(--border-default)",
 						}}
 					>
 						<Lucide.Globe size={12} className="event-system" />

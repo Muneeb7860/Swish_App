@@ -1,10 +1,11 @@
 # routing_config.yaml — Semantic Router thresholds, agent registry, budget, evaluation
 classifier:
-  model: llama3.2:3b
+  model: gemma3:4b
   backend: ollama
   ollama_url: http://localhost:11434
-  timeout_ms: 30000
+  timeout_ms: 3000
   cpu_mode: true
+  system_prompt_path: system_prompts/classifier_v2.txt
 
 routing:
   confidence_threshold: 0.60
@@ -20,7 +21,7 @@ budget:
 agents:
   gemma_reasoner:
     backend: ollama
-    model: llama3.2:3b
+    model: gemma3:4b
     ollama_url: http://localhost:11434
     timeout_ms: 45000
     role: reasoner

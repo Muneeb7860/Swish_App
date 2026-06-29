@@ -5,10 +5,6 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	plugins: [react()],
 	resolve: {
-		// shared-ui is linked via file: and ships its own react copy; dedupe so the
-		// re-exported components and the test renderer share ONE react instance
-		// (otherwise hooks fail with "Cannot read properties of null (useState)").
-		dedupe: ["react", "react-dom"],
 		alias: {
 			"@": resolve(__dirname, "./src"),
 		},

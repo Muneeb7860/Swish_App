@@ -124,3 +124,8 @@ frontend-customer/cypress/videos/
 # demo runtime (do not commit secrets/logs)
 demo/.htpasswd
 demo/*.log
+
+# ─── Agent workspaces ────────────────────────────────────────────────────────
+.claude/
+.gemini/
+

@@ -1,5 +1,5 @@
 import * as Lucide from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function InventoryApp({
 	products,

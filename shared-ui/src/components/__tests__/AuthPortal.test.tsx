@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AuthPortal, type AuthSession } from "../AuthPortal";
+import { AuthPortal } from "../AuthPortal";
 
 describe("AuthPortal Component", () => {
 	const mockOnAuthSuccess = vi.fn();
@@ -38,10 +38,12 @@ describe("AuthPortal Component", () => {
 			expect(screen.getByText("Custom Login")).toBeInTheDocument();
 		});
 
-		it("renders with custom submit button label", () => {
+		it("uses submitLabel for non-customer roles", () => {
+			// The customer role shows "Log in"/"Create account"; submitLabel applies
+			// to the other roles (admin/rider).
 			render(
 				<AuthPortal
-					role="customer"
+					role="admin"
 					submitLabel="Continue"
 					onAuthSuccess={mockOnAuthSuccess}
 				/>,
@@ -49,6 +51,11 @@ describe("AuthPortal Component", () => {
 			expect(
 				screen.getByRole("button", { name: "Continue" }),
 			).toBeInTheDocument();
+		});
+
+		it("shows 'Log in' as the customer submit action", () => {
+			render(<AuthPortal role="customer" onAuthSuccess={mockOnAuthSuccess} />);
+			expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
 		});
 	});
 
@@ -137,17 +144,19 @@ describe("AuthPortal Component", () => {
 	});
 
 	describe("Accessibility", () => {
-		it("has proper form structure", () => {
-			render(<AuthPortal role="customer" onAuthSuccess={mockOnAuthSuccess} />);
-			expect(
-				screen.getByRole("form") || screen.getByRole("button"),
-			).toBeInTheDocument();
+		it("renders a form wrapping the inputs", () => {
+			const { container } = render(
+				<AuthPortal role="customer" onAuthSuccess={mockOnAuthSuccess} />,
+			);
+			const form = container.querySelector("form");
+			expect(form).toBeInTheDocument();
+			expect(form?.querySelector("input")).toBeInTheDocument();
 		});
 
-		it("submit button is properly labeled", () => {
+		it("submit button is properly labeled (non-customer role)", () => {
 			render(
 				<AuthPortal
-					role="customer"
+					role="admin"
 					submitLabel="Sign In"
 					onAuthSuccess={mockOnAuthSuccess}
 				/>,
