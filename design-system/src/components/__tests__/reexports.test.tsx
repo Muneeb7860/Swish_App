@@ -1,11 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-	AuthPortal,
-	Modal,
-	ProductCardSkeleton,
-	Skeleton,
-} from "../index";
+import { AuthPortal, Modal, ProductCardSkeleton, Skeleton } from "../index";
 
 // design-system re-exports its components from @swish/shared-ui. This smoke test
 // verifies the re-export wiring resolves and the components render — the full

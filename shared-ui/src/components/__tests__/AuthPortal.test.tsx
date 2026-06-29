@@ -55,7 +55,9 @@ describe("AuthPortal Component", () => {
 
 		it("shows 'Log in' as the customer submit action", () => {
 			render(<AuthPortal role="customer" onAuthSuccess={mockOnAuthSuccess} />);
-			expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "Log in" }),
+			).toBeInTheDocument();
 		});
 	});
 
@@ -175,7 +177,7 @@ describe("AuthPortal Component", () => {
 
 	describe("Error Handling", () => {
 		it("calls onAuthError callback on error", async () => {
-			const { container } = render(
+			render(
 				<AuthPortal
 					role="customer"
 					onAuthSuccess={mockOnAuthSuccess}

@@ -39,7 +39,8 @@ public class MfaServiceTest {
         ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
 
-        verify(valueOperations).set(keyCaptor.capture(), valueCaptor.capture(), ttlCaptor.capture());
+        verify(valueOperations)
+                .set(keyCaptor.capture(), valueCaptor.capture(), ttlCaptor.capture());
 
         assertEquals("mfa:session:" + token, keyCaptor.getValue());
         assertTrue(valueCaptor.getValue().startsWith(userId + ":"));
@@ -74,9 +75,11 @@ public class MfaServiceTest {
 
         when(valueOperations.get(redisKey)).thenReturn(userId + ":" + otp);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            mfaService.verifyOtp(sessionToken, "654321");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    mfaService.verifyOtp(sessionToken, "654321");
+                });
 
         // Key should NOT be deleted on failure (allows retry within window)
         verify(redisTemplate, never()).delete(redisKey);
@@ -89,8 +92,10 @@ public class MfaServiceTest {
 
         when(valueOperations.get(redisKey)).thenReturn(null);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            mfaService.verifyOtp(sessionToken, "123456");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    mfaService.verifyOtp(sessionToken, "123456");
+                });
     }
 }

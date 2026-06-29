@@ -1,7 +1,4 @@
-import {
-	AuthPortal,
-	type AuthSession as SharedAuthSession,
-} from "@swish/shared-ui";
+import { AuthPortal, type AuthSession } from "@swish/shared-ui";
 import { useState } from "react";
 import "@swish/shared-ui/tokens";
 import CustomerApp from "./components/CustomerApp";
@@ -28,11 +25,6 @@ const MOCK_PRODUCTS = [
 	},
 ];
 
-interface AuthSession extends SharedAuthSession {
-	token: string;
-	sessionId: string;
-}
-
 export default function App() {
 	const [session, setSession] = useState<AuthSession | null>(null);
 	const [cart, setCart] = useState([]);
@@ -53,7 +45,7 @@ export default function App() {
 			<AuthPortal
 				role="customer"
 				mfaEnabled={true}
-				onAuthSuccess={setSession}
+				onAuthSuccess={(s) => setSession(s)}
 				apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth`}
 			/>
 		);
@@ -84,7 +76,7 @@ export default function App() {
 							`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth/logout`,
 							{
 								method: "POST",
-								headers: { "X-Session-Id": session.sessionId },
+								headers: { "X-Session-Id": session.sessionId ?? "" },
 							},
 						).catch(() => {});
 						setSession(null);

@@ -125,7 +125,11 @@ frontend-customer/cypress/videos/
 demo/.htpasswd
 demo/*.log
 
-# ─── Agent workspaces ────────────────────────────────────────────────────────
+# ─── Agent workspaces & scratch ──────────────────────────────────────────────
+# Keep agent-generated handovers/plans/status reports OUT of the repo. Write
+# ephemeral docs to .agent-scratch/ (gitignored) instead of the project root.
 .claude/
 .gemini/
+.agent-scratch/
+**/.agents/
 

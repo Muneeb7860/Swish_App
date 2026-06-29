@@ -44,7 +44,10 @@ public class MfaService implements MfaUseCase {
         log.info(
                 "MFA OTP initiated for user {} (email={}). Session token={}. OTP={} (dev-only log"
                         + " — remove before prod)",
-                userId, email, sessionToken, otp);
+                userId,
+                email,
+                sessionToken,
+                otp);
 
         return sessionToken;
     }
