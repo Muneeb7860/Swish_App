@@ -1,0 +1,380 @@
+[
+	{
+		"query": "What is Swish?",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "low",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "Is delivery active in Zurich?",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "low",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "Explain how rider dispatching logic works on a high level.",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "medium",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "What is the difference between a cold chain and normal delivery?",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "medium",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "How does the pricing engine calculate surge multipliers during peak hours?",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "high",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "Detail the architecture of the order lifecycle state machine.",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "high",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "What are the rules of ArchUnit hexagonal architecture enforcement?",
+		"expected_intent": "general_knowledge",
+		"expected_complexity": "high",
+		"category": "general_knowledge"
+	},
+	{
+		"query": "Write a python function to add two numbers.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "low",
+		"category": "code_generation"
+	},
+	{
+		"query": "Generate a basic HTML button element.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "low",
+		"category": "code_generation"
+	},
+	{
+		"query": "Create a TypeScript interface for a Swish Order and Rider.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "medium",
+		"category": "code_generation"
+	},
+	{
+		"query": "Write a SQL query to select all active orders from the database.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "medium",
+		"category": "code_generation"
+	},
+	{
+		"query": "Write a complete python FastAPI server with rate limiting, logging, and an endpoint to process rider coordinates.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "high",
+		"category": "code_generation"
+	},
+	{
+		"query": "Implement a Kafka consumer in Java using Spring Boot that listens to order-events topic.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "high",
+		"category": "code_generation"
+	},
+	{
+		"query": "Generate a custom React Hook for managing WebSocket connections with automatic reconnection limits.",
+		"expected_intent": "code_generation",
+		"expected_complexity": "high",
+		"category": "code_generation"
+	},
+	{
+		"query": "Why am I getting NameError: name 'x' is not defined in python?",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "low",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Fix: SyntaxError: Unexpected token } in JavaScript.",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "low",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Debug this Python function that fails with IndexError: list index out of range when the list is empty: def get_first(lst): return lst[0]",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "medium",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Fix this React component which is causing infinite re-renders because useEffect lacks a dependency array.",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "medium",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Analyze and fix a memory leak in this Node.js WebSocket handler that keeps appending clients to a global array without cleaning them up on close.",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "high",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Identify why the Spring Boot backend throws NullPointerException in SecurityConfig.java during JWT verification.",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "high",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Why does my pgvector similarity search return 0 results even though embeddings are successfully saved in database?",
+		"expected_intent": "code_debugging",
+		"expected_complexity": "high",
+		"category": "code_debugging"
+	},
+	{
+		"query": "Is it bad to use global variables in Python?",
+		"expected_intent": "code_review",
+		"expected_complexity": "low",
+		"category": "code_review"
+	},
+	{
+		"query": "Should I use let or var in JavaScript?",
+		"expected_intent": "code_review",
+		"expected_complexity": "low",
+		"category": "code_review"
+	},
+	{
+		"query": "Review this Python code for performance bottlenecks: def find_duplicates(lst): return [x for x in lst if lst.count(x) > 1]",
+		"expected_intent": "code_review",
+		"expected_complexity": "medium",
+		"category": "code_review"
+	},
+	{
+		"query": "Can you refactor this nested if-else chain to be cleaner?",
+		"expected_intent": "code_review",
+		"expected_complexity": "medium",
+		"category": "code_review"
+	},
+	{
+		"query": "Perform a security and performance review of this SQL transaction block in Spring Boot that performs multiple updates without a rollback mechanism on error.",
+		"expected_intent": "code_review",
+		"expected_complexity": "high",
+		"category": "code_review"
+	},
+	{
+		"query": "Review this custom React state management implementation using Context API for potential performance and re-render issues.",
+		"expected_intent": "code_review",
+		"expected_complexity": "high",
+		"category": "code_review"
+	},
+	{
+		"query": "Analyze this custom Dockerfile and suggest ways to optimize layers, reduce size, and improve build times.",
+		"expected_intent": "code_review",
+		"expected_complexity": "high",
+		"category": "code_review"
+	},
+	{
+		"query": "Summarize this sentence: The rider delivered the milk and bread in 12 minutes.",
+		"expected_intent": "summarization",
+		"expected_complexity": "low",
+		"category": "summarization"
+	},
+	{
+		"query": "TLDR: We need to buy apples, bananas, and oranges.",
+		"expected_intent": "summarization",
+		"expected_complexity": "low",
+		"category": "summarization"
+	},
+	{
+		"query": "Summarize the following rider feedback report: [REDACTED] reported that the address was hard to find, GPS accuracy was off by 20 meters, and the customer didn't pick up the phone initially. However, the order was eventually successfully delivered.",
+		"expected_intent": "summarization",
+		"expected_complexity": "medium",
+		"category": "summarization"
+	},
+	{
+		"query": "Write a brief summary of our AI Governance Phase 9 completion status from the handover notes.",
+		"expected_intent": "summarization",
+		"expected_complexity": "medium",
+		"category": "summarization"
+	},
+	{
+		"query": "Summarize the GDPR compliance requirements regarding storing rider GPS coordinates and user email logs in a PostgreSQL database.",
+		"expected_intent": "summarization",
+		"expected_complexity": "high",
+		"category": "summarization"
+	},
+	{
+		"query": "Provide a concise summary of the key findings in this 3-page system logs dump showing connection drops.",
+		"expected_intent": "summarization",
+		"expected_complexity": "high",
+		"category": "summarization"
+	},
+	{
+		"query": "Summarize the n8n webhook integration workflow and Kafka consumer messaging flow.",
+		"expected_intent": "summarization",
+		"expected_complexity": "high",
+		"category": "summarization"
+	},
+	{
+		"query": "Write a short slogan for a 15-minute grocery delivery app.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "low",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Generate a headline for a grocery sale.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "low",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Draft a friendly notification email to a customer whose delivery is delayed by 10 minutes.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "medium",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Write a creative marketing paragraph for a new organic local honey product on Swish.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "medium",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Write an engaging, humorous story about a delivery rider who meets a friendly neighborhood dog while delivering fresh croissants.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "high",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Create a blog post announcing the launch of Swish delivery in Geneva, emphasizing local partnerships and green transport.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "high",
+		"category": "creative_writing"
+	},
+	{
+		"query": "Compose a formal apology letter to a B2B wholesaler regarding a late delivery shipment, proposing a discount on their next invoice.",
+		"expected_intent": "creative_writing",
+		"expected_complexity": "high",
+		"category": "creative_writing"
+	},
+	{
+		"query": "How do I calculate the average of a column in Excel?",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "low",
+		"category": "data_analysis"
+	},
+	{
+		"query": "What does p95 latency mean?",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "low",
+		"category": "data_analysis"
+	},
+	{
+		"query": "Analyze these delivery times and find the median: [12, 15, 8, 22, 14, 11, 30] minutes.",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "medium",
+		"category": "data_analysis"
+	},
+	{
+		"query": "Explain how to plot a line chart of order volume over the last 30 days using pandas.",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "medium",
+		"category": "data_analysis"
+	},
+	{
+		"query": "Given a dataset of rider delivery times, ratings, and weather conditions, write a python script to run a regression model to find correlation.",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "high",
+		"category": "data_analysis"
+	},
+	{
+		"query": "Perform a cohort analysis of customer retention rates based on their first order month using SQL.",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "high",
+		"category": "data_analysis"
+	},
+	{
+		"query": "Write a python script to calculate the Context Conservation Ratio (CCR) and print a statistical distribution of numeric hallucination penalties.",
+		"expected_intent": "data_analysis",
+		"expected_complexity": "high",
+		"category": "data_analysis"
+	},
+	{
+		"query": "How do I check CPU usage in Linux?",
+		"expected_intent": "system_admin",
+		"expected_complexity": "low",
+		"category": "system_admin"
+	},
+	{
+		"query": "What command restarts Docker on macOS?",
+		"expected_intent": "system_admin",
+		"expected_complexity": "low",
+		"category": "system_admin"
+	},
+	{
+		"query": "Write an Nginx configuration snippet to reverse proxy traffic to localhost:8080.",
+		"expected_intent": "system_admin",
+		"expected_complexity": "medium",
+		"category": "system_admin"
+	},
+	{
+		"query": "Generate a Docker Compose file for a PostgreSQL instance with pgvector extension enabled.",
+		"expected_intent": "system_admin",
+		"expected_complexity": "medium",
+		"category": "system_admin"
+	},
+	{
+		"query": "Write a Kubernetes deployment and service manifest for a scalable Spring Boot gateway with health probes and resource limits.",
+		"expected_intent": "system_admin",
+		"expected_complexity": "high",
+		"category": "system_admin"
+	},
+	{
+		"query": "Diagnose why a Docker container fails to start, displaying the error: Address already in use 0.0.0.0:8080.",
+		"expected_intent": "system_admin",
+		"expected_complexity": "high",
+		"category": "system_admin"
+	},
+	{
+		"query": "Configure a GitHub Actions CI workflow that runs backend tests using JDK 17, builds a Docker image, and pushes it to a private registry.",
+		"expected_intent": "system_admin",
+		"expected_complexity": "high",
+		"category": "system_admin"
+	},
+	{
+		"query": "Is the query '[REDACTED]' sensitive?",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "low",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "How does GDPR define personal data?",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "low",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "What are the legal implications of a customer requesting total deletion of their account history under Swiss privacy laws?",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "medium",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "How should we securely store credit card details or payment tokens in our database?",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "medium",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "Write a policy explaining how Swish complies with European and Swiss data protection regulations concerning rider tracking and GPS telemetry logging.",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "high",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "What security measures and access controls must be placed on the AI Governance logs to prevent exposure of PII?",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "high",
+		"category": "sensitive_query"
+	},
+	{
+		"query": "Outline the risk assessment and mitigation strategy for integrating third-party AI APIs with patient-sensitive or client-private datasets.",
+		"expected_intent": "sensitive_query",
+		"expected_complexity": "high",
+		"category": "sensitive_query"
+	}
+]
