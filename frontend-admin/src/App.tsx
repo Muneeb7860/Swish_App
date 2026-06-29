@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AuthPortal, type AuthSession } from "@swish/shared-ui";
 import "@swish/shared-ui/tokens";
+import AdminLogin from "./components/AdminLogin";
 import AdminPanel from "./components/AdminPanel";
 import BusinessApp from "./components/BusinessApp";
 import InventoryApp from "./components/InventoryApp";
