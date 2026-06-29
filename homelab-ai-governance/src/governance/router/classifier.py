@@ -122,7 +122,11 @@ CRITICAL RULES:
 """
 
 
-def classify_intent(query: str) -> ClassificationResult:
+def classify_intent(
+    query: str,
+    model_override: str | None = None,
+    timeout_override: int | None = None
+) -> ClassificationResult:
     """Classify the query intent using guided decoding via instructor.
 
     Falls back to static keywords if Ollama is unreachable or response
@@ -131,9 +135,13 @@ def classify_intent(query: str) -> ClassificationResult:
     routing_cfg = load_routing_config()
     classifier_cfg = routing_cfg.get("classifier", {})
 
-    model_name = classifier_cfg.get("model", "gemma3:4b")
+    model_name = model_override or classifier_cfg.get("model", "gemma3:4b")
     ollama_url = classifier_cfg.get("ollama_url", "http://localhost:11434")
-    timeout_ms = classifier_cfg.get("timeout_ms", 30000)
+    
+    if timeout_override is not None:
+        timeout_ms = timeout_override
+    else:
+        timeout_ms = classifier_cfg.get("timeout_ms", 3000)
 
     try:
         # Patch the OpenAI client to route to Ollama's OpenAI-compatible port

@@ -50,14 +50,23 @@ class CloudAgent(BaseAgent):
 
     def generate(self, prompt: str) -> AgentResponse:
         """Send a prompt to the cloud API using chat completions."""
+        return self.generate_chat(prompt, system_prompt=None)
+
+    def generate_chat(self, prompt: str, system_prompt: str | None = None) -> AgentResponse:
+        """Send a structured chat prompt to the cloud API using chat completions."""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self._get_api_key()}",
             "Content-Type": "application/json",
         }
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         payload = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": 0.3,
         }
 

@@ -1096,7 +1096,7 @@ export default function CustomerApp({
 		const cartItem = cart.find((item) => item.id === p.id);
 		const isFavorite = favorites.includes(p.id);
 
-		let discountBadge = null;
+		let discountBadge: string | null = null;
 		if (p.id.startsWith("mock-")) {
 			if (p.category === "Imported") {
 				discountBadge = "Imported";

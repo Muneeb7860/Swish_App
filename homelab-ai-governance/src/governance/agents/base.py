@@ -33,6 +33,10 @@ class BaseAgent(abc.ABC):
         """Send a prompt and return the agent's response."""
 
     @abc.abstractmethod
+    def generate_chat(self, prompt: str, system_prompt: str | None = None) -> AgentResponse:
+        """Send a structured chat prompt and return the agent's response."""
+
+    @abc.abstractmethod
     def is_available(self) -> bool:
         """Health check: can this agent accept requests right now?"""
 
