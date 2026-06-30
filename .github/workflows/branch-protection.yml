@@ -5,6 +5,8 @@ on:
     branches:
       - develop
       - master
+      - mac-machine
+      - macbook_machine
   push:
     branches:
       - master
