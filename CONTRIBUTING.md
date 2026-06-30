@@ -11,27 +11,27 @@ If you've noticed a bug or have a feature request, make sure to check our Issues
 This project uses a fixed, per-machine branching model. There are **exactly four branches** and **no others are ever created**:
 
 ```
-Mac_Machine ─────┐
+mac-machine ─────┐
                  ├──> develop ──> master
-Windows_Machine ─┘
+macbook_machine ─┘
 ```
 
 - **`master`** — single source of truth for the whole project.
 - **`develop`** — the integration branch. It is the **ONLY** branch permitted to merge into `master`.
-- **`Mac_Machine`** — all work done on the Mac machine commits here.
-- **`Windows_Machine`** — all work done on the Windows machine commits here.
+- **`mac-machine`** — all work done on the primary Mac machine commits here.
+- **`macbook_machine`** — all work done on the secondary Macbook machine commits here.
 
 ### Rules
-1. **Commit only to your machine's branch.** On the Mac machine, every agent commits to `Mac_Machine`. On Windows, every agent commits to `Windows_Machine`. Never cross machine branches.
+1. **Commit only to your machine's branch.** On the primary Mac machine, every agent commits to `mac-machine`. On the secondary Macbook machine, every agent commits to `macbook_machine`. Never cross machine branches.
 2. **Machine branches pull from and push to `develop` only.** `develop` is where the two machines converge.
 3. **A machine branch must NEVER open a PR directly to `master`.** The only PR that targets `master` is `develop → master`.
-4. **Never create new branches.** No `feature/*`, no `agent/feat/*`, no `fix/*`. The four branches above are the complete set. Never recreate a lowercase `mac-machine`.
+4. **Never create new branches.** No `feature/*`, no `agent/feat/*`, no `fix/*`. The four branches above are the complete set.
 
 ### PR base rule
 | Head branch | PR base |
 |-------------|---------|
-| `Mac_Machine` | `develop` |
-| `Windows_Machine` | `develop` |
+| `mac-machine` | `develop` |
+| `macbook_machine` | `develop` |
 | `develop` | `master` |
 
 ## Pull Request Guidelines
@@ -42,7 +42,7 @@ Windows_Machine ─┘
 
 ## Agent Git & Development Strategy
 Autonomous Agents working on this repository MUST strictly follow this operational protocol:
-1. **Branching Model**: Follow the mandated strategy above. Commit to your machine branch (`Mac_Machine` here), never create task branches, never PR a machine branch to `master`.
+1. **Branching Model**: Follow the mandated strategy above. Commit to your machine branch (`mac-machine` here), never create task branches, never PR a machine branch to `master`.
 2. **Conventional Commits**: Use granular, atomic commits adhering to conventional commits (e.g. `feat(backend):`, `fix(frontend):`, `chore(docs):`). Use `security:` not `sec:`.
 3. **Stage only your own files**: Never `git add -A`. Stage explicit paths and verify with `git diff --cached --name-only` before committing — another agent may have unstaged work in the tree.
 4. **Correct JDK**: Backend builds require `JAVA_HOME=/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home` (Homebrew JDK 26 breaks Lombok).

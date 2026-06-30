@@ -23,10 +23,8 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testOrchestrateComplexTask_Success() {
-        LlmResponse response = LlmResponse.builder()
-                .content("response token")
-                .tokenCost(0.001)
-                .build();
+        LlmResponse response =
+                LlmResponse.builder().content("response token").tokenCost(0.001).build();
         when(llmGateway.callLlm("test prompt")).thenReturn(response);
 
         Flux<String> result = aiOrchestrationService.orchestrateComplexTask("test prompt");
@@ -39,7 +37,8 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testOrchestrateComplexTask_Failure() {
-        when(llmGateway.callLlm("test prompt")).thenThrow(new RuntimeException("Cloud LLM offline"));
+        when(llmGateway.callLlm("test prompt"))
+                .thenThrow(new RuntimeException("Cloud LLM offline"));
 
         Flux<String> result = aiOrchestrationService.orchestrateComplexTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));
@@ -51,10 +50,8 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testExecuteLocalTask_Success() {
-        LlmResponse response = LlmResponse.builder()
-                .content("local response")
-                .tokenCost(0.0001)
-                .build();
+        LlmResponse response =
+                LlmResponse.builder().content("local response").tokenCost(0.0001).build();
         when(llmGateway.callLlm("test prompt")).thenReturn(response);
 
         Flux<String> result = aiOrchestrationService.executeLocalTask("test prompt");
@@ -67,7 +64,8 @@ public class AiOrchestrationServiceTest {
 
     @Test
     public void testExecuteLocalTask_Failure() {
-        when(llmGateway.callLlm("test prompt")).thenThrow(new RuntimeException("Local Ollama crashed"));
+        when(llmGateway.callLlm("test prompt"))
+                .thenThrow(new RuntimeException("Local Ollama crashed"));
 
         Flux<String> result = aiOrchestrationService.executeLocalTask("test prompt");
         List<String> list = result.collectList().block(Duration.ofSeconds(2));

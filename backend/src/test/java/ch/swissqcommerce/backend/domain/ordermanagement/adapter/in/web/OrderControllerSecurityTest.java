@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>Filters are disabled so we exercise the controller's own ownership check in isolation rather
  * than the gateway/OPA URL-level policy.
  */
-@WebMvcTest(OrderController.class)
+@WebMvcTest(ch.swissqcommerce.backend.domain.ordermanagement.adapter.in.web.OrderController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class OrderControllerSecurityTest {
 

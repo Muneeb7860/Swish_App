@@ -46,9 +46,7 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			expect(
-				screen.getByRole("button", { name: "Close" }),
-			).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
 		});
 
 		it("hides the close button when hideCloseButton is set", () => {
@@ -82,7 +80,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-overlay")!);
+			const overlay = container.querySelector(".swish-modal-overlay");
+			expect(overlay).not.toBeNull();
+			if (overlay) fireEvent.click(overlay);
 			expect(onClose).toHaveBeenCalledTimes(1);
 		});
 
@@ -93,7 +93,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-content")!);
+			const content = container.querySelector(".swish-modal-content");
+			expect(content).not.toBeNull();
+			if (content) fireEvent.click(content);
 			expect(onClose).not.toHaveBeenCalled();
 		});
 
@@ -104,7 +106,9 @@ describe("Modal", () => {
 					<p>x</p>
 				</Modal>,
 			);
-			fireEvent.click(container.querySelector(".swish-modal-overlay")!);
+			const overlay = container.querySelector(".swish-modal-overlay");
+			expect(overlay).not.toBeNull();
+			if (overlay) fireEvent.click(overlay);
 			expect(onClose).not.toHaveBeenCalled();
 		});
 
@@ -154,7 +158,12 @@ describe("Modal", () => {
 
 		it("applies accentColor and maxWidth to the content panel", () => {
 			const { container } = render(
-				<Modal isOpen onClose={() => {}} accentColor="rgb(1, 2, 3)" maxWidth={420}>
+				<Modal
+					isOpen
+					onClose={() => {}}
+					accentColor="rgb(1, 2, 3)"
+					maxWidth={420}
+				>
 					<p>x</p>
 				</Modal>,
 			);

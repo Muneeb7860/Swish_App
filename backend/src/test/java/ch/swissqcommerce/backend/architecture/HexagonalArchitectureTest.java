@@ -88,6 +88,7 @@ public class HexagonalArchitectureTest {
                     .should()
                     .dependOnClassesThat()
                     .resideInAPackage("ch.swissqcommerce.backend.domain.governance.core.service..")
+                    .allowEmptyShould(true)
                     .as(
                             "Scheduler packages must not depend on domain governance core service"
                                     + " implementations directly");

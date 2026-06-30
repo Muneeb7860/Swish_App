@@ -223,7 +223,7 @@ Clone the repository and pull the active development tree:
 ```bash
 git clone https://github.com/Muneeb7860/Swish_App.git
 cd Swish_App
-git checkout Mac_Machine
+git checkout mac-machine
 ```
 
 ### 2. Boot the Ecosystem

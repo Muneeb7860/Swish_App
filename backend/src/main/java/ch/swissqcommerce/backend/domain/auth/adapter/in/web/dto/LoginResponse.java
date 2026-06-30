@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class LoginResponse {
     /** Present only on a successful full authentication. */
     private String token;
+
     private String tokenType;
     private String sessionId;
     private OffsetDateTime expiresAt;

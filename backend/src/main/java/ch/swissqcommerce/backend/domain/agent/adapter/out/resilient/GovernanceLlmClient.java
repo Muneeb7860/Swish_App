@@ -12,14 +12,15 @@ import org.springframework.stereotype.Component;
  * <p>This lives in its <b>own</b> Spring bean on purpose. Resilience4j's {@link CircuitBreaker} is
  * applied by a Spring AOP proxy, and that proxy does <em>not</em> intercept self-invocations or
  * private methods. The previous design annotated a private method called from within {@link
- * ResilientLlmGateway} itself, so the breaker was silently a no-op — it never opened, never tripped,
- * and {@code resilience4j_circuitbreaker_state{name="governance"}} was never published. Routing the
- * call through this injected bean is what actually arms the breaker.
+ * ResilientLlmGateway} itself, so the breaker was silently a no-op — it never opened, never
+ * tripped, and {@code resilience4j_circuitbreaker_state{name="governance"}} was never published.
+ * Routing the call through this injected bean is what actually arms the breaker.
  *
- * <p>There is intentionally <b>no</b> {@code fallbackMethod}: when the breaker is OPEN, Resilience4j
- * throws {@code CallNotPermittedException}, which {@link ResilientLlmGateway#executeCallChain}
- * already catches and uses to drop to its tiered PII-gated cloud / local-mock fallback. Keeping the
- * fallback decision in one place preserves the documented fail-safe ordering (ADR-007).
+ * <p>There is intentionally <b>no</b> {@code fallbackMethod}: when the breaker is OPEN,
+ * Resilience4j throws {@code CallNotPermittedException}, which {@link
+ * ResilientLlmGateway#executeCallChain} already catches and uses to drop to its tiered PII-gated
+ * cloud / local-mock fallback. Keeping the fallback decision in one place preserves the documented
+ * fail-safe ordering (ADR-007).
  */
 @Component
 @RequiredArgsConstructor

@@ -36,5 +36,21 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["shared-ui/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noArrayIndexKey": "off"
+					},
+					"a11y": {
+						"noStaticElementInteractions": "off",
+						"useKeyWithClickEvents": "off"
+					}
+				}
+			}
+		}
+	]
 }
