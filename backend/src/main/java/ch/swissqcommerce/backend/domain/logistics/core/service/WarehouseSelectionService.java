@@ -60,7 +60,10 @@ public class WarehouseSelectionService implements WarehouseSelectionUseCase {
             return Optional.empty();
         }
 
-        List<DarkStore> warehouses = darkStoreRepo.findAll();
+        List<DarkStore> warehouses =
+                darkStoreRepo.findAll().stream()
+                        .filter(wh -> Boolean.TRUE.equals(wh.getActive()))
+                        .toList();
         if (warehouses.isEmpty()) {
             return Optional.empty();
         }
@@ -366,7 +369,7 @@ public class WarehouseSelectionService implements WarehouseSelectionUseCase {
 
     private boolean checkCapacity(String warehouseId) {
         Optional<DarkStore> storeOpt = darkStoreRepo.findById(warehouseId);
-        if (storeOpt.isEmpty()) return false;
+        if (storeOpt.isEmpty() || !Boolean.TRUE.equals(storeOpt.get().getActive())) return false;
         int capacity =
                 storeOpt.get().getDailyOrderCapacity() != null
                         ? storeOpt.get().getDailyOrderCapacity()

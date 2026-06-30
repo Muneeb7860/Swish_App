@@ -107,4 +107,25 @@ public class RoutingControllerTest {
                         jsonPath("$.error")
                                 .value("Automatic routing failed. Order sent to HITL queue."));
     }
+
+    @Autowired private RoutingController routingController;
+
+    @Test
+    public void testRouteOrder_TooManyRequests_LoadShedding() throws Exception {
+        authenticateAsAdmin();
+
+        // Drain all permits from the semaphore (default limit is 10)
+        routingController.semaphore.acquire(10);
+
+        try {
+            mockMvc.perform(post("/api/v1/routing/orders/101"))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(
+                            jsonPath("$.error")
+                                    .value("System is under heavy load. Please try again later."));
+        } finally {
+            // Release permits
+            routingController.semaphore.release(10);
+        }
+    }
 }

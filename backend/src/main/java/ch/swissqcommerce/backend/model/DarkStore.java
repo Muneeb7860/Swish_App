@@ -61,6 +61,11 @@ public class DarkStore {
     @Column(name = "last_sanitization_audit")
     private OffsetDateTime lastSanitizationAudit;
 
+    @Column(name = "active", nullable = false)
+    @NotNull
+    @Builder.Default
+    private Boolean active = true;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
