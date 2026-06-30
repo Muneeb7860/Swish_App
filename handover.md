@@ -500,3 +500,19 @@ We successfully resolved the CI build blocking issues on the `develop` branch an
     - Pre-commit hook: **438/438 backend tests passed** (`BUILD SUCCESS` in 1m 4s).
     - Pushed commit `385c9e4` to `origin/mac-machine`.
 
+### Cycle Update (2026-06-30) — Epic 3B: RoutingAgent v1.0 [DONE]
+
+*   **Carrier SLA & ETA rules**:
+    - Implemented a new Flyway migration `V38__carrier_sla_rules.sql` defining standard/express delivery days, max weight limits, and fragile item support per carrier.
+    - Decoupled REST controllers from core services by introducing the `WarehouseSelectionUseCase` inbound port, resolving ArchUnit constraint violations.
+    - Upgraded `WarehouseSelectionService` to perform SLA-aware carrier filtering based on item weight, fragile overrides, and delivery time window constraints. Estimations for delivery days are returned on the routing result.
+    - Added multi-package count logic: splits orders weighing more than 30kg into multiple packages and reports the package count.
+
+*   **REST Endpoint**:
+    - Created `RoutingController` exposing `POST /api/v1/routing/orders/{orderId}` to trigger manual routing optimization. Secured via `@PreAuthorize("hasRole('ADMIN')")` and OPA fallback configuration.
+
+*   **Verification**:
+    - Created `CarrierSlaRoutingTest` covering weight limits, fragile handling, express windows, and multi-package splits.
+    - Created `RoutingControllerTest` validating all REST response codes.
+    - Pre-commit hook ran successfully: **445/445 backend tests passed** (`BUILD SUCCESS` in 1m 5s).
+    - Opened PR #133: `mac-machine -> develop`.

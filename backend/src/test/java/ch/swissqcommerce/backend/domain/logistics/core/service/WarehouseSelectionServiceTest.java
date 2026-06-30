@@ -3,6 +3,7 @@ package ch.swissqcommerce.backend.domain.logistics.core.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import ch.swissqcommerce.backend.domain.logistics.core.port.in.WarehouseSelectionUseCase;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort.BaselineCost;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort.RegionPreference;
@@ -26,6 +27,10 @@ public class WarehouseSelectionServiceTest {
     @Mock private DarkStoreRepository darkStoreRepo;
     @Mock private InventoryRepository inventoryRepo;
     @Mock private LogisticsDataPort logisticsDataPort;
+
+    @Mock
+    private ch.swissqcommerce.backend.domain.logistics.core.port.out.CarrierSlaPort carrierSlaPort;
+
     private WarehouseSelectionService service;
 
     private DarkStore store1;
@@ -35,7 +40,9 @@ public class WarehouseSelectionServiceTest {
 
     @BeforeEach
     public void setUp() {
-        service = new WarehouseSelectionService(darkStoreRepo, inventoryRepo, logisticsDataPort);
+        service =
+                new WarehouseSelectionService(
+                        darkStoreRepo, inventoryRepo, logisticsDataPort, carrierSlaPort);
 
         store1 =
                 DarkStore.builder()
@@ -79,15 +86,15 @@ public class WarehouseSelectionServiceTest {
         BaselineCost baseline = new BaselineCost("WH-NY-01", new BigDecimal("5.50"), 10);
         when(logisticsDataPort.findBaselinesByZipPrefix("800")).thenReturn(List.of(baseline));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt =
                 service.findOptimalWarehouse(orderData);
 
         assertTrue(resultOpt.isPresent());
-        WarehouseSelectionService.RoutingResult result = resultOpt.get();
-        assertEquals("WH-NY-01", result.getPrimaryWarehouseId());
-        assertFalse(result.isSplitShipment());
-        assertTrue(result.getEstimatedCost() > 5.50);
-        assertEquals("USPS", result.getCarrier());
+        WarehouseSelectionUseCase.RoutingResult result = resultOpt.get();
+        assertEquals("WH-NY-01", result.primaryWarehouseId());
+        assertFalse(result.splitShipment());
+        assertTrue(result.estimatedCost() > 5.50);
+        assertEquals("USPS", result.carrier());
     }
 
     @Test
@@ -98,12 +105,12 @@ public class WarehouseSelectionServiceTest {
         BaselineCost baseline = new BaselineCost("WH-NY-01", new BigDecimal("10.00"), 3);
         when(logisticsDataPort.findBaselinesByZipPrefix("800")).thenReturn(List.of(baseline));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt =
                 service.findOptimalWarehouse(orderData);
 
         assertTrue(resultOpt.isPresent());
-        WarehouseSelectionService.RoutingResult result = resultOpt.get();
-        assertTrue(result.getEstimatedCost() > 12.00);
+        WarehouseSelectionUseCase.RoutingResult result = resultOpt.get();
+        assertTrue(result.estimatedCost() > 12.00);
     }
 
     @Test
@@ -130,14 +137,14 @@ public class WarehouseSelectionServiceTest {
         when(darkStoreRepo.findById("WH-NY-01")).thenReturn(Optional.of(store1));
         when(darkStoreRepo.findById("WH-CA-02")).thenReturn(Optional.of(store2));
 
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt =
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt =
                 service.findOptimalWarehouse(splitOrderData);
 
         assertTrue(resultOpt.isPresent());
-        WarehouseSelectionService.RoutingResult result = resultOpt.get();
-        assertEquals("WH-NY-01", result.getPrimaryWarehouseId());
-        assertTrue(result.isSplitShipment());
-        assertEquals(2, result.getSplits().size());
-        assertEquals("UPS", result.getCarrier());
+        WarehouseSelectionUseCase.RoutingResult result = resultOpt.get();
+        assertEquals("WH-NY-01", result.primaryWarehouseId());
+        assertTrue(result.splitShipment());
+        assertEquals(2, result.splits().size());
+        assertEquals("UPS", result.carrier());
     }
 }

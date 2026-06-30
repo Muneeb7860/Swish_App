@@ -114,7 +114,9 @@ public class OpaAuthorizationManager implements AuthorizationManager<RequestAuth
 
     private AuthorizationDecision evaluateFallbackRules(String uri, List<String> roles) {
         // Admin-only paths
-        if (uri.startsWith("/api/admin") || uri.startsWith("/api/security")) {
+        if (uri.startsWith("/api/admin")
+                || uri.startsWith("/api/security")
+                || uri.startsWith("/api/v1/routing")) {
             boolean granted = roles.contains("ROLE_ADMIN");
             if (!granted)
                 log.warn("OPA Fallback [DENY - admin-only path]: uri={}, roles={}", uri, roles);

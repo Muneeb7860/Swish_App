@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.swissqcommerce.backend.domain.logistics.core.port.in.WarehouseSelectionUseCase;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.RoutingOrderData;
 import ch.swissqcommerce.backend.domain.logistics.core.service.WarehouseSelectionService;
 import ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence.OrderEntity;
@@ -146,10 +147,10 @@ public class RoutingCapacityIntegrationTest {
 
         // 1. Initially, WH-NY-01 has daily capacity limit 1 and 0 orders today.
         // Fulfills the order successfully.
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt1 =
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt1 =
                 selectionService.findOptimalWarehouse(orderData);
         assertTrue(resultOpt1.isPresent());
-        assertEquals("WH-NY-01", resultOpt1.get().getPrimaryWarehouseId());
+        assertEquals("WH-NY-01", resultOpt1.get().primaryWarehouseId());
 
         // 2. Place 1 order assigned to WH-NY-01 today
         transactionTemplate.executeWithoutResult(
@@ -177,7 +178,7 @@ public class RoutingCapacityIntegrationTest {
 
         // 3. Query again. Since WH-NY-01 order count today = 1 (capacity limit = 1),
         // it must be disqualified.
-        Optional<WarehouseSelectionService.RoutingResult> resultOpt2 =
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt2 =
                 selectionService.findOptimalWarehouse(orderData);
         assertFalse(
                 resultOpt2
