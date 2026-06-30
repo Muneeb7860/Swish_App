@@ -516,3 +516,24 @@ We successfully resolved the CI build blocking issues on the `develop` branch an
     - Created `RoutingControllerTest` validating all REST response codes.
     - Pre-commit hook ran successfully: **445/445 backend tests passed** (`BUILD SUCCESS` in 1m 5s).
     - Opened PR #133: `mac-machine -> develop`.
+
+### Cycle Update (2026-06-30) — Epic 3C: Hardening v2 [DONE]
+
+*   **Dark Store Active Flags**:
+    - Implemented Flyway migration `V39__dark_store_active_flag.sql` adding the `active` column to `oltp.dark_stores` defaulting to `true`.
+    - Added the `active` field to the `DarkStore` JPA model and filtered out inactive dark stores from `WarehouseSelectionService` and split capacity checks.
+
+*   **Resilient Circuit Breakers**:
+    - Created `CarrierRateClient` decorated with Resilience4j `@CircuitBreaker(name = "carrierRate")` to wrap REST calls to the carrier rate API.
+    - Configured Resilience4j properties for `carrierRate` in `application.properties` (window size 5, failure threshold 50%, wait 15s).
+    - Upgraded `CarrierRateAdapter` to fail-safe gracefully (return `Optional.empty()`) on `CallNotPermittedException` when circuit is open.
+
+*   **Concurrency Load-Shedding**:
+    - Implemented Semaphore-based concurrency limiting in `RoutingController` rejecting concurrent requests beyond the limit with `429 Too Many Requests`.
+
+*   **Verification**:
+    - Wrote unit tests in `WarehouseSelectionServiceTest` asserting inactive dark stores are ignored.
+    - Wrote unit tests in `CarrierRateAdapterTest` asserting `CallNotPermittedException` returns empty.
+    - Wrote integration tests in `RoutingControllerTest` asserting `429 Too Many Requests` is returned when concurrency limit is breached.
+    - Opened PR #134: `mac-machine -> develop`.
+

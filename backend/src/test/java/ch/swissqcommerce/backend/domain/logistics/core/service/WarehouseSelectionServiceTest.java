@@ -147,4 +147,24 @@ public class WarehouseSelectionServiceTest {
         assertEquals(2, result.splits().size());
         assertEquals("UPS", result.carrier());
     }
+
+    @Test
+    public void testFindOptimalWarehouse_IgnoresInactiveWarehouses() {
+        // Set store1 (WH-NY-01) as inactive
+        store1.setActive(false);
+
+        Inventory stock1 = Inventory.builder().itemId("item-1").stock(5).reservedQty(0).build();
+        when(inventoryRepo.findByStoreStoreId("WH-CA-02")).thenReturn(List.of(stock1));
+
+        BaselineCost baseline = new BaselineCost("WH-CA-02", new BigDecimal("7.50"), 10);
+        when(logisticsDataPort.findBaselinesByZipPrefix("800")).thenReturn(List.of(baseline));
+
+        Optional<WarehouseSelectionUseCase.RoutingResult> resultOpt =
+                service.findOptimalWarehouse(orderData);
+
+        assertTrue(resultOpt.isPresent());
+        WarehouseSelectionUseCase.RoutingResult result = resultOpt.get();
+        // Should choose WH-CA-02 because WH-NY-01 is inactive
+        assertEquals("WH-CA-02", result.primaryWarehouseId());
+    }
 }

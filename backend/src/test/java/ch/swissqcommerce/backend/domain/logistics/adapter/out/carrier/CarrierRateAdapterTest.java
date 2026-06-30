@@ -12,31 +12,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 public class CarrierRateAdapterTest {
 
     private CarrierRateAdapter adapter;
 
-    @Mock private RestTemplate restTemplate;
-
-    @Mock private RestTemplateBuilder restTemplateBuilder;
+    @Mock private CarrierRateClient carrierRateClient;
 
     @BeforeEach
     void setUp() {
-        when(restTemplateBuilder.requestFactory(any(java.util.function.Supplier.class)))
-                .thenReturn(restTemplateBuilder);
-        when(restTemplateBuilder.build()).thenReturn(restTemplate);
-        adapter = new CarrierRateAdapter(restTemplateBuilder);
+        adapter = new CarrierRateAdapter(carrierRateClient);
     }
 
     @Test
     void testGetCarrierRate_Success() {
-        Map<String, Object> mockResponse = Map.of("carrier", "UPS", "rate", 8.50);
-        when(restTemplate.getForObject(anyString(), eq(Map.class))).thenReturn(mockResponse);
+        Map mockResponse = Map.of("carrier", "UPS", "rate", 8.50);
+        when(carrierRateClient.callCarrierRateApi(anyString())).thenReturn(mockResponse);
 
         Optional<CarrierRate> rateOpt = adapter.getCarrierRate("WH-NY-01", "80012");
         assertTrue(rateOpt.isPresent());
@@ -46,16 +39,29 @@ public class CarrierRateAdapterTest {
 
     @Test
     void testGetCarrierRate_TimeoutException() {
-        when(restTemplate.getForObject(anyString(), eq(Map.class)))
+        when(carrierRateClient.callCarrierRateApi(anyString()))
                 .thenThrow(new ResourceAccessException("Timeout"));
 
         Optional<CarrierRate> rateOpt = adapter.getCarrierRate("WH-NY-01", "80012");
-        assertFalse(rateOpt.isPresent()); // Returns empty immediately on timeout
+        assertFalse(rateOpt.isPresent());
+    }
+
+    @Test
+    void testGetCarrierRate_CircuitOpenException() {
+        when(carrierRateClient.callCarrierRateApi(anyString()))
+                .thenThrow(
+                        io.github.resilience4j.circuitbreaker.CallNotPermittedException
+                                .createCallNotPermittedException(
+                                        io.github.resilience4j.circuitbreaker.CircuitBreaker
+                                                .ofDefaults("carrierRate")));
+
+        Optional<CarrierRate> rateOpt = adapter.getCarrierRate("WH-NY-01", "80012");
+        assertFalse(rateOpt.isPresent());
     }
 
     @Test
     void testGetCarrierRate_GenericException() {
-        when(restTemplate.getForObject(anyString(), eq(Map.class)))
+        when(carrierRateClient.callCarrierRateApi(anyString()))
                 .thenThrow(new RuntimeException("API error"));
 
         Optional<CarrierRate> rateOpt = adapter.getCarrierRate("WH-NY-01", "80012");
