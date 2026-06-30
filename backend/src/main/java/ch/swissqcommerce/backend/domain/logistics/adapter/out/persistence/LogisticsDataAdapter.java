@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.logistics.adapter.out.persistence;
 
 import ch.swissqcommerce.backend.domain.logistics.adapter.out.carrier.CarrierRateAdapter;
+import ch.swissqcommerce.backend.domain.logistics.core.port.out.CarrierSlaPort;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.LogisticsDataPort;
 import ch.swissqcommerce.backend.domain.logistics.core.port.out.RoutingOrderData;
 import ch.swissqcommerce.backend.model.CustomerAddress;
@@ -19,25 +20,28 @@ import org.springframework.stereotype.Component;
  * baseline, region preference, and shipment data.
  */
 @Component
-public class LogisticsDataAdapter implements LogisticsDataPort {
+public class LogisticsDataAdapter implements LogisticsDataPort, CarrierSlaPort {
 
     private final WarehouseBaselineRepository baselineRepo;
     private final RegionPrefRepository regionPrefRepo;
     private final ShipmentRepository shipmentRepo;
     private final OrderRepository orderRepo;
     private final CarrierRateAdapter carrierRateAdapter;
+    private final CarrierSlaRepository carrierSlaRepo;
 
     public LogisticsDataAdapter(
             WarehouseBaselineRepository baselineRepo,
             RegionPrefRepository regionPrefRepo,
             ShipmentRepository shipmentRepo,
             OrderRepository orderRepo,
-            CarrierRateAdapter carrierRateAdapter) {
+            CarrierRateAdapter carrierRateAdapter,
+            CarrierSlaRepository carrierSlaRepo) {
         this.baselineRepo = baselineRepo;
         this.regionPrefRepo = regionPrefRepo;
         this.shipmentRepo = shipmentRepo;
         this.orderRepo = orderRepo;
         this.carrierRateAdapter = carrierRateAdapter;
+        this.carrierSlaRepo = carrierSlaRepo;
     }
 
     @Override
@@ -122,5 +126,19 @@ public class LogisticsDataAdapter implements LogisticsDataPort {
     @Cacheable(value = "carrier-rates", key = "#warehouseId + '-' + #destinationZip")
     public Optional<CarrierRate> getCarrierRate(String warehouseId, String destinationZip) {
         return carrierRateAdapter.getCarrierRate(warehouseId, destinationZip);
+    }
+
+    @Override
+    public List<CarrierSlaData> findActiveSlas() {
+        return carrierSlaRepo.findByActiveTrueOrderByCarrierAsc().stream()
+                .map(
+                        sla ->
+                                new CarrierSlaData(
+                                        sla.getCarrier(),
+                                        sla.getMaxWeightKg(),
+                                        sla.getStandardDays(),
+                                        sla.getExpressDays(),
+                                        Boolean.TRUE.equals(sla.getFragileOk())))
+                .toList();
     }
 }
