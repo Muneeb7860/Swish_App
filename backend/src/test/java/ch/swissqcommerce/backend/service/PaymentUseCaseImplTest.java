@@ -2,17 +2,14 @@ package ch.swissqcommerce.backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
 import ch.swissqcommerce.backend.domain.payment.core.service.PaymentUseCaseImpl;
+import ch.swissqcommerce.backend.domain.payment.port.out.OrderValidationPort;
+import ch.swissqcommerce.backend.domain.payment.port.out.PaymentEventPublisherPort;
+import ch.swissqcommerce.backend.domain.payment.port.out.PaymentLedgerPort;
 import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
-import ch.swissqcommerce.backend.domain.transaction.port.out.OutboxEventPort;
-import ch.swissqcommerce.backend.model.Customer;
-import ch.swissqcommerce.backend.model.OutboxEvent;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -20,29 +17,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 public class PaymentUseCaseImplTest {
 
     @Mock private PaymentPort paymentPort;
-    @Mock private ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort orderPort;
-    @Mock private LedgerUseCase ledgerUseCase;
-    @Mock private OutboxEventPort outboxEventPort;
-    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private OrderValidationPort orderValidationPort;
+    @Mock private PaymentLedgerPort paymentLedgerPort;
+    @Mock private PaymentEventPublisherPort paymentEventPublisherPort;
 
     @InjectMocks private PaymentUseCaseImpl paymentUseCase;
 
     @Test
     public void testAuthorizePayment_Success() {
-        Customer customer = new Customer();
-        customer.setCustomerId("C1");
-
-        Order order = new Order();
-        order.setOrderId(1);
-        order.setCustomer(customer);
-
-        when(orderPort.findById(1)).thenReturn(Optional.of(order));
+        doNothing().when(orderValidationPort).validateOrderCustomer(1, "C1");
 
         when(paymentPort.save(any(Payment.class)))
                 .thenAnswer(
@@ -59,14 +47,18 @@ public class PaymentUseCaseImplTest {
         assertEquals(100, result.getPaymentId());
         assertEquals("AUTHORIZED", result.getStatus());
 
-        verify(ledgerUseCase).recordTransaction(eq("PAYMENT-AUTH"), anyString(), anyList());
-        verify(outboxEventPort, times(2)).save(any(OutboxEvent.class));
-        verify(eventPublisher, times(2)).publishEvent(any(OutboxEvent.class));
+        verify(orderValidationPort).validateOrderCustomer(1, "C1");
+        verify(paymentLedgerPort).recordPaymentAuth(1, "C1", new BigDecimal("50.00"));
+        verify(paymentEventPublisherPort).publishPaymentAuthorized(100, 1, new BigDecimal("50.00"));
+        verify(paymentEventPublisherPort)
+                .publishPaymentFraudCheck(100, 1, new BigDecimal("50.00"), "C1");
     }
 
     @Test
     public void testAuthorizePayment_OrderNotFound() {
-        when(orderPort.findById(1)).thenReturn(Optional.empty());
+        doThrow(new IllegalArgumentException("Order not found: 1"))
+                .when(orderValidationPort)
+                .validateOrderCustomer(1, "C1");
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -108,7 +100,9 @@ public class PaymentUseCaseImplTest {
         assertEquals("CAPTURED", result.getStatus());
         assertNotNull(result.getCapturedAt());
 
-        verify(outboxEventPort, times(2)).save(any(OutboxEvent.class));
+        verify(paymentEventPublisherPort).publishPaymentCaptured(100, 1, new BigDecimal("50.00"));
+        verify(paymentEventPublisherPort)
+                .publishPaymentNotification(100, 1, new BigDecimal("50.00"), "CAPTURED");
     }
 
     @Test
