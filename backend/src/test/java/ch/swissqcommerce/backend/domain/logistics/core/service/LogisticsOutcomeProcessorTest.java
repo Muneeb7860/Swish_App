@@ -14,15 +14,18 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 public class LogisticsOutcomeProcessorTest {
 
-    private LogisticsDataPort logisticsDataPort;
+    @Mock private LogisticsDataPort logisticsDataPort;
     private LogisticsOutcomeProcessor processor;
 
     @BeforeEach
     public void setUp() {
-        logisticsDataPort = mock(LogisticsDataPort.class);
         processor = new LogisticsOutcomeProcessor(logisticsDataPort);
     }
 

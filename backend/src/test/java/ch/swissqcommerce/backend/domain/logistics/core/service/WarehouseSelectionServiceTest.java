@@ -16,12 +16,16 @@ import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 public class WarehouseSelectionServiceTest {
 
-    private DarkStoreRepository darkStoreRepo;
-    private InventoryRepository inventoryRepo;
-    private LogisticsDataPort logisticsDataPort;
+    @Mock private DarkStoreRepository darkStoreRepo;
+    @Mock private InventoryRepository inventoryRepo;
+    @Mock private LogisticsDataPort logisticsDataPort;
     private WarehouseSelectionService service;
 
     private DarkStore store1;
@@ -31,10 +35,6 @@ public class WarehouseSelectionServiceTest {
 
     @BeforeEach
     public void setUp() {
-        darkStoreRepo = mock(DarkStoreRepository.class);
-        inventoryRepo = mock(InventoryRepository.class);
-        logisticsDataPort = mock(LogisticsDataPort.class);
-
         service = new WarehouseSelectionService(darkStoreRepo, inventoryRepo, logisticsDataPort);
 
         store1 =
