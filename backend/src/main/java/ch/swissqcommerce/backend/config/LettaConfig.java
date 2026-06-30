@@ -15,7 +15,11 @@ public class LettaConfig {
     @Value("${swish.letta.api.token:dummy-key}")
     private String apiToken;
 
-    @Value("${swish.letta.model:openai/gpt-4o}")
+    // Default to a LOCAL Ollama model (free/local-only AI policy). The Letta
+    // container ships a dummy OPENAI_API_KEY, so an openai/* default could never
+    // authenticate anyway — and a paid model must never be the default.
+    // Override via SWISH_LETTA_MODEL.
+    @Value("${swish.letta.model:ollama/qwen2.5:7b}")
     private String model;
 
     @Bean

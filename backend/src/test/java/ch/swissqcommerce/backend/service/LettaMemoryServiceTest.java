@@ -38,7 +38,7 @@ public class LettaMemoryServiceTest {
         MockitoAnnotations.openMocks(this);
         when(lettaConfig.getApiUrl()).thenReturn("http://localhost:8283");
         when(lettaConfig.getApiToken()).thenReturn("dummy-key");
-        when(lettaConfig.getModel()).thenReturn("openai/gpt-4o");
+        when(lettaConfig.getModel()).thenReturn("ollama/qwen2.5:7b");
 
         when(meterRegistry.counter(eq("letta.fallback.triggers"), any(String[].class)))
                 .thenReturn(counter);

@@ -483,6 +483,20 @@ We successfully resolved the CI build blocking issues on the `develop` branch an
     - All other parent Maven modules compile and test successfully.
     - All five frontend microfrontends (`frontend-host`, `frontend-customer`, `frontend-rider`, `frontend-admin`, `frontend-b2b`) lint and build cleanly (`npm run build:all` and `npm run lint`).
 
+### Cycle Update (2026-06-30) — Epic 1: CI/CD Hardening [DONE]
 
+*   **Branch Trigger Alignment**:
+    - Updated `.github/workflows/ci.yml` push/pull_request triggers: replaced stale uppercase `Mac_Machine` / `Windows_Machine` with the canonical lowercase `mac-machine` / `macbook_machine` (post-rename branch names).
+    - Updated `.github/workflows/branch-protection.yml` pull_request branches to also cover `mac-machine` and `macbook_machine`, so conventional-commit enforcement fires on machine-branch PRs (previously it only ran on `develop`/`master` PRs).
 
+*   **Shared-UI Quality Gate** (`@swish/shared-ui` design-system library):
+    - Added `shared-ui` key to the `changes` path-filter job output (watches `shared-ui/**`).
+    - Added new parallel CI job `shared-ui-quality`: Node 20 → `npm ci` → `tsc --noEmit` (TypeScript strict type-check) → `vitest run` (48 component tests: `AuthPortal`, `Modal`, `Skeleton`).
+    - Closes the CI blind spot where a broken shared component could silently reach `develop`.
+
+*   **Verification**:
+    - `shared-ui` Vitest suite: **48/48 tests passed** locally (1.14s, 3 files).
+    - YAML lint: both workflow files parse cleanly via `python3 yaml.safe_load`.
+    - Pre-commit hook: **438/438 backend tests passed** (`BUILD SUCCESS` in 1m 4s).
+    - Pushed commit `385c9e4` to `origin/mac-machine`.
 
