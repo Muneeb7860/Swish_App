@@ -7,34 +7,25 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
 
+/**
+ * Adapter that invokes the carrier rate API to retrieve shipping quotes. Delegates the network call
+ * to {@link CarrierRateClient} which is decorated with a Resilience4j circuit breaker.
+ */
 @Component
 public class CarrierRateAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(CarrierRateAdapter.class);
 
-    private final RestTemplate restTemplate;
+    private final CarrierRateClient carrierRateClient;
 
     @Value("${carrier.api.url:http://localhost:8083/api/carrier/rate}")
     private String carrierApiUrl;
 
-    public CarrierRateAdapter(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate =
-                restTemplateBuilder
-                        .requestFactory(
-                                () -> {
-                                    SimpleClientHttpRequestFactory factory =
-                                            new SimpleClientHttpRequestFactory();
-                                    factory.setConnectTimeout(200);
-                                    factory.setReadTimeout(200);
-                                    return factory;
-                                })
-                        .build();
+    public CarrierRateAdapter(CarrierRateClient carrierRateClient) {
+        this.carrierRateClient = carrierRateClient;
     }
 
     public Optional<CarrierRate> getCarrierRate(String warehouseId, String destinationZip) {
@@ -47,7 +38,7 @@ public class CarrierRateAdapter {
                             + destinationZip;
             log.debug("Calling carrier rate API: {}", url);
 
-            Map<?, ?> response = restTemplate.getForObject(url, Map.class);
+            Map<?, ?> response = carrierRateClient.callCarrierRateApi(url);
             if (response != null && response.containsKey("rate")) {
                 Object rateObj = response.get("rate");
                 String carrier =
@@ -64,6 +55,13 @@ public class CarrierRateAdapter {
                     warehouseId,
                     destinationZip,
                     e.getMessage());
+            return Optional.empty();
+        } catch (io.github.resilience4j.circuitbreaker.CallNotPermittedException e) {
+            log.warn(
+                    "Carrier rate API call blocked by open circuit breaker for warehouse={},"
+                            + " zip={}",
+                    warehouseId,
+                    destinationZip);
             return Optional.empty();
         } catch (Exception e) {
             log.warn(

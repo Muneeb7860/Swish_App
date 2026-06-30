@@ -2,36 +2,31 @@ package ch.swissqcommerce.backend.domain.payment.core.service;
 
 import ch.swissqcommerce.backend.domain.payment.core.model.Payment;
 import ch.swissqcommerce.backend.domain.payment.port.in.PaymentUseCase;
+import ch.swissqcommerce.backend.domain.payment.port.out.OrderValidationPort;
+import ch.swissqcommerce.backend.domain.payment.port.out.PaymentEventPublisherPort;
+import ch.swissqcommerce.backend.domain.payment.port.out.PaymentLedgerPort;
 import ch.swissqcommerce.backend.domain.payment.port.out.PaymentPort;
-import ch.swissqcommerce.backend.domain.transaction.core.model.Order;
-import ch.swissqcommerce.backend.domain.transaction.port.in.LedgerUseCase;
-import ch.swissqcommerce.backend.domain.transaction.port.out.OutboxEventPort;
-import ch.swissqcommerce.backend.model.OutboxEvent;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 public class PaymentUseCaseImpl implements PaymentUseCase {
 
     private final PaymentPort paymentPort;
-    private final ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort orderPort;
-    private final LedgerUseCase ledgerUseCase;
-    private final OutboxEventPort outboxEventPort;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OrderValidationPort orderValidationPort;
+    private final PaymentLedgerPort paymentLedgerPort;
+    private final PaymentEventPublisherPort paymentEventPublisherPort;
 
     public PaymentUseCaseImpl(
             PaymentPort paymentPort,
-            ch.swissqcommerce.backend.domain.transaction.port.out.OrderPort orderPort,
-            LedgerUseCase ledgerUseCase,
-            OutboxEventPort outboxEventPort,
-            ApplicationEventPublisher eventPublisher) {
+            OrderValidationPort orderValidationPort,
+            PaymentLedgerPort paymentLedgerPort,
+            PaymentEventPublisherPort paymentEventPublisherPort) {
         this.paymentPort = paymentPort;
-        this.orderPort = orderPort;
-        this.ledgerUseCase = ledgerUseCase;
-        this.outboxEventPort = outboxEventPort;
-        this.eventPublisher = eventPublisher;
+        this.orderValidationPort = orderValidationPort;
+        this.paymentLedgerPort = paymentLedgerPort;
+        this.paymentEventPublisherPort = paymentEventPublisherPort;
     }
 
     @Override
@@ -77,16 +72,9 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
             BigDecimal amount,
             String paymentMethod,
             String idempotencyKey) {
-        Order order =
-                orderPort
-                        .findById(orderId)
-                        .orElseThrow(
-                                () -> new IllegalArgumentException("Order not found: " + orderId));
 
-        if (order.getCustomer() == null
-                || !customerId.equals(order.getCustomer().getCustomerId())) {
-            throw new IllegalArgumentException("Payment customer must match order customer.");
-        }
+        // Validate that order matches customer
+        orderValidationPort.validateOrderCustomer(orderId, customerId);
 
         Payment payment =
                 Payment.builder()
@@ -99,51 +87,16 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
                         .idempotencyKey(idempotencyKey)
                         .build();
 
-        ledgerUseCase.recordTransaction(
-                "PAYMENT-AUTH",
-                "Authorise payment for order " + orderId,
-                List.of(
-                        new LedgerUseCase.LedgerLeg(
-                                "customer", customerId, amount, BigDecimal.ZERO),
-                        new LedgerUseCase.LedgerLeg("system", null, BigDecimal.ZERO, amount)));
+        // Record authorization ledger transaction
+        paymentLedgerPort.recordPaymentAuth(orderId, customerId, amount);
 
         Payment saved = paymentPort.save(payment);
 
-        OutboxEvent event =
-                OutboxEvent.builder()
-                        .aggregateType("Payment")
-                        .aggregateId(
-                                saved.getPaymentId() != null
-                                        ? saved.getPaymentId().toString()
-                                        : null)
-                        .eventType("payment.authorized")
-                        .payload(
-                                String.format(
-                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
-                                        saved.getPaymentId(), orderId, saved.getAmount()))
-                        .build();
-        outboxEventPort.save(event);
-        eventPublisher.publishEvent(event);
-
-        OutboxEvent fraudEvent =
-                OutboxEvent.builder()
-                        .aggregateType("Payment")
-                        .aggregateId(
-                                saved.getPaymentId() != null
-                                        ? saved.getPaymentId().toString()
-                                        : null)
-                        .eventType("payment.fraud_check")
-                        .payload(
-                                String.format(
-                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s,"
-                                                + " \"customerId\": \"%s\"}",
-                                        saved.getPaymentId(),
-                                        orderId,
-                                        saved.getAmount(),
-                                        customerId))
-                        .build();
-        outboxEventPort.save(fraudEvent);
-        eventPublisher.publishEvent(fraudEvent);
+        // Publish outbox events
+        paymentEventPublisherPort.publishPaymentAuthorized(
+                saved.getPaymentId(), orderId, saved.getAmount());
+        paymentEventPublisherPort.publishPaymentFraudCheck(
+                saved.getPaymentId(), orderId, saved.getAmount(), customerId);
 
         return saved;
     }
@@ -167,36 +120,11 @@ public class PaymentUseCaseImpl implements PaymentUseCase {
         payment.setCapturedAt(OffsetDateTime.now());
         Payment saved = paymentPort.save(payment);
 
-        OutboxEvent event =
-                OutboxEvent.builder()
-                        .aggregateType("Payment")
-                        .aggregateId(saved.getPaymentId().toString())
-                        .eventType("payment.captured")
-                        .payload(
-                                String.format(
-                                        "{\"paymentId\": %d, \"orderId\": %d, \"amount\": %s}",
-                                        saved.getPaymentId(),
-                                        saved.getOrderId(),
-                                        saved.getAmount()))
-                        .build();
-        outboxEventPort.save(event);
-        eventPublisher.publishEvent(event);
-
-        OutboxEvent notificationEvent =
-                OutboxEvent.builder()
-                        .aggregateType("Payment")
-                        .aggregateId(saved.getPaymentId().toString())
-                        .eventType("payment.notification")
-                        .payload(
-                                String.format(
-                                        "{\"paymentId\": %d, \"orderId\": %d, \"status\":"
-                                                + " \"CAPTURED\", \"amount\": %s}",
-                                        saved.getPaymentId(),
-                                        saved.getOrderId(),
-                                        saved.getAmount()))
-                        .build();
-        outboxEventPort.save(notificationEvent);
-        eventPublisher.publishEvent(notificationEvent);
+        // Publish capture outbox events
+        paymentEventPublisherPort.publishPaymentCaptured(
+                saved.getPaymentId(), saved.getOrderId(), saved.getAmount());
+        paymentEventPublisherPort.publishPaymentNotification(
+                saved.getPaymentId(), saved.getOrderId(), saved.getAmount(), "CAPTURED");
 
         return saved;
     }
