@@ -288,7 +288,12 @@ services:
       - "8283:8283"
     environment:
       - LETTA_PG_URI=postgresql://letta:lettapassword@postgres-letta:5432/letta
+      # Local Ollama backend (free/local-only AI policy). OPENAI_API_KEY stays a
+      # dummy so no paid OpenAI calls are ever made; agents use ollama/* models.
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - OPENAI_API_KEY=dummy-key
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - postgres-letta
     networks:
