@@ -1,6 +1,6 @@
 # routing_config.yaml — Semantic Router thresholds, agent registry, budget, evaluation
 classifier:
-  model: gemma3:4b
+  model: qwen2.5:3b
   backend: ollama
   ollama_url: http://localhost:11434
   timeout_ms: 3000

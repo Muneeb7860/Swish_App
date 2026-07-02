@@ -49,6 +49,7 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
 
 import threading
 import time
+from governance.router.classifier import get_classifier_stats
 
 class MetricsTracker:
     def __init__(self):
@@ -126,6 +127,12 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         metrics_tracker.record_failure()
         logger.exception("Governance pipeline execution failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/stats")
+def stats() -> dict[str, Any]:
+    """Get internal classifier routing stats."""
+    return get_classifier_stats()
 
 
 @app.get("/health")
