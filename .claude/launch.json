@@ -4,7 +4,7 @@
 		{
 			"name": "uat-static-host",
 			"runtimeExecutable": "python3",
-			"runtimeArgs": ["/tmp/uat_serve.py"],
+			"runtimeArgs": ["demo/uat_serve.py"],
 			"port": 3100
 		},
 		{
