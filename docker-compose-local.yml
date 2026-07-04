@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   postgres-gis:
-    image: postgis/postgis:15-3.3
+    build:
+      context: .
+      dockerfile: ./infrastructure/postgres-gis/Dockerfile
     container_name: postgres-gis
     environment:
       POSTGRES_USER: ${DB_USER:-admin}
@@ -15,6 +17,12 @@ services:
       - ./scripts/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
     networks:
       - hybrid-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-b2b_qcomm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -96,7 +104,8 @@ services:
     ports:
       - "8180:8080"
     depends_on:
-      - postgres-gis
+      postgres-gis:
+        condition: service_healthy
     networks:
       - hybrid-net
     deploy:
@@ -223,24 +232,6 @@ services:
         limits:
           memory: 512M
 
-  postgres-temporal:
-    image: postgres:15
-    container_name: postgres-temporal
-    environment:
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporalpassword
-      POSTGRES_DB: temporal
-    ports:
-      - "127.0.0.1:5435:5432"
-    volumes:
-      - temporal_pgdata:/var/lib/postgresql/data
-    networks:
-      - hybrid-net
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
   temporal:
     image: temporalio/auto-setup:1.22.4
     container_name: temporal
@@ -250,30 +241,13 @@ services:
     environment:
       - DB=postgresql
       - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PASSWORD=temporalpassword
-      - POSTGRES_PWD=temporalpassword
-      - POSTGRES_SEEDS=postgres-temporal
+      - POSTGRES_USER=${DB_USER:-admin}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-adminpassword}
+      - POSTGRES_PWD=${DB_PASSWORD:-adminpassword}
+      - POSTGRES_SEEDS=postgres-gis
     depends_on:
-      - postgres-temporal
-    networks:
-      - hybrid-net
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  postgres-letta:
-    image: pgvector/pgvector:pg16
-    container_name: postgres-letta
-    environment:
-      POSTGRES_USER: letta
-      POSTGRES_PASSWORD: lettapassword
-      POSTGRES_DB: letta
-    ports:
-      - "127.0.0.1:5434:5432"
-    volumes:
-      - letta_pgdata:/var/lib/postgresql/data
+      postgres-gis:
+        condition: service_healthy
     networks:
       - hybrid-net
     deploy:
@@ -287,7 +261,7 @@ services:
     ports:
       - "8283:8283"
     environment:
-      - LETTA_PG_URI=postgresql://letta:lettapassword@postgres-letta:5432/letta
+      - LETTA_PG_URI=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-adminpassword}@postgres-gis:5432/letta
       # Local Ollama backend (free/local-only AI policy). OPENAI_API_KEY stays a
       # dummy so no paid OpenAI calls are ever made; agents use ollama/* models.
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
@@ -295,7 +269,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - postgres-letta
+      postgres-gis:
+        condition: service_healthy
     networks:
       - hybrid-net
     deploy:
@@ -307,8 +282,6 @@ volumes:
   pgdata:
   mongodata:
   redisdata:
-  temporal_pgdata:
-  letta_pgdata:
   grafanadata:
 
 networks:

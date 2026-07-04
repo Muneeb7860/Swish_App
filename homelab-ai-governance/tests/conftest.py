@@ -7,6 +7,13 @@ from pathlib import Path
 
 import pytest
 
+# Must be set before any test module imports app code that initializes the
+# OTel TracerProvider (fixtures run too late). Without this, spans try to
+# export to the otel-collector container on localhost:4318; when it's not
+# running, each export blocks on retry backoff before timing out, turning a
+# <5s suite into 13+ minutes.
+os.environ["OTEL_SDK_DISABLED"] = "true"
+
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
