@@ -8,6 +8,7 @@ from typing import Any
 
 from governance.agents.base import BaseAgent
 from governance.agents.cloud_agent import CloudAgent
+from governance.agents.letta_agent import LettaAgent
 from governance.agents.ollama_agent import OllamaAgent
 from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
@@ -63,6 +64,16 @@ def get_agent(agent_id: str) -> BaseAgent:
             api_key_env=api_key_env,
             timeout_ms=timeout_ms,
         )
+    elif backend == "letta":
+        letta_url = cfg.get("letta_url", "http://localhost:8283")
+        api_token = cfg.get("api_token", "dummy-key")
+        return LettaAgent(
+            agent_id=agent_id,
+            model=model,
+            letta_url=letta_url,
+            api_token=api_token,
+            timeout_ms=timeout_ms,
+        )
     else:
         raise ConfigError(f"Unsupported backend type '{backend}' for agent '{agent_id}'")
 
@@ -84,6 +95,7 @@ def execute_pipeline(
     query: str,
     expected_format: str | None = None,
     local_only_override: bool = False,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Orchestrates the entire query governance pipeline.
 
@@ -215,8 +227,10 @@ def execute_pipeline(
         final_prompt = f"{pii_instruction}{processed_query}"
 
     try:
-        logger.info("Executing initial inference on agent '%s'", agent_id)
-        response = agent.generate(final_prompt)
+        if isinstance(agent, LettaAgent):
+            response = agent.generate_chat(final_prompt, session_id=session_id)
+        else:
+            response = agent.generate(final_prompt)
         candidate_text = response.text
     except Exception as e:
         logger.error("Initial inference failed for agent %s: %s", agent_id, e)

@@ -107,6 +107,7 @@ class GovernRequest(BaseModel):
     query: str
     expected_format: str | None = None
     local_only_override: bool = False
+    session_id: str | None = None
 
 
 @app.post("/api/v1/govern")
@@ -119,6 +120,7 @@ def govern(req: GovernRequest) -> dict[str, Any]:
             query=req.query,
             expected_format=req.expected_format,
             local_only_override=req.local_only_override,
+            session_id=req.session_id,
         )
         latency = time.perf_counter() - start
         metrics_tracker.record_request(latency, res)
