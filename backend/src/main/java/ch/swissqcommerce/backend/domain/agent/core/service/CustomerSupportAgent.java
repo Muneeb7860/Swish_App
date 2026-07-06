@@ -79,19 +79,9 @@ public class CustomerSupportAgent {
 
     private String callLlmWithLettaFallback(
             String prompt, String conversationId, double[] tokenCostOut) {
-        try {
-            if (lettaMemoryService != null && conversationId != null) {
-                String lettaResponse = lettaMemoryService.sendMessage(conversationId, prompt);
-                if (lettaResponse != null) {
-                    tokenCostOut[0] =
-                            0.035; // Default cost estimate for Letta calls to prevent budget bypass
-                    budgetTracker.trackUsage(0.035); // Track the Letta call cost dynamically
-                    return lettaResponse;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        LlmResponse response = llmGateway.callLlm(prompt);
+        // Route stateful conversations through the primary LlmGatewayPort with conversationId.
+        // This enforces local PII pre-scanning and content guardrails before reaching Letta.
+        LlmResponse response = llmGateway.callLlm(prompt, conversationId);
         tokenCostOut[0] = response.getTokenCost();
         return response.getContent();
     }

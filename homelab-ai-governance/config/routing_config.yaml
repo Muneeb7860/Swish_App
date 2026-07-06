@@ -49,6 +49,14 @@ agents:
     timeout_ms: 30000
     role: frontier
 
+  letta_support:
+    backend: letta
+    model: ollama/qwen2.5:7b
+    letta_url: http://localhost:8283
+    api_token: dummy-key
+    timeout_ms: 30000
+    role: stateful_support
+
 evaluation_rules:
   passing_threshold: 0.75
   max_self_correction_retries: 3

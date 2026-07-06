@@ -1,112 +1,112 @@
 {
-  "generated_at": "2026-07-02T14:23:17Z",
-  "dataset_size": 63,
-  "ollama_url": "http://localhost:11434",
-  "results": [
-    {
-      "model": "gemma3:4b",
-      "json_compliance": 1.0,
-      "intent_accuracy": 0.7936507936507936,
-      "false_refusal_rate": 0.0,
-      "keyword_fallback_rate": 0.0,
-      "latency_p50": 3445.27641699824,
-      "latency_p95": 3573.543762499321,
-      "latency_p99": 4132.060192578358,
-      "per_intent_accuracy_pct": {
-        "general_knowledge": 85.7,
-        "code_generation": 100.0,
-        "code_debugging": 100.0,
-        "code_review": 100.0,
-        "summarization": 71.4,
-        "creative_writing": 85.7,
-        "data_analysis": 42.9,
-        "system_admin": 57.1,
-        "sensitive_query": 71.4
-      }
-    },
-    {
-      "model": "phi3:mini",
-      "json_compliance": 0.746031746031746,
-      "intent_accuracy": 0.6190476190476191,
-      "false_refusal_rate": 0.25,
-      "keyword_fallback_rate": 0.25396825396825395,
-      "latency_p50": 2660.3259589974186,
-      "latency_p95": 21110.087474699674,
-      "latency_p99": 31767.802635957956,
-      "per_intent_accuracy_pct": {
-        "general_knowledge": 100.0,
-        "code_generation": 100.0,
-        "code_debugging": 85.7,
-        "code_review": 71.4,
-        "summarization": 57.1,
-        "creative_writing": 57.1,
-        "data_analysis": 57.1,
-        "system_admin": 57.1,
-        "sensitive_query": 42.9
-      }
-    },
-    {
-      "model": "qwen2.5:3b",
-      "json_compliance": 1.0,
-      "intent_accuracy": 0.9047619047619048,
-      "false_refusal_rate": 0.0,
-      "keyword_fallback_rate": 0.0,
-      "latency_p50": 1063.2841249971534,
-      "latency_p95": 1233.810879395605,
-      "latency_p99": 2395.879552921108,
-      "per_intent_accuracy_pct": {
-        "general_knowledge": 71.4,
-        "code_generation": 100.0,
-        "code_debugging": 100.0,
-        "code_review": 100.0,
-        "summarization": 71.4,
-        "creative_writing": 100.0,
-        "data_analysis": 100.0,
-        "system_admin": 85.7,
-        "sensitive_query": 85.7
-      }
-    },
-    {
-      "model": "qwen2.5:7b",
-      "json_compliance": 1.0,
-      "intent_accuracy": 0.8412698412698413,
-      "false_refusal_rate": 0.0,
-      "keyword_fallback_rate": 0.0,
-      "latency_p50": 2055.366333006532,
-      "latency_p95": 2486.757511901669,
-      "latency_p99": 4655.307875880835,
-      "per_intent_accuracy_pct": {
-        "general_knowledge": 100.0,
-        "code_generation": 100.0,
-        "code_debugging": 85.7,
-        "code_review": 100.0,
-        "summarization": 85.7,
-        "creative_writing": 71.4,
-        "data_analysis": 71.4,
-        "system_admin": 71.4,
-        "sensitive_query": 71.4
-      }
-    },
-    {
-      "model": "mistral:7b",
-      "json_compliance": 1.0,
-      "intent_accuracy": 0.8888888888888888,
-      "false_refusal_rate": 0.0,
-      "keyword_fallback_rate": 0.0,
-      "latency_p50": 1505.2357079985086,
-      "latency_p95": 1758.787991597637,
-      "latency_p99": 4114.582950541094,
-      "per_intent_accuracy_pct": {
-        "general_knowledge": 100.0,
-        "code_generation": 100.0,
-        "code_debugging": 85.7,
-        "code_review": 100.0,
-        "summarization": 71.4,
-        "creative_writing": 100.0,
-        "data_analysis": 100.0,
-        "system_admin": 85.7,
-        "sensitive_query": 57.1
-      }
-    }
-  ]
+	"generated_at": "2026-07-02T14:23:17Z",
+	"dataset_size": 63,
+	"ollama_url": "http://localhost:11434",
+	"results": [
+		{
+			"model": "gemma3:4b",
+			"json_compliance": 1.0,
+			"intent_accuracy": 0.7936507936507936,
+			"false_refusal_rate": 0.0,
+			"keyword_fallback_rate": 0.0,
+			"latency_p50": 3445.27641699824,
+			"latency_p95": 3573.543762499321,
+			"latency_p99": 4132.060192578358,
+			"per_intent_accuracy_pct": {
+				"general_knowledge": 85.7,
+				"code_generation": 100.0,
+				"code_debugging": 100.0,
+				"code_review": 100.0,
+				"summarization": 71.4,
+				"creative_writing": 85.7,
+				"data_analysis": 42.9,
+				"system_admin": 57.1,
+				"sensitive_query": 71.4
+			}
+		},
+		{
+			"model": "phi3:mini",
+			"json_compliance": 0.746031746031746,
+			"intent_accuracy": 0.6190476190476191,
+			"false_refusal_rate": 0.25,
+			"keyword_fallback_rate": 0.25396825396825395,
+			"latency_p50": 2660.3259589974186,
+			"latency_p95": 21110.087474699674,
+			"latency_p99": 31767.802635957956,
+			"per_intent_accuracy_pct": {
+				"general_knowledge": 100.0,
+				"code_generation": 100.0,
+				"code_debugging": 85.7,
+				"code_review": 71.4,
+				"summarization": 57.1,
+				"creative_writing": 57.1,
+				"data_analysis": 57.1,
+				"system_admin": 57.1,
+				"sensitive_query": 42.9
+			}
+		},
+		{
+			"model": "qwen2.5:3b",
+			"json_compliance": 1.0,
+			"intent_accuracy": 0.9047619047619048,
+			"false_refusal_rate": 0.0,
+			"keyword_fallback_rate": 0.0,
+			"latency_p50": 1063.2841249971534,
+			"latency_p95": 1233.810879395605,
+			"latency_p99": 2395.879552921108,
+			"per_intent_accuracy_pct": {
+				"general_knowledge": 71.4,
+				"code_generation": 100.0,
+				"code_debugging": 100.0,
+				"code_review": 100.0,
+				"summarization": 71.4,
+				"creative_writing": 100.0,
+				"data_analysis": 100.0,
+				"system_admin": 85.7,
+				"sensitive_query": 85.7
+			}
+		},
+		{
+			"model": "qwen2.5:7b",
+			"json_compliance": 1.0,
+			"intent_accuracy": 0.8412698412698413,
+			"false_refusal_rate": 0.0,
+			"keyword_fallback_rate": 0.0,
+			"latency_p50": 2055.366333006532,
+			"latency_p95": 2486.757511901669,
+			"latency_p99": 4655.307875880835,
+			"per_intent_accuracy_pct": {
+				"general_knowledge": 100.0,
+				"code_generation": 100.0,
+				"code_debugging": 85.7,
+				"code_review": 100.0,
+				"summarization": 85.7,
+				"creative_writing": 71.4,
+				"data_analysis": 71.4,
+				"system_admin": 71.4,
+				"sensitive_query": 71.4
+			}
+		},
+		{
+			"model": "mistral:7b",
+			"json_compliance": 1.0,
+			"intent_accuracy": 0.8888888888888888,
+			"false_refusal_rate": 0.0,
+			"keyword_fallback_rate": 0.0,
+			"latency_p50": 1505.2357079985086,
+			"latency_p95": 1758.787991597637,
+			"latency_p99": 4114.582950541094,
+			"per_intent_accuracy_pct": {
+				"general_knowledge": 100.0,
+				"code_generation": 100.0,
+				"code_debugging": 85.7,
+				"code_review": 100.0,
+				"summarization": 71.4,
+				"creative_writing": 100.0,
+				"data_analysis": 100.0,
+				"system_admin": 85.7,
+				"sensitive_query": 57.1
+			}
+		}
+	]
 }

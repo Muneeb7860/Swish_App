@@ -65,13 +65,13 @@ public class ResilientLlmGatewayTest {
     @Test
     public void governanceConfigured_usesGovernance_neverTouchesCloud() {
         when(pythonGovernanceAdapter.isConfigured()).thenReturn(true);
-        when(pythonGovernanceAdapter.callLlm(anyString()))
+        when(pythonGovernanceAdapter.callLlm(anyString(), any()))
                 .thenReturn(LlmResponse.builder().content("governed").tokenCost(0.5).build());
 
         LlmResponse res = gateway.callLlm(PII_PROMPT);
 
         assertEquals("governed", res.getContent());
-        verify(pythonGovernanceAdapter).callLlm(PII_PROMPT);
+        verify(pythonGovernanceAdapter).callLlm(eq(PII_PROMPT), any());
         verifyNoInteractions(geminiFreeAdapter);
         verifyNoInteractions(mockLlmAdapter);
     }
@@ -81,7 +81,7 @@ public class ResilientLlmGatewayTest {
     @Test
     public void governanceDown_withPii_blocksCloud_returnsDegraded() {
         when(pythonGovernanceAdapter.isConfigured()).thenReturn(true);
-        when(pythonGovernanceAdapter.callLlm(anyString()))
+        when(pythonGovernanceAdapter.callLlm(anyString(), any()))
                 .thenThrow(new RestClientException("governance offline"));
         // Cloud is available — but PII must keep it off-limits.
         lenient().when(geminiFreeAdapter.isConfigured()).thenReturn(true);
@@ -102,7 +102,7 @@ public class ResilientLlmGatewayTest {
 
         assertEquals(ResilientLlmGateway.GOVERNANCE_DEGRADED, res.getContent());
         verify(geminiFreeAdapter, never()).callLlm(anyString());
-        verify(pythonGovernanceAdapter, never()).callLlm(anyString());
+        verify(pythonGovernanceAdapter, never()).callLlm(anyString(), any());
     }
 
     // ─── Gated cloud: PII-free prompts may use cloud as a fallback ────────────
@@ -110,7 +110,7 @@ public class ResilientLlmGatewayTest {
     @Test
     public void governanceDown_cleanPrompt_usesGatedCloud() {
         when(pythonGovernanceAdapter.isConfigured()).thenReturn(true);
-        when(pythonGovernanceAdapter.callLlm(anyString()))
+        when(pythonGovernanceAdapter.callLlm(anyString(), any()))
                 .thenThrow(new RestClientException("governance offline"));
         when(geminiFreeAdapter.isConfigured()).thenReturn(true);
         when(geminiFreeAdapter.callLlm(anyString()))
@@ -154,7 +154,7 @@ public class ResilientLlmGatewayTest {
     @Test
     public void governanceDown_noCloud_withPii_usesMock() {
         when(pythonGovernanceAdapter.isConfigured()).thenReturn(true);
-        when(pythonGovernanceAdapter.callLlm(anyString()))
+        when(pythonGovernanceAdapter.callLlm(anyString(), any()))
                 .thenThrow(new RestClientException("governance offline"));
         when(geminiFreeAdapter.isConfigured()).thenReturn(false);
         when(mockLlmAdapter.callLlm(anyString()))
