@@ -6,12 +6,12 @@ Below is our current backlog status and road map.
 
 ---
 
-## Epic 1: CI/CD & Automated Governance (The "DevOps" Epic)
-*We have a robust Git branching strategy, but we are still manually compiling and testing code.*
+## Epic 1: CI/CD & Automated Governance (The "DevOps" Epic) [COMPLETED]
+*We have a robust Git branching strategy, automated pipelines, and quality gates on every PR.*
 
-- **GitHub Actions Pipeline**: Implement automated CI pipelines that trigger on every Pull Request to `develop`.
-- **Automated Quality Gates**: Integrate SonarQube or ESLint/Checkstyle to automatically block PRs that contain code smells or vulnerabilities.
-- [x] **Flyway DB Migrations**: Replace our static `schema.sql` boot script with Flyway for professional, version-controlled database schema evolution.
+- [x] **GitHub Actions Pipeline**: Automated CI pipeline triggers on every push/PR to `develop`, `master`, and feature branches (`macbook_machine`, `mac-machine`). Jobs: backend quality (test + JaCoCo 75% coverage + Spotless + OWASP), all 5 frontend builds + ESLint + Biome lint, Cypress E2E, Trivy vulnerability scan, AI governance tests, secret scan (TruffleHog), branch protection, conventional commits enforcement, and semantic release.
+- [x] **Automated Quality Gates**: Spotless (Google Java Format/AOSP) blocks backend PRs with style violations. JaCoCo enforces 75% code coverage minimum. Biome + ESLint block frontend PRs with lint errors. OWASP dependency-check flags CVEs ≥ CVSS 7. Trivy scans for CRITICAL/HIGH vulnerabilities on every push.
+- [x] **Flyway DB Migrations**: Replaced static `schema.sql` boot script with Flyway for professional, version-controlled database schema evolution.
 
 ## Epic 2: Enterprise Observability (The "Day-2 Ops" Epic) [COMPLETED]
 *We wired up Micrometer OpenTelemetry and Actuator, and now have full trace/metric visualization.*
