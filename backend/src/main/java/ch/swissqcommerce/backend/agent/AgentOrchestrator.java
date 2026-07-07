@@ -89,66 +89,69 @@ public class AgentOrchestrator {
         log.info("AgentOrchestrator: Starting synchronous orchestration. Input: {}", inputSummary);
         List<AgentSuggestionEntity> logs = new ArrayList<>();
 
-        // Generate trace ID for the request block
-        ch.swissqcommerce.backend.config.TraceContext.getTraceId();
+		// Generate trace ID for the request block
+		ch.swissqcommerce.backend.config.TraceContext.getTraceId();
 
-        // 1. Ops Agent (Inventory)
-        try {
-            AgentSuggestion suggestion = opsAgent.analyze();
-            AgentSuggestionEntity entity =
-                    processAgentPipeline("OpsAgent", suggestion, inputSummary);
-            if (entity != null) logs.add(entity);
-        } catch (Exception e) {
-            log.error("OpsAgent orchestration failed", e);
-        }
+		try {
+			// 1. Ops Agent (Inventory)
+			try {
+				AgentSuggestion suggestion = opsAgent.analyze();
+				AgentSuggestionEntity entity =
+						processAgentPipeline("OpsAgent", suggestion, inputSummary);
+				if (entity != null) logs.add(entity);
+			} catch (Exception e) {
+				log.error("OpsAgent orchestration failed", e);
+			}
 
-        // 2. Routing Agent
-        try {
-            AgentSuggestion suggestion = routingAgent.analyze();
-            AgentSuggestionEntity entity =
-                    processAgentPipeline("RoutingAgent", suggestion, inputSummary);
-            if (entity != null) logs.add(entity);
-        } catch (Exception e) {
-            log.error("RoutingAgent orchestration failed", e);
-        }
+			// 2. Routing Agent
+			try {
+				AgentSuggestion suggestion = routingAgent.analyze();
+				AgentSuggestionEntity entity =
+						processAgentPipeline("RoutingAgent", suggestion, inputSummary);
+				if (entity != null) logs.add(entity);
+			} catch (Exception e) {
+				log.error("RoutingAgent orchestration failed", e);
+			}
 
-        // 3. Pricing Agent
-        try {
-            AgentSuggestion suggestion = pricingAgent.analyze();
-            AgentSuggestionEntity entity =
-                    processAgentPipeline("PricingAgent", suggestion, inputSummary);
-            if (entity != null) logs.add(entity);
-        } catch (Exception e) {
-            log.error("PricingAgent orchestration failed", e);
-        }
+			// 3. Pricing Agent
+			try {
+				AgentSuggestion suggestion = pricingAgent.analyze();
+				AgentSuggestionEntity entity =
+						processAgentPipeline("PricingAgent", suggestion, inputSummary);
+				if (entity != null) logs.add(entity);
+			} catch (Exception e) {
+				log.error("PricingAgent orchestration failed", e);
+			}
 
-        // 4. Risk Agent
-        try {
-            AgentSuggestion suggestion = riskAgent.analyze();
-            AgentSuggestionEntity entity =
-                    processAgentPipeline("RiskAgent", suggestion, inputSummary);
-            if (entity != null) logs.add(entity);
-        } catch (Exception e) {
-            log.error("RiskAgent orchestration failed", e);
-        }
+			// 4. Risk Agent
+			try {
+				AgentSuggestion suggestion = riskAgent.analyze();
+				AgentSuggestionEntity entity =
+						processAgentPipeline("RiskAgent", suggestion, inputSummary);
+				if (entity != null) logs.add(entity);
+			} catch (Exception e) {
+				log.error("RiskAgent orchestration failed", e);
+			}
 
-        // 5. Support Agent
-        try {
-            AgentSuggestion suggestion = supportAgent.analyze();
-            AgentSuggestionEntity entity =
-                    processAgentPipeline("SupportAgent", suggestion, inputSummary);
-            if (entity != null) logs.add(entity);
-        } catch (Exception e) {
-            log.error("SupportAgent orchestration failed", e);
-        }
+			// 5. Support Agent
+			try {
+				AgentSuggestion suggestion = supportAgent.analyze();
+				AgentSuggestionEntity entity =
+						processAgentPipeline("SupportAgent", suggestion, inputSummary);
+				if (entity != null) logs.add(entity);
+			} catch (Exception e) {
+				log.error("SupportAgent orchestration failed", e);
+			}
 
-        log.info(
-                "AgentOrchestrator: Completed synchronous orchestration. Generated {} suggestion"
-                        + " entities.",
-                logs.size());
-        ch.swissqcommerce.backend.config.TraceContext.clear();
-        return logs;
-    }
+			log.info(
+					"AgentOrchestrator: Completed synchronous orchestration. Generated {} suggestion"
+							+ " entities.",
+					logs.size());
+		} finally {
+			ch.swissqcommerce.backend.config.TraceContext.clear();
+		}
+		return logs;
+	}
 
     /**
      * Asynchronously execute the full agent pipeline and write an AgentSuggestionCompleted event to
