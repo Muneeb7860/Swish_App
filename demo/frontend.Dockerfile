@@ -6,6 +6,12 @@ COPY frontend-rider ./frontend-rider
 COPY frontend-admin ./frontend-admin
 COPY frontend-b2b ./frontend-b2b
 COPY frontend-host ./frontend-host
+COPY shared-ui ./shared-ui
+
+# shared-ui is consumed by each app via "file:../shared-ui" (not an npm
+# workspace), so it needs its own node_modules installed in the build
+# context before any app that imports it can resolve the dependency.
+RUN cd shared-ui && npm ci --no-audit --no-fund
 
 RUN cd frontend-customer && npm ci --no-audit --no-fund && npm run build -- --base=/remotes/customer/
 RUN cd frontend-rider    && npm ci --no-audit --no-fund && npm run build -- --base=/remotes/rider/

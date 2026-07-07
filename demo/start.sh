@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 export JWT_SECRET='NiywY/0Zr2Kf/B8mGz9JDo9tFPauu4PKTpgMWALKdJpxFLQgrrRn4iuf3ihfrnqp'
 export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
-[ -f demo/.htpasswd ] || printf "beta:%s\n" "$(openssl passwd -apr1 "${BETA_PASS:-m8FdHvyLDP}")" > demo/.htpasswd
+mkdir -p demo/auth
+[ -f demo/auth/.htpasswd ] || printf "beta:%s\n" "$(openssl passwd -apr1 "${BETA_PASS:-m8FdHvyLDP}")" > demo/auth/.htpasswd
 
 echo "▶ keep-awake (caffeinate)…"; caffeinate -dimsu & echo $! > /tmp/swish_caffeinate.pid
 echo "▶ ensure Docker (colima)…"; docker info >/dev/null 2>&1 || colima start --cpu 4 --memory 8
