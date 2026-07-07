@@ -180,11 +180,12 @@ async function run() {
 			commonEnv,
 		);
 
-		// 3. Boot frontend App Shell Host
+		// 3. Boot frontend App Shell Host — force port 3000 so Cypress baseUrl matches.
+		// --strictPort ensures it fails fast rather than silently shifting to 3002+.
 		runService(
 			"Host App Shell",
 			npmCmd,
-			["run", "dev"],
+			["run", "dev", "--", "--port", "3000", "--strictPort"],
 			path.join(WORKSPACE_DIR, "frontend-host"),
 			path.join(LOGS_DIR, "host.log"),
 		);
