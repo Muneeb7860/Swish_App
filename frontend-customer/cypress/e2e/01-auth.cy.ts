@@ -49,7 +49,9 @@ describe("Auth flow — UI", () => {
 
 		// After successful registration the component shows a success message
 		// and reverts to Login tab
-		cy.contains("Account created", { timeout: 8000 }).should("be.visible");
+		cy.contains("Account created — please log in.", { timeout: 8000 }).should(
+			"be.visible",
+		);
 	});
 
 	it("shows an error when registering with the same email twice", () => {

@@ -33,7 +33,7 @@ public class AgentSuggestionEntity {
     @Column(name = "entity_id", length = 100, nullable = false)
     private String entityId;
 
-    @Column(name = "recommendation", length = 4000, nullable = false)
+    @Column(name = "recommendation", columnDefinition = "jsonb", nullable = false)
     private String recommendation;
 
     @Column(name = "confidence", precision = 3, scale = 2, nullable = false)

@@ -18,6 +18,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -161,6 +162,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public int createPendingOrder(
             String itemId, String wholesalerName, double proposedPrice, int quantity) {
         log.info(
@@ -212,6 +214,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public int createFulfilledOrder(
             String itemId, String wholesalerName, double proposedPrice, int quantity) {
         log.info(
@@ -263,6 +266,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public void auditNegotiation(
             int restockOrderId, String wholesalerName, double proposedPrice, int quantity) {
         log.info(
@@ -299,6 +303,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public void updateOrderStatus(int restockOrderId, String status) {
         log.info("updateOrderStatus: orderId={}, status={}", restockOrderId, status);
         B2BRestockOrder order =
@@ -311,6 +316,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public void updateOrderPrice(int restockOrderId, double newPrice) {
         log.info("updateOrderPrice: orderId={}, newPrice={}", restockOrderId, newPrice);
         B2BRestockOrder order =
@@ -323,6 +329,7 @@ public class B2BProcurementActivitiesImpl implements B2BProcurementActivities {
     }
 
     @Override
+    @Transactional
     public void updateApprovalStatus(
             int restockOrderId, String status, String operator, String reason) {
         log.info(

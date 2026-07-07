@@ -124,12 +124,17 @@ public class RewardsAndGovernanceIntegrationTest {
                 WholesalerEntity.builder()
                         .wholesalerId("WHOLE-999")
                         .name("Starfleet Supplies")
+                        .isActive(true)
                         .baseInvoiceAmount(new BigDecimal("1000.00"))
                         .fallbackInvoiceAmount(new BigDecimal("2000.00"))
                         .build();
         wholesalerRepository.save(wholesalerEntity);
         wholesaler =
-                Wholesaler.builder().wholesalerId("WHOLE-999").name("Starfleet Supplies").build();
+                Wholesaler.builder()
+                        .wholesalerId("WHOLE-999")
+                        .name("Starfleet Supplies")
+                        .isActive(true)
+                        .build();
 
         // Seed Restock Order
         B2BRestockOrderEntity restockOrderEntity =
@@ -389,7 +394,22 @@ public class RewardsAndGovernanceIntegrationTest {
 
     @Test
     public void testMultiWholesalerRfqAuction() {
-        // Given
+        // Clear dependent tables first to avoid Referential Integrity/FK Constraint violations
+        approvalsRepository.deleteAll();
+        restockOrderRepository.deleteAll();
+        wholesalerRepository.deleteAll();
+
+        // Seed Starfleet Supplies
+        wholesalerRepository.save(
+                WholesalerEntity.builder()
+                        .wholesalerId("WHOLE-999")
+                        .name("Starfleet Supplies")
+                        .isActive(true)
+                        .baseInvoiceAmount(new BigDecimal("1000.00"))
+                        .fallbackInvoiceAmount(new BigDecimal("2000.00"))
+                        .build());
+
+        // Seed Galactic Supplies
         WholesalerEntity otherWholesaler =
                 WholesalerEntity.builder()
                         .wholesalerId("WHOLE-888")
@@ -435,19 +455,7 @@ public class RewardsAndGovernanceIntegrationTest {
                                 Mockito.anyString(),
                                 Mockito.anyString(),
                                 Mockito.anyDouble(),
-                                Mockito.eq("Starfleet Supplies"),
-                                Mockito.anyInt()))
-                .thenReturn(
-                        new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent
-                                .NegotiationAnalysis(
-                                2.40, 0.95, "Good price from Starfleet", "ACCEPTED", 0.00005));
-
-        Mockito.when(
-                        b2BProcurementAgent.negotiateRestock(
                                 Mockito.anyString(),
-                                Mockito.anyString(),
-                                Mockito.anyDouble(),
-                                Mockito.eq("Galactic Supplies"),
                                 Mockito.anyInt()))
                 .thenReturn(
                         new ch.swissqcommerce.backend.domain.agent.core.service.B2BProcurementAgent

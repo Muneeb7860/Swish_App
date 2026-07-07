@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.model;
 
 import ch.swissqcommerce.backend.domain.transaction.core.model.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ public class HitlQueue {
     @Size(max = 20)
     private String type;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     private Customer customer;
