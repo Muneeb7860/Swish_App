@@ -97,6 +97,13 @@ public class OrderServiceImpl implements OrderUseCase {
             }
         }
 
+        // API callers commonly send payment method names in whatever casing is
+        // convenient (e.g. "wallet"); the orders table's CHECK constraint only
+        // accepts the exact canonical casing below. Normalize here so a case
+        // mismatch surfaces as a clear 400 instead of an opaque SQL constraint
+        // violation leaking to the client.
+        String canonicalPaymentMethod = normalizePaymentMethod(paymentMethod);
+
         // 1. Initial quick idempotency check
         if (idempotencyKey != null) {
             Optional<Order> existingOrder = orderPort.findByIdempotencyKey(idempotencyKey);
@@ -131,7 +138,7 @@ public class OrderServiceImpl implements OrderUseCase {
                 Order.builder()
                         .customer(customer)
                         .store(store)
-                        .paymentMethod(paymentMethod)
+                        .paymentMethod(canonicalPaymentMethod)
                         .bagsReturned(bagsReturned)
                         .idempotencyKey(idempotencyKey)
                         .tipAmount(tip)
@@ -298,6 +305,31 @@ public class OrderServiceImpl implements OrderUseCase {
                         + " Please try again later. Root cause: "
                         + t.getMessage(),
                 t);
+    }
+
+    // Must match the orders_payment_method_check CHECK constraint on oltp.orders
+    // (see db/migration/V1__init_schema.sql) exactly, including casing.
+    private static final Map<String, String> CANONICAL_PAYMENT_METHODS =
+            Map.of(
+                    "wallet", "Wallet",
+                    "swipe", "Swipe",
+                    "paypal", "PayPal",
+                    "paytm", "Paytm",
+                    "cash on delivery", "Cash on Delivery");
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            throw new IllegalArgumentException("Payment method must not be blank");
+        }
+        String canonical = CANONICAL_PAYMENT_METHODS.get(paymentMethod.trim().toLowerCase());
+        if (canonical == null) {
+            throw new IllegalArgumentException(
+                    "Unsupported payment method: '"
+                            + paymentMethod
+                            + "'. Valid options: "
+                            + String.join(", ", CANONICAL_PAYMENT_METHODS.values()));
+        }
+        return canonical;
     }
 
     private String evaluateCheckoutRouting(List<CartItem> items) {
