@@ -223,14 +223,17 @@ Clone the repository and pull the active development tree:
 ```bash
 git clone https://github.com/Muneeb7860/Swish_App.git
 cd Swish_App
-git checkout mac-machine
+git checkout macbook_machine
 ```
 
 ### 2. Boot the Ecosystem
-**Closed-beta / demo (full stack on one host):**
+**Closed-beta / UAT / Local Demo (One-Click Launch):**
 ```bash
-bash demo/start.sh        # infra + backend + frontends + tunnel (see demo/DEMO.md)
+# Checks ports, starts docker stack, runs flyway migrations, builds/packages jar files,
+# and boots backend gateway and all 5 MFEs on pinned ports (3000-3003, 5002)
+./run_demo.sh
 ```
+
 **Local dev infra only (Postgres/Kafka/Redis/Mongo):**
 ```bash
 docker compose -f docker-compose-local.yml up -d
