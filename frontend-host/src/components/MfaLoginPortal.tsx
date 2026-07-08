@@ -27,7 +27,6 @@ interface MfaLoginPortalProps {
 
 export default function MfaLoginPortal({
 	isAuthenticated,
-	activeProfile,
 	mfaStep,
 	setMfaStep,
 	mfaRole,
@@ -63,7 +62,9 @@ export default function MfaLoginPortal({
 				{mfaStep === "credentials" ? (
 					<div className="mfa-form-layout">
 						<div className="mfa-field-group">
-							<label className="mfa-label">Authentication Profile (Role)</label>
+							<label htmlFor="mfa-select-role" className="mfa-label">
+								Authentication Profile (Role)
+							</label>
 							<select
 								id="mfa-select-role"
 								aria-label="Select Authentication Profile"
@@ -80,7 +81,9 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">Account Password</label>
+							<label htmlFor="input-mfa-password" className="mfa-label">
+								Account Password
+							</label>
 							<input
 								id="input-mfa-password"
 								type="password"
@@ -92,7 +95,9 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">MFA Verification Path</label>
+							<label htmlFor="select-mfa-method" className="mfa-label">
+								MFA Verification Path
+							</label>
 							<select
 								id="select-mfa-method"
 								value={mfaMethod}
@@ -105,6 +110,7 @@ export default function MfaLoginPortal({
 						</div>
 
 						<button
+							type="button"
 							aria-label="Button"
 							id="btn-mfa-request-otp"
 							className="mfa-button-primary mt-2"
@@ -135,7 +141,9 @@ export default function MfaLoginPortal({
 						</div>
 
 						<div className="mfa-field-group">
-							<label className="mfa-label">6-Digit Verification Code</label>
+							<label htmlFor="input-mfa-otp" className="mfa-label">
+								6-Digit Verification Code
+							</label>
 							<input
 								id="input-mfa-otp"
 								type="text"
@@ -148,6 +156,7 @@ export default function MfaLoginPortal({
 						</div>
 
 						<button
+							type="button"
 							aria-label="Button"
 							id="btn-mfa-verify-otp"
 							className="mfa-button-primary"
@@ -157,6 +166,7 @@ export default function MfaLoginPortal({
 						</button>
 
 						<button
+							type="button"
 							aria-label="Button"
 							id="btn-mfa-back"
 							className="mfa-button-secondary"

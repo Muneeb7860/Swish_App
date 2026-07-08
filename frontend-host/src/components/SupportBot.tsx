@@ -119,7 +119,7 @@ export default function SupportBot({
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [botMessages, botOpen, isBotTyping]);
+	}, []);
 
 	if (!botOpen) {
 		return (

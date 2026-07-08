@@ -24,7 +24,6 @@ interface FetchOptions extends RequestInit {
 	bypassMock?: boolean;
 }
 
-// biome-ignore lint/complexity/noStaticOnlyClass: ApiClient is an intentional static utility namespace for the HTTP layer; converting to free functions is out of scope.
 export class ApiClient {
 	private static async delay(ms: number): Promise<void> {
 		return new Promise((resolve) => setTimeout(resolve, ms));
