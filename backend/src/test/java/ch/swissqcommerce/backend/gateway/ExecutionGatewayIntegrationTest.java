@@ -53,6 +53,14 @@ public class ExecutionGatewayIntegrationTest {
         // Testcontainers JDBC URL instead of failing with "Driver org.h2.Driver claims to
         // not accept jdbcUrl".
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        // test/resources/application.properties also pins H2Dialect; against a real
+        // Postgres container that makes Hibernate emit H2/ANSI JSON syntax ("? format
+        // json") which Postgres rejects. Force the Postgres dialect so jsonb columns
+        // (agent_suggestion.recommendation, execution_record.execution_result) bind
+        // correctly with @JdbcTypeCode(SqlTypes.JSON).
+        registry.add(
+                "spring.jpa.properties.hibernate.dialect",
+                () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
 
     @Autowired private InventoryRepository inventoryRepo;
