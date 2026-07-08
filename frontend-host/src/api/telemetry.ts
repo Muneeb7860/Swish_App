@@ -59,7 +59,7 @@ export function getActiveTraceParent(): string {
 	const activeSpan = trace.getSpan(context.active());
 	if (activeSpan) {
 		const spanContext = activeSpan.spanContext();
-		if (spanContext && spanContext.traceId && spanContext.spanId) {
+		if (spanContext?.traceId && spanContext.spanId) {
 			const flags = spanContext.traceFlags.toString(16).padStart(2, "0");
 			return `00-${spanContext.traceId}-${spanContext.spanId}-${flags}`;
 		}

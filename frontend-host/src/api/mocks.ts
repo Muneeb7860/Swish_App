@@ -1,14 +1,14 @@
-import {
-	type AuditLogEntry,
-	type B2BInvoice,
-	type B2BRestockOrder,
-	type CatalogItem,
-	type ComplianceReport,
-	type HitlTicket,
-	type LedgerLine,
-	type OnboardingApplication,
-	type Order,
-	type RiderCourse,
+import type {
+	AuditLogEntry,
+	B2BInvoice,
+	B2BRestockOrder,
+	CatalogItem,
+	ComplianceReport,
+	HitlTicket,
+	LedgerLine,
+	OnboardingApplication,
+	Order,
+	RiderCourse,
 } from "./types";
 
 export const MOCK_PRODUCTS: CatalogItem[] = [

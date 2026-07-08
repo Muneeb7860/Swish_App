@@ -35,7 +35,7 @@ export default function RiderTrackingPanel({
 				{ temp: activeOrder.temperature ?? 4.0, time: Date.now() },
 			]);
 		}
-	}, [activeOrder?.id, activeOrder?.status]);
+	}, [activeOrder?.status, activeOrder.temperature]);
 
 	// Flash animation and history tracking on every new tick
 	useEffect(() => {
@@ -50,9 +50,14 @@ export default function RiderTrackingPanel({
 			const timer = setTimeout(() => setTickFlash(false), 400);
 			return () => clearTimeout(timer);
 		}
-	}, [riderCoords?.lat, riderCoords?.lng]);
+	}, [
+		riderCoords?.lat,
+		riderCoords?.lng,
+		activeOrder?.temperature,
+		riderCoords,
+	]);
 
-	if (!activeOrder || activeOrder.status !== "transit") return null;
+	if (activeOrder?.status !== "transit") return null;
 
 	const coords = riderCoords || prevCoords;
 	const progress = activeOrder.progress || 0;

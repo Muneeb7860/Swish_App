@@ -31,8 +31,8 @@ const verifyMfeOrigin = <T,>(
 ): Promise<T> => {
 	return importPromise.then((module) => {
 		const scriptElements = Array.from(document.querySelectorAll("script"));
-		const remoteScript = scriptElements.find(
-			(s) => s.src && s.src.includes(remoteName),
+		const remoteScript = scriptElements.find((s) =>
+			s.src?.includes(remoteName),
 		);
 		if (remoteScript) {
 			const url = new URL(remoteScript.src);
@@ -78,7 +78,7 @@ const RiderApp = React.lazy(() =>
 const AdminPanel = React.lazy(() =>
 	verifyMfeOrigin(import("admin/AdminPanel"), "admin"),
 );
-const BusinessApp = React.lazy(() =>
+const _BusinessApp = React.lazy(() =>
 	verifyMfeOrigin(import("admin/BusinessApp"), "admin"),
 );
 const InventoryApp = React.lazy(() =>
@@ -161,7 +161,7 @@ class LocalErrorBoundary extends React.Component<
 }
 
 // Default mock product catalog
-const INITIAL_PRODUCTS = [
+const _INITIAL_PRODUCTS = [
 	{
 		id: "p1",
 		name: "Organic Fresh Milk",
@@ -824,7 +824,7 @@ export default function App() {
 		setTrustLogs((prev) => [
 			...prev,
 			{
-				id: "TL-" + Date.now(),
+				id: `TL-${Date.now()}`,
 				time: new Date().toLocaleTimeString(),
 				actor,
 				event,
@@ -1455,7 +1455,7 @@ export default function App() {
 						dryIceInjected: false,
 					})
 					.then((res) => {
-						if (res && res.alertTriggered) {
+						if (res?.alertTriggered) {
 							// Handle potential circuit breaker state if simulated
 						}
 					})
@@ -1578,7 +1578,7 @@ export default function App() {
 					`Order #${order.id} delivered. PoD Handshake Hash: ${podHash || "N/A"}`,
 				);
 				triggerToast(
-					`Order #${order.id} delivered! PoD Hash: ${podHash ? podHash.substring(0, 10) + "..." : "N/A"}`,
+					`Order #${order.id} delivered! PoD Hash: ${podHash ? `${podHash.substring(0, 10)}...` : "N/A"}`,
 					"customer",
 				);
 				setActiveOrder(null);
@@ -1810,7 +1810,7 @@ export default function App() {
 	}, [activeRole, fetchHitlQueues]);
 
 	const handleReleaseHitl = (ticket) => {
-		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
+		if (ticket.id?.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
 			api
 				.approveB2bOverride(realId, {
@@ -1868,7 +1868,7 @@ export default function App() {
 	};
 
 	const handleVoidHitl = (ticket) => {
-		if (ticket.id && ticket.id.toString().startsWith("b2b-")) {
+		if (ticket.id?.toString().startsWith("b2b-")) {
 			const realId = ticket.originalId;
 			api
 				.rejectB2bOverride(realId, {
@@ -1920,7 +1920,7 @@ export default function App() {
 					setHitlQueue((prev) => [
 						...prev,
 						{
-							id: "HITL-" + Date.now(),
+							id: `HITL-${Date.now()}`,
 							type: "rider_emergency",
 							desc: "Emergency dispatch rider salvage fee",
 							amount: 15.0,
@@ -1992,7 +1992,7 @@ export default function App() {
 						setHitlQueue((prev) => [
 							...prev,
 							{
-								id: "HITL-" + Date.now(),
+								id: `HITL-${Date.now()}`,
 								type: "customer_refund",
 								desc: "AI Support Bot customer order refund",
 								amount: 8.97,

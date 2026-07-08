@@ -85,7 +85,7 @@ export const useAiStream = () => {
 						}
 
 						// Append the new token to our state for real-time UI typing effect
-						setStreamData((prev) => prev + cleanData + " ");
+						setStreamData((prev) => `${prev + cleanData} `);
 					}
 				}
 			}
@@ -101,7 +101,7 @@ export const useAiStream = () => {
 				if (accumulatedLength > MAX_STREAM_BYTES) {
 					throw new Error("AI Stream payload size limit exceeded");
 				}
-				setStreamData((prev) => prev + cleanData + " ");
+				setStreamData((prev) => `${prev + cleanData} `);
 			}
 		} catch (err: unknown) {
 			// AbortError is expected when the stream is intentionally cancelled —

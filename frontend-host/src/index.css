@@ -263,7 +263,7 @@ body {
 		grid-template-columns: 1fr;
 	}
 	.system-engine-sidebar {
-		border-left: none !important;
+		border-left: none;
 		border-top: 1px solid var(--border-default);
 	}
 }
@@ -1992,7 +1992,7 @@ body {
 	justify-content: center;
 	text-align: center;
 	padding: 3rem 2rem;
-	border: 1px solid rgba(239, 68, 68, 0.2) !important;
+	border: 1px solid rgba(239, 68, 68, 0.2);
 	border-radius: 20px;
 	max-width: 560px;
 	margin: 3rem auto;
@@ -2002,7 +2002,7 @@ body {
 		135deg,
 		rgba(239, 68, 68, 0.03) 0%,
 		rgba(7, 10, 19, 0.9) 100%
-	) !important;
+	);
 	backdrop-filter: blur(20px);
 }
 
@@ -2184,11 +2184,11 @@ body {
 }
 
 .rbac-btn-escalate {
-	background: var(--color-admin) !important;
-	color: #ffffff !important;
+	background: var(--color-admin);
+	color: #ffffff;
 	width: 100%;
 	border: none;
-	padding: 0.65rem !important;
+	padding: 0.65rem;
 	cursor: pointer;
 	font-family: var(--font-sans);
 	font-weight: bold;
@@ -2203,7 +2203,7 @@ body {
 
 .rbac-btn-logout {
 	width: 100%;
-	padding: 0.65rem !important;
+	padding: 0.65rem;
 	cursor: pointer;
 	font-family: var(--font-sans);
 	border-radius: 8px;
@@ -2214,7 +2214,7 @@ body {
 	display: flex;
 	align-items: center;
 	gap: 0.3rem;
-	padding: 0.75rem 1rem !important;
+	padding: 0.75rem 1rem;
 	background: rgba(255, 255, 255, 0.03);
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	border-radius: 12px 12px 12px 2px;
@@ -2353,24 +2353,20 @@ body {
 
 /* Dynamically styled elements using active persona theme */
 .app-container .brand-logo {
-	background: linear-gradient(
-		135deg,
-		var(--role-accent),
-		var(--color-engine)
-	) !important;
-	-webkit-background-clip: text !important;
-	-webkit-text-fill-color: transparent !important;
+	background: linear-gradient(135deg, var(--role-accent), var(--color-engine));
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
 	transition: background 0.5s ease;
 }
 
 .app-container .glass-card:hover {
-	border-color: var(--role-card-border) !important;
+	border-color: var(--role-card-border);
 	box-shadow: 0 0 15px rgba(255, 255, 255, 0.02);
 }
 
 .app-container .ai-bot-toggle-btn {
-	background: var(--role-accent) !important;
-	box-shadow: 0 0 15px var(--role-glow) !important;
+	background: var(--role-accent);
+	box-shadow: 0 0 15px var(--role-glow);
 	transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -2379,30 +2375,30 @@ body {
 }
 
 .app-container .ai-bot-header {
-	border-bottom: 2px solid var(--role-accent) !important;
+	border-bottom: 2px solid var(--role-accent);
 	transition: border-bottom 0.5s ease;
 }
 
 .app-container .ai-bot-header-title {
-	color: var(--role-accent) !important;
+	color: var(--role-accent);
 	transition: color 0.5s ease;
 }
 
 .app-container .ai-bot-input:focus {
-	border-color: var(--role-accent) !important;
-	box-shadow: 0 0 10px var(--role-glow) !important;
+	border-color: var(--role-accent);
+	box-shadow: 0 0 10px var(--role-glow);
 }
 
 .app-container .btn-primary-glow {
-	background: var(--role-accent) !important;
-	color: #070a13 !important;
+	background: var(--role-accent);
+	color: #070a13;
 	font-weight: 800;
 	transition: all 0.3s ease;
 }
 
 .app-container .btn-primary-glow:hover {
-	background: color-mix(in oklab, var(--role-accent) 80%, white) !important;
-	box-shadow: 0 0 15px var(--role-button-hover) !important;
+	background: color-mix(in oklab, var(--role-accent) 80%, white);
+	box-shadow: 0 0 15px var(--role-button-hover);
 	transform: scale(0.98);
 }
 
@@ -2463,7 +2459,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 
 @media (prefers-reduced-motion: reduce) {
 	::view-transition-group(root) {
-		animation: none !important;
+		animation: none;
 	}
 }
 
@@ -2762,7 +2758,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 
 .mfa-select {
 	width: 100%;
-	background: #020408 !important;
+	background: #020408;
 	border: 1px solid var(--border-default);
 	border-radius: 8px;
 	color: var(--text-primary);
@@ -2781,7 +2777,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 
 .mfa-input {
 	width: 100%;
-	background: #020408 !important;
+	background: #020408;
 	border: 1px solid var(--border-default);
 	border-radius: 8px;
 	color: var(--text-primary);
@@ -2798,53 +2794,53 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 }
 
 .mfa-input-otp {
-	font-size: 1.25rem !important;
+	font-size: 1.25rem;
 	letter-spacing: 6px;
 	text-align: center;
 	font-weight: 700;
 }
 
 .mfa-button-primary {
-	background: var(--color-engine) !important;
-	color: #070a13 !important;
-	border: 1px solid rgba(255, 255, 255, 0.15) !important;
-	padding: 0.65rem !important;
-	width: 100% !important;
-	border-radius: 8px !important;
-	cursor: pointer !important;
-	font-family: var(--font-sans) !important;
-	font-weight: 800 !important;
-	font-size: 0.85rem !important;
-	box-shadow: 0 4px 15px var(--color-engine-glow) !important;
-	transition: var(--transition-smooth) !important;
+	background: var(--color-engine);
+	color: #070a13;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	padding: 0.65rem;
+	width: 100%;
+	border-radius: 8px;
+	cursor: pointer;
+	font-family: var(--font-sans);
+	font-weight: 800;
+	font-size: 0.85rem;
+	box-shadow: 0 4px 15px var(--color-engine-glow);
+	transition: var(--transition-smooth);
 }
 
 .mfa-button-primary:hover {
-	transform: translateY(-1px) !important;
+	transform: translateY(-1px);
 	box-shadow:
 		0 6px 20px rgba(6, 182, 212, 0.4),
-		0 0 15px rgba(6, 182, 212, 0.3) !important;
-	border-color: rgba(255, 255, 255, 0.35) !important;
+		0 0 15px rgba(6, 182, 212, 0.3);
+	border-color: rgba(255, 255, 255, 0.35);
 }
 
 .mfa-button-secondary {
-	background: rgba(255, 255, 255, 0.02) !important;
-	color: var(--text-secondary) !important;
-	border: 1px solid var(--border-default) !important;
-	padding: 0.6rem !important;
-	width: 100% !important;
-	border-radius: 8px !important;
-	cursor: pointer !important;
-	font-family: var(--font-sans) !important;
-	font-weight: 600 !important;
-	font-size: 0.85rem !important;
-	transition: var(--transition-smooth) !important;
+	background: rgba(255, 255, 255, 0.02);
+	color: var(--text-secondary);
+	border: 1px solid var(--border-default);
+	padding: 0.6rem;
+	width: 100%;
+	border-radius: 8px;
+	cursor: pointer;
+	font-family: var(--font-sans);
+	font-weight: 600;
+	font-size: 0.85rem;
+	transition: var(--transition-smooth);
 }
 
 .mfa-button-secondary:hover {
-	background: rgba(255, 255, 255, 0.05) !important;
-	color: var(--text-primary) !important;
-	border-color: rgba(255, 255, 255, 0.2) !important;
+	background: rgba(255, 255, 255, 0.05);
+	color: var(--text-primary);
+	border-color: rgba(255, 255, 255, 0.2);
 }
 
 .mfa-info-panel {
@@ -3017,7 +3013,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
 }
 .glass-card-hover-3d:hover {
 	transform: translateY(-4px) scale(1.02) rotateX(1deg) rotateY(1deg);
-	border-color: rgba(255, 255, 255, 0.18) !important;
+	border-color: rgba(255, 255, 255, 0.18);
 	box-shadow:
 		0 20px 35px rgba(0, 0, 0, 0.45),
 		0 0 15px rgba(255, 255, 255, 0.05);

@@ -70,7 +70,7 @@ echo -e "\n${YELLOW}[3/4] Booting Backend Services (PostgreSQL Staging Mode)...$
 
 KEY_NAME="JWT_""SECRET"
 export "${KEY_NAME}"
-eval "${KEY_NAME}=\${${KEY_NAME}:-devsecret}"
+eval "${KEY_NAME}=\${${KEY_NAME}:-devsecretdevsecretdevsecretdevsecret}"
 
 java -Dserver.port=8083 \
      -Dspring.profiles.active=staging \
@@ -106,34 +106,30 @@ done
 echo -e "\n${YELLOW}[4/4] Launching Frontend Micro-Frontends (Production Preview)...${NC}"
 
 # Host Shell (Port 3000)
-cd frontend-host && npm run preview -- --port 3000 --strictPort > /tmp/swish_host.log 2>&1 &
+(cd frontend-host && npm run preview -- --port 3000 --strictPort > /tmp/swish_host.log 2>&1) &
 PIDS+=($!)
 echo -e "✓ Host App Shell running on: ${GREEN}http://localhost:3000${NC}"
-cd ..
 
 # Customer Remote (Port 3001)
-cd frontend-customer && npm run preview -- --port 3001 --strictPort > /tmp/swish_customer.log 2>&1 &
+(cd frontend-customer && npm run preview -- --port 3001 --strictPort > /tmp/swish_customer.log 2>&1) &
 PIDS+=($!)
 echo -e "✓ Customer Remote running on: ${GREEN}http://localhost:3001${NC}"
-cd ..
 
 # Rider Remote (Port 3002)
-cd frontend-rider && npm run preview -- --port 3002 --strictPort > /tmp/swish_rider.log 2>&1 &
+(cd frontend-rider && npm run preview -- --port 3002 --strictPort > /tmp/swish_rider.log 2>&1) &
 PIDS+=($!)
 echo -e "✓ Rider Remote running on: ${GREEN}http://localhost:3002${NC}"
-cd ..
 
 # Admin Remote (Port 3003)
-cd frontend-admin && npm run preview -- --port 3003 --strictPort > /tmp/swish_admin.log 2>&1 &
+(cd frontend-admin && npm run preview -- --port 3003 --strictPort > /tmp/swish_admin.log 2>&1) &
 PIDS+=($!)
 echo -e "✓ Admin Remote running on: ${GREEN}http://localhost:3003${NC}"
-cd ..
 
 # B2B Remote (Port 5002)
-cd frontend-b2b && npm run preview -- --port 5002 --strictPort > /tmp/swish_b2b.log 2>&1 &
+(cd frontend-b2b && npm run preview -- --port 5002 --strictPort > /tmp/swish_b2b.log 2>&1) &
 PIDS+=($!)
 echo -e "✓ B2B/Wholesaler Remote running on: ${GREEN}http://localhost:5002${NC}"
-cd ..
+
 
 echo -e "\n${GREEN}======================================================================${NC}"
 echo -e "${GREEN}   🎉 ALL SWISH OS SERVICES RUNNING! Press Ctrl+C to stop the demo. ${NC}"

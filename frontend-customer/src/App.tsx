@@ -1,6 +1,7 @@
 import { AuthPortal, type AuthSession } from "@swish/shared-ui";
 import { useState } from "react";
 import "@swish/shared-ui/tokens";
+import ConsentManager from "./components/ConsentManager";
 import CustomerApp from "./components/CustomerApp";
 import "./index.css";
 
@@ -42,12 +43,15 @@ export default function App() {
 
 	if (!session) {
 		return (
-			<AuthPortal
-				role="customer"
-				mfaEnabled={false}
-				onAuthSuccess={(s) => setSession(s)}
-				apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8083"}/api/v1/auth`}
-			/>
+			<>
+				<AuthPortal
+					role="customer"
+					mfaEnabled={false}
+					onAuthSuccess={(s) => setSession(s)}
+					apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8083"}/api/v1/auth`}
+				/>
+				<ConsentManager />
+			</>
 		);
 	}
 
@@ -60,6 +64,7 @@ export default function App() {
 				color: "#fff",
 			}}
 		>
+			<ConsentManager />
 			<div
 				style={{
 					display: "flex",
