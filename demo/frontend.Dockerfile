@@ -13,6 +13,18 @@ COPY shared-ui ./shared-ui
 # context before any app that imports it can resolve the dependency.
 RUN cd shared-ui && npm ci --no-audit --no-fund
 
+# Same-origin API base for the tunnel/nginx deployment: with these empty, every
+# MFE's REST base resolves to a relative "/api/..." which the demo nginx proxies
+# to the backend on the same origin. This is what makes the app work behind the
+# Cloudflare tunnel (a remote browser must NOT be told to call "localhost").
+# These are build-time only and scoped to THIS image — the local run_demo.sh
+# preview builds separately and keeps its absolute localhost defaults (it has no
+# proxy, so it needs them). Covers host (VITE_API_BASE_URL), admin governance
+# console (VITE_API_BASE), and the customer surface (VITE_API_URL).
+ENV VITE_API_BASE_URL="" \
+    VITE_API_BASE="" \
+    VITE_API_URL=""
+
 RUN cd frontend-customer && npm ci --no-audit --no-fund && npm run build -- --base=/remotes/customer/
 RUN cd frontend-rider    && npm ci --no-audit --no-fund && npm run build -- --base=/remotes/rider/
 RUN cd frontend-admin    && npm ci --no-audit --no-fund && npm run build -- --base=/remotes/admin/
