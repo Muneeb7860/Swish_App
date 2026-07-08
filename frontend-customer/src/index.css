@@ -2261,3 +2261,176 @@ body {
 		justify-content: center;
 	}
 }
+
+/* ============================================================
+   Consent Manager — cookie banner, revisit button, prefs toggles
+   (see components/ConsentManager.tsx)
+   ============================================================ */
+.consent-banner {
+	position: fixed;
+	left: 50%;
+	bottom: 1rem;
+	transform: translateX(-50%);
+	width: min(760px, calc(100vw - 2rem));
+	z-index: 1200;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	border-radius: 16px;
+	border: 1px solid var(--border-strong);
+	background: var(--bg-glass-strong);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+	animation: fade-in-overlay 0.3s ease-out;
+}
+
+.consent-banner__body {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	flex: 1 1 340px;
+}
+
+.consent-banner__icon {
+	color: var(--color-customer);
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.consent-banner__title {
+	display: block;
+	font-weight: 800;
+	font-size: var(--text-base);
+	color: var(--text-primary);
+}
+
+.consent-banner__text {
+	margin-top: 0.25rem;
+	font-size: var(--text-xs);
+	line-height: 1.4;
+	color: var(--text-secondary);
+}
+
+.consent-banner__actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.consent-revisit-btn {
+	position: fixed;
+	left: 1rem;
+	bottom: 1rem;
+	z-index: 1150;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.5rem 0.85rem;
+	border-radius: 999px;
+	border: 1px solid var(--border-strong);
+	background: var(--bg-glass-strong);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	color: var(--text-secondary);
+	font-family: var(--font-sans);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	cursor: pointer;
+	transition: var(--transition-smooth);
+}
+
+.consent-revisit-btn:hover {
+	color: var(--text-primary);
+	border-color: var(--color-customer);
+	box-shadow: 0 0 14px var(--color-customer-glow);
+}
+
+.consent-revisit-btn svg {
+	color: var(--color-customer);
+}
+
+.consent-prefs {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.25rem 0 0.5rem;
+}
+
+.consent-prefs__row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.75rem;
+	border-radius: 12px;
+	border: 1px solid var(--border-default);
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.consent-prefs__meta {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.consent-prefs__label {
+	font-weight: 700;
+	font-size: var(--text-sm);
+	color: var(--text-primary);
+}
+
+.consent-prefs__desc {
+	font-size: var(--text-xs);
+	line-height: 1.35;
+	color: var(--text-muted);
+}
+
+.consent-prefs__stamp {
+	margin-top: 0.25rem;
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+	text-align: right;
+}
+
+.consent-toggle {
+	position: relative;
+	flex-shrink: 0;
+	width: 42px;
+	height: 24px;
+	border-radius: 999px;
+	border: 1px solid var(--border-strong);
+	background: var(--bg-muted);
+	cursor: pointer;
+	transition: var(--transition-smooth);
+	padding: 0;
+}
+
+.consent-toggle.on {
+	background: var(--color-customer);
+	border-color: var(--color-customer);
+}
+
+.consent-toggle.locked {
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.consent-toggle__knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #fff;
+	transition: var(--transition-smooth);
+}
+
+.consent-toggle.on .consent-toggle__knob {
+	left: 20px;
+}

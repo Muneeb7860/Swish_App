@@ -86,7 +86,7 @@ export const verifyMfa = (
 		"/api/v1/auth/mfa/verify",
 		data,
 		{},
-		() => ({ token: "mock.jwt.token-verified-" + data.session_token }),
+		() => ({ token: `mock.jwt.token-verified-${data.session_token}` }),
 	);
 };
 
@@ -153,7 +153,7 @@ export const requestRefund = (
 		() => ({
 			status: "pending_admin_approval",
 			message: "AI Audit flagged low-medium confidence. Route to HITL queue.",
-			ticket_id: "HITL-" + id,
+			ticket_id: `HITL-${id}`,
 		}),
 	);
 };
@@ -194,7 +194,7 @@ export const createPayment = (payment: PaymentRequest): Promise<Payment> => {
 		currency: "CHF",
 		payment_method: payment.payment_method,
 		status: "authorized",
-		idempotency_key: "idem-" + Date.now(),
+		idempotency_key: `idem-${Date.now()}`,
 		created_at: new Date().toISOString(),
 	}));
 };
@@ -216,7 +216,7 @@ export const capturePayment = (id: number): Promise<Payment> => {
 		currency: "CHF",
 		payment_method: "Wallet",
 		status: "captured",
-		idempotency_key: "idem-" + id,
+		idempotency_key: `idem-${id}`,
 		created_at: new Date().toISOString(),
 		captured_at: new Date().toISOString(),
 	}));
@@ -240,7 +240,7 @@ export const submitOnboard = (
 		onboard,
 		{},
 		() => ({
-			application_id: "app-" + Math.random().toString(36).substring(2, 7),
+			application_id: `app-${Math.random().toString(36).substring(2, 7)}`,
 		}),
 	);
 };

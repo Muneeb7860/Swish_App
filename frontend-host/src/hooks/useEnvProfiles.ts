@@ -87,7 +87,7 @@ export function useEnvProfiles() {
 					/ACTIVE_PROFILE\s*=\s*([a-zA-Z0-9_-]+)/i,
 				);
 				let profileKey = "development";
-				if (activeProfileMatch && activeProfileMatch[1]) {
+				if (activeProfileMatch?.[1]) {
 					profileKey = activeProfileMatch[1].trim().toLowerCase();
 				}
 
