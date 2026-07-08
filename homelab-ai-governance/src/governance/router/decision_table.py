@@ -94,8 +94,9 @@ _RULES: list[dict[str, Any]] = [
     {"rule": 27, "intent": "sensitive_query", "complexity": "high", "agent": "gemma_reasoner"},
 ]
 
-# Agents that are local (Ollama-backed) vs cloud
-_LOCAL_AGENTS = {"gemma_reasoner", "mistral_summarizer", "deepseek_coder"}
+# Agents that are local (Ollama/vLLM-backed) vs cloud
+_LOCAL_AGENTS = {"gemma_reasoner", "mistral_summarizer", "deepseek_coder", "vllm_reasoner"}
+
 
 # Local fallback map: when a cloud agent is selected but can't be used
 _LOCAL_FALLBACK = {

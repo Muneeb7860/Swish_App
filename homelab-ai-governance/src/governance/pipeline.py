@@ -10,6 +10,7 @@ from governance.agents.base import BaseAgent
 from governance.agents.cloud_agent import CloudAgent
 from governance.agents.letta_agent import LettaAgent
 from governance.agents.ollama_agent import OllamaAgent
+from governance.agents.vllm_agent import VllmAgent
 from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
 from governance.evaluator.loop import run_self_correction_loop
@@ -73,6 +74,14 @@ def get_agent(agent_id: str) -> BaseAgent:
             model=model,
             letta_url=letta_url,
             api_token=api_token,
+            timeout_ms=timeout_ms,
+        )
+    elif backend == "vllm":
+        vllm_url = cfg.get("vllm_url", "http://localhost:8000")
+        return VllmAgent(
+            agent_id=agent_id,
+            model=model,
+            vllm_url=vllm_url,
             timeout_ms=timeout_ms,
         )
     else:

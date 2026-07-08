@@ -39,9 +39,10 @@ Below is our current backlog status and road map.
 ## Epic 5: Production Hardening & Agentic Scaling (Architect Recommendation Roadmap) [BACKLOG]
 *Curated architecture recommendations to transition from MVP to a production-grade, highly scalable, and secure B2B platform.*
 
-- [ ] **High-Performance Local Inference (vLLM)**: Replace basic Ollama serving with a production-grade **vLLM** engine for local model hosting (Qwen/Llama). Implement **PagedAttention** to increase concurrent request throughput by 10x–20x on on-premise hardware, and use **llama-cpp-python** for CPU-only edge environments.
+- [x] **High-Performance Local Inference (vLLM)**: Replace basic Ollama serving with a production-grade **vLLM** engine for local model hosting (Qwen/Llama). Implement **PagedAttention** to increase concurrent request throughput by 10x–20x on on-premise hardware, and use **llama-cpp-python** for CPU-only edge environments.
 - [x] **Durable Stateful Agent Memory (Letta)**: Upgrade support and procurement agents from stateless REST cycles to **Letta** virtual context memory management. Isolate memory into **Core Memory** (agent self-managed) and **Archival Memory** (loaded via semantic vector search) to prevent context-window exhaustion.
-- [ ] **Structured Guardrails & Output Validation**: Standardize prompt-safety and payload schema validation by integrating **Guardrails AI** (defining Pydantic `RAIL` safety schemas) and **NVIDIA NeMo Guardrails** (defining dialog flow boundaries) inside the Python governance layer.
+- [x] **Structured Guardrails & Output Validation**: Standardize prompt-safety and payload schema validation by integrating **Guardrails AI** (defining Pydantic `RAIL` safety schemas) and **NVIDIA NeMo Guardrails** (defining dialog flow boundaries) inside the Python governance layer.
 - [x] **Self-Hosted LLM Observability (Arize Phoenix)**: Deploy a self-hosted **Arize Phoenix** container. Export OpenTelemetry LLM trace logs directly to the local collector to ensure 100% PII privacy, auditing intermediate prompt/response spans and token costs locally.
-- [ ] **Automated Prompt Red-Teaming (Promptfoo)**: Integrate **Promptfoo** into the CI pipeline to run automated regression and security tests (e.g., checking 100+ prompt injection, jailbreak, and PII leakage scenarios) against the governance service before merging PRs.
+- [x] **Automated Prompt Red-Teaming (Promptfoo)**: Integrate **Promptfoo** into the CI pipeline to run automated regression and security tests (e.g., checking 100+ prompt injection, jailbreak, and PII leakage scenarios) against the governance service before merging PRs.
+
 
