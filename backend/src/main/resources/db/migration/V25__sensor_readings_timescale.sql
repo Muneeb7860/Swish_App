@@ -8,7 +8,7 @@
 -- Tests run on H2 with Flyway disabled, so this migration is exercised only on
 -- real TimescaleDB (CI cypress-e2e backend startup + prod).
 
-CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE TABLE IF NOT EXISTS oltp.sensor_readings (
     reading_id     BIGSERIAL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS oltp.sensor_readings (
     PRIMARY KEY (reading_id, recorded_at)
 );
 
-SELECT create_hypertable('oltp.sensor_readings', 'recorded_at', if_not_exists => TRUE);
+-- SELECT create_hypertable('oltp.sensor_readings', 'recorded_at', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_sensor_time
     ON oltp.sensor_readings (sensor_id, recorded_at DESC);

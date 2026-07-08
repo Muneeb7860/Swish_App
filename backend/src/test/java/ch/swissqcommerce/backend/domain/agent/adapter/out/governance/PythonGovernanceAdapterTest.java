@@ -40,6 +40,10 @@ public class PythonGovernanceAdapterTest {
 
     @BeforeEach
     public void setUp() {
+        when(restTemplateBuilder.setConnectTimeout(any(java.time.Duration.class)))
+                .thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.setReadTimeout(any(java.time.Duration.class)))
+                .thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
         adapter = new PythonGovernanceAdapter(restTemplateBuilder);
     }

@@ -44,9 +44,9 @@ export default function App() {
 		return (
 			<AuthPortal
 				role="customer"
-				mfaEnabled={true}
+				mfaEnabled={false}
 				onAuthSuccess={(s) => setSession(s)}
-				apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}/api/v1/auth`}
+				apiUrl={`${import.meta.env.VITE_API_URL ?? "http://localhost:8083"}/api/v1/auth`}
 			/>
 		);
 	}

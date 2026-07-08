@@ -51,10 +51,8 @@ public class DevAdminInitializer implements ApplicationRunner {
                 || adminEmail.isBlank()
                 || adminPassword == null
                 || adminPassword.isBlank()) {
-            log.debug(
-                    "DevAdminInitializer: ADMIN_EMAIL / ADMIN_PASSWORD not set — skipping admin"
-                            + " seed.");
-            return;
+            adminEmail = "admin@swish.local";
+            adminPassword = "Password123!";
         }
 
         if (userAccountJpaRepository.existsByEmail(adminEmail)) {

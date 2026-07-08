@@ -44,7 +44,7 @@ services:
     build: { context: ., dockerfile: demo/frontend.Dockerfile }
     ports: ["3000:80"]
     extra_hosts: ["host.docker.internal:host-gateway"]
-    volumes: ["./demo/.htpasswd:/etc/nginx/.htpasswd:ro"]
+    volumes: ["./demo/auth:/etc/nginx/auth:ro"]
     restart: unless-stopped
 
 volumes:

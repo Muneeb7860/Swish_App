@@ -236,14 +236,14 @@ describe("Swish App Q-Commerce E2E Shopping Flow", () => {
 			});
 
 		// Low-stock substitution modal
-		cy.get(".cert-modal-overlay", { timeout: 6000 }).should("be.visible");
+		cy.get(".swish-modal-overlay", { timeout: 6000 }).should("be.visible");
 		cy.contains("Stock Alert: Running Low!").should("exist");
 		cy.contains("Whole Wheat Sourdough").should("exist");
 
 		cy.contains("Swap Item").click();
 
 		// Modal closes; Sourdough appears in cart
-		cy.get(".cert-modal-overlay").should("not.exist");
+		cy.get(".swish-modal-overlay").should("not.exist");
 		cy.get(".customer-cart-drawer")
 			.contains("Whole Wheat Sourdough")
 			.should("exist");

@@ -28,7 +28,7 @@ public class ExecutionRecord {
     @Column(name = "executed", nullable = false)
     private Boolean executed;
 
-    @Column(name = "execution_result", length = 4000)
+    @Column(name = "execution_result", columnDefinition = "jsonb")
     private String executionResult;
 
     @Column(name = "error", columnDefinition = "TEXT")

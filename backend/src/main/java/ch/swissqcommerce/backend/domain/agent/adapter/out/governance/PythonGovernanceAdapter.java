@@ -33,7 +33,11 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
     private final RestTemplate restTemplate;
 
     public PythonGovernanceAdapter(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate =
+                restTemplateBuilder
+                        .setConnectTimeout(java.time.Duration.ofSeconds(60))
+                        .setReadTimeout(java.time.Duration.ofSeconds(60))
+                        .build();
     }
 
     public boolean isConfigured() {

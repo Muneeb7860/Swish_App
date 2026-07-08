@@ -8,7 +8,6 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,22 +48,18 @@ public class TemporalConfig {
         Worker worker = factory.newWorker("B2B_PROCUREMENT_TASK_QUEUE");
         worker.registerWorkflowImplementationTypes(B2BProcurementWorkflowImpl.class);
         worker.registerActivitiesImplementations(activities);
-        return worker;
-    }
 
-    @PostConstruct
-    public void startWorkerFactory() {
         try {
-            if (workerFactory != null) {
-                log.info("Starting Temporal Worker Factory...");
-                workerFactory.start();
-                log.info("Temporal Worker Factory started successfully.");
-            }
+            log.info("Starting Temporal Worker Factory...");
+            factory.start();
+            log.info("Temporal Worker Factory started successfully.");
         } catch (Exception e) {
             log.error(
                     "Failed to start Temporal Worker Factory (Temporal server offline?): {}",
                     e.getMessage());
         }
+
+        return worker;
     }
 
     @PreDestroy

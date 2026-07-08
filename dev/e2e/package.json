@@ -5,6 +5,6 @@
 	"main": "e2e_runner.js",
 	"type": "module",
 	"dependencies": {
-		"playwright": "^1.49.0"
+		"playwright": "^1.50.0"
 	}
 }
