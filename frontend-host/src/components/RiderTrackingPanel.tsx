@@ -35,7 +35,7 @@ export default function RiderTrackingPanel({
 				{ temp: activeOrder.temperature ?? 4.0, time: Date.now() },
 			]);
 		}
-	}, [activeOrder?.status, activeOrder.temperature]);
+	}, [activeOrder?.status, activeOrder?.temperature]);
 
 	// Flash animation and history tracking on every new tick
 	useEffect(() => {
