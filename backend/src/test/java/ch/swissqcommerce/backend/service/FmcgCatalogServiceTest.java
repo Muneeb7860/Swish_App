@@ -9,6 +9,7 @@ import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.core.service.FmcgCatalogServiceImpl;
 import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase.FmcgImportResult;
 import ch.swissqcommerce.backend.domain.catalog.port.out.CatalogPort;
+import ch.swissqcommerce.backend.domain.catalog.port.out.FmcgApiPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.DarkStorePort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.InventoryPort;
 import ch.swissqcommerce.backend.model.DarkStore;
@@ -29,6 +30,7 @@ public class FmcgCatalogServiceTest {
     @Mock private DarkStorePort darkStorePort;
     @Mock private CatalogPort catalogPort;
     @Mock private DynamicPricingAgent dynamicPricingAgent;
+    @Mock private FmcgApiPort fmcgApiPort;
 
     private FmcgCatalogServiceImpl fmcgCatalogService;
 
@@ -36,11 +38,25 @@ public class FmcgCatalogServiceTest {
     public void setUp() {
         fmcgCatalogService =
                 new FmcgCatalogServiceImpl(
-                        inventoryPort, darkStorePort, catalogPort, dynamicPricingAgent);
+                        inventoryPort,
+                        darkStorePort,
+                        catalogPort,
+                        dynamicPricingAgent,
+                        fmcgApiPort);
     }
 
     @Test
     public void testImportFmcgProducts_Success() {
+        // Mock FmcgApiPort
+        when(fmcgApiPort.fetchProduct(anyString()))
+                .thenAnswer(
+                        invocation -> {
+                            String barcode = invocation.getArgument(0);
+                            return Optional.of(
+                                    new FmcgApiPort.FmcgProductDto(
+                                            "Mocked Product Name for " + barcode, "Mocked Brand"));
+                        });
+
         // Mock DarkStore lookups
         DarkStore store1 = DarkStore.builder().storeId("store-1").storeName("Zurich").build();
         DarkStore store2 = DarkStore.builder().storeId("store-2").storeName("Geneva").build();

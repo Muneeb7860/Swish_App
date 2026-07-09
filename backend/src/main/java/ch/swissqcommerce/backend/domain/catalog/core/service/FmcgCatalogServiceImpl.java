@@ -4,18 +4,13 @@ import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase;
 import ch.swissqcommerce.backend.domain.catalog.port.out.CatalogPort;
+import ch.swissqcommerce.backend.domain.catalog.port.out.FmcgApiPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.DarkStorePort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.InventoryPort;
 import ch.swissqcommerce.backend.model.DarkStore;
 import ch.swissqcommerce.backend.model.Inventory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +31,7 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
     private final DarkStorePort darkStorePort;
     private final CatalogPort catalogPort;
     private final DynamicPricingAgent dynamicPricingAgent;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final FmcgApiPort fmcgApiPort;
 
     private static final Map<String, FmcgFallback> FALLBACKS =
             Map.of(
@@ -135,9 +130,6 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
     @Override
     @Transactional
     public List<FmcgImportResult> importFmcgProducts() {
-        HttpClient client =
-                HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-
         List<FmcgImportResult> results = new ArrayList<>();
 
         // Fetch target dark stores
@@ -158,42 +150,19 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
 
             // Try Live API
             try {
-                HttpRequest request =
-                        HttpRequest.newBuilder()
-                                .uri(
-                                        URI.create(
-                                                "https://world.openfoodfacts.org/api/v2/product/"
-                                                        + barcode
-                                                        + ".json?fields=code,product_name,brands,categories,image_front_url"))
-                                .header(
-                                        "User-Agent",
-                                        "SwishApp - Catalog Seeder - Version 1.0 - admin@swish.ch")
-                                .timeout(Duration.ofSeconds(5))
-                                .GET()
-                                .build();
-
-                HttpResponse<String> response =
-                        client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    Map<?, ?> body = objectMapper.readValue(response.body(), Map.class);
-                    if (Integer.valueOf(1).equals(body.get("status"))
-                            || "product found".equals(body.get("status_verbose"))) {
-                        Map<?, ?> product = (Map<?, ?>) body.get("product");
-                        String apiName = (String) product.get("product_name");
-                        String apiBrand = (String) product.get("brands");
-                        if (apiName != null && !apiName.isBlank()) {
-                            name = apiName;
-                            source = "API";
-                        }
-                        if (apiBrand != null && !apiBrand.isBlank()) {
-                            // Extract primary brand if multiple comma-separated exist
-                            brand = apiBrand.split(",")[0].trim();
-                        }
+                java.util.Optional<FmcgApiPort.FmcgProductDto> apiProduct =
+                        fmcgApiPort.fetchProduct(barcode);
+                if (apiProduct.isPresent()) {
+                    name = apiProduct.get().getName();
+                    if (apiProduct.get().getBrand() != null) {
+                        brand = apiProduct.get().getBrand();
                     }
+                    source = "API";
                 }
             } catch (Exception e) {
                 log.warn(
-                        "Failed to fetch product {} from Open Food Facts API (using fallback): {}",
+                        "Resilient fallback active. Failed to fetch product {} from Open Food Facts"
+                                + " API: {}",
                         barcode,
                         e.getMessage());
             }
