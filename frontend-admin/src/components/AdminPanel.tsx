@@ -1,5 +1,6 @@
 import * as Lucide from "lucide-react";
 import { useState } from "react";
+import { API_BASE } from "../api/governance";
 
 interface OnboardingApp {
 	id: string;
@@ -38,6 +39,8 @@ interface AdminPanelProps {
 	handleVoidHitl: (ticket: HitlTicket) => void;
 	handleAdjustHitl: (ticket: HitlTicket, newPrice: number) => void;
 	hitlLoading?: boolean;
+	token?: string | null;
+	refreshCatalog?: () => void;
 }
 
 export default function AdminPanel({
@@ -47,8 +50,8 @@ export default function AdminPanel({
 	setWholesalerOutageActive,
 	paymentOutageActive,
 	setPaymentOutageActive,
-	redisCrashActive,
-	setRedisCrashActive,
+	redisCrashActive: _redisCrashActive,
+	setRedisCrashActive: _setRedisCrashActive,
 	dbLatencyActive,
 	setDbLatencyActive,
 	riderTrafficActive,
@@ -62,10 +65,45 @@ export default function AdminPanel({
 	handleVoidHitl,
 	handleAdjustHitl,
 	hitlLoading = false,
+	token = null,
+	refreshCatalog = () => {},
 }: AdminPanelProps) {
 	// Local state for the inline "Adjust Bid" price input. Keyed by ticket id.
 	const [adjustPrices, setAdjustPrices] = useState<Record<string, string>>({});
 	const [adjustOpen, setAdjustOpen] = useState<Record<string, boolean>>({});
+
+	// FMCG Catalog Import state
+	const [importStatus, setImportStatus] = useState<
+		"idle" | "loading" | "success" | "error"
+	>("idle");
+	const [importResults, setImportResults] = useState<any[]>([]);
+	const [importError, setImportError] = useState<string | null>(null);
+
+	const handleImportFmcg = async () => {
+		setImportStatus("loading");
+		setImportError(null);
+		try {
+			const res = await fetch(`${API_BASE}/api/v1/products/import-fmcg`, {
+				method: "POST",
+				headers: {
+					Authorization: token ? `Bearer ${token}` : "",
+				},
+			});
+			if (!res.ok) {
+				throw new Error(`Import failed: HTTP ${res.status}`);
+			}
+			const data = await res.json();
+			setImportResults(data);
+			setImportStatus("success");
+			if (refreshCatalog) {
+				refreshCatalog();
+			}
+		} catch (err: any) {
+			console.error("Failed to import FMCG products:", err);
+			setImportError(err.message || "Failed to import products");
+			setImportStatus("error");
+		}
+	};
 
 	return (
 		<div
@@ -134,6 +172,7 @@ export default function AdminPanel({
 										setColdChainBreakdownActive(e.target.checked)
 									}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-cold-chain"
 									className="switch-label"
@@ -160,6 +199,7 @@ export default function AdminPanel({
 									checked={wholesalerOutageActive}
 									onChange={(e) => setWholesalerOutageActive(e.target.checked)}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-wholesaler-outage"
 									className="switch-label"
@@ -185,6 +225,7 @@ export default function AdminPanel({
 									checked={paymentOutageActive}
 									onChange={(e) => setPaymentOutageActive(e.target.checked)}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-payment-outage"
 									className="switch-label"
@@ -210,6 +251,7 @@ export default function AdminPanel({
 									checked={simulateTelemetryFraud}
 									onChange={(e) => setSimulateTelemetryFraud(e.target.checked)}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-telemetry-fraud"
 									className="switch-label"
@@ -236,6 +278,7 @@ export default function AdminPanel({
 									checked={dbLatencyActive}
 									onChange={(e) => setDbLatencyActive(e.target.checked)}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-db-latency"
 									className="switch-label"
@@ -261,6 +304,7 @@ export default function AdminPanel({
 									checked={riderTrafficActive}
 									onChange={(e) => setRiderTrafficActive(e.target.checked)}
 								/>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
 								<label
 									htmlFor="switch-rider-traffic"
 									className="switch-label"
@@ -268,6 +312,241 @@ export default function AdminPanel({
 							</div>
 						</div>
 					</div>
+				</div>
+
+				{/* FMCG Import & Dynamic Pricing Hub */}
+				<div
+					className="glass-card"
+					style={{
+						padding: "1.25rem",
+						borderLeft: "3px solid var(--color-business)",
+					}}
+				>
+					<h3
+						style={{
+							fontWeight: 800,
+							color: "var(--color-business)",
+							display: "flex",
+							alignItems: "center",
+							gap: "0.4rem",
+							marginBottom: "0.5rem",
+						}}
+					>
+						<Lucide.ShoppingBag size={18} />
+						Global FMCG Import & Dynamic Pricing Hub
+					</h3>
+					<p
+						style={{
+							fontSize: "0.7rem",
+							color: "var(--text-muted)",
+							marginBottom: "1rem",
+						}}
+					>
+						Fetch live FMCG product metadata (Nestlé, Cadbury, Mondelez,
+						Coca-Cola, PepsiCo, Unilever, Dabur, Himalaya, ITC, P&G) from global
+						Open Food Facts APIs and calculate dynamic zone-surge/perishable
+						discounts.
+					</p>
+
+					<div
+						style={{
+							display: "flex",
+							gap: "1rem",
+							alignItems: "center",
+							marginBottom: "1rem",
+						}}
+					>
+						<button
+							type="button"
+							className="btn-primary-glow"
+							style={{
+								background: "var(--color-business)",
+								color: "#070a13",
+								border: "none",
+								padding: "0.55rem 1rem",
+								fontSize: "0.75rem",
+								cursor: importStatus === "loading" ? "not-allowed" : "pointer",
+								fontWeight: "bold",
+								borderRadius: "6px",
+								opacity: importStatus === "loading" ? 0.6 : 1,
+							}}
+							disabled={importStatus === "loading"}
+							onClick={handleImportFmcg}
+						>
+							{importStatus === "loading" ? (
+								<span
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "0.3rem",
+									}}
+								>
+									<Lucide.Loader size={13} className="animate-spin" />
+									Importing & Recalculating...
+								</span>
+							) : (
+								"Import & Price FMCG Products"
+							)}
+						</button>
+
+						{importStatus === "success" && (
+							<span
+								style={{
+									fontSize: "0.7rem",
+									color: "#34d399",
+									fontWeight: "bold",
+								}}
+							>
+								✓ Successfully Imported 10 Items
+							</span>
+						)}
+
+						{importStatus === "error" && (
+							<span
+								style={{
+									fontSize: "0.7rem",
+									color: "#f87171",
+									fontWeight: "bold",
+								}}
+							>
+								⚠ {importError}
+							</span>
+						)}
+					</div>
+
+					{importResults.length > 0 && (
+						<div
+							style={{
+								maxHeight: "220px",
+								overflowY: "auto",
+								border: "1px solid var(--border-default)",
+								borderRadius: "8px",
+								background: "rgba(0,0,0,0.2)",
+							}}
+						>
+							<table
+								style={{
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.68rem",
+								}}
+							>
+								<thead>
+									<tr
+										style={{
+											borderBottom: "1px solid var(--border-default)",
+											background: "rgba(255,255,255,0.02)",
+										}}
+									>
+										<th
+											style={{
+												padding: "0.4rem",
+												textAlign: "left",
+												color: "var(--text-muted)",
+											}}
+										>
+											Item
+										</th>
+										<th
+											style={{
+												padding: "0.4rem",
+												textAlign: "left",
+												color: "var(--text-muted)",
+											}}
+										>
+											Brand
+										</th>
+										<th
+											style={{
+												padding: "0.4rem",
+												textAlign: "right",
+												color: "var(--text-muted)",
+											}}
+										>
+											Base Price
+										</th>
+										<th
+											style={{
+												padding: "0.4rem",
+												textAlign: "right",
+												color: "var(--text-muted)",
+											}}
+										>
+											Dynamic Price
+										</th>
+										<th
+											style={{
+												padding: "0.4rem",
+												textAlign: "center",
+												color: "var(--text-muted)",
+											}}
+										>
+											Source
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{importResults.map((item, idx) => (
+										<tr
+											key={idx}
+											style={{
+												borderBottom: "1px solid rgba(255,255,255,0.03)",
+											}}
+										>
+											<td style={{ padding: "0.4rem", fontWeight: 600 }}>
+												{item.emoji} {item.name}
+											</td>
+											<td
+												style={{
+													padding: "0.4rem",
+													color: "var(--text-secondary)",
+												}}
+											>
+												{item.brand}
+											</td>
+											<td
+												style={{
+													padding: "0.4rem",
+													textAlign: "right",
+													color: "var(--text-muted)",
+												}}
+											>
+												{item.basePrice.toFixed(2)} CHF
+											</td>
+											<td
+												style={{
+													padding: "0.4rem",
+													textAlign: "right",
+													color: "var(--color-customer)",
+													fontWeight: "bold",
+												}}
+											>
+												{item.dynamicPrice.toFixed(2)} CHF
+											</td>
+											<td style={{ padding: "0.4rem", textAlign: "center" }}>
+												<span
+													style={{
+														padding: "0.1rem 0.3rem",
+														borderRadius: "4px",
+														fontSize: "0.55rem",
+														fontWeight: "bold",
+														background:
+															item.source === "API"
+																? "rgba(52, 211, 153, 0.1)"
+																: "rgba(251, 191, 36, 0.1)",
+														color:
+															item.source === "API" ? "#34d399" : "#fbbf24",
+													}}
+												>
+													{item.source}
+												</span>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
 				</div>
 			</div>
 

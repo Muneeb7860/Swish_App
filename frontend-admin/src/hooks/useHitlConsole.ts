@@ -13,6 +13,7 @@ const TOKEN_KEY = "swish_admin_token";
 
 export interface HitlConsole {
 	authed: boolean;
+	token: string | null;
 	queue: HitlTicket[];
 	loading: boolean;
 	error: string | null;
@@ -121,6 +122,7 @@ export function useHitlConsole(): HitlConsole {
 
 	return {
 		authed: !!token,
+		token,
 		queue,
 		loading,
 		error,

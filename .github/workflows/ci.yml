@@ -500,6 +500,47 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
+  # OWASP A03 (Injection) + Top-10 static analysis. Semgrep OSS (free, no cloud
+  # token) with the community java/typescript/react/owasp rulesets. Scoped to
+  # SOURCE dirs (a whole-repo scan errors + takes ~36min on vendored/generated
+  # files); source-only is clean and ~15s. Enforcing at ERROR severity only —
+  # high-confidence findings block the build; warnings do not. See docs/SECURITY_EVALS.md.
+  security-semgrep:
+    name: SAST (Semgrep — OWASP/Injection)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.microservices == 'true' ||
+      needs.changes.outputs.frontend-host == 'true' ||
+      needs.changes.outputs.frontend-admin == 'true' ||
+      needs.changes.outputs.frontend-customer == 'true' ||
+      needs.changes.outputs.frontend-rider == 'true' ||
+      needs.changes.outputs.frontend-b2b == 'true' ||
+      needs.changes.outputs.governance == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Semgrep SAST scan (ERROR severity blocks)
+        run: |
+          semgrep scan \
+            --config p/java --config p/typescript --config p/react --config p/owasp-top-ten \
+            --severity ERROR --error --metrics=off \
+            backend/src/main \
+            frontend-host/src frontend-customer/src frontend-admin/src \
+            frontend-rider/src frontend-b2b/src shared-ui/src \
+            homelab-ai-governance/src
+
   governance-quality:
     name: AI Governance Quality Gate (Python)
     runs-on: ubuntu-latest

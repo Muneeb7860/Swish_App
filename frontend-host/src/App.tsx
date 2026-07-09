@@ -701,32 +701,35 @@ export default function App() {
 		};
 	}, []);
 
-	useEffect(() => {
-		if (isAuthenticated) {
-			setCatalogLoading(true);
-			api
-				.getCatalog()
-				.then((items) => {
-					const mapped = items.map((item) => ({
-						id: item.item_id,
-						name: item.name,
-						price: item.price,
-						stock: item.stock,
-						stockEast: Math.max(0, item.stock - 2),
-						category: item.category,
-						emoji: item.emoji,
-						perishable: item.perishable,
-					}));
-					setProducts(mapped);
-				})
-				.catch((err) => {
-					console.error("Failed to load catalog from BFF:", err);
-				})
-				.finally(() => {
-					setCatalogLoading(false);
-				});
-		}
+	const refreshCatalog = useCallback(() => {
+		if (!isAuthenticated) return;
+		setCatalogLoading(true);
+		api
+			.getCatalog()
+			.then((items) => {
+				const mapped = items.map((item) => ({
+					id: item.item_id,
+					name: item.name,
+					price: item.price,
+					stock: item.stock,
+					stockEast: Math.max(0, item.stock - 2),
+					category: item.category,
+					emoji: item.emoji,
+					perishable: item.perishable,
+				}));
+				setProducts(mapped);
+			})
+			.catch((err) => {
+				console.error("Failed to load catalog from BFF:", err);
+			})
+			.finally(() => {
+				setCatalogLoading(false);
+			});
 	}, [isAuthenticated, setProducts]);
+
+	useEffect(() => {
+		refreshCatalog();
+	}, [refreshCatalog]);
 
 	const ROLES = ["customer", "rider", "inventory", "business", "admin"];
 	const handleRoleChange = (newRole: string) => {
@@ -2731,6 +2734,8 @@ export default function App() {
 										handleReleaseHitl={handleReleaseHitl}
 										handleVoidHitl={handleVoidHitl}
 										hitlLoading={hitlLoading}
+										token={authToken}
+										refreshCatalog={refreshCatalog}
 									/>
 								</LocalErrorBoundary>
 							) : (
