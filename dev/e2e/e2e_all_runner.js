@@ -180,11 +180,13 @@ async function run() {
 			commonEnv,
 		);
 
-		// 3. Boot frontend App Shell Host
+		// 3. Boot frontend App Shell Host — use preview (production build) so
+		// Playwright/Cypress get a stable build without Vite HMR module errors.
+		// Force port 3000 --strictPort so Cypress baseUrl matches reliably.
 		runService(
 			"Host App Shell",
 			npmCmd,
-			["run", "dev"],
+			["run", "preview", "--", "--port", "3000", "--strictPort"],
 			path.join(WORKSPACE_DIR, "frontend-host"),
 			path.join(LOGS_DIR, "host.log"),
 		);
@@ -278,7 +280,7 @@ async function run() {
 			await runTest(
 				"Cypress Host E2E",
 				npmCmd,
-				["run", "e2e"],
+				["run", "e2e", "--", "--headless"],
 				path.join(WORKSPACE_DIR, "frontend-host"),
 			);
 		} catch (err) {

@@ -118,6 +118,10 @@ jobs:
         working-directory: ./backend
         run: mvn jacoco:check
 
+      - name: Spotless Code Style Gate (Google Java Format / AOSP)
+        working-directory: ./backend
+        run: mvn spotless:check
+
       - name: OWASP Dependency Security Check
         working-directory: ./backend
         env:
@@ -180,6 +184,10 @@ jobs:
       - name: Install dependencies
         working-directory: ./frontend-host
         run: npm ci
+
+      - name: Run Biome Lint Gate (errors block; warnings allowed)
+        working-directory: ./frontend-host
+        run: npx @biomejs/biome lint .
 
       - name: Run ESLint Standards Validation
         working-directory: ./frontend-host

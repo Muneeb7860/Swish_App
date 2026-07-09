@@ -76,13 +76,18 @@ public class ResilientLlmGateway implements LlmGatewayPort {
 
     @Override
     public LlmResponse callLlm(String prompt) {
+        return callLlm(prompt, null);
+    }
+
+    @Override
+    public LlmResponse callLlm(String prompt, String sessionId) {
         // 0. Fail-fast budget check
         if (agentBudgetTracker.isBudgetExceeded()) {
             log.warn("Cost budget exceeded — blocking LLM call; returning governance-degraded.");
             return governanceDegraded();
         }
 
-        LlmResponse response = executeCallChain(prompt);
+        LlmResponse response = executeCallChain(prompt, sessionId);
 
         // Track the usage cost in the centralized budget tracker
         if (response != null) {
@@ -93,13 +98,17 @@ public class ResilientLlmGateway implements LlmGatewayPort {
     }
 
     private LlmResponse executeCallChain(String prompt) {
+        return executeCallChain(prompt, null);
+    }
+
+    private LlmResponse executeCallChain(String prompt, String sessionId) {
         // 1. Preferred: the governed path. It owns the PII gate, so raw prompts are safe here.
         //    Routed through GovernanceLlmClient so the "governance" circuit breaker actually
         //    applies (AOP can't advise a self-invoked private method). When the breaker is OPEN it
         //    throws CallNotPermittedException, caught below to drop to the next fail-safe tier.
         if (pythonGovernanceAdapter.isConfigured()) {
             try {
-                return governanceLlmClient.call(prompt);
+                return governanceLlmClient.call(prompt, sessionId);
             } catch (Exception e) {
                 log.warn(
                         "Python Governance service unavailable ({}). Applying fail-safe fallback.",

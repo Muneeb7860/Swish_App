@@ -208,14 +208,7 @@ export const useResilientWebSocket = (
 		};
 
 		wsRef.current = ws;
-	}, [
-		url,
-		userId,
-		accessToken,
-		maxReconnectAttempts,
-		reconnectIntervalMin,
-		reconnectIntervalMax,
-	]);
+	}, [url, userId, accessToken, handleReconnect]);
 
 	const handleReconnect = () => {
 		if (reconnectAttemptRef.current < maxReconnectAttempts) {
@@ -310,7 +303,7 @@ export class OrderStatusSocket {
 		if (!OrderStatusSocket.listeners.has(orderId)) {
 			OrderStatusSocket.listeners.set(orderId, new Set());
 		}
-		OrderStatusSocket.listeners.get(orderId)!.add(callback);
+		OrderStatusSocket.listeners.get(orderId)?.add(callback);
 
 		// Initialize socket connection or simulated flow
 		OrderStatusSocket.initForOrder(orderId);
@@ -383,7 +376,7 @@ export class OrderStatusSocket {
 				};
 				OrderStatusSocket.ws.onmessage = (event) => {
 					const data = JSON.parse(event.data);
-					if (data && data.orderId) {
+					if (data?.orderId) {
 						OrderStatusSocket.trigger(data.orderId, data.status, data.metadata);
 					}
 				};
@@ -431,7 +424,7 @@ export class OrderStatusSocket {
 const BASE_URL_HOST = (url: string) => {
 	try {
 		return new URL(url).host;
-	} catch (e) {
+	} catch (_e) {
 		return "localhost:8080";
 	}
 };

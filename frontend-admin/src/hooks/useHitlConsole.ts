@@ -17,6 +17,7 @@ export interface HitlConsole {
 	loading: boolean;
 	error: string | null;
 	login: (email: string, password: string) => Promise<void>;
+	loginWithToken: (token: string) => void;
 	logout: () => void;
 	refresh: () => Promise<void>;
 	approve: (ticket: HitlTicket) => Promise<void>;
@@ -56,12 +57,19 @@ export function useHitlConsole(): HitlConsole {
 		if (token) void refresh();
 	}, [token, refresh]);
 
-	const login = useCallback(async (email: string, password: string) => {
+	const loginWithToken = useCallback((t: string) => {
 		setError(null);
-		const t = await apiLogin(email, password);
 		localStorage.setItem(TOKEN_KEY, t);
 		setToken(t);
 	}, []);
+
+	const login = useCallback(
+		async (email: string, password: string) => {
+			const t = await apiLogin(email, password);
+			loginWithToken(t);
+		},
+		[loginWithToken],
+	);
 
 	const logout = useCallback(() => {
 		localStorage.removeItem(TOKEN_KEY);
@@ -117,6 +125,7 @@ export function useHitlConsole(): HitlConsole {
 		loading,
 		error,
 		login,
+		loginWithToken,
 		logout,
 		refresh,
 		approve: (t) => resolve(t, true),

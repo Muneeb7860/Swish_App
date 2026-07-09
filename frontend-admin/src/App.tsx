@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { AuthPortal, type AuthSession } from "@swish/shared-ui";
+import { useState } from "react";
 import "@swish/shared-ui/tokens";
-import AdminLogin from "./components/AdminLogin";
+import { API_BASE } from "./api/governance";
 import AdminPanel from "./components/AdminPanel";
 import BusinessApp from "./components/BusinessApp";
 import InventoryApp from "./components/InventoryApp";
@@ -13,10 +13,6 @@ export default function App() {
 	const [session, setSession] = useState<AuthSession | null>(null);
 	const [tab, setTab] = useState("admin"); // admin, business, inventory, system
 	const hitl = useHitlConsole();
-
-	if (!session) {
-		return <AuthPortal role="admin" onAuthSuccess={setSession} />;
-	}
 	const [products, setProducts] = useState([
 		{
 			id: "p1",
@@ -40,6 +36,10 @@ export default function App() {
 		},
 	]);
 
+	if (!session) {
+		return <AuthPortal role="admin" onAuthSuccess={setSession} />;
+	}
+
 	return (
 		<div
 			style={{
@@ -54,6 +54,7 @@ export default function App() {
 			<div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
 				{["admin", "business", "inventory", "system"].map((t) => (
 					<button
+						type="button"
 						key={t}
 						onClick={() => setTab(t)}
 						style={{
@@ -70,7 +71,16 @@ export default function App() {
 				))}
 			</div>
 
-			{tab === "admin" && !hitl.authed && <AdminLogin onLogin={hitl.login} />}
+			{tab === "admin" && !hitl.authed && (
+				<AuthPortal
+					role="admin"
+					formLabel="🔐 Supervisor Sign-in"
+					submitLabel="Sign in"
+					apiUrl={`${API_BASE}/api/v1/auth`}
+					onAuthSuccess={(s) => hitl.loginWithToken(s.token)}
+					onAuthError={(e) => console.error("Supervisor sign-in failed:", e)}
+				/>
+			)}
 
 			{tab === "admin" && hitl.authed && (
 				<>
@@ -87,6 +97,7 @@ export default function App() {
 							● Supervisor session active
 						</span>
 						<button
+							type="button"
 							onClick={() => hitl.refresh()}
 							style={{
 								padding: "0.3rem 0.7rem",
@@ -100,6 +111,7 @@ export default function App() {
 							↻ Refresh queue
 						</button>
 						<button
+							type="button"
 							onClick={hitl.logout}
 							style={{
 								padding: "0.3rem 0.7rem",

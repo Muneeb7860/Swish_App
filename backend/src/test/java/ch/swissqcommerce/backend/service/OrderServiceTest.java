@@ -267,7 +267,7 @@ public class OrderServiceTest {
                         orderService.checkout(
                                 "CUST-1",
                                 List.of(new OrderUseCase.CartItem("ITEM-1", 1)),
-                                "C",
+                                "Wallet",
                                 BigDecimal.ZERO,
                                 0,
                                 null));

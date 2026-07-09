@@ -49,6 +49,7 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
 
 import threading
 import time
+from governance.router.classifier import get_classifier_stats
 
 class MetricsTracker:
     def __init__(self):
@@ -106,6 +107,7 @@ class GovernRequest(BaseModel):
     query: str
     expected_format: str | None = None
     local_only_override: bool = False
+    session_id: str | None = None
 
 
 @app.post("/api/v1/govern")
@@ -118,6 +120,7 @@ def govern(req: GovernRequest) -> dict[str, Any]:
             query=req.query,
             expected_format=req.expected_format,
             local_only_override=req.local_only_override,
+            session_id=req.session_id,
         )
         latency = time.perf_counter() - start
         metrics_tracker.record_request(latency, res)
@@ -126,6 +129,12 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         metrics_tracker.record_failure()
         logger.exception("Governance pipeline execution failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/stats")
+def stats() -> dict[str, Any]:
+    """Get internal classifier routing stats."""
+    return get_classifier_stats()
 
 
 @app.get("/health")

@@ -28,7 +28,7 @@ bash demo/stop.sh      # stop everything (Postgres data persists in the named vo
 
 ## Change the beta password
 ```bash
-printf "beta:%s\n" "$(openssl passwd -apr1 'NEWPASS')" > demo/.htpasswd   # no rebuild; just restart frontend
+printf "beta:%s\n" "$(openssl passwd -apr1 'NEWPASS')" > demo/auth/.htpasswd   # no rebuild; just restart frontend
 docker compose -f docker-compose.demo.yml restart frontend
 ```
 

@@ -122,7 +122,7 @@ frontend-customer/cypress/videos/
 /data/
 *.jtl
 # demo runtime (do not commit secrets/logs)
-demo/.htpasswd
+demo/auth/.htpasswd
 demo/*.log
 
 # ─── Agent workspaces & scratch ──────────────────────────────────────────────

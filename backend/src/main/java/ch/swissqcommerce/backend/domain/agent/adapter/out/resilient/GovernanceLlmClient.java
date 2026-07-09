@@ -35,6 +35,11 @@ public class GovernanceLlmClient {
      */
     @CircuitBreaker(name = "governance")
     public LlmResponse call(String prompt) {
-        return pythonGovernanceAdapter.callLlm(prompt);
+        return call(prompt, null);
+    }
+
+    @CircuitBreaker(name = "governance")
+    public LlmResponse call(String prompt, String sessionId) {
+        return pythonGovernanceAdapter.callLlm(prompt, sessionId);
     }
 }

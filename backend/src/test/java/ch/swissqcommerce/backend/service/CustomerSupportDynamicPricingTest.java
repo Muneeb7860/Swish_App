@@ -82,7 +82,7 @@ public class CustomerSupportDynamicPricingTest {
         String analyzeJson =
                 "{\"reply\":\"Let me check current dynamic pricing"
                     + " conditions.\",\"confidence\":0.95,\"tool\":\"DYNAMIC_PRICING\",\"tool_argument\":\"raining=true;ratio=0.8;expiry=2\"}";
-        when(llmGateway.callLlm(contains("Analyze the customer message")))
+        when(llmGateway.callLlm(contains("Analyze the customer message"), anyString()))
                 .thenReturn(new LlmResponse(analyzeJson, 0.05));
 
         // 2. Mock Dynamic Pricing Agent LLM execution called by AgentToolExecutor
@@ -96,7 +96,7 @@ public class CustomerSupportDynamicPricingTest {
         String finalJson =
                 "{\"reply\":\"Yes, because it is raining and riders are scarce, a surge of 1.8x"
                         + " applies.\",\"confidence\":0.98,\"tool\":null,\"tool_argument\":null}";
-        when(llmGateway.callLlm(contains("formulate the final reply")))
+        when(llmGateway.callLlm(contains("formulate the final reply"), anyString()))
                 .thenReturn(new LlmResponse(finalJson, 0.04));
 
         // Execute orchestrator
@@ -144,9 +144,12 @@ public class CustomerSupportDynamicPricingTest {
     public void testLettaMalformedNonJsonResponseGracefulFallback() {
         AgentRequest request = new AgentRequest("Show my orders", "conv-letta-error", "cust-1");
 
-        // Mock Letta to return non-JSON plain text
-        when(lettaMemoryService.sendMessage(anyString(), anyString()))
-                .thenReturn("Hello, this is a plain text non-JSON response from Letta!");
+        // Mock LLM call to return non-JSON plain text
+        when(llmGateway.callLlm(anyString(), eq("conv-letta-error")))
+                .thenReturn(
+                        new LlmResponse(
+                                "Hello, this is a plain text non-JSON response from Letta!",
+                                0.035));
 
         // Execute orchestrator
         AgentResponse response = masterOrchestratorService.processMessage(request);
@@ -165,11 +168,12 @@ public class CustomerSupportDynamicPricingTest {
     public void testLettaMemoryCallAccumulatesEstimatedCost() {
         AgentRequest request = new AgentRequest("Help me", "conv-letta", "cust-1");
 
-        // Mock Letta to return valid JSON
+        // Mock LLM call to return valid JSON
         String lettaJson =
                 "{\"reply\":\"Hello from"
                         + " Letta!\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
-        when(lettaMemoryService.sendMessage(eq("conv-letta"), anyString())).thenReturn(lettaJson);
+        when(llmGateway.callLlm(anyString(), eq("conv-letta")))
+                .thenReturn(new LlmResponse(lettaJson, 0.035));
 
         AgentResponse response = masterOrchestratorService.processMessage(request);
 
@@ -186,10 +190,8 @@ public class CustomerSupportDynamicPricingTest {
         // 1. First request succeeds but costs $6.0, exceeding daily budget
         String responseJson =
                 "{\"reply\":\"Okay\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
-        when(llmGateway.callLlm(anyString())).thenReturn(new LlmResponse(responseJson, 6.0));
-
-        // Letta returns null so it falls back to llmGateway
-        when(lettaMemoryService.sendMessage(anyString(), anyString())).thenReturn(null);
+        when(llmGateway.callLlm(anyString(), anyString()))
+                .thenReturn(new LlmResponse(responseJson, 6.0));
 
         AgentResponse response1 = masterOrchestratorService.processMessage(request);
         assertNotNull(response1);
@@ -237,8 +239,8 @@ public class CustomerSupportDynamicPricingTest {
         AgentRequest request = new AgentRequest("Check cost limit", "conv-budget", "cust-1");
         String responseJson =
                 "{\"reply\":\"Okay\",\"confidence\":0.9,\"tool\":null,\"tool_argument\":null}";
-        when(llmGateway.callLlm(anyString())).thenReturn(new LlmResponse(responseJson, 6.0));
-        when(lettaMemoryService.sendMessage(anyString(), anyString())).thenReturn(null);
+        when(llmGateway.callLlm(anyString(), anyString()))
+                .thenReturn(new LlmResponse(responseJson, 6.0));
 
         AgentResponse response1 = masterOrchestratorService.processMessage(request);
         assertNotNull(response1);

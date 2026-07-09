@@ -48,7 +48,6 @@ export default defineConfig({
 				"./api": "./src/api/endpoints.ts",
 				"./apiTypes": "./src/api/types.ts",
 				"./websocket": "./src/api/websocket.ts",
-				"./LoadingSkeleton": "./src/components/LoadingSkeleton.tsx",
 			},
 			shared: ["react", "react-dom"],
 		}),

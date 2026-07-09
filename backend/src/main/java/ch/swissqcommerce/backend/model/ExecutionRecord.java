@@ -3,6 +3,8 @@ package ch.swissqcommerce.backend.model;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "execution_record", schema = "oltp")
@@ -28,7 +30,10 @@ public class ExecutionRecord {
     @Column(name = "executed", nullable = false)
     private Boolean executed;
 
-    @Column(name = "execution_result", length = 4000)
+    // jsonb binding: see AgentSuggestionEntity.recommendation — JdbcTypeCode is
+    // required so Hibernate binds the String as jsonb, not varchar.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "execution_result", columnDefinition = "jsonb")
     private String executionResult;
 
     @Column(name = "error", columnDefinition = "TEXT")

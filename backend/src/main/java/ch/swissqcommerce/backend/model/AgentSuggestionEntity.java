@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "agent_suggestion", schema = "oltp")
@@ -33,7 +35,10 @@ public class AgentSuggestionEntity {
     @Column(name = "entity_id", length = 100, nullable = false)
     private String entityId;
 
-    @Column(name = "recommendation", length = 4000, nullable = false)
+    // jsonb binding: columnDefinition alone only affects DDL; without JdbcTypeCode
+    // Hibernate binds the String as varchar and Postgres rejects varchar->jsonb.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "recommendation", columnDefinition = "jsonb", nullable = false)
     private String recommendation;
 
     @Column(name = "confidence", precision = 3, scale = 2, nullable = false)

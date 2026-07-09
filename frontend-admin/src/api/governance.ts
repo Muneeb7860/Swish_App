@@ -3,7 +3,7 @@
 // The HitlQueueController is @CrossOrigin and SecurityConfig allows localhost:*,
 // and the endpoints require an ADMIN JWT obtained via /api/v1/auth/login.
 
-const API_BASE: string =
+export const API_BASE: string =
 	(import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8083";
 
 /** Unified HITL item as served by GET /api/governance/hitl (Phase 8A). */

@@ -39,8 +39,13 @@ export default function RbacBlocker({
 			`[${timestamp}] GEOSHIELD: Geofence token signature verified`,
 			`[${timestamp}] CAPTCHA_AUDIT: Zero-knowledge proofs active`,
 		]);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [targetRole]);
+	}, [
+		targetRole,
+		triggerToast,
+		logKafka,
+		currentUserSession?.token,
+		currentUserSession?.role,
+	]);
 
 	const handleEscalate = () => {
 		if (logKafka) {
@@ -103,8 +108,8 @@ export default function RbacBlocker({
 					<span className="terminal-title">SECURITY EVENT LOG</span>
 				</div>
 				<div className="rbac-terminal-body">
-					{securityLogs.map((log, i) => (
-						<div key={i} className="rbac-terminal-line">
+					{securityLogs.map((log) => (
+						<div key={log} className="rbac-terminal-line">
 							<span className="line-prefix">&gt;</span> {log}
 						</div>
 					))}
@@ -113,6 +118,7 @@ export default function RbacBlocker({
 
 			<div className="rbac-action-group">
 				<button
+					type="button"
 					aria-label="Button"
 					className="btn-primary-glow rbac-btn-escalate"
 					onClick={handleEscalate}
@@ -120,6 +126,7 @@ export default function RbacBlocker({
 					Request Access Elevation
 				</button>
 				<button
+					type="button"
 					aria-label="Button"
 					className="btn-secondary-glow rbac-btn-logout"
 					onClick={handleLogout}

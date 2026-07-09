@@ -1,6 +1,6 @@
 # routing_config.yaml — Semantic Router thresholds, agent registry, budget, evaluation
 classifier:
-  model: gemma3:4b
+  model: qwen2.5:3b
   backend: ollama
   ollama_url: http://localhost:11434
   timeout_ms: 3000
@@ -48,6 +48,14 @@ agents:
     api_key_env: GROQ_API_KEY
     timeout_ms: 30000
     role: frontier
+
+  letta_support:
+    backend: letta
+    model: ollama/qwen2.5:7b
+    letta_url: http://localhost:8283
+    api_token: dummy-key
+    timeout_ms: 30000
+    role: stateful_support
 
 evaluation_rules:
   passing_threshold: 0.75

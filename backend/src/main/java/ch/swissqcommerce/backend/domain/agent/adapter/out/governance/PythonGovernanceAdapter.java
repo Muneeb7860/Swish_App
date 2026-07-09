@@ -33,7 +33,11 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
     private final RestTemplate restTemplate;
 
     public PythonGovernanceAdapter(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate =
+                restTemplateBuilder
+                        .setConnectTimeout(java.time.Duration.ofSeconds(60))
+                        .setReadTimeout(java.time.Duration.ofSeconds(60))
+                        .build();
     }
 
     public boolean isConfigured() {
@@ -42,6 +46,11 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
 
     @Override
     public LlmResponse callLlm(String prompt) {
+        return callLlm(prompt, null);
+    }
+
+    @Override
+    public LlmResponse callLlm(String prompt, String sessionId) {
         if (!isConfigured()) {
             // Selection is the composite's job; if we get here without a URL it is a wiring bug.
             throw new IllegalStateException("Python Governance API URL is not configured");
@@ -54,6 +63,9 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
 
         Map<String, Object> body = new HashMap<>();
         body.put("query", prompt);
+        if (sessionId != null) {
+            body.put("session_id", sessionId);
+        }
 
         // If the prompt contains "Response MUST be a valid JSON", request JSON format
         if (prompt.contains("valid JSON") || prompt.contains("structure:")) {
@@ -62,7 +74,10 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        log.info("Forwarding prompt to Python Governance service at {}", endpointUrl);
+        log.info(
+                "Forwarding prompt to Python Governance service at {} with session {}",
+                endpointUrl,
+                sessionId);
         // A transport failure throws RestClientException here, which propagates to the
         // composite gateway's fail-safe handler. We deliberately do NOT catch it.
         Map<?, ?> response = restTemplate.postForObject(endpointUrl, entity, Map.class);

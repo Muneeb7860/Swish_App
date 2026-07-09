@@ -537,3 +537,21 @@ We successfully resolved the CI build blocking issues on the `develop` branch an
     - Wrote integration tests in `RoutingControllerTest` asserting `429 Too Many Requests` is returned when concurrency limit is breached.
     - Opened PR #134: `mac-machine -> develop`.
 
+
+### Cycle Update (2026-07-08) — UAT & Business Demo Readiness + Polishing [DONE]
+
+*   **E2E Test Infrastructure Fixes**:
+    - Upgraded `playwright` to `^1.50.0` to resolve pre-downloaded browser package mapping issues.
+    - Configured Cypress to run with the `--headless` flag to prevent window environment crashes.
+    - Updated customer substitution modal selector validations to target `.swish-modal-overlay`.
+    - Switched dev servers to production preview mode to bypass HMR compilation checks.
+
+*   **Quality Gates & CI/CD**:
+    - Added `mvn spotless:check` to enforce Java format compliance in GitHub Action jobs.
+    - Added Biome lint validations (`npx @biomejs/biome lint`) to frontend CI jobs.
+    - Cleaned up duplicate backup seeder classes (`DevDataSeeder 2.java`, etc.) causing duplicate class compilation errors.
+    - Removed invalid TypeScript `ignoreDeprecations` option in `frontend-customer/cypress/tsconfig.json` to resolve compiler flags.
+
+*   **Unified Demo Orchestrator (`run_demo.sh`)**:
+    - Created a unified launch orchestrator shell script `run_demo.sh` to verify ports, start backend services in staging mode, boot the gateway, and run all 5 frontend apps on mapped ports.
+    - Documented UAT and Demo readiness in `uat_readiness_assessment.md`.

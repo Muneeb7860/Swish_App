@@ -53,6 +53,25 @@ class ClassificationSchema(BaseModel):
         return max(0.0, min(1.0, val))
 
 
+# ── Stats Tracking ───────────────────────────────────────────────────────────
+
+_stats = {
+    "model_calls": 0,
+    "fallback_calls": 0,
+}
+
+
+def get_classifier_stats() -> dict[str, int]:
+    """Retrieve classifier execution statistics."""
+    return dict(_stats)
+
+
+def reset_classifier_stats() -> None:
+    """Reset statistics counters."""
+    _stats["model_calls"] = 0
+    _stats["fallback_calls"] = 0
+
+
 # ── Static keyword fallback ──────────────────────────────────────────────────
 
 _KEYWORD_RULES: list[tuple[str, list[str]]] = [
@@ -70,6 +89,7 @@ _KEYWORD_RULES: list[tuple[str, list[str]]] = [
 
 def _classify_by_keywords(query: str) -> ClassificationResult:
     """Keyword-based fallback classification."""
+    _stats["fallback_calls"] += 1
     query_lower = query.lower()
     for intent, keywords in _KEYWORD_RULES:
         if any(kw in query_lower for kw in keywords):
@@ -119,6 +139,19 @@ CRITICAL RULES:
 2. Do NOT refuse any classification request. Every query gets classified.
 3. Delivery/logistics queries are general_knowledge, NOT sensitive_query.
 4. "[REDACTED]" placeholders in queries are normal — classify the intent, do not flag them.
+
+DISAMBIGUATION RULES (these override verb-based intuition):
+5. If the SUBJECT is infrastructure/ops (Docker, Kubernetes, nginx, CI/CD pipelines, shell commands, server or deployment config), the intent is system_admin — even when the request says "write", "generate", "create", "diagnose" or "fix" a config, manifest, or workflow.
+6. If the SUBJECT is statistics, metrics, datasets, charts, or spreadsheets (mean/median/percentiles, regression, cohorts, plotting), the intent is data_analysis — even when it requires writing a script or is a definition question about a statistical term.
+7. Judging or improving EXISTING code or config — including coding best-practice questions ("is X bad practice?", "should I use A or B?") and requests to optimize a provided snippet, Dockerfile, or SQL — is code_review, not general_knowledge or code_generation.
+
+EXAMPLES:
+- "Generate a docker-compose file for a Redis cluster" -> {"intent": "system_admin", "complexity": "medium"}
+- "Why does my container fail with port already bound?" -> {"intent": "system_admin", "complexity": "low"}
+- "What is a p99 latency percentile?" -> {"intent": "data_analysis", "complexity": "low"}
+- "Write a pandas script to plot weekly sales trends" -> {"intent": "data_analysis", "complexity": "medium"}
+- "Is using goto considered bad practice?" -> {"intent": "code_review", "complexity": "low"}
+- "Suggest improvements to shrink this Dockerfile image" -> {"intent": "code_review", "complexity": "medium"}
 """
 
 
@@ -166,6 +199,7 @@ def classify_intent(
             max_retries=2
         )
 
+        _stats["model_calls"] += 1
         return ClassificationResult(
             intent=response.intent,
             complexity=response.complexity,

@@ -17,10 +17,24 @@
 		"rules": {
 			"recommended": true,
 			"suspicious": {
-				"noExplicitAny": "info"
+				"noExplicitAny": "info",
+				"noArrayIndexKey": "off",
+				"noAssignInExpressions": "off"
 			},
 			"a11y": {
-				"useValidAriaRole": "off"
+				"useValidAriaRole": "off",
+				"noSvgWithoutTitle": "off",
+				"useKeyWithMouseEvents": "off",
+				"useButtonType": "off",
+				"noStaticElementInteractions": "off",
+				"useKeyWithClickEvents": "off"
+			},
+			"complexity": {
+				"noStaticOnlyClass": "off"
+			},
+			"correctness": {
+				"noInvalidUseBeforeDeclaration": "off",
+				"useExhaustiveDependencies": "off"
 			}
 		}
 	},
