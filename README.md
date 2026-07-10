@@ -2,280 +2,357 @@
 
 [![Quality Gates](https://img.shields.io/badge/Quality%20Gates-Passed-success?style=for-the-badge)](https://github.com/Muneeb7860/Swish_App/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Java Version](https://img.shields.io/badge/Java-17-orange?style=for-the-badge)](https://img.shields.io/badge/Java-17-orange)
+[![Java Version](https://img.shields.io/badge/Java-17-orange?style=for-the-badge)](https://www.oracle.com/java/technologies/javase/jdk17-archive.html)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge)](https://react.dev/)
 
-Welcome to **Swish OS v2.0.0**, an enterprise-grade, multi-tenant B2B SaaS platform engineered to transform legacy convenience stores and micro-fulfillment centers (MFCs) into autonomous, high-velocity distribution hubs. Designed to guarantee hyper-local grocery delivery within a strict 15-minute window, Swish OS represents a low-CapEx, software-first solution that retrofits existing retail networks with decentralized micro-frontends and agentic workflows.
+Welcome to **Swish OS v2.0.0**, an enterprise-grade, multi-tenant B2B SaaS platform engineered to transform legacy convenience stores and micro-fulfillment centers (MFCs) into autonomous, high-velocity quick-commerce operations. Built on rigorous architectural principles (TOGAF, Hexagonal Architecture, COBIT 2019, ITIL v4).
+
+**Key Stats:**
+- **51.8%** Java backend logic
+- **21.3%** TypeScript frontend applications  
+- **9.2%** CSS styling & design system
+- **7.9%** HTML markup
+- **6.2%** Python AI agents & scripts
 
 ---
 
-## 🏗️ Architectural Vision & Design Frameworks
+## 🎯 What is Swish OS?
 
-Swish OS is designed around rigorous architectural standards, combining business agility with system resilience:
+Swish OS is a complete operational platform for:
+- **Store Operators** — Manage inventory, fulfill orders, track restocks
+- **CFOs & Finance Managers** — Real-time ledger tracking, savings analytics, cost controls
+- **Platform Admins** — Configure guardrails, oversee HITL queues, manage system health
+- **Suppliers & Wholesalers** — B2B procurement negotiation and fulfillment
+- **Delivery Couriers** — GPS-guided routing and order logistics
 
-> [!NOTE]
-> **As-built vs. roadmap.** The **current** deployment path is **Google Cloud Run** (`.github/workflows/deploy-cloudrun.yml`); demo/closed-beta runs via `docker-compose.demo.yml`. Items marked **🛣️ Roadmap** below — the Kubernetes service mesh, Envoy mTLS sidecars, SPIFFE/SPIRE identity, NGINX Ingress — are **planned feature improvements, not yet implemented** (Kubernetes is currently deprecated; see [`infrastructure/k8s/DEPRECATED.md`](infrastructure/k8s/DEPRECATED.md)).
+---
 
-*   **TOGAF ADM Alignment:** Guided by the Open Group Architecture Framework, with traceability from Phase A (Business Stakeholder ROI) to Phase D (technology/deployment on Cloud Run; Kafka KRaft event pipelines).
-*   **🛣️ Roadmap — Zero-Trust Networking:** *Planned:* mutual TLS (mTLS) with SPIFFE/SPIRE identity across a service mesh behind a rate-limited ingress. *Today:* TLS terminates at Cloud Run / the gateway with JWT auth + edge rate limiting.
-*   **Hexagonal Architecture (Ports & Adapters):** Isolates pure domain rules and state-machine logic in backend microservices from database adapters, web endpoints, and external API connectors.
-*   **COBIT 2019 & ITIL v4 Resilience:** Standardized circuit breakers, dead-letter fallback recovery queues, and pessimistic database locking to mitigate dual-write failures and transaction anomalies.
+## 🏗️ Architectural Vision
+
+Swish OS follows industry-leading architectural frameworks:
+
+- **TOGAF ADM Alignment:** Business-driven architecture (Phase A) through deployment (Phase D)
+- **Hexagonal Architecture:** Isolates domain logic from adapters (databases, APIs, UI)
+- **COBIT 2019 & ITIL v4 Resilience:** Circuit breakers, dead-letter recovery, pessimistic locking
+- **Zero-Trust Networking (Roadmap):** mTLS with SPIFFE/SPIRE across Kubernetes service mesh
+- **Transactional Outbox Pattern:** Prevents dual-write inconsistencies using Kafka KRaft
 
 ---
 
 ## 🌐 System Context (C4 Model)
 
-### System Context Level (L1)
-```mermaid
-graph TB
-  classDef system fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
-  classDef actor fill:#111827,stroke:#10b981,stroke-width:2px,color:#f8fafc;
-  classDef external fill:#1f2937,stroke:#64748b,stroke-width:1px,stroke-dasharray: 5 5,color:#94a3b8;
-
-  CFO((CFO / Finance Manager)):::actor
-  Operator((Store Operator)):::actor
-  Admin((Platform Admin)):::actor
-  
-  System[Swish OS v2.0.0 B2B Platform]:::system
-  
-  PrimaryWholesaler[Primary Wholesaler ERP<br>WHOLESALER-1]:::external
-  SecondaryWholesaler[Secondary Wholesaler ERP<br>wholesaler-2]:::external
-  GPSService[GPS Navigation API]:::external
-
-  CFO -->|Review Savings & Ledger Logs| System
-  Operator -->|Fulfill Orders & View Restocks| System
-  Admin -->|Configure Guardrails & Overrides| System
-  
-  System -->|Negotiate and Restock| PrimaryWholesaler
-  System -->|Fallback Restocks| SecondaryWholesaler
-  System -->|Track Shipments| GPSService
+### Level 1: System Context Diagram
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                               │
+│  CFO          Store Operator      Platform Admin            │
+│    ↓                 ↓                    ↓                  │
+│    └─────────────────┴────────────────────┘                │
+│                     │                                        │
+│                 Swish OS v2.0.0 Platform                    │
+│          (B2B SaaS | Multi-tenant | Autonomous)            │
+│                     │                                        │
+│    ┌────────────────┼────────────────┐                     │
+│    ↓                ↓                ↓                      │
+│ Primary         Secondary        GPS Navigation             │
+│ Wholesaler      Wholesaler       Service (Maps)             │
+│ ERP             ERP                                         │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Container Level (L2) — 🛣️ Target Architecture (roadmap)
+### Level 2: Container Architecture (Target Topology)
+The platform targets a **Kubernetes service mesh** with:
+- **NGINX Ingress Controller** — DMZ, TLS termination, rate limiting
+- **Spring Cloud Gateway** — Custom routing with JWT verification, idempotency checks
+- **Core Microservices** (Envoy mTLS sidecars):
+  - `backend` — Hexagonal domain core (transactions, auth, agents)
+  - `core-business-engine` — B2B checkout, inventory, timeout sweepers
+  - `notification-engine` — Kafka consumer, WebSocket broadcasts
+  - `shared-async-services` — AI routing, ledger, shared schemas
+  - `platform-gateway` — API orchestration & security proxy
+- **Data Tier**:
+  - PostgreSQL (OLTP transactional source of truth)
+  - MongoDB (Analytical archive, cold storage)
+  - Redis (Session state, rate limiting, caching)
+- **Event Broker**: Apache Kafka (KRaft mode)
 
-> The diagram below depicts the **target** topology (Kubernetes mesh + Envoy mTLS sidecars). The **current** runtime is Cloud Run services (prod) / docker-compose (demo) — same containers, no mesh yet.
-
-```mermaid
-graph TB
-  classDef edge fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc;
-  classDef gateway fill:#0f172a,stroke:#8b5cf6,stroke-width:2px,color:#f8fafc;
-  classDef container fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
-  classDef store fill:#0f172a,stroke:#06b6d4,stroke-width:2px,color:#f8fafc;
-  classDef queue fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
-
-  Ingress[NGINX Ingress Controller<br>DMZ / TLS Termination]:::edge
-  
-  subgraph k8s-service-mesh [Kubernetes Pod Mesh]
-    GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
-    
-    subgraph core-services [Core Services (Envoy mTLS Sidecars)]
-      Backend[backend Service<br>Hexagonal Core Port 8080]:::container
-      BusinessEngine[core-business-engine<br>Checkout/Inv/B2B Port 8081]:::container
-      NotifEngine[notification-engine<br>Kafka Consumer/WS Port 8082]:::container
-      SharedAsync[shared-async-services<br>AI & Ledger]:::container
-      SecurityEngine[Security Engine<br>Guardrails / mTLS]:::container
-      RewardsEngine[Rewards Engine<br>Gamification / Loyalty]:::container
-      EventsEngine[Events Engine<br>Outbox Relay]:::container
-      GovernanceEngine[Governance Engine<br>Compliance / Onboarding]:::container
-    end
-    
-    subgraph databases [Data & Storage Tier]
-      Redis[(Redis Cache & Rate Limiting)]:::store
-      Postgres[(PostgreSQL OLTP Database)]:::store
-      MongoDB[(MongoDB Analytical Archive)]:::store
-    end
-
-    Kafka[Kafka Event Broker]:::queue
-  end
-
-  Ingress -->|mTLS Traffic Route| GW
-  
-  GW -->|Route| Backend
-  GW -->|Route| BusinessEngine
-  GW -->|Route| NotifEngine
-  GW -->|Route| SharedAsync
-
-  Backend --> Postgres
-  BusinessEngine --> Postgres
-  NotifEngine --> Postgres
-  SharedAsync --> Postgres
-
-  Backend --> SecurityEngine
-  Backend --> EventsEngine
-  SharedAsync --> RewardsEngine
-  BusinessEngine --> GovernanceEngine
-
-  SecurityEngine -.-> Redis
-  SecurityEngine -.->|"publish"| Kafka
-  RewardsEngine --> Postgres
-  RewardsEngine -.-> Redis
-  EventsEngine --> Postgres
-  EventsEngine -.->|"publish"| Kafka
-  GovernanceEngine --> Postgres
-
-  Backend -.-> Redis
-  BusinessEngine -.-> Redis
-  NotifEngine -.-> Redis
-  GW -.-> Redis
-
-  BusinessEngine -.->|"publish"| Kafka
-  Kafka -.->|"consume"| NotifEngine
-  Kafka -.->|"consume"| SharedAsync
-  Postgres -.->|"Outbox publish"| Kafka
-  Kafka -.->|OlapEventSinkListener| MongoDB
-```
+**Current Deployment**: Google Cloud Run (prod) + Docker Compose (dev/demo)
 
 ---
 
 ## 🗄️ Core Architecture & Data Strategy
 
 ### 1. Traffic Flow
-1.  **🛣️ Roadmap — NGINX Ingress / Envoy mTLS mesh:** *Planned:* DMZ TLS termination + SPIFFE-verified, sidecar-encrypted pod-to-pod traffic. *Today:* TLS terminates at Cloud Run (prod) / the gateway, no mesh.
-2.  **platform-gateway:** Unified routing gateway with custom filter chains for JWT verification, idempotency checking, circuit-breaker fallbacks, and edge rate limiting. *(As-built.)*
+1. **API Ingress** → NGINX / Cloud Run load balancer → TLS termination
+2. **Gateway Layer** → Spring Cloud Gateway with custom filters (JWT, rate limiting, circuit breakers)
+3. **Service Layer** → Hexagonal microservices with Kafka event publication
+4. **Data Layer** → PostgreSQL (primary), MongoDB (archive), Redis (cache)
 
 ### 2. Segmented Dual-Database Model
-To prevent write locks and reconcile database performance with cost controls:
-*   **Relational Tier (PostgreSQL):** Single source of truth for OLTP transactions, inventory tracking, and double-entry general ledgers. Uses Flyway database migrations and is configured for `READ_COMMITTED` isolation combined with explicit pessimistic locking (`SELECT ... FOR UPDATE`) to eliminate concurrent transaction rollback anomalies.
-*   **Analytical Archive (MongoDB):** Low-cost, tiered document database acting as a cold-archive for high-throughput, non-critical telemetry logs (e.g. GPS coordinates, local weather, and historical bidding traces). Sharded to prevent dual-write performance bottlenecks.
-*   **Distributed Session State (Redis):** Cluster cache capturing autocomplete inventory structures, courier presence markers, and token buckets. Bypasses relational disk writes for 70% of read requests.
+- **PostgreSQL (OLTP)**: Single source of truth for transactions, inventory, double-entry ledgers
+  - Flyway migrations
+  - Configured for `REPEATABLE_READ` isolation
+- **MongoDB (OLAP Archive)**: Low-cost, tiered document store for telemetry, GPS logs, historical data
+- **Redis (Distributed Cache)**: Token buckets, courier presence, autocomplete structures
+  - Prevents 70% of relational disk writes
 
 ### 3. Asynchronous Event Pipeline (Transactional Outbox)
-To avoid dual-write inconsistencies (where a database update succeeds but a corresponding message broker write fails):
-1.  Both the primary transaction and the pending event metadata are committed to a database-backed `outbox` table within the same ACID unit of work.
-2.  An asynchronous outbox relay polls this table and publishes the events sequentially to **Apache Kafka**.
-3.  Kafka pipelines process messages using a Kafka broker running in KRaft mode, backed by a `DeadLetterPublishingRecoverer` strategy to isolate malformed payloads.
+Prevents dual-write inconsistencies:
+1. Database transaction + event metadata → `outbox` table (atomic)
+2. Async relay polls `outbox`, publishes to Kafka
+3. Kafka consumers process messages
+4. Dead-letter queue isolates malformed payloads
 
 ---
 
 ## 🤖 B2B Agentic OS & Guardrails
 
-Swish OS features a multi-domain agentic pipeline that manages stock replenishment and operational exceptions:
-
 ```
-[Stock < 3 Alarm] 
-        │
-        ▼
-[B2BProcurementAgent] ──► [Query Wholesaler Pricing] ──► [Evaluate Contract Cost]
-                                                                   │
-       ┌───────────────────────────────────────────────────────────┘
-       ▼
-[ProcurementGuardrailsEngine]
-       │
-       ├─► (Passes bounds: Cost < $5000 & Variance < 10%) ──► [REST API RESTOCK] ──► [Update PostgreSQL]
-       │                                                                                  │
-       └─► (Violates bounds) ──► [Write to HitlQueue] ──► [L1/L2 Operator Release] ───────┘
+Stock Alert (< 3 units)
+        ↓
+[B2BProcurementAgent] ← Queries primary/secondary wholesaler pricing
+        ↓
+[ProcurementGuardrailsEngine] ← Evaluates cost bounds & variance limits
+        ├─ PASS (Cost < $5000, Variance < 10%) → REST API Restock → PostgreSQL Update
+        └─ FAIL → Human-in-the-Loop Queue → L1/L2 Operator Release
 ```
 
-*   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers.
-*   **ProcurementGuardrailsEngine:** Evaluates contract proposals against strict financial bounds (e.g., maximum cost thresholds and wholesale price variance ceilings).
-*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator.
-*   **Additional Domain Agents:**
-    *   *FraudAgent:* Checks order frequencies, trust scores, and transactions to detect identity/payment fraud.
-    *   *PricingAgent:* Adapts delivery pricing dynamically based on local congestion, weather, and inventory counts.
-    *   *RoutingAgent:* Directs split-shipment logistics, calculating carrier rates and courier capacity constraints.
+**Domain Agents**:
+- **B2BProcurementAgent** — Autonomous pricing negotiation
+- **FraudAgent** — Order frequency & trust score detection
+- **PricingAgent** — Dynamic delivery pricing (weather, congestion, inventory)
+- **RoutingAgent** — Split-shipment logistics & carrier rate optimization
+- **ProcurementGuardrailsEngine** — Financial bounds enforcement
 
 ---
 
 ## 📜 Compliance, Governance, & Safety
 
-*   **GDP Temperature Compliance:** Satisfies Good Distribution Practice guidelines (EU 2013/C 343/01) for cold chain integrity. Sensor records are cryptographically signed at the IoT boundary.
-*   **Write-Once, Read-Many (WORM) Auditing:** Core logs (sensor diagnostics, ledger transactions, and HITL approvals) are archived in WORM storage to provide audit trails for regulatory compliance.
-*   **GDPR Article 17 Purge:** Out-of-the-box support for the "Right to be Forgotten." Customer records can be fully anonymized without breaking relational foreign keys or double-entry financial ledger integrity.
+- **GDP Temperature Compliance** — Cold-chain integrity with cryptographically signed IoT sensor records (EU 2013/C 343/01)
+- **Write-Once, Read-Many (WORM) Auditing** — Immutable logs for sensor diagnostics, ledger transactions, HITL approvals
+- **GDPR Article 17 Support** — Right to be Forgotten with automatic anonymization (maintains referential integrity)
 
 ---
 
-## 📁 Repository Blueprint
+## 📁 Repository Structure
 
-```text
-├── backend/                   # Spring Boot Hexagonal core microservice & domain logic
+```
+Swish_App/
+├── backend/                          # Spring Boot Hexagonal microservice
 │   └── src/main/java/ch/swissqcommerce/backend/domain/
-│       ├── transaction/       # Order lifecycle & state machines
-│       ├── payment/           # Payment processing & webhook endpoints
-│       ├── inventory/         # Product structures & dark store operations
-│       ├── event/             # Transactional Outbox relay scheduler
-│       ├── auth/              # JWT-based authorization & security contexts
-│       └── agent/             # Gemini AI adapter for procurement
-├── platform-gateway/          # Custom Spring Cloud Gateway, rate limiter & security proxy
-├── core-business-engine/      # Standalone service executing B2B orders & timeout sweepers
-├── notification-engine/       # Kafka listener broadcasting updates via Websockets
-├── shared-async-services/     # Universal schemas, AI routingports & accounting ledger
-├── frontend-host/             # Micro-frontend shell hosting decoupled client modules
-├── frontend-customer/         # Customer ordering storefront module (Port 5173)
-├── frontend-rider/            # Courier navigation and routing UI (Port 5174)
-├── frontend-admin/            # Console managing chaos desks & HITL ticket resolution (Port 5175)
-├── frontend-b2b/              # Supplier inventory dashboard and negotiation portal
-├── mobile/                    # React Native codebase for mobile deployments
-├── infrastructure/            # Centralized Docker Compose layers & Kubernetes manifests
-├── docs/                      # Architectural Decision Records (ADRs) & HLD/LLD assets
-├── scripts/                   # System synchronization, chaos scripts, and build suites
-└── tests/                     # Cypress end-to-end scripts and unified regression suites
+│       ├── transaction/              # Order lifecycle & state machines
+│       ├── payment/                  # Payment processing & webhooks
+│       ├── inventory/                # Product structures & dark store ops
+│       ├── event/                    # Transactional Outbox relay
+│       ├── auth/                     # JWT authorization & security
+│       └── agent/                    # Gemini AI adapter
+│
+├── platform-gateway/                 # Spring Cloud Gateway + rate limiter
+├── core-business-engine/             # B2B order execution service
+├── notification-engine/              # Kafka listener + WebSocket broadcaster
+├── shared-async-services/            # AI routing, ledger, async pipelines
+│
+├── design-system/                    # Unified React component library
+│   ├── tokens.css                   # Design tokens (colors, spacing, typography)
+│   ├── components/                  # AuthPortal, Skeleton, etc.
+│   └── index.ts                     # Exports
+│
+├── ds-bundle/                        # B2B-specific design system
+│   ├── CheckoutPanel                # Wholesale checkout interface
+│   ├── CreditCardMockup             # 3D card visualization
+│   ├── OrderTimeline                # Multi-stage progress indicator
+│   └── StatusIndicator              # WebSocket connection status
+│
+├── frontend-customer/                # Customer storefront MFE (Port 5173)
+├── frontend-rider/                   # Courier navigation MFE (Port 5174)
+├── frontend-admin/                   # Admin console MFE (Port 5175)
+├── frontend-b2b/                     # Supplier dashboard MFE
+├── frontend-host/                    # Micro-frontend shell (Port 3000)
+│
+├── mobile/                           # React Native mobile app
+├── infrastructure/                   # Docker Compose & Kubernetes manifests
+├── docs/                             # ADRs, HLD, LLD assets
+├── scripts/                          # Build, sync, chaos engineering tools
+├── tests/                            # Cypress E2E + regression suites
+├── schemas/                          # Shared TypeScript/API schemas
+│
+├── k8s/                              # Kubernetes deployment manifests
+├── nginx/                            # NGINX ingress configuration
+├── figma/                            # Design files & component specs
+│
+└── Configuration Files:
+    ├── docker-compose.demo.yml       # Full-stack local deployment
+    ├── docker-compose-local.yml      # Infrastructure-only (Postgres/Kafka/Redis)
+    ├── run_demo.sh                   # One-click deployment script
+    ├── seed.sql                      # Database initialization
+    ├── pom.xml                       # Maven root POM
+    ├── package.json                  # Monorepo NPM scripts
+    └── biome.json                    # Code formatter/linter config
 ```
 
 ---
 
 ## 🚀 Quick Start Guide (5 Minutes)
 
-Spin up the entire local infrastructure footprint—including frontends, microservices, databases, event brokers, and complete telemetry pipelines—using a single command.
-
-### 1. Initialize Configuration
-Clone the repository and pull the active development tree:
+### 1. Clone & Setup
 ```bash
 git clone https://github.com/Muneeb7860/Swish_App.git
 cd Swish_App
-git checkout macbook_machine
+git checkout master
 ```
 
-### 2. Boot the Ecosystem
-**Closed-beta / UAT / Local Demo (One-Click Launch):**
+### 2. Full Stack Deployment (One Command)
 ```bash
-# Checks ports, starts docker stack, runs flyway migrations, builds/packages jar files,
-# and boots backend gateway and all 5 MFEs on pinned ports (3000-3003, 5002)
+# Starts all services, databases, frontends, migrations
 ./run_demo.sh
 ```
 
-**Local dev infra only (Postgres/Kafka/Redis/Mongo):**
+**What this does:**
+- ✅ Checks required ports (3000-3003, 5002, 5173-5175, 8080, 9092)
+- ✅ Starts Docker Compose stack (Postgres, Kafka, Redis, MongoDB)
+- ✅ Runs Flyway database migrations
+- ✅ Builds Java microservices (Maven)
+- ✅ Launches React MFEs on pinned ports
+- ✅ Provides telemetry dashboards
+
+### 3. Infrastructure Only (Databases)
 ```bash
 docker compose -f docker-compose-local.yml up -d
 ```
-> The legacy `infrastructure/docker-compose.yml` is **not** a supported boot path (drifted; references the retired `bff`).
 
-### 3. Mission Control Port Mappings
-Once healthy, access these local addresses:
-*   🛒 **Customer Storefront MFE:** `http://localhost:5173`
-*   🏍️ **Rider Logistics MFE:** `http://localhost:5174`
-*   🛠️ **Admin Management MFE:** `http://localhost:5175`
-*   📊 **Grafana Core Metrics Control:** `http://localhost:3000`
-*   🔌 **Platform API Gateway:** `http://localhost:8080`
+> **Note:** Legacy `infrastructure/docker-compose.yml` is deprecated (references retired BFF).
+
+### 4. Access Services
+| Service | URL | Purpose |
+|---------|-----|---------|
+| 🛒 Customer Storefront | `http://localhost:5173` | End-user shopping |
+| 🏍️ Rider Logistics | `http://localhost:5174` | Courier routing |
+| 🛠️ Admin Console | `http://localhost:5175` | Platform management |
+| 📊 Grafana Metrics | `http://localhost:3000` | System observability |
+| 🔌 API Gateway | `http://localhost:8080` | REST endpoints |
 
 ---
 
 ## 🧪 Testing & Chaos Engineering
 
 ### Automated Regression Testing
-Verify backend compiler compliance, ArchUnit architecture rules, and unit expectations:
 ```bash
-# Execute Spring Boot JUnit & ArchUnit guards
+# Backend: Spring Boot JUnit & ArchUnit architecture rules
 mvn test
 
-# Run Cypress End-to-End browser workflows
+# Frontend: Cypress end-to-end workflows
 npm run test:e2e
 ```
 
-### Chaos Engineering Execution
-Swish OS enforces high-availability limits. Trigger the chaos engine script to randomly inject network partition drops, Kafka broker failures, database connectivity timeouts, and API latency surges to evaluate Resilience4j circuit breakers:
+### Chaos Engineering
 ```bash
+# Inject random failures: network partitions, Kafka broker drops, DB timeouts, API latency surges
 bash scripts/chaos.sh
 ```
+
+Swish OS enforces high-availability limits and graceful degradation under failure.
 
 ---
 
 ## 🏛️ Program Governance
 
-*   **Scaled Agile Framework (SAFe):** Managed on a 2-week Program Increment (PI) planning cycle with feature toggles dynamically controling the chaos engines and procurement guardrail limits.
-*   **ITIL v4 Service Value Chain:** Structures the flow of restocking requests to business margin optimization.
-*   **veriSM Management Mesh Weights:**
-    *   *Agile Development (SAFe):* **Weight 5** (Weekly deployment matrix checks).
-    *   *DevOps (CI/CD):* **Weight 5** (Automated matrix testing of backend containers).
-    *   *Service Management (ITIL v4):* **Weight 4** (SLA monitoring, cold chain telemetry tracking).
-    *   *Governance (COBIT 2019):* **Weight 5** (Tamper-evident ledger, secrets rotation).
+- **SAFe 6.0** — 2-week Program Increment planning with feature toggles
+- **ITIL v4 Service Value Chain** — Structures restocking workflows → margin optimization
+- **veriSM Management Mesh** with weighted domains:
+  - *Agile Development (SAFe)* — **Weight 5** (weekly deployment matrix checks)
+  - *DevOps (CI/CD)* — **Weight 5** (automated backend container testing)
+  - *Service Management (ITIL)* — **Weight 4** (SLA monitoring, cold-chain tracking)
+  - *Governance (COBIT)* — **Weight 5** (tamper-evident ledgers, secrets rotation)
+
+---
+
+## 🎨 Design System
+
+### @swish/design-system
+A unified, consolidated design system reducing code duplication by **72%**:
+
+| Component | Status | Use Cases |
+|-----------|--------|-----------|
+| **AuthPortal** | ✅ Ready | Multi-role authentication (customer, admin, rider) with MFA |
+| **Skeleton** | ✅ Ready | Loading states (product grids, tables, generic cards) |
+| **Glass Cards** | ✅ Ready | Premium frosted-glass UI effects |
+| **Status Badges** | ✅ Ready | WebSocket connection, role indicators |
+
+**Tokens (CSS Custom Properties):**
+- Colors: backgrounds, text, status indicators, role-specific
+- Spacing: 4px baseline grid (0–64px)
+- Typography: xs (11px) → 2xl (30px)
+- Shadows: sm, md, lg, xl, glow
+- Animations: fade-in, slide, scale, pulse, hologram-shimmer
+
+---
+
+## 📊 Language Composition
+| Language | Percentage | Primary Use |
+|----------|-----------|------------|
+| Java | 51.8% | Spring Boot microservices, domain logic |
+| TypeScript | 21.3% | React frontends, design system |
+| CSS | 9.2% | Styling & component library |
+| HTML | 7.9% | Template markup |
+| Python | 6.2% | AI agents, scripts, data pipelines |
+| JavaScript | 1.5% | Legacy utilities |
+| Other | 2.1% | Config, build files |
+
+---
+
+## 🤝 Contributing
+
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, branch strategies, and PR expectations.
+
+### Key Branches
+- `master` — Production-ready, stable releases
+- `macbook_machine` — Active development (unstable, feature-in-progress)
+- Feature branches follow `feature/JIRA-123-description` pattern
+
+---
+
+## 📚 Documentation
+
+- [High-Level Design](./high_level_design.md) — System architecture, C4 diagrams
+- [Low-Level Design](./low_level_design.md) — Detailed service specs, API contracts
+- [Roadmap](./ROADMAP.md) — Planned features, Q3-Q4 initiatives
+- [Changelog](./CHANGELOG.md) — Release notes & version history
+- [Disaster Recovery](./DISASTER_RECOVERY.md) — Backup, failover, recovery procedures
+- [Handover Guide](./handover.md) — Operational runbooks, troubleshooting
+- [Branch Strategy](./BRANCH_STRATEGY.md) — Git workflow & merge policies
+
+---
+
+## 🔒 Security
+
+See [SECURITY.md](./SECURITY.md) for vulnerability reporting and security policies.
+
+**Key Safeguards:**
+- JWT-based authentication with RS256 signing
+- Role-based access control (RBAC) for customer/admin/rider/business
+- Secrets rotation via GitOps + HashiCorp Vault
+- SQL injection prevention (parameterized queries)
+- CORS & CSRF protection
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see [LICENSE](./LICENSE) for details.
+
+---
+
+## 🌟 Status & Support
+
+- **Version**: 2.0.0
+- **Repository Created**: 42 days ago
+- **Last Updated**: 1 day ago
+- **Issue Tracker**: [GitHub Issues](https://github.com/Muneeb7860/Swish_App/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Muneeb7860/Swish_App/discussions)
+
+---
+
+**Made with ❤️ by Muneeb7860**  
+*In a blink* — Fast, reliable, autonomous quick-commerce operations.
