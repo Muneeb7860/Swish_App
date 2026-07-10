@@ -1,6 +1,7 @@
 package ch.swissqcommerce.backend.domain.catalog.core.service;
 
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
+import ch.swissqcommerce.backend.domain.catalog.adapter.out.api.CompetitorPricingClient;
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase;
 import ch.swissqcommerce.backend.domain.catalog.port.out.CatalogPort;
@@ -32,6 +33,7 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
     private final CatalogPort catalogPort;
     private final DynamicPricingAgent dynamicPricingAgent;
     private final FmcgApiPort fmcgApiPort;
+    private final CompetitorPricingClient competitorPricingClient;
 
     private static final Map<String, FmcgFallback> FALLBACKS =
             Map.of(
@@ -182,7 +184,10 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
             // We simulate: false (isRaining), 1.2 (riderToOrderRatio),
             // competitor price is 5% cheaper, 45 (daysToExpiry) (or 2 if perishable to trigger
             // discounts), 0.20 (vipDensity)
-            double competitorPriceVal = basePrice.multiply(new BigDecimal("0.95")).doubleValue();
+            double competitorPriceVal =
+                    competitorPricingClient
+                            .fetchCompetitorPrice(barcode)
+                            .orElse(basePrice.multiply(new BigDecimal("0.95")).doubleValue());
             double surge = 1.0;
             double discount = 0.0;
             String rationale = "In-house fallback applied.";

@@ -21,7 +21,7 @@ test.describe("Test 5 — FMCG Catalog Import & Dynamic Pricing Console", () => 
 		await interceptAPIs(page);
 
 		// Intercept the FMCG catalog import POST API
-		await page.route("**/api/v1/products/import-fmcg", async (route) => {
+		await page.route("**/api/v1/products/import-fmcg*", async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
@@ -241,6 +241,83 @@ test.describe("Test 5 — FMCG Catalog Import & Dynamic Pricing Console", () => 
 		await expect(cadburyCard.locator("text=10% OFF")).toBeVisible();
 
 		// Verify console errors
+		const criticalErrors = consoleErrors.filter(
+			(e) =>
+				!e.includes("Warning:") &&
+				!e.includes("Download the React DevTools") &&
+				!e.includes("ERR_CONNECTION_REFUSED") &&
+				!e.includes("ERR_FAILED") &&
+				!e.includes("net::ERR"),
+		);
+		expect(criticalErrors).toEqual([]);
+	});
+
+	test("Admin panel chaos controls recalculate FMCG prices dynamically", async ({
+		page,
+	}) => {
+		const consoleErrors = collectConsoleErrors(page);
+
+		// Intercept the API call to inspect the query parameters passed during chaos
+		let capturedQuery: string | null = null;
+		await page.route("**/api/v1/products/import-fmcg*", async (route) => {
+			const url = new URL(route.request().url());
+			capturedQuery = url.search;
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify([
+					{
+						barcode: "7613035449626",
+						name: "Nestle Chocapic Céréales",
+						brand: "Nestlé",
+						category: "Snacks & Drinks",
+						emoji: "🍫",
+						basePrice: 4.5,
+						dynamicPrice: 6.3,
+						surgeMultiplier: 1.4,
+						discountPercent: 0.0,
+						pricingRationale: "Chaos surge active due to rider congestion.",
+						source: "API",
+						status: "SUCCESS",
+					},
+				]),
+			});
+		});
+
+		// Visit app and login as admin
+		await loginAs(page, "admin");
+
+		// Wait for Admin Panel to mount
+		await page
+			.locator(".admin-dashboard")
+			.waitFor({ state: "visible", timeout: 20_000 });
+
+		// Toggle the rider traffic switch by clicking its label (as input has opacity: 0)
+		const trafficSwitch = page.locator("#switch-rider-traffic");
+		await page.locator("label[for='switch-rider-traffic']").click();
+		await expect(trafficSwitch).toBeChecked();
+
+		// Locate FMCG Console Card and Click the import button
+		const fmcgCard = page
+			.locator("text=Global FMCG Import & Dynamic Pricing Hub")
+			.locator("..");
+		const importBtn = fmcgCard.locator("button", {
+			hasText: "Import & Price FMCG Products",
+		});
+		await importBtn.click();
+
+		// Verify success status
+		const successMsg = page.locator("text=✓ Successfully Imported");
+		await expect(successMsg).toBeVisible({ timeout: 10_000 });
+
+		// Verify that we captured query parameters indicating riderToOrderRatio=0.4
+		expect(capturedQuery).toContain("riderToOrderRatio=0.4");
+
+		// Verify that the table shows the recalculated surge price of 6.30
+		const table = fmcgCard.locator("table");
+		await expect(table.locator("text=6.3")).toBeVisible();
+
+		// Verify no console errors
 		const criticalErrors = consoleErrors.filter(
 			(e) =>
 				!e.includes("Warning:") &&
