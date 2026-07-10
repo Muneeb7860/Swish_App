@@ -96,12 +96,15 @@ export default function AdminPanel({
 			}
 
 			const query = params.toString() ? `?${params.toString()}` : "";
-			const res = await fetch(`${API_BASE}/api/v1/products/import-fmcg${query}`, {
-				method: "POST",
-				headers: {
-					Authorization: token ? `Bearer ${token}` : "",
+			const res = await fetch(
+				`${API_BASE}/api/v1/products/import-fmcg${query}`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: token ? `Bearer ${token}` : "",
+					},
 				},
-			});
+			);
 			if (!res.ok) {
 				throw new Error(`Import failed: HTTP ${res.status}`);
 			}
@@ -117,7 +120,6 @@ export default function AdminPanel({
 			setImportStatus("error");
 		}
 	};
-
 	return (
 		<div
 			className="admin-dashboard"
@@ -185,7 +187,7 @@ export default function AdminPanel({
 										setColdChainBreakdownActive(e.target.checked)
 									}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-cold-chain"
 									className="switch-label"
@@ -212,7 +214,7 @@ export default function AdminPanel({
 									checked={wholesalerOutageActive}
 									onChange={(e) => setWholesalerOutageActive(e.target.checked)}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-wholesaler-outage"
 									className="switch-label"
@@ -238,7 +240,7 @@ export default function AdminPanel({
 									checked={paymentOutageActive}
 									onChange={(e) => setPaymentOutageActive(e.target.checked)}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-payment-outage"
 									className="switch-label"
@@ -264,7 +266,7 @@ export default function AdminPanel({
 									checked={simulateTelemetryFraud}
 									onChange={(e) => setSimulateTelemetryFraud(e.target.checked)}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-telemetry-fraud"
 									className="switch-label"
@@ -291,7 +293,7 @@ export default function AdminPanel({
 									checked={dbLatencyActive}
 									onChange={(e) => setDbLatencyActive(e.target.checked)}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-db-latency"
 									className="switch-label"
@@ -317,7 +319,7 @@ export default function AdminPanel({
 									checked={riderTrafficActive}
 									onChange={(e) => setRiderTrafficActive(e.target.checked)}
 								/>
-								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: styled toggle switch */}{" "}
 								<label
 									htmlFor="switch-rider-traffic"
 									className="switch-label"
@@ -326,7 +328,6 @@ export default function AdminPanel({
 						</div>
 					</div>
 				</div>
-
 				{/* FMCG Import & Dynamic Pricing Hub */}
 				<div
 					className="glass-card"
@@ -560,7 +561,7 @@ export default function AdminPanel({
 							</table>
 						</div>
 					)}
-				</div>
+				</div>{" "}
 			</div>
 
 			{/* Verification queues */}

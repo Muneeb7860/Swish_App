@@ -8,8 +8,8 @@
 
 ### 1. Backend Agent Domain Expansion (`backend`)
 *   **Target Files**: 
-    - [NEW] [B2BProcurementAgent.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java)
-    - [MODIFY] [AgentController.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/in/web/AgentController.java)
+- [NEW] [B2BProcurementAgent.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java)
+    - [MODIFY] [AgentController.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/in/web/AgentController.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Design**:
     - Build `B2BProcurementAgent` to consume inventory alarm logs.
     - Inject the LLM gateway interface (`LlmGatewayPort`) to generate optimized restock contracts.
@@ -17,14 +17,14 @@
 
 ### 2. Safeguard & HITL Validator
 *   **Target Files**:
-    - [NEW] [ProcurementGuardrailsEngine.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/ProcurementGuardrailsEngine.java)
+- [NEW] [ProcurementGuardrailsEngine.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/ProcurementGuardrailsEngine.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Design**:
     - Implement hard bounds: Max limit $5,000 per order, and price variance within 10% of historical average.
     - Violations block the transaction and write records directly to the `HitlQueue`.
 
 ### 3. Headless API Schema Exposure (`bff`)
 *   **Target Files**:
-    - [MODIFY] [application.yml](../bff/src/main/resources/application.yml)
+- [MODIFY] [application.yml](../bff/src/main/resources/application.yml) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Design**:
     - Expose machine-readable OpenAPI endpoints (`/v3/api-docs`).
     - Add custom security policies to intercept and parse headers for external AI client authentication.

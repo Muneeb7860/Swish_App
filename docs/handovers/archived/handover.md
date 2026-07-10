@@ -19,7 +19,7 @@ Here is the exact mapping of modified and newly created files in the repository:
 *   **[CustomerSupportAgent.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java) [MODIFY]**:
     - Declared public constants `TOOL_ORDER_STATUS` and `TOOL_DYNAMIC_PRICING` to prevent prompt/executor name drifts.
     - Updated the system prompt inside `analyze` to allow the LLM to route pricing-related queries (surges, discounts, price checks) to the pricing agent.
-*   **[AgentToolExecutor.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentToolExecutor.java) [MODIFY]**:
+*   **[AgentToolExecutor.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentToolExecutor.java) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Injected `DynamicPricingAgent`.
     - Declared a static nested class `ToolResult` containing both `content` (output string) and `cost` (double token cost).
     - Refactored `executeTool` to return `ToolResult`.
@@ -28,7 +28,7 @@ Here is the exact mapping of modified and newly created files in the repository:
     - Updated the tool invocation call site to handle `ToolResult`.
     - Multi-agent token costs are now accumulated via `trackUsage(toolResult.cost)` and added to `accumulatedCost` before executing the final response. This prevents mesh-hop LLM token leakages from bypassing the $5/day budget guardrail (ADR-007).
     - Hardened with B2B procurement cost accumulation and a budget breach check: if the daily limit is reached, it bypasses LLM negotiations and falls back to a deterministic 10% discount bid.
-*   **[CustomerSupportDynamicPricingTest.java](../../../backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) [NEW]**:
+*   **[CustomerSupportDynamicPricingTest.java](../../../backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) [NEW]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Verifies the dynamic pricing routing path, cost accumulation across the orchestrator, robust parse-guards with defaults, and Letta non-JSON malformed string fallback to the HITL queue.
     - Added a test case verifying the B2B procurement daily budget-bypass guardrail.
 
@@ -36,7 +36,7 @@ Here is the exact mapping of modified and newly created files in the repository:
 *   **[LettaConfig.java](../../../backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java) [NEW]**:
     Registers properties and maps the `lettaRestTemplate` bean. Configures a **5s connect timeout** and **10s read timeout** via `SimpleClientHttpRequestFactory` to prevent blocking the main Spring threads if the Letta container lags.
     - Added configurable properties to dynamically resolve API Token and model target overrides.
-*   **[LettaMemoryService.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) [NEW]**:
+*   **[LettaMemoryService.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) [NEW]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     The stateful client adapter. Maps the client `conversationId` into a formatted Letta agent identifier (`agent-conv-conversationId`). It handles the following:
     - Lists active agents (`GET /v1/agents`) using `Object.class` to dynamically support both JSON array (`List`) and object wrappers containing `items`, `results`, or `agents`.
     - Automatically provisions a new agent (`POST /v1/agents`) if it doesn't already exist.
@@ -46,14 +46,14 @@ Here is the exact mapping of modified and newly created files in the repository:
     - Added a test case verifying that configurable Letta API Token and model override properties are correctly applied to the outgoing HTTP headers and request bodies.
 *   **[B2BProcurementActivitiesImpl.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementActivitiesImpl.java) [MODIFY]**:
     Wired with `LettaMemoryService`. Maps procurement sessions into unique keys based on the restock item and wholesaler name (`procurement-[itemId]-[wholesalerName]`) to ensure the agent maintains multi-turn context during long-running procurement negotiations.
-*   **[application.properties](../../../backend/src/main/resources/application.properties) [MODIFY]**:
+*   **[application.properties](../../../backend/src/main/resources/application.properties) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     Exposes Letta server URL, token, and model defaults:
     ```properties
     swish.letta.api.url=${SWISH_LETTA_API_URL:http://localhost:8283}
     swish.letta.api.token=${SWISH_LETTA_API_TOKEN:dummy-key}
     swish.letta.model=${SWISH_LETTA_MODEL:openai/gpt-4o}
     ```
-*   **[docker-compose-local.yml](../../../docker-compose-local.yml) [MODIFY]**:
+*   **[docker-compose-local.yml](../../../docker-compose-local.yml) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     Added two local containers to the homelab compose file:
     - `postgres-letta`: Uses image `pgvector/pgvector:pg16` on port `5434` for Letta's core metadata and semantic vector indices (eliminating the need for a separate Chroma DB instance).
     - `letta`: Exposed on port `8283`, connecting to the `postgres-letta` DB.
@@ -77,7 +77,7 @@ Here is the exact mapping of modified and newly created files in the repository:
     - Wired `HitlQueueController` and `AdminController` and implemented `testHitlQueueControllerEndpointsEnforceAdminRole` and `testAdminControllerEndpointsEnforceAdminRole` to verify that unauthenticated/non-admin users (e.g. `ROLE_CUSTOMER`) receive an `AccessDeniedException` while admin users (`ROLE_ADMIN`) successfully pass method security.
 
 ### 5. Vector Search Grounding (RAG - Phase 6)
-*   **[memory_mesh.py](../../../homelab-ai-governance/src/governance/stubs/memory_mesh.py) [MODIFY]**:
+*   **[memory_mesh.py](../../../homelab-ai-governance/src/governance/stubs/memory_mesh.py) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Queries `postgres-letta` via `psycopg2-binary` using cosine similarity (`<=>` operator) on a `vector(768)` embedding.
     - Generates search embeddings dynamically using the local Ollama `nomic-embed-text:latest` model.
     - Auto-bootstraps the database schema (creating table `knowledge_base` and column `embedding`) and auto-seeds it if empty.
@@ -86,7 +86,7 @@ Here is the exact mapping of modified and newly created files in the repository:
     - Unit tests validating disabled RAG stubs, database connection offline fallbacks, and successful pgvector cosine similarity query execution.
 *   **[routing_config.yaml](../../../homelab-ai-governance/config/routing_config.yaml) [MODIFY]**:
     - Added a `rag` configuration block specifying database URL, embedding model, embedding url, and similarity threshold (`0.60`).
-*   **[pyproject.toml](../../../homelab-ai-governance/pyproject.toml) [MODIFY]**:
+*   **[pyproject.toml](../../../homelab-ai-governance/pyproject.toml) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Appended `psycopg2-binary>=2.9.0` to project dependencies.
 
 ---
@@ -165,7 +165,7 @@ We have completed **Phase 9: Recursive AI Governance Alignment & AI Hardening**.
 2. **[Observability & Hardening Report](../../../docs/architectural_report_circuit_breakers_metrics_tracing.md)**: Highlights the design and sequence flows of MemoryMesh circuit breakers, Prometheus actuator metrics, and OpenTelemetry distributed tracing context propagation.
 3. **[Detailed Project Handover](../../../docs/detailed_project_handover.md)**: Summarizes Phase 9 specific fixes (redaction safety refusals, CCR ignore lists, DeepSeek data sovereignty redaction, cold-start timeouts).
 4. **[Implementation Plan - Phase 9](../../../docs/implementation_plan_phase9.md)**: The plan and validation criteria executed for Phase 9 alignment.
-5. **[Security Architecture Audit Report](../../../docs/security_architecture_audit_report.md)**: Validates overall Agentic OS security posture against PII privacy, 1s SLAs, method security, and transactional outbox auditing.
+5. **[Security Architecture Audit Report](../../../docs/security_architecture_audit_report.md)**: Validates overall Agentic OS security posture against PII privacy, 1s SLAs, method security, and transactional outbox auditing. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ### Cycle update (2026-06-13) — Epic 2, Epic 2.5 & Phase 8 (A+B) landed
 
@@ -193,7 +193,7 @@ This section summarizes the frontend (FE) hardening changes implemented, ensurin
 ## 🎨 Completed Upgrades & Changes
 
 ### 1. Customer Super App (`frontend-customer`)
-* **Green Neon ESG Toggle**: Replaced the default browser checkbox for bag returns in [CustomerApp.tsx](../../../frontend-customer/src/components/CustomerApp.tsx) with a custom green neon sliding switch (`.switch-input-customer` + `.switch-label`) matching the customer branding.
+* **Green Neon ESG Toggle**: Replaced the default browser checkbox for bag returns in [CustomerApp.tsx](../../../frontend-customer/src/components/CustomerApp.tsx) with a custom green neon sliding switch (`.switch-input-customer` + `.switch-label`) matching the customer branding. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 * **Premium VIP Membership Hub**:
   * Added conditional styling using the gold-glowing class `.vip-card-glow` and gold header text `.vip-gold-text` when a user's VIP status is active.
   * Rebuilt the Trust Shield rating to use a progress bar and visual checking indicators (`Lucide.ShieldCheck` / `Lucide.ShieldAlert`).
@@ -266,7 +266,7 @@ We successfully audited Phase 6 and completed the implementation and validation 
 We successfully implemented and validated the board-mandated compliance and audit capability enhancements:
 
 * **Telemetry Audit Schema (Flyway Migration)**:
-  - Created [V29__telemetry_audit_hardening.sql](../../../backend/src/main/resources/db/migration/V29__telemetry_audit_hardening.sql) adding calibration tracking columns (`last_calibrated_at`, `calibration_status`) and cryptographic chaining columns (`previous_reading_hash`, `reading_hash`) to database entities.
+- Created [V29__telemetry_audit_hardening.sql](../../../backend/src/main/resources/db/migration/V29__telemetry_audit_hardening.sql) adding calibration tracking columns (`last_calibrated_at`, `calibration_status`) and cryptographic chaining columns (`previous_reading_hash`, `reading_hash`) to database entities.
 
 * **Telemetry Invariant Auditing**:
   - Updated models and entity mappings ([SensorEntity.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorEntity.java), [SensorReadingEntity.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorReadingEntity.java)) and fixed a gap in [SensorPersistenceAdapter.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorPersistenceAdapter.java) to correctly persist hashes.
@@ -280,13 +280,13 @@ We successfully implemented and validated the board-mandated compliance and audi
   - Modified [WholesalerServiceImpl.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/wholesaler/core/service/WholesalerServiceImpl.java) to verify store sensor calibration compliance and dynamically reroute B2B restock order generation to alternative compliant dark stores if any temperature/GPS sensors have failed.
 
 * **Human Override Justification Hashing**:
-  - Enforced non-blank override reasons in all resolution handlers in [GovernanceServiceImpl.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/governance/core/service/GovernanceServiceImpl.java).
+  - Enforced non-blank override reasons in all resolution handlers in [GovernanceServiceImpl.java](../../../backend/src/main/java/ch/swissqcommerce/backend/domain/governance/core/service/GovernanceServiceImpl.java). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
   - Computed the SHA-256 hash of all non-blank reasons and saved them under `"HITL-OVERRIDE-HASH:<hash>"` event logs in the double-entry `SecurityTrustLedger`.
 
 * **Verification**:
   - **Backend Test Suite**: 100% green (`BUILD SUCCESS` with 326 tests). Includes new unit tests verifying dynamic rerouting, calibration status changes, and telemetry chain validation under normal/tampered scenarios.
   - **Frontend Build Suite**: All React micro-frontends compile cleanly (`npm run build:all` success).
-  - **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](../../../docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features.
+- **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](../../../docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 

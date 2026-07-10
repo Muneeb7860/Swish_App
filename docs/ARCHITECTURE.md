@@ -90,4 +90,4 @@ graph TD
 ## ☸️ Production Deployment & Scalability
 
 1.  **Local Environment**: Runs under standard Docker Compose ([docker-compose.yml](../infrastructure/docker-compose.yml)) containing all support databases.
-2.  **Kubernetes Orchestration**: Production-grade YAML manifests in the [k8s](../infrastructure/k8s) directory enforce memory/CPU limits and readiness/liveness checks across the entire cluster.
+2.  **Kubernetes Orchestration**: Production-grade YAML manifests in the [k8s](../infrastructure/k8s) directory enforce memory/CPU limits and readiness/liveness checks across the entire cluster. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)

@@ -1,6 +1,6 @@
 # Low-Level Design (LLD): Swiss Quick Commerce System
 
-This Low-Level Design (LLD) document translates the High-Level Design (HLD) architecture and Business Requirements Document (BRD) into concrete operational models. It maps directly to the API contracts ([bff-openapi.yaml](./bff-openapi.yaml)) and database schemas ([V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)).
+This Low-Level Design (LLD) document translates the High-Level Design (HLD) architecture and Business Requirements Document (BRD) into concrete operational models. It maps directly to the API contracts ([bff-openapi.yaml](./bff-openapi.yaml)) and database schemas ([V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 
@@ -64,7 +64,7 @@ usecaseDiagram
 
 ### 2.1 Domain Class Model
 
-This class diagram represents the Object-Relational mapping directly derived from [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql).
+This class diagram represents the Object-Relational mapping directly derived from [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 classDiagram
@@ -171,7 +171,7 @@ This diagram shows the physical table structures in the PostgreSQL database sepa
   - [olap.dw_customer_fraud_risk_scores](./backend/src/main/resources/db/migration/V1__init_schema.sql#L280)
   - [olap.dw_esg_carbon_facts](./backend/src/main/resources/db/migration/V1__init_schema.sql#L290)
 - **MongoDB `olap` Schema Documents:**
-  - [olap.negotiation_history_logs](./docs/PRD.md#L34) (Unstructured document logs defined in product requirements)
+  - [olap.negotiation_history_logs](./docs/PRD.md#L34) (Unstructured document logs defined in product requirements) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 erDiagram
@@ -509,7 +509,7 @@ Implementation files:
 * Controller: [WholesalerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
 * Service: [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
 * Negotiation Agent: [B2BProcurementAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -562,7 +562,7 @@ sequenceDiagram
 Maps to: `GET /api/wholesaler/invoices` or any secured endpoint.
 Implementation files:
 * Filter: [EdgeJwtVerificationFilter.java](./bff/src/main/java/ch/swissqcommerce/bff/filter/EdgeJwtVerificationFilter.java)
-* BFF Main: [BffApplication.java](./bff/src/main/java/ch/swissqcommerce/bff/BffApplication.java)
+* BFF Main: [BffApplication.java](./bff/src/main/java/ch/swissqcommerce/bff/BffApplication.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -607,7 +607,7 @@ sequenceDiagram
 Maps to: `OutboxEventScheduler.processPendingEvents()` scheduler.
 Implementation files:
 * Outbox Scheduler: [OutboxEventScheduler.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/event/core/service/OutboxEventScheduler.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -655,7 +655,7 @@ Implementation files:
 * Wholesaler Controller: [WholesalerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
 * Wholesaler Service: [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
 * Admin Controller: [AdminController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -698,7 +698,7 @@ sequenceDiagram
 Maps to: `POST /api/telemetry/tick` and `POST /api/telemetry/{orderId}/dry-ice`
 Implementation files:
 * Telemetry Controller: [TelemetryController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/TelemetryController.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -730,7 +730,7 @@ sequenceDiagram
 Maps to: `POST /api/customer/profile/purge`
 Implementation files:
 * Customer Controller: [CustomerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/CustomerController.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -752,7 +752,7 @@ Maps to: `POST /api/rider/onboard` and `POST /api/admin/onboard/queue/{id}/appro
 Implementation files:
 * Controller: [RiderController.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/in/web/RiderController.java)
 * Service Implementation: [RiderServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/core/service/RiderServiceImpl.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -780,7 +780,7 @@ sequenceDiagram
 Maps to: `POST /api/inventory/picker/handover`
 Implementation files:
 * Inventory Controller: [InventoryController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/InventoryController.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -802,7 +802,7 @@ sequenceDiagram
 Maps to: `POST /api/admin/chaos/faults`
 Implementation files:
 * Admin Controller: [AdminController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
-* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram

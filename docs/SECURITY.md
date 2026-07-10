@@ -7,7 +7,7 @@ We prioritize the security and integrity of the Swish App ecosystem. This docume
 ## 🔒 Implemented Security Protocols
 
 ### 1. Authentication & Authorization
-*   **Edge Token Verification**: The [EdgeJwtVerificationFilter](../bff/src/main/java/ch/swissqcommerce/bff/filter/EdgeJwtVerificationFilter.java) verifies HS256 JWT tokens at the gateway BFF boundary, isolating core backend services from external networks.
+*   **Edge Token Verification**: The [EdgeJwtVerificationFilter](../bff/src/main/java/ch/swissqcommerce/bff/filter/EdgeJwtVerificationFilter.java) verifies HS256 JWT tokens at the gateway BFF boundary, isolating core backend services from external networks. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Role-Based Access Control (RBAC)**: Enforced dynamically across endpoints using Spring Security and JWT-parsed roles (`CUSTOMER`, `RIDER`, `ADMIN`).
 *   **Credential Decoupling**: Secrets (passwords, JWT keys, AI provider tokens) are loaded strictly via Docker environment variables or K8s `secretKeyRef` bindings. Fallbacks have been pruned to prevent credential exposure.
 
@@ -18,7 +18,7 @@ We prioritize the security and integrity of the Swish App ecosystem. This docume
 
 ### 3. Data Tier Security
 *   **Isolation**: relational PostgreSQL databases, Apache Kafka event brokers, and Redis cache clusters run in isolated backend network subnets. Only the BFF Edge gateway has access to them.
-*   **Pruned Volume Mappings**: Relational initialization scripts ([seed.sql](../seed.sql)) are mounted for schema bootstrapping only, with no production paths exposed.
+*   **Pruned Volume Mappings**: Relational initialization scripts ([seed.sql](../seed.sql)) are mounted for schema bootstrapping only, with no production paths exposed. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 

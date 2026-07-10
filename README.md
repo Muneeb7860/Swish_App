@@ -147,9 +147,7 @@ To prevent write locks and reconcile database performance with cost controls:
 | **Ledger Auditing** | PostgreSQL | WORM (S3/GCS) | ∞ | `transaction_id`, `hash_chain`, `signature` |
 | **Inventory & Products**| PostgreSQL | Redis | 1 hour cache | `product_id`, `stock_count`, `price` |
 | **GPS Telemetry** | Redis (Buffer) | MongoDB | 24 hours | `rider_id`, `latitude`, `longitude` |
-| **Bidding Logs** | MongoDB | — | 30 days | `bid_id`, `wholesaler_name`, `proposed_price` |
-
-
+| **Bidding Logs** | MongoDB | — | 30 days | `bid_id`, `wholesaler_name`, `proposed_price` | (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 ### 3. Asynchronous Event Pipeline (Transactional Outbox)
 To avoid dual-write inconsistencies (where a database update succeeds but a corresponding message broker write fails):
 1.  Both the primary transaction and the pending event metadata are committed to a database-backed `outbox` table within the same ACID unit of work.
@@ -158,7 +156,7 @@ To avoid dual-write inconsistencies (where a database update succeeds but a corr
 
 ---
 
-## 🤖 B2B Agentic OS, LLM Strategy & Safety Guardrails
+## 🤖 B2B Agentic OS, LLM Strategy & Safety Guardrails (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 Swish OS features a multi-domain agentic pipeline that manages stock replenishment and operational exceptions:
 
@@ -210,8 +208,7 @@ Before query routing and model output deliveries, the governance layer executes 
 ### 🧑‍💻 Core Platform Agents
 *   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers and conducts restock negotiations.
 *   **ProcurementGuardrailsEngine:** Evaluates contract proposals against strict financial bounds (e.g., maximum cost thresholds and wholesale price variance ceilings).
-*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator.
-
+*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Additional Domain Agents:**
     *   *FraudAgent:* Checks order frequencies, trust scores, and transactions to detect identity/payment fraud.
     *   *PricingAgent:* Adapts delivery pricing dynamically based on local congestion, weather, and inventory counts.
@@ -278,9 +275,7 @@ Micro-Frontends (MFEs) are decoupled client apps federated at runtime using `@or
 *   **`zustand`:** Pinned to `^4.5.2` for shared client store state
 *   **`@swish/design-system`:** Local UI component library ensuring style uniformity across Customer, Rider, and Admin screens.
 
----
-
-
+--- (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 ## 🚀 Quick Start Guide (5 Minutes)
 
 Spin up the entire local infrastructure footprint—including frontends, microservices, databases, event brokers, and complete telemetry pipelines—using a single command.
@@ -346,7 +341,6 @@ bash scripts/chaos.sh
     *   *DevOps (CI/CD):* **Weight 5** (Automated matrix testing of backend containers).
     *   *Service Management (ITIL v4):* **Weight 4** (SLA monitoring, cold chain telemetry tracking).
     *   *Governance (COBIT 2019):* **Weight 5** (Tamper-evident ledger, secrets rotation).
-
 ---
 
 ## 🔗 Related Documentation Index
@@ -355,5 +349,4 @@ bash scripts/chaos.sh
 *   📈 **[High Level Design (HLD)](./docs/HLD.md)**: Network topology, distributed database layouts, and outbox schema structures.
 *   🔍 **[Low Level Design (LLD)](./docs/LLD.md)**: Interface bindings, class/object relations, and micro-frontend federation configs.
 *   🔒 **[Security Architecture Audit](./docs/SECURITY.md)**: Cryptographic signature chains, TLS termination details, and GDPR purge rules.
-*   🧪 **[User Acceptance Testing (UAT)](./docs/UAT_TEST_CASES.md)**: Detailed test scripts, validations, and administrative scenario flows.
-
+*   🧪 **[User Acceptance Testing (UAT)](./docs/UAT_TEST_CASES.md)**: Detailed test scripts, validations, and administrative scenario flows. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)

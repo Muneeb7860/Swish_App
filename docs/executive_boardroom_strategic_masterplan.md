@@ -77,7 +77,7 @@ All figures in USD ($).
 
 ## 🛠️ 5. Technical Deep Dive & Code Refactoring
 
-To resolve the database write lock failures under high concurrent bulk restocks identified in the simulated crisis (Scenario C), the Lead Platform Architect has refactored the transaction locking level in [WholesalerService.java](../backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java).
+To resolve the database write lock failures under high concurrent bulk restocks identified in the simulated crisis (Scenario C), the Lead Platform Architect has refactored the transaction locking level in [WholesalerService.java](../backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ### A. The Lock Optimization Refactoring
 We replace the highly restrictive `@Transactional(isolation = Isolation.SERIALIZABLE)` with `Isolation.READ_COMMITTED` combined with pessimistic database locks. This prevents serialization rollback loops (SQLState 40001) while guaranteeing strict inventory and ledger integrity:

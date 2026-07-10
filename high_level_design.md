@@ -11,7 +11,7 @@ For additional architectural, business, and low-level details, refer to the foll
 *   [docs/SECURITY.md](./docs/SECURITY.md) — Network isolation and security trust guidelines.
 *   [docs/pivot_implementation_plan.md](./docs/pivot_implementation_plan.md) — Transition plan to the agentic B2B SaaS framework.
 *   [docs/executive_boardroom_strategic_masterplan.md](./docs/executive_boardroom_strategic_masterplan.md) — Competitive landscape analysis and 5-year EBITDA models.
-*   [docs/cfo_masterplan_critique.md](./docs/cfo_masterplan_critique.md) — Detailed critique of the SaaS cost structure and database strategies.
+*   [docs/cfo_masterplan_critique.md](./docs/cfo_masterplan_critique.md) — Detailed critique of the SaaS cost structure and database strategies. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 
@@ -129,7 +129,7 @@ To keep transactional performance latency below 5ms:
     *   **MongoDB** acts strictly as an analytical cold-archive for high-volume, non-GDP telemetry. Under this model, MongoDB runs on low-cost tiered storage with strict retention rules to minimize OpEx growth.
 
 ### D. Transaction Isolation & Pessimistic Database Locks
-To resolve the database write lock failures (SQLState 40001 serialization errors) under high concurrent bulk restocks, the platform implements transactional tuning in [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java):
+To resolve the database write lock failures (SQLState 40001 serialization errors) under high concurrent bulk restocks, the platform implements transactional tuning in [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java): (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   Downgrades isolation levels from `@Transactional(isolation = Isolation.SERIALIZABLE)` to `Isolation.READ_COMMITTED`.
 *   Uses explicit database locks (`SELECT ... FOR UPDATE`) in the JPA repository to prevent concurrent update anomalies on inventory rows while bypassing serialization rollback overhead.
 
@@ -182,7 +182,7 @@ This phase maps B2B replenishment and the autonomous procurement pipeline. If lo
       └─► (Violates bounds) ──► [Write to HitlQueue] ──► [L1/L2 Operator Release] ───────┘
 ```
 
-*   **B2B Procurement Workflows**: Details of the autonomous negotiation agent and guardrails are implemented in [B2BProcurementAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java) and [ProcurementGuardrailsEngine.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/ProcurementGuardrailsEngine.java).
+*   **B2B Procurement Workflows**: Details of the autonomous negotiation agent and guardrails are implemented in [B2BProcurementAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java) and [ProcurementGuardrailsEngine.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/ProcurementGuardrailsEngine.java). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Primary/Secondary Wholesaler Failovers**: If the primary distributor's API fails, the backend automatically retries routing restocks to secondary wholesale channels (`wholesaler-2`).
 
 ### Phase C: Information Systems Architecture
@@ -210,7 +210,7 @@ The data model divides structures into three segments to avoid contention:
 *   **Fault Tolerance**: Resilience4j circuit breakers applied at the gateway boundary.
 
 ### Phase E & F: Opportunities & Solutions, Migration Planning
-*   Migrating the legacy system to Swish OS v2.0.0 is managed in stages outlined in [docs/pivot_implementation_plan.md](./docs/pivot_implementation_plan.md).
+*   Migrating the legacy system to Swish OS v2.0.0 is managed in stages outlined in [docs/pivot_implementation_plan.md](./docs/pivot_implementation_plan.md). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   Initial pilot nodes deploy the headless BFF gateway first, routing to mock wholesale channels before enabling live agentic negotiations.
 
 ---
@@ -352,7 +352,7 @@ The development and rollout of Swish OS v2.0.0 are governed by the **Quick Comme
 | **Wholesale Reorder Triggers** | < 5 Seconds | Stock checks trigger restocks immediately when units < 3. |
 | **Autonomous Bid Negotiation** | < 1 Minute | `B2BProcurementAgent` compares prices and commits. |
 | **Guardrails & HITL Evaluation**| < 3 Minutes | Non-compliant orders held in `HitlQueue` for operator approval. |
-| **Store Dispatch Picking Cycle** | < 4 Minutes | 4-minute picking SLA. Uptime monitored in [application.yml](./bff/src/main/resources/application.yml). |
+| **Store Dispatch Picking Cycle** | < 4 Minutes | 4-minute picking SLA. Uptime monitored in [application.yml](./bff/src/main/resources/application.yml). | (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 | **Logistics Cargo Transit** | < 10 Minutes | GPS path updates tracked. GDP temperature logs < 8°C. |
 
 ### Release on Demand Strategies (Feature Toggles)
@@ -371,13 +371,13 @@ The **Service Value System** structures the flow of demand (e.g., store restocki
 2.  **Improve**: Analyze transaction database lock latency metrics to tune hibernate transaction Isolation levels in [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java).
 3.  **Engage**: Capture operational metrics through merchant exception dashboards.
 4.  **Design & Transition**: Introduce secure container upgrades (NGINX Ingress limits, Envoy mTLS sidecar boundaries) using automated deployment pipelines.
-5.  **Obtain/Build**: Compile and execute unit and integration tests as detailed in [docs/LLD.md](./docs/LLD.md).
+5.  **Obtain/Build**: Compile and execute unit and integration tests as detailed in [docs/LLD.md](./docs/LLD.md). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 6.  **Deliver & Support**: Monitor the 4-minute picking SLA and trigger alarms for cold chain sensor temperature deviations.
 
 ### ITIL Practices Incorporated
 *   **Incident Management**: The system triggers circuit-breaker fallback paths automatically when latency exceeds 1000ms.
 *   **Service Level Management**: Standardizes automated penalty calculations if picking SLA compliance falls below 85% of pilot agreements.
-*   **Change Control**: All configuration, security policies, and feature flags must be tracked in version control, following the guidelines in [BRANCH_STRATEGY.md](./BRANCH_STRATEGY.md).
+*   **Change Control**: All configuration, security policies, and feature flags must be tracked in version control, following the guidelines in [BRANCH_STRATEGY.md](./BRANCH_STRATEGY.md). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 
@@ -389,7 +389,7 @@ We align IT governance with the COBIT 2019 framework across five core domains:
 | :--- | :--- | :--- |
 | **Evaluate, Direct, Monitor** | **EDM03** (Ensure Risk Optimization) | Enforcing circuit breakers at the API Gateway and Pessimistic locks in [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java) to prevent database deadlocks. |
 | **Align, Plan, Organize** | **APO12** (Manage Risk) | Implementing the `ProcurementGuardrailsEngine` to intercept and block abnormal AI procurement contracts. |
-| **Build, Acquire, Implement** | **BAI06** (Manage IT Changes) | Managing micro-frontend rollouts via Module Federation config definitions in [docs/LLD.md](./docs/LLD.md). |
+| **Build, Acquire, Implement** | **BAI06** (Manage IT Changes) | Managing micro-frontend rollouts via Module Federation config definitions in [docs/LLD.md](./docs/LLD.md). | (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 | **Deliver, Service, Support** | **DSS05** (Manage Security Services) | Restricting inter-container communications using Envoy mTLS sidecars and rotating database credentials via HashiCorp Vault. |
 | **Monitor, Evaluate, Assess** | **MEA01** (Monitor Performance) | Auditing system response times and streaming metrics to Zipkin and Prometheus dashboards. |
 

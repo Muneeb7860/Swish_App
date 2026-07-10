@@ -28,7 +28,7 @@ Due to environment variations between the development machines, the current Wind
 * **Local Inference Backend**: [Ollama](https://ollama.com) running locally at `http://localhost:11434`.
 * **Python Runtime**: Python 3.11+ installed natively.
 * **Workstation Branch**: `Mac_Machine` (synced at commit `51e96e9`).
-* **Sync Tool**: Use the [sync_to_mac_machine.sh](../../../sync_to_mac_machine.sh) script to consolidate files and push back to `origin/Mac_Machine`.
+* **Sync Tool**: Use the [sync_to_mac_machine.sh](../../../sync_to_mac_machine.sh) script to consolidate files and push back to `origin/Mac_Machine`. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 
@@ -140,7 +140,7 @@ OUTPUT FORMAT (strict):
 To integrate the new system prompt and support modern prompt formats, we will make the following code upgrades:
 
 ### 6.1. Add `/api/chat` Endpoint Support
-* **Target File**: [ollama_agent.py](../../../homelab-ai-governance/src/governance/agents/ollama_agent.py)
+* **Target File**: [ollama_agent.py](../../../homelab-ai-governance/src/governance/agents/ollama_agent.py) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 * **Changes**: Add support for the `/api/chat` endpoint (sending messages as a structure of `system` and `user` roles). This improves model response styling compared to single `/api/generate` prompt construction.
 ```python
 def generate_chat(self, prompt: str, system_prompt: str = None) -> str:
@@ -162,7 +162,7 @@ def generate_chat(self, prompt: str, system_prompt: str = None) -> str:
 * **Changes**: Load `classifier_v2.txt` from config, pass it to `ollama_agent.generate_chat()`, increase default query timeout from `2000ms` to `3000ms`, and log JSON failures.
 
 ### 6.3. Update Routing Schema
-* **Target File**: [routing_config.yaml](../../../homelab-ai-governance/config/routing_config.yaml)
+* **Target File**: [routing_config.yaml](../../../homelab-ai-governance/config/routing_config.yaml) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 * **Changes**: Add path mappings for the system prompt text files and bump the classifier timeout to `3000ms`.
 
 ---

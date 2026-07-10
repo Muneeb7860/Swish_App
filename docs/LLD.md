@@ -46,7 +46,7 @@ The `PaymentGatewayStrategy` interface abstract external providers:
 *   `CODAdapter`
 
 ## 4. Frontend Module Federation
-- [frontend-host/vite.config.ts](../frontend-host/vite.config.ts) defines `remotes` via `@originjs/vite-plugin-federation`.
+- [frontend-host/vite.config.ts](../frontend-host/vite.config.ts) defines `remotes` via `@originjs/vite-plugin-federation`. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - State Management: `Zustand`
 - Data Fetching: `TanStack Query`
 
