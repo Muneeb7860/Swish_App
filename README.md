@@ -1,326 +1,330 @@
-# Swish OS v2.0.0 🚀
+<p align="center">
+  <svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0b0f19" />
+        <stop offset="100%" stop-color="#111827" />
+      </linearGradient>
+      <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#3b82f6" />
+        <stop offset="50%" stop-color="#8b5cf6" />
+        <stop offset="100%" stop-color="#ec4899" />
+      </linearGradient>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="6" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    
+    <!-- Background Card -->
+    <rect width="800" height="240" rx="16" fill="url(#bgGrad)" stroke="#1f2937" stroke-width="2" />
+    
+    <!-- Decorative Ambient Glows -->
+    <circle cx="720" cy="60" r="140" fill="#8b5cf6" opacity="0.12" filter="url(#glow)" />
+    <circle cx="80" cy="180" r="100" fill="#3b82f6" opacity="0.08" filter="url(#glow)" />
+    
+    <!-- Hexagonal Logo Symbol -->
+    <g transform="translate(60, 60)" filter="url(#glow)">
+      <polygon points="60,10 110,38.8 110,96.2 60,125 10,96.2 10,38.8" fill="none" stroke="url(#accentGrad)" stroke-width="6" stroke-linejoin="round" />
+      <!-- Inner Lightning Bolt / Dynamic Flow -->
+      <path d="M60,35 L40,75 L65,75 L55,105 L80,65 L55,65 Z" fill="url(#accentGrad)" />
+    </g>
+    
+    <!-- Text Elements -->
+    <text x="210" y="110" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="900" letter-spacing="1">SWISH OS</text>
+    <text x="210" y="145" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="500">Autonomous B2B Quick-Commerce Operating System</text>
+    <text x="210" y="175" fill="url(#accentGrad)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2">v2.0.0 • MULTI-TENANT SaaS • HEXAGONAL ARCHITECTURE</text>
+  </svg>
+</p>
 
-[![Quality Gates](https://img.shields.io/badge/Quality%20Gates-Passed-success?style=for-the-badge)](https://github.com/Muneeb7860/Swish_App/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Java Version](https://img.shields.io/badge/Java-17-orange?style=for-the-badge)](https://www.oracle.com/java/technologies/javase/jdk17-archive.html)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge)](https://spring.io/projects/spring-boot)
-[![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge)](https://react.dev/)
-
-Welcome to **Swish OS v2.0.0**, an enterprise-grade, multi-tenant B2B SaaS platform engineered to transform legacy convenience stores and micro-fulfillment centers (MFCs) into autonomous, high-velocity quick-commerce operations. Built on rigorous architectural principles (TOGAF, Hexagonal Architecture, COBIT 2019, ITIL v4).
-
-**Key Stats:**
-- **51.8%** Java backend logic
-- **21.3%** TypeScript frontend applications  
-- **9.2%** CSS styling & design system
-- **7.9%** HTML markup
-- **6.2%** Python AI agents & scripts
-
----
-
-## 🎯 What is Swish OS?
-
-Swish OS is a complete operational platform for:
-- **Store Operators** — Manage inventory, fulfill orders, track restocks
-- **CFOs & Finance Managers** — Real-time ledger tracking, savings analytics, cost controls
-- **Platform Admins** — Configure guardrails, oversee HITL queues, manage system health
-- **Suppliers & Wholesalers** — B2B procurement negotiation and fulfillment
-- **Delivery Couriers** — GPS-guided routing and order logistics
-
----
-
-## 🏗️ Architectural Vision
-
-Swish OS follows industry-leading architectural frameworks:
-
-- **TOGAF ADM Alignment:** Business-driven architecture (Phase A) through deployment (Phase D)
-- **Hexagonal Architecture:** Isolates domain logic from adapters (databases, APIs, UI)
-- **COBIT 2019 & ITIL v4 Resilience:** Circuit breakers, dead-letter recovery, pessimistic locking
-- **Zero-Trust Networking (Roadmap):** mTLS with SPIFFE/SPIRE across Kubernetes service mesh
-- **Transactional Outbox Pattern:** Prevents dual-write inconsistencies using Kafka KRaft
-
----
-
-## 🌐 System Context (C4 Model)
-
-### Level 1: System Context Diagram
-```
-┌─────────────────────────────────────────────────────────────┐
-│                                                               │
-│  CFO          Store Operator      Platform Admin            │
-│    ↓                 ↓                    ↓                  │
-│    └─────────────────┴────────────────────┘                │
-│                     │                                        │
-│                 Swish OS v2.0.0 Platform                    │
-│          (B2B SaaS | Multi-tenant | Autonomous)            │
-│                     │                                        │
-│    ┌────────────────┼────────────────┐                     │
-│    ↓                ↓                ↓                      │
-│    └─────────────────────────────────┘                      │
-│ Primary         Secondary        GPS Navigation             │
-│ Wholesaler      Wholesaler       Service (Maps)             │
-│ ERP             ERP                                         │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Level 2: Container Architecture (Target Topology)
-The platform targets a **Kubernetes service mesh** with:
-- **NGINX Ingress Controller** — DMZ, TLS termination, rate limiting
-- **Spring Cloud Gateway** — Custom routing with JWT verification, idempotency checks
-- **Core Microservices** (Envoy mTLS sidecars):
-  - `backend` — Hexagonal domain core (transactions, auth, agents)
-  - `core-business-engine` — B2B checkout, inventory, timeout sweepers
-  - `notification-engine` — Kafka consumer, WebSocket broadcasts
-  - `shared-async-services` — AI routing, ledger, shared schemas
-  - `platform-gateway` — API orchestration & security proxy
-- **Data Tier**:
-  - PostgreSQL (OLTP transactional source of truth)
-  - MongoDB (Analytical archive, cold storage)
-  - Redis (Session state, rate limiting, caching)
-- **Event Broker**: Apache Kafka (KRaft mode)
-
-**Current Deployment**: Google Cloud Run (prod) + Docker Compose (dev/demo)
+<p align="center">
+  <a href="https://github.com/Muneeb7860/Swish_App/actions"><img src="https://img.shields.io/badge/Quality%20Gates-Passed-success?style=for-the-badge&logo=github&logoColor=white&color=10b981" alt="Quality Gates" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&color=eab308" alt="License: MIT" /></a>
+  <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive.html"><img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk&logoColor=white&color=f97316" alt="Java Version" /></a>
+  <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge&logo=springboot&logoColor=white&color=22c55e" alt="Spring Boot" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react&logoColor=white&color=06b6d4" alt="React" /></a>
+</p>
 
 ---
 
-## 🗄️ Core Architecture & Data Strategy
+## 🗺️ Navigation Dashboard
 
-### 1. Traffic Flow
-1. **API Ingress** → NGINX / Cloud Run load balancer → TLS termination
-2. **Gateway Layer** → Spring Cloud Gateway with custom filters (JWT, rate limiting, circuit breakers)
-3. **Service Layer** → Hexagonal microservices with Kafka event publication
-4. **Data Layer** → PostgreSQL (primary), MongoDB (archive), Redis (cache)
-
-### 2. Segmented Dual-Database Model
-- **PostgreSQL (OLTP)**: Single source of truth for transactions, inventory, double-entry ledgers
-  - Flyway migrations
-  - Configured for `REPEATABLE_READ` isolation
-- **MongoDB (OLAP Archive)**: Low-cost, tiered document store for telemetry, GPS logs, historical data
-- **Redis (Distributed Cache)**: Token buckets, courier presence, autocomplete structures
-  - Prevents 70% of relational disk writes
-
-#### 🗃️ Data Schema Map
-| Data Type | Primary DB | Archive | TTL / Expiry | Example Fields |
-| :--- | :--- | :--- | :--- | :--- |
-| **Orders & Checkout** | PostgreSQL | MongoDB | ∞ | `order_id`, `status`, `total_amount` |
-| **Ledger Auditing** | PostgreSQL | WORM (S3/GCS) | ∞ | `transaction_id`, `hash_chain`, `signature` |
-| **Inventory & Products**| PostgreSQL | Redis | 1 hour cache | `product_id`, `stock_count`, `price` |
-| **GPS Telemetry** | Redis (Buffer) | MongoDB | 24 hours | `rider_id`, `latitude`, `longitude` |
-| **Bidding Logs** | MongoDB | — | 30 days | `bid_id`, `wholesaler_name`, `proposed_price` |
-
-### 3. Asynchronous Event Pipeline (Transactional Outbox)
-Prevents dual-write inconsistencies:
-1. Database transaction + event metadata → `outbox` table (atomic)
-2. Async relay polls `outbox`, publishes to Kafka
-3. Kafka consumers process messages
-4. Dead-letter queue isolates malformed payloads
+*   🎯 **[Platform Overview & Vision](#-platform-overview--vision)**
+*   🏗️ **[System Architecture & Container Topology](#-system-architecture--container-topology)**
+*   📂 **[Repository Directory Blueprint](#-repository-directory-blueprint)**
+*   🤖 **[B2B Agentic OS & LLM Strategy](#-b2b-agentic-os--llm-strategy)**
+*   📜 **[Compliance, Governance & Security](#-compliance-governance--security)**
+*   📐 **[Architecture Decision Records (ADR) Registry](#-architecture-decision-records-adr-registry)**
+*   🚀 **[Homelab Dev Setup & Troubleshooting](#-homelab-dev-setup--troubleshooting)**
+*   🧪 **[Testing, Quality Gates & Chaos Engineering](#-testing-quality-gates--chaos-engineering)**
 
 ---
 
-## 🤖 B2B Agentic OS, LLM Strategy & Safety Guardrails
+## 🎯 Platform Overview & Vision
 
-```
-Stock Alert (< 3 units)
-        ↓
-[B2BProcurementAgent] ← Queries primary/secondary wholesaler pricing
-        ↓
-[ProcurementGuardrailsEngine] ← Evaluates cost bounds & variance limits
-        ├─ PASS (Cost < $5000, Variance < 10%) → REST API Restock → PostgreSQL Update
-        └─ FAIL → Human-in-the-Loop Queue → L1/L2 Operator Release
+**Swish OS v2.0.0** is an enterprise-grade, multi-tenant B2B SaaS operating system engineered to transform legacy convenience stores and micro-fulfillment centers (MFCs) into autonomous, high-velocity distribution hubs. Designed to satisfy a strict **15-minute hyper-local grocery delivery SLA**, Swish OS retrofits existing retail networks with decentralized micro-frontends and robust agentic workflows.
+
+### Architectural Pillars & Design Frameworks
+*   **TOGAF ADM Lifecycle Traceability**: Integrates business stakeholders' requirements directly with technical deployments on Google Cloud Run and Apache Kafka event streams.
+*   **Hexagonal Isolation (Ports & Adapters)**: Separates pure domain rules, workflows, and state-machine components from database engines, communication adapters, and frontend client views.
+*   **COBIT 2019 & ITIL v4 Service Value Chains**: Builds high availability and resilience directly into the ecosystem with circuit breakers, dead-letter fallbacks, and pessimistic resource locking.
+*   **Zero-Trust Networking Roadmap**: *Planned improvements include* mutual TLS (mTLS) with SPIFFE/SPIRE identity propagation inside a Kubernetes service mesh. *As-built:* TLS termination at Cloud Run / API Gateway with JSON Web Token (JWT) auth.
+
+---
+
+## 🏗️ System Architecture & Container Topology
+
+### L1: System Context Diagram
+The following diagram maps how customers, platform administrators, and CFOs interface with Swish OS, which coordinates negotiations with wholesalers and updates external mapping APIs.
+
+```mermaid
+graph TB
+  classDef system fill:#0b0f19,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
+  classDef actor fill:#111827,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+  classDef external fill:#1f2937,stroke:#64748b,stroke-width:1px,stroke-dasharray: 5 5,color:#94a3b8;
+
+  CFO((CFO / Finance Manager)):::actor
+  Operator((Store Operator)):::actor
+  Admin((Platform Admin)):::actor
+  
+  System[Swish OS v2.0.0 B2B Platform]:::system
+  
+  PrimaryWholesaler[Primary Wholesaler ERP<br>WHOLESALER-1]:::external
+  SecondaryWholesaler[Secondary Wholesaler ERP<br>WHOLESALER-2]:::external
+  GPSService[GPS Navigation API]:::external
+
+  CFO -->|Review Savings & Ledger Logs| System
+  Operator -->|Fulfill Orders & View Restocks| System
+  Admin -->|Configure Guardrails & Overrides| System
+  
+  System -->|Negotiate and Restock| PrimaryWholesaler
+  System -->|Fallback Restocks| SecondaryWholesaler
+  System -->|Track Shipments| GPSService
 ```
 
-### 🧠 AI & LLM Execution Strategy
+### L2: Container Target Topology (🛣️ Roadmap)
+> [!NOTE]
+> **Kubernetes Ingress Deployment**: The target environment includes NGINX Ingress and Envoy mTLS sidecars. The current production deployment uses Google Cloud Run (individual container microservices) and Docker Compose for local environments.
 
-To ensure zero external cloud dependencies, offline functionality, and predictable token costs, the platform implements a tiered hybrid execution model:
+```mermaid
+graph TB
+  classDef edge fill:#0b0f19,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+  classDef gateway fill:#0b0f19,stroke:#8b5cf6,stroke-width:2px,color:#f8fafc;
+  classDef container fill:#0b0f19,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
+  classDef store fill:#0b0f19,stroke:#06b6d4,stroke-width:2px,color:#f8fafc;
+  classDef queue fill:#0b0f19,stroke:#f97316,stroke-width:2px,color:#f8fafc;
 
-#### 1. Local Inference (Primary)
-*   **Execution Engine:** Self-hosted **Ollama** serving containerized models.
-*   **Default Model:** `qwen:14b` or `llama2:13b` serving B2B negotiations and agent mesh calls locally.
-*   **Memory Preserving layer:** Uses **Letta (formerly MemGPT)** to manage stateful memory contexts (Core Memory + Archival Database Vector search using pgvector) for long-running multi-turn Wholesaler RFQ negotiations.
+  Ingress[NGINX Ingress Controller<br>DMZ / TLS Termination]:::edge
+  
+  subgraph k8s-service-mesh [Kubernetes Pod Mesh]
+    GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
+    
+    subgraph core-services [Core Services (Envoy mTLS Sidecars)]
+      Backend[backend Service<br>Hexagonal Core Port 8083]:::container
+      BusinessEngine[core-business-engine<br>Checkout & Inventory Port 8081]:::container
+      NotifEngine[notification-engine<br>Kafka WebSockets Port 8082]:::container
+      SharedAsync[shared-async-services<br>AI & Ledger Port 8084]:::container
+      SecurityEngine[Security Engine<br>Guardrails / mTLS]:::container
+      RewardsEngine[Rewards Engine<br>Gamification]:::container
+      EventsEngine[Events Engine<br>Outbox Relay]:::container
+      GovernanceEngine[Governance Engine<br>Compliance]:::container
+    end
+    
+    subgraph databases [Data & Storage Tier]
+      Redis[(Redis Cache & Rate Limiter)]:::store
+      Postgres[(PostgreSQL OLTP Database)]:::store
+      MongoDB[(MongoDB Analytical Archive)]:::store
+    end
 
-#### 2. Cloud Fallback (Secondary)
-*   **Execution Engine:** **Spring AI** (`spring-ai-openai-spring-boot-starter`).
-*   **Trigger Condition:** Automatically trips via the `ResilientLlmGateway` circuit breaker if the local Ollama instance timeouts or crashes.
-*   **Cost Management:** PII is redacted at the gateway before sending requests to public cloud endpoints; a strict `$5/day` token budget counter checks usage dynamically.
+    Kafka[Kafka Event Broker]:::queue
+  end
+
+  Ingress -->|mTLS Route| GW
+  
+  GW -->|Route| Backend
+  GW -->|Route| BusinessEngine
+  GW -->|Route| NotifEngine
+  GW -->|Route| SharedAsync
+
+  Backend --> Postgres
+  BusinessEngine --> Postgres
+  NotifEngine --> Postgres
+  SharedAsync --> Postgres
+
+  Backend --> SecurityEngine
+  Backend --> EventsEngine
+  SharedAsync --> RewardsEngine
+  BusinessEngine --> GovernanceEngine
+
+  SecurityEngine -.-> Redis
+  SecurityEngine -.->|"publish"| Kafka
+  RewardsEngine --> Postgres
+  RewardsEngine -.-> Redis
+  EventsEngine --> Postgres
+  EventsEngine -.->|"publish"| Kafka
+  GovernanceEngine --> Postgres
+
+  Backend -.-> Redis
+  BusinessEngine -.-> Redis
+  NotifEngine -.-> Redis
+  GW -.-> Redis
+
+  BusinessEngine -.->|"publish"| Kafka
+  Kafka -.->|"consume"| NotifEngine
+  Kafka -.->|"consume"| SharedAsync
+  Postgres -.->|"Outbox publish"| Kafka
+  Kafka -.->|OlapEventSinkListener| MongoDB
+```
 
 ---
 
-### 🛡️ Safety Guardrails & Payload Verification
+## 📂 Repository Directory Blueprint
 
-Before query routing and model output deliveries, the governance layer executes two safety guardrail systems:
+The workspace is organized into discrete service folders separating backend APIs, frontend micro-frontends, telemetry setups, and configuration:
 
-#### 1. NVIDIA NeMo Guardrails (Colang Dialog Safety)
-*   **Safety Scripting:** Active rails defined in [config.yml](./homelab-ai-governance/config/nemo_guardrails/config.yml) and [flows.co](./homelab-ai-governance/config/nemo_guardrails/flows.co) enforce conversation flow boundaries.
-*   **Input Blocking:** Matches prompts against safety intents (e.g., system configuration overrides, malicious bypasses, or requests for competitor pricing). If violated, the flow triggers a direct bot safety response, short-circuiting downstream LLM costs.
-
-#### 2. Guardrails AI (Structured Output Validation)
-*   **Schema Enforcement:** Model outputs are parsed and validated against strict Pydantic schemas (e.g. `CustomerSupportSchema`, `DynamicPricingSchema`).
-*   **Recursive Self-Correction:** If the model outputs malformed JSON or invalid values (e.g., negative prices, invalid barcodes), the enforcer extracts field-level error messages and re-submits a structured correction request to the model (up to 3 retries) before escalating to local fallback.
-
----
-
-### 🧑‍💻 Core Platform Agents
-*   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers and conducts restock negotiations.
-*   **ProcurementGuardrailsEngine:** Evaluates contract proposals against strict financial bounds (e.g., maximum cost thresholds and wholesale price variance ceilings).
-*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator.
-*   **Additional Domain Agents:**
-    *   *FraudAgent:* Checks order frequencies, trust scores, and transactions to detect identity/payment fraud.
-    *   *PricingAgent:* Adapts delivery pricing dynamically based on local congestion, weather, and inventory counts.
-    *   *RoutingAgent:* Directs split-shipment logistics, calculating carrier rates and courier capacity constraints.
-
----
-
-## 📜 Compliance, Governance, & Safety
-
-Swish OS enforces high-availability limits, rate-limits, and encryption at-rest. Operational standards are structured around:
-
-### ⚙️ Service Inventory
-
-The platform is transitioning from a monolithic core to a microservices architecture. The current deployment state of each service is as follows:
-
-| Service / Component | Purpose | Local Port | Status / Deployment |
+| Submodule / Folder | Technology Stack | Purpose | Local Dev Port |
 | :--- | :--- | :--- | :--- |
-| **`backend/`** | Hexagonal Core Engine. Manages order lifecycles, payments, sensor calibration, and agent mesh execution. | `8083` | **Active** (Java Spring Boot) |
-| **`platform-gateway/`** | API Ingress gateway. Executes JWT checks, routing, and token bucket rate-limiting. | `8080` | **Active** (Spring Cloud Gateway) |
-| **`core-business-engine/`** | Standalone B2B checkout & catalog management engine. | `8081` | *Under Extraction / Development* |
-| **`notification-engine/`** | Kafka listener broadcasting real-time updates over WebSockets. | `8082` | *Under Extraction / Development* |
-| **`shared-async-services/`** | Universal domain entities & accounting schemas. | — | *Under Extraction / Development* |
+| 🔌 **[platform-gateway](./platform-gateway)** | Java Spring Cloud Gateway | Ingress routing, JWT checks, rate-limiting | `8080` |
+| ☕ **[backend](./backend)** | Java 17, Spring Boot, Lombok | Hexagonal Core (order states, auth, DB) | `8083` |
+| 🤖 **[homelab-ai-governance](./homelab-ai-governance)** | Python 3.14, FastAPI, NeMo | AI Guardrails, Pydantic RAIL enforcers | `5002` |
+| 🏷️ **[competitor-pricing-server](./competitor-pricing-server)** | Node.js, Express, Axios | External mockup mock pricing server | `8085` |
+| 📦 **[core-business-engine](./core-business-engine)** | Java Spring Boot | Standalone B2B procurement & checkout | `8081` |
+| 🔔 **[notification-engine](./notification-engine)** | Java Spring Boot, Kafka | Kafka consumer & WebSocket event server | `8082` |
+| 📊 **[shared-async-services](./shared-async-services)** | Java Spring Boot | AI routing ports & double-entry ledger | — |
+| 🎨 **[design-system](./design-system)** | React, Vanilla CSS, Vite | Unified UI component library (`@swish/ds`) | — |
+| 🛒 **[frontend-customer](./frontend-customer)** | React, TypeScript, Zustand | Customer shopping storefront MFE | `3001` |
+| 🏍️ **[frontend-rider](./frontend-rider)** | React, TypeScript, Leaflet | Courier tracking & route navigation MFE | `3002` |
+| 🛠️ **[frontend-admin](./frontend-admin)** | React, TypeScript, Recharts | Ops panel (chaos toggles, HITL, compliance) | `3003` |
+| 💼 **[frontend-b2b](./frontend-b2b)** | React, TypeScript | Wholesaler bid negotiation & invoice MFE | `3004` |
+| 📱 **[mobile](./mobile)** | React Native, Expo | Courier/Operator companion native app | — |
+| 🛡️ **[infrastructure](./infrastructure)** | Docker Compose, Postgres GIS | Local infrastructure setups (Postgres, Mongo, Kafka) | — |
 
 ---
 
-## 🎨 Module Federation & Micro-Frontends
+## 🤖 B2B Agentic OS & LLM Strategy
 
-Micro-Frontends (MFEs) are decoupled client apps federated at runtime using `@originjs/vite-plugin-federation` (v1.4.1) or custom module configuration. Mismatches are avoided by pinning shared library versions in `vite.config.ts` across all MFEs:
+Swish OS features an agentic pipeline executing B2B restocks and protecting operations against out-of-bounds contract terms:
 
-*   **`react` / `react-dom`:** Pinned to `^18.2.0`
-*   **`zustand`:** Pinned to `^4.5.2` for shared client store state
-*   **`@swish/design-system`:** Local UI component library ensuring style uniformity across Customer, Rider, and Admin screens.
-
----
-
-## 🚀 Quick Start Guide (5 Minutes)
-
-### 1. Clone & Setup
-```bash
-git clone https://github.com/Muneeb7860/Swish_App.git
-cd Swish_App
+```
+[Stock < 3 Alarm]
+        │
+        ▼
+[B2BProcurementAgent] ──► [Query Wholesaler Pricing] ──► [Evaluate Contract Cost]
+                                                                    │
+       ┌────────────────────────────────────────────────────────────┘
+       ▼
+[ProcurementGuardrailsEngine]
+       │
+       ├─► (Passes: Cost < $5000 & Variance < 10%) ──► [REST API RESTOCK] ──► [Update PostgreSQL]
+       │                                                                            │
+       └─► (Violates bounds) ──► [Write to HitlQueue] ──► [L1/L2 Operator Release] ──┘
 ```
 
-### 2. Stand Up Core Infrastructure
-Use the unified local script:
+### 🧠 Core Platform Agents
+*   **B2BProcurementAgent**: Queries wholesaler catalog prices, runs multi-turn RFQ negotiations, and selects contract proposals.
+*   **ProcurementGuardrailsEngine**: Verifies transaction bounds (e.g., maximum order size, price deviation ceilings).
+*   **Human-in-the-Loop (HITL) Queue**: Intercepts transactions violating guardrails, locking them in `hitl_queue` for operator resolution.
+*   **Domain Agents**:
+    *   *FraudAgent*: Evaluates customer purchase velocities, trust levels, and geolocation telemetry.
+    *   *PricingAgent*: Adapts quick-commerce checkout pricing dynamically using congestion, logistics, and store stock.
+    *   *RoutingAgent*: Manages delivery dispatch sequences, carrier assignments, and shipping split logic.
+
+### 🧠 LLM Execution & Hybrid Fallback Strategy
+To guarantee offline reliability and contain token budgets, Swish OS runs a local-first inference pipeline:
+1.  **Local Inference (Primary)**: Uses local **Ollama** serving `qwen:14b` or `llama2:13b` to process B2B bids. Stateful conversation logs are managed using **Letta (formerly MemGPT)** to maintain long-term memory.
+2.  **Cloud Fallback (Secondary)**: Trips to **Spring AI** using OpenAI/Gemini endpoints if local latency breaches SLAs. Sensitive identifiers are anonymized at the gateway before routing to the cloud.
+
+### 🛡️ Safety Guardrails
+1.  **NVIDIA NeMo Guardrails**: Standardizes safety intents via Colang scripts (`config.yml` / `flows.co`). Restricts injection attempts or requests for competitor pricing before routing to models.
+2.  **Guardrails AI Enforcer**: Validates model output JSON against Pydantic RAIL schemas. If a field fails validation (e.g., negative prices), the enforcer automatically runs up to 3 self-correction loops.
+
+---
+
+## 📜 Compliance, Governance & Security
+
+The platform aligns operational auditing with strict enterprise standards:
+
+### Compliance Matrix
+| Feature | Compliance Standard | Regulatory Mechanism | Evidence Location |
+| :--- | :--- | :--- | :--- |
+| **Tamper-Evident Ledger** | SOC 2 Type II / COBIT 2019 | Cryptographic double-entry hash-chaining of journal logs | [`LedgerServiceImpl.java`](./backend/src/main/java/ch/swissqcommerce/backend/domain/transaction/core/service/LedgerServiceImpl.java) |
+| **Right to be Forgotten** | GDPR Article 17 | Customer data purge & anonymization without breaking double-entry ledger | [`LedgerUseCase.java`](./backend/src/main/java/ch/swissqcommerce/backend/domain/transaction/port/in/LedgerUseCase.java) |
+| **Cold Chain Tracking** | GDP (EU 2013/C 343/01) | IoT sensor temperature signatures verified at network boundary | [`RiderTrackingPanel.tsx`](./frontend-host/src/components/RiderTrackingPanel.tsx) |
+| **Write-Once-Read-Many** | SEC Rule 17a-4 | Read-only analytical archive logs stored on immutable file storage | [`MongoDB OLAP Sink`](./docs/adr/adr_009_telemetry_consolidation_and_compliance.md) |
+| **Program Governance** | SAFe & ITIL v4 | 2-week agile program increments, incident management workflows, and ITIL mesh | [`docs/board_resolution.md`](./docs/board_resolution.md) |
+
+---
+
+## 📐 Architecture Decision Records (ADR) Registry
+
+We document all system constraints and architectural pivot histories in `docs/adr/`:
+
+| ID | Title | Status | Abstract |
+|---|---|---|---|
+| 001 | [Hexagonal Architecture](./docs/adr/adr_001_hexagonal_architecture.md) | **Accepted** | Isolates core business domain logic from databases, UI, and external REST APIs. |
+| 002 | [Module Federation](./docs/adr/adr_002_module_federation_zustand.md) | **Accepted** | Dynamically integrates micro-frontends at runtime using Vite federation and Zustand. |
+| 003 | [Kafka DLQ Resilience](./docs/adr/adr_003_kafka_resilience_dlq.md) | **Accepted** | Implements the transactional outbox pattern to guarantee event deliveries. |
+| 004 | [WebSocket Notifications](./docs/adr/adr_004_robust_notification_engine.md) | **Accepted** | Deploys WebSocket event streams to notify operators and couriers in real-time. |
+| 005 | [Strangler Fig Extraction](./docs/adr/adr_005_service_extraction_strangler_fig.md) | **Accepted** | Details extraction roadmap of monolithic domains into standalone microservices. |
+| 006 | [Secrets Vault & mTLS](./docs/adr/adr_006_secrets_vault_and_mtls.md) | **Accepted** | Guides secrets storage in HashiCorp Vault / Cloud Secret Manager. |
+| 007 | [Agentic Governance Layer](./docs/adr/adr_007_agentic_governance_layering.md) | **Accepted** | Employs NeMo and Guardrails AI to sanitize input prompts and output JSON payloads. |
+| 007b | [Handoff Runbooks](./docs/adr/adr_007_implementation_and_handover.md) | **Accepted** | Detailed phase-by-phase implementation verification and handoff runbooks. |
+| 008 | [Multi-Agent Collaboration](./docs/adr/adr_008_multi_agent_operating_model.md) | **Accepted** | Models collaborative workflows between B2B procurement, fraud, and pricing agents. |
+| 009 | [Telemetry Compliance](./docs/adr/adr_009_telemetry_consolidation_and_compliance.md) | **Accepted** | Consolidates IoT sensor logs, WORM database logs, and GDPR consent states. |
+
+---
+
+## 🚀 Homelab Dev Setup & Troubleshooting
+
+### Prerequisites
+*   **Java Development Kit (JDK) 17**: Ensure your `JAVA_HOME` points strictly to JDK 17 (Lombok fails processing under JDK 26+).
+*   **Node.js**: v18.0.0+ (required for Micro-Frontend bundling).
+*   **Docker & Compose**: For running Kafka, PostgreSQL, MongoDB, and Redis.
+
+### Dev Environment Ingress Boot
+Set up the entire local infrastructure and verify compilation inside the directories:
+
 ```bash
-./dev/infra/stand_up_infra.sh
+# 1. Boot local infrastructure services
+docker compose -f docker-compose-local.yml up -d
+
+# 2. Compile Java Backend with Java 17
+export JAVA_HOME="/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+cd backend && mvn clean compile -DskipTests
 ```
 
----
-
-## 🏛️ Program Governance
-
-*   **Scaled Agile Framework (SAFe):** Managed on a 2-week Program Increment (PI) planning cycle with feature toggles dynamically controling the chaos engines and procurement guardrail limits.
-*   **ITIL v4 Service Value Chain:** Structures the flow of restocking requests to business margin optimization.
-*   **veriSM Management Mesh Weights:**
-    *   *Agile Development (SAFe):* **Weight 5** (Weekly deployment matrix checks).
-    *   *DevOps (CI/CD):* **Weight 5** (Automated matrix testing of backend containers).
-    *   *Service Management (ITIL v4):* **Weight 4** (SLA monitoring, cold chain telemetry tracking).
-    *   *Governance (COBIT 2019):* **Weight 5** (Tamper-evident ledger, secrets rotation).
+### Port Map Reference
+Access the developer dashboards at these local addresses:
+*   🛒 **Host Front-End / Customer MFE**: `http://localhost:5173`
+*   🏍️ **Rider Delivery Dashboard**: `http://localhost:3002`
+*   🛠️ **Platform Ingress Gateway**: `http://localhost:8080`
+*   📊 **Grafana Monitor Console**: `http://localhost:3000`
 
 ---
 
-## 🎨 Design System
+## 🧪 Testing, Quality Gates & Chaos Engineering
 
-### @swish/design-system
-A unified, consolidated design system reducing code duplication by **72%**:
+### Standards Checks
+All commits run through strict Biome linting, Spotless formatting, and backend tests:
+```bash
+# Run Biome code quality checks
+npx biome check --write ./
 
-| Component | Status | Use Cases |
-|-----------|--------|-----------|
-| **AuthPortal** | ✅ Ready | Multi-role authentication (customer, admin, rider) with MFA |
-| **Skeleton** | ✅ Ready | Loading states (product grids, tables, generic cards) |
-| **Glass Cards** | ✅ Ready | Premium frosted-glass UI effects |
-| **Status Badges** | ✅ Ready | WebSocket connection, role indicators |
+# Format Java code style
+mvn spotless:apply -f backend/pom.xml
 
-**Tokens (CSS Custom Properties):**
-- Colors: backgrounds, text, status indicators, role-specific
-- Spacing: 4px baseline grid (0–64px)
-- Typography: xs (11px) → 2xl (30px)
-- Shadows: sm, md, lg, xl, glow
-- Animations: fade-in, slide, scale, pulse, hologram-shimmer
+# Run Java Backend Tests
+mvn test -f backend/pom.xml
+```
 
----
-
-## 📊 Language Composition
-| Language | Percentage | Primary Use |
-|----------|-----------|------------|
-| Java | 51.8% | Spring Boot microservices, domain logic |
-| TypeScript | 21.3% | React frontends, design system |
-| CSS | 9.2% | Styling & component library |
-| HTML | 7.9% | Template markup |
-| Python | 6.2% | AI agents, scripts, data pipelines |
-| JavaScript | 1.5% | Legacy utilities |
-| Other | 2.1% | Config, build files |
-
----
-
-## 🤝 Contributing
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, branch strategies, and PR expectations.
-
-### Key Branches
-- `master` — Production-ready, stable releases
-- `macbook_machine` — Active development (unstable, feature-in-progress)
-- Feature branches follow `feature/JIRA-123-description` pattern
-
----
-
-## 📚 Documentation
-
-- [High-Level Design](./high_level_design.md) — System architecture, C4 diagrams
-- [Low-Level Design](./low_level_design.md) — Detailed service specs, API contracts
-- [Roadmap](./ROADMAP.md) — Planned features, Q3-Q4 initiatives
-- [Changelog](./CHANGELOG.md) — Release notes & version history
-- [Disaster Recovery](./DISASTER_RECOVERY.md) — Backup, failover, recovery procedures
-- [Handover Guide](./handover.md) — Operational runbooks, troubleshooting
-- [Branch Strategy](./BRANCH_STRATEGY.md) — Git workflow & merge policies
-
----
-
-## 🔗 Related Documentation Index
-*   📐 **[System Architecture](./docs/ARCHITECTURE.md)**: Architectural patterns, structural layout, and C4 context levels.
-*   💼 **[Business Requirements Document (BRD)](./docs/BRD.md)**: Enterprise scope, customer segments, subscription tiers, and picking/delivery SLAs.
-*   📈 **[High Level Design (HLD)](./docs/HLD.md)**: Network topology, distributed database layouts, and outbox schema structures.
-*   🔍 **[Low Level Design (LLD)](./docs/LLD.md)**: Interface bindings, class/object relations, and micro-frontend federation configs.
-*   🔒 **[Security Architecture Audit](./docs/SECURITY.md)**: Cryptographic signature chains, TLS termination details, and GDPR purge rules.
-*   🧪 **[User Acceptance Testing (UAT)](./docs/UAT_TEST_CASES.md)**: Detailed test scripts, validations, and administrative scenario flows.
-
----
-
-## 🔒 Security
-
-See [SECURITY.md](./SECURITY.md) for vulnerability reporting and security policies.
-
-**Key Safeguards:**
-- JWT-based authentication with RS256 signing
-- Role-based access control (RBAC) for customer/admin/rider/business
-- Secrets rotation via GitOps + HashiCorp Vault
-- SQL injection prevention (parameterized queries)
-- CORS & CSRF protection
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see [LICENSE](./LICENSE) for details.
-
----
-
-## 🌟 Status & Support
-
-- **Version**: 2.0.0
-- **Repository Created**: 42 days ago
-- **Last Updated**: 1 day ago
-- **Issue Tracker**: [GitHub Issues](https://github.com/Muneeb7860/Swish_App/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Muneeb7860/Swish_App/discussions)
+### Chaos Engineering Tests
+Trigger random container network drops, database latencies, and message queue faults to evaluate circuit-breaker resilience:
+```bash
+bash scripts/chaos.sh
+```
 
 ---
 
 **Made with ❤️ by Muneeb7860**  
-*In a blink* — Fast, reliable, autonomous quick-commerce operations.
+*Swish OS — Fast, autonomous, resilient quick-commerce operations.*
