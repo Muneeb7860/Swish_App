@@ -1,5 +1,0 @@
-agent_id: cloud_frontier
-base_library: shared_guardrails.yaml
-overrides:
-  license_check:
-    default_action: block

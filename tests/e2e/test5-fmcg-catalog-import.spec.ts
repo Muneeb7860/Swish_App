@@ -141,4 +141,114 @@ test.describe("Test 5 — FMCG Catalog Import & Dynamic Pricing Console", () => 
 			`Unexpected console errors: ${JSON.stringify(criticalErrors)}`,
 		).toEqual([]);
 	});
+
+	test("Customer storefront renders FMCG brand filter and dynamic pricing badges", async ({
+		page,
+	}) => {
+		const consoleErrors = collectConsoleErrors(page);
+
+		// Intercept customer catalog to return FMCG items
+		await page.route("**/api/customer/catalog", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify([
+					{
+						item_id: "p1",
+						name: "Organic Fresh Milk",
+						price: 3.49,
+						stock: 12,
+						category: "Dairy & Eggs",
+						emoji: "🥛",
+						perishable: true,
+					},
+					{
+						item_id: "brand-7613035449626",
+						name: "Nestle Chocapic Céréales",
+						price: 4.86,
+						stock: 25,
+						category: "Snacks & Drinks",
+						emoji: "🍫",
+						perishable: false,
+					},
+					{
+						item_id: "brand-7622202225512",
+						name: "Cadbury Oreo Biscuits",
+						price: 1.98,
+						stock: 15,
+						category: "Snacks & Drinks",
+						emoji: "🍪",
+						perishable: false,
+					},
+				]),
+			});
+		});
+
+		// ── Step 1 & 2: Log in as customer ──
+		await loginAs(page, "customer");
+
+		// ── Step 3: Wait for Customer MFE to mount ──
+		await page
+			.locator(".customer-dashboard")
+			.waitFor({ state: "visible", timeout: 20_000 });
+
+		// Ensure we're on the catalog tab
+		const catalogTab = page.locator(".customer-tab-btn", {
+			hasText: "Browse Store Catalog",
+		});
+		await catalogTab.click();
+		await page.waitForTimeout(1000);
+
+		// ── Step 4: Verify brand filter presence and interaction ──
+		const brandHeader = page.locator("text=Shop by Top FMCG Brand");
+		await expect(brandHeader).toBeVisible();
+
+		const nestleBtn = page.locator("button.brand-pill", {
+			hasText: "🍫 Nestlé",
+		});
+		await expect(nestleBtn).toBeVisible();
+
+		// Click the Nestlé brand filter
+		await nestleBtn.click();
+		await page.waitForTimeout(1000);
+
+		// Verify indicator banner
+		const filterBanner = page.locator(
+			"text=🎯 Filter Active: Showing Nestle items",
+		);
+		await expect(filterBanner).toBeVisible();
+
+		// Verify Nestlé product card and its surge pricing badge
+		const nestleCard = page
+			.locator(".product-card", { hasText: "Nestle Chocapic" })
+			.first();
+		await expect(nestleCard).toBeVisible();
+		await expect(nestleCard.locator("text=+$0.36 Surge")).toBeVisible();
+
+		// Click Cadbury brand filter
+		const cadburyBtn = page.locator("button.brand-pill", {
+			hasText: "🍬 Cadbury",
+		});
+		await expect(cadburyBtn).toBeVisible();
+		await cadburyBtn.click();
+		await page.waitForTimeout(1000);
+
+		// Verify Cadbury product card and its discount pricing badge (base = 2.20, price = 1.98 -> 10% OFF)
+		const cadburyCard = page
+			.locator(".product-card", { hasText: "Cadbury Oreo" })
+			.first();
+		await expect(cadburyCard).toBeVisible();
+		await expect(cadburyCard.locator("text=10% OFF")).toBeVisible();
+
+		// Verify console errors
+		const criticalErrors = consoleErrors.filter(
+			(e) =>
+				!e.includes("Warning:") &&
+				!e.includes("Download the React DevTools") &&
+				!e.includes("ERR_CONNECTION_REFUSED") &&
+				!e.includes("ERR_FAILED") &&
+				!e.includes("net::ERR"),
+		);
+		expect(criticalErrors).toEqual([]);
+	});
 });
