@@ -21,7 +21,7 @@ test.describe("Test 5 — FMCG Catalog Import & Dynamic Pricing Console", () => 
 		await interceptAPIs(page);
 
 		// Intercept the FMCG catalog import POST API
-		await page.route("**/api/v1/products/import-fmcg", async (route) => {
+		await page.route("**/api/v1/products/import-fmcg*", async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
@@ -140,5 +140,192 @@ test.describe("Test 5 — FMCG Catalog Import & Dynamic Pricing Console", () => 
 			criticalErrors,
 			`Unexpected console errors: ${JSON.stringify(criticalErrors)}`,
 		).toEqual([]);
+	});
+
+	test("Customer storefront renders FMCG brand filter and dynamic pricing badges", async ({
+		page,
+	}) => {
+		const consoleErrors = collectConsoleErrors(page);
+
+		// Intercept customer catalog to return FMCG items
+		await page.route("**/api/customer/catalog", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify([
+					{
+						item_id: "p1",
+						name: "Organic Fresh Milk",
+						price: 3.49,
+						stock: 12,
+						category: "Dairy & Eggs",
+						emoji: "🥛",
+						perishable: true,
+					},
+					{
+						item_id: "brand-7613035449626",
+						name: "Nestle Chocapic Céréales",
+						price: 4.86,
+						stock: 25,
+						category: "Snacks & Drinks",
+						emoji: "🍫",
+						perishable: false,
+					},
+					{
+						item_id: "brand-7622202225512",
+						name: "Cadbury Oreo Biscuits",
+						price: 1.98,
+						stock: 15,
+						category: "Snacks & Drinks",
+						emoji: "🍪",
+						perishable: false,
+					},
+				]),
+			});
+		});
+
+		// ── Step 1 & 2: Log in as customer ──
+		await loginAs(page, "customer");
+
+		// ── Step 3: Wait for Customer MFE to mount ──
+		await page
+			.locator(".customer-dashboard")
+			.waitFor({ state: "visible", timeout: 20_000 });
+
+		// Ensure we're on the catalog tab
+		const catalogTab = page.locator(".customer-tab-btn", {
+			hasText: "Browse Store Catalog",
+		});
+		await catalogTab.click();
+		await page.waitForTimeout(1000);
+
+		// ── Step 4: Verify brand filter presence and interaction ──
+		const brandHeader = page.locator("text=Shop by Top FMCG Brand");
+		await expect(brandHeader).toBeVisible();
+
+		const nestleBtn = page.locator("button.brand-pill", {
+			hasText: "🍫 Nestlé",
+		});
+		await expect(nestleBtn).toBeVisible();
+
+		// Click the Nestlé brand filter
+		await nestleBtn.click();
+		await page.waitForTimeout(1000);
+
+		// Verify indicator banner
+		const filterBanner = page.locator(
+			"text=🎯 Filter Active: Showing Nestle items",
+		);
+		await expect(filterBanner).toBeVisible();
+
+		// Verify Nestlé product card and its surge pricing badge
+		const nestleCard = page
+			.locator(".product-card", { hasText: "Nestle Chocapic" })
+			.first();
+		await expect(nestleCard).toBeVisible();
+		await expect(nestleCard.locator("text=+$0.36 Surge")).toBeVisible();
+
+		// Click Cadbury brand filter
+		const cadburyBtn = page.locator("button.brand-pill", {
+			hasText: "🍬 Cadbury",
+		});
+		await expect(cadburyBtn).toBeVisible();
+		await cadburyBtn.click();
+		await page.waitForTimeout(1000);
+
+		// Verify Cadbury product card and its discount pricing badge (base = 2.20, price = 1.98 -> 10% OFF)
+		const cadburyCard = page
+			.locator(".product-card", { hasText: "Cadbury Oreo" })
+			.first();
+		await expect(cadburyCard).toBeVisible();
+		await expect(cadburyCard.locator("text=10% OFF")).toBeVisible();
+
+		// Verify console errors
+		const criticalErrors = consoleErrors.filter(
+			(e) =>
+				!e.includes("Warning:") &&
+				!e.includes("Download the React DevTools") &&
+				!e.includes("ERR_CONNECTION_REFUSED") &&
+				!e.includes("ERR_FAILED") &&
+				!e.includes("net::ERR"),
+		);
+		expect(criticalErrors).toEqual([]);
+	});
+
+	test("Admin panel chaos controls recalculate FMCG prices dynamically", async ({
+		page,
+	}) => {
+		const consoleErrors = collectConsoleErrors(page);
+
+		// Intercept the API call to inspect the query parameters passed during chaos
+		let capturedQuery: string | null = null;
+		await page.route("**/api/v1/products/import-fmcg*", async (route) => {
+			const url = new URL(route.request().url());
+			capturedQuery = url.search;
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify([
+					{
+						barcode: "7613035449626",
+						name: "Nestle Chocapic Céréales",
+						brand: "Nestlé",
+						category: "Snacks & Drinks",
+						emoji: "🍫",
+						basePrice: 4.5,
+						dynamicPrice: 6.3,
+						surgeMultiplier: 1.4,
+						discountPercent: 0.0,
+						pricingRationale: "Chaos surge active due to rider congestion.",
+						source: "API",
+						status: "SUCCESS",
+					},
+				]),
+			});
+		});
+
+		// Visit app and login as admin
+		await loginAs(page, "admin");
+
+		// Wait for Admin Panel to mount
+		await page
+			.locator(".admin-dashboard")
+			.waitFor({ state: "visible", timeout: 20_000 });
+
+		// Toggle the rider traffic switch by clicking its label (as input has opacity: 0)
+		const trafficSwitch = page.locator("#switch-rider-traffic");
+		await page.locator("label[for='switch-rider-traffic']").click();
+		await expect(trafficSwitch).toBeChecked();
+
+		// Locate FMCG Console Card and Click the import button
+		const fmcgCard = page
+			.locator("text=Global FMCG Import & Dynamic Pricing Hub")
+			.locator("..");
+		const importBtn = fmcgCard.locator("button", {
+			hasText: "Import & Price FMCG Products",
+		});
+		await importBtn.click();
+
+		// Verify success status
+		const successMsg = page.locator("text=✓ Successfully Imported");
+		await expect(successMsg).toBeVisible({ timeout: 10_000 });
+
+		// Verify that we captured query parameters indicating riderToOrderRatio=0.4
+		expect(capturedQuery).toContain("riderToOrderRatio=0.4");
+
+		// Verify that the table shows the recalculated surge price of 6.30
+		const table = fmcgCard.locator("table");
+		await expect(table.locator("text=6.3")).toBeVisible();
+
+		// Verify no console errors
+		const criticalErrors = consoleErrors.filter(
+			(e) =>
+				!e.includes("Warning:") &&
+				!e.includes("Download the React DevTools") &&
+				!e.includes("ERR_CONNECTION_REFUSED") &&
+				!e.includes("ERR_FAILED") &&
+				!e.includes("net::ERR"),
+		);
+		expect(criticalErrors).toEqual([]);
 	});
 });

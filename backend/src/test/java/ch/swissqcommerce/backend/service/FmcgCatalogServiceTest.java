@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
+import ch.swissqcommerce.backend.domain.catalog.adapter.out.api.CompetitorPricingClient;
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.core.service.FmcgCatalogServiceImpl;
 import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase.FmcgImportResult;
@@ -31,6 +32,7 @@ public class FmcgCatalogServiceTest {
     @Mock private CatalogPort catalogPort;
     @Mock private DynamicPricingAgent dynamicPricingAgent;
     @Mock private FmcgApiPort fmcgApiPort;
+    @Mock private CompetitorPricingClient competitorPricingClient;
 
     private FmcgCatalogServiceImpl fmcgCatalogService;
 
@@ -42,11 +44,16 @@ public class FmcgCatalogServiceTest {
                         darkStorePort,
                         catalogPort,
                         dynamicPricingAgent,
-                        fmcgApiPort);
+                        fmcgApiPort,
+                        competitorPricingClient);
     }
 
     @Test
     public void testImportFmcgProducts_Success() {
+        // Mock CompetitorPricingClient
+        when(competitorPricingClient.fetchCompetitorPrice(anyString()))
+                .thenReturn(Optional.empty());
+
         // Mock FmcgApiPort
         when(fmcgApiPort.fetchProduct(anyString()))
                 .thenAnswer(
@@ -119,6 +126,10 @@ public class FmcgCatalogServiceTest {
 
     @Test
     public void testImportFmcgProducts_WithChaosParameters() {
+        // Mock CompetitorPricingClient
+        when(competitorPricingClient.fetchCompetitorPrice(anyString()))
+                .thenReturn(Optional.empty());
+
         // Mock FmcgApiPort
         when(fmcgApiPort.fetchProduct(anyString()))
                 .thenReturn(Optional.of(new FmcgApiPort.FmcgProductDto("Name", "Brand")));
