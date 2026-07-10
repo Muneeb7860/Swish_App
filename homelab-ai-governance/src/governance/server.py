@@ -1,21 +1,21 @@
-"""REST API server exposing the governance pipeline."""
-
 from __future__ import annotations
 
 import logging
+import os
+import threading
+import time
 from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from governance.pipeline import execute_pipeline
+from governance.router.classifier import get_classifier_stats
 from governance.stubs.memory_mesh import MemoryMesh
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-import os
 
 app = FastAPI(title="Homelab AI Governance Service", version="0.1.0")
 
@@ -34,7 +34,9 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
         provider = TracerProvider(resource=resource)
 
         # OTLP collector HTTP endpoint
-        otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
+        otlp_endpoint = os.environ.get(
+            "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces"
+        )
         processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
         provider.add_span_processor(processor)
         trace.set_tracer_provider(provider)
@@ -46,10 +48,6 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
         logger.warning("Failed to initialize OpenTelemetry instrumentation: %s", e)
 
 
-
-import threading
-import time
-from governance.router.classifier import get_classifier_stats
 
 class MetricsTracker:
     def __init__(self):
@@ -76,19 +74,19 @@ class MetricsTracker:
         with self.lock:
             self.requests_total += 1
             self.latency_sum += latency
-            
+
             # Check if request contained PII or override triggered local only routing
             routing = result.get("routing_decision", {})
             if routing.get("local_only", False):
                 self.pii_redacted_total += 1
-            
+
             # Extract intent
             intent = routing.get("intent", "unknown")
             if intent in self.intent_counts:
                 self.intent_counts[intent] += 1
             else:
                 self.intent_counts[intent] = 1
-            
+
             # Extract self-correction stats
             loop = result.get("loop_result", {})
             self.attempts_total += loop.get("attempts", 1)
@@ -99,6 +97,7 @@ class MetricsTracker:
         with self.lock:
             self.requests_total += 1
             self.failures_total += 1
+
 
 metrics_tracker = MetricsTracker()
 
@@ -151,39 +150,31 @@ def metrics() -> str:
         "# TYPE rag_circuit_breaker_tripped_total counter",
         f'rag_circuit_breaker_tripped_total{{type="db"}} {MemoryMesh.db_breaker_trips}',
         f'rag_circuit_breaker_tripped_total{{type="embedding"}} {MemoryMesh.embedding_breaker_trips}',
-        
         "# HELP governance_requests_total Total number of queries governed.",
         "# TYPE governance_requests_total counter",
-        f'governance_requests_total {metrics_tracker.requests_total}',
-        
+        f"governance_requests_total {metrics_tracker.requests_total}",
         "# HELP governance_exceptions_total Total number of governance pipeline failures.",
         "# TYPE governance_exceptions_total counter",
-        f'governance_exceptions_total {metrics_tracker.failures_total}',
-        
+        f"governance_exceptions_total {metrics_tracker.failures_total}",
         "# HELP governance_pipeline_latency_seconds_sum Sum of governance pipeline latencies.",
         "# TYPE governance_pipeline_latency_seconds_sum counter",
-        f'governance_pipeline_latency_seconds_sum {metrics_tracker.latency_sum}',
-        
+        f"governance_pipeline_latency_seconds_sum {metrics_tracker.latency_sum}",
         "# HELP governance_pipeline_latency_seconds_count Count of requests recorded for latency.",
         "# TYPE governance_pipeline_latency_seconds_count counter",
-        f'governance_pipeline_latency_seconds_count {metrics_tracker.requests_total}',
-        
+        f"governance_pipeline_latency_seconds_count {metrics_tracker.requests_total}",
         "# HELP governance_pii_redactions_total Total requests triggering PII redaction or local routing.",
         "# TYPE governance_pii_redactions_total counter",
-        f'governance_pii_redactions_total {metrics_tracker.pii_redacted_total}',
-        
+        f"governance_pii_redactions_total {metrics_tracker.pii_redacted_total}",
         "# HELP governance_self_correction_attempts_total Total self-correction attempts made.",
         "# TYPE governance_self_correction_attempts_total counter",
-        f'governance_self_correction_attempts_total {metrics_tracker.attempts_total}',
-        
+        f"governance_self_correction_attempts_total {metrics_tracker.attempts_total}",
         "# HELP governance_self_correction_fallback_total Total fallbacks to local Gemma Reasoner.",
         "# TYPE governance_self_correction_fallback_total counter",
-        f'governance_self_correction_fallback_total {metrics_tracker.fallback_total}',
-        
+        f"governance_self_correction_fallback_total {metrics_tracker.fallback_total}",
         "# HELP governed_requests_by_intent_total Total requests governed categorized by intent class.",
         "# TYPE governed_requests_by_intent_total counter",
     ]
     for intent, count in metrics_tracker.intent_counts.items():
         lines.append(f'governed_requests_by_intent_total{{intent="{intent}"}} {count}')
-        
+
     return "\n".join(lines) + "\n"

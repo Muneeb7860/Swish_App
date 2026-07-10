@@ -1,5 +1,6 @@
 package ch.swissqcommerce.backend.domain.catalog.adapter.out.api;
 
+import ch.swissqcommerce.backend.domain.catalog.port.out.CompetitorPricingPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.net.URI;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class CompetitorPricingClient {
+public class CompetitorPricingClient implements CompetitorPricingPort {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient =
