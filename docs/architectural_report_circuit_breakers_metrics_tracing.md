@@ -81,7 +81,7 @@ sequenceDiagram
 ## 3. Technical Implementation Details
 
 ### 3.1 Python RAG Circuit Breakers (`MemoryMesh`)
-- **Location**: [memory_mesh.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/stubs/memory_mesh.py)
+- **Location**: [memory_mesh.py](../homelab-ai-governance/src/governance/stubs/memory_mesh.py) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - **Design Pattern**: Introduced class-level variables to preserve circuit breaker states across transient function invocation instances.
 - **Cooldown Window**: Configured a `_cooldown_duration = 30.0` seconds interval.
 - **Fail-safe Logic**:
@@ -89,7 +89,7 @@ sequenceDiagram
   - If a breaker is tripped, the resolver immediately logs a warning and routes the execution path directly to local stubs (`DEFAULT_DOCUMENTS`), avoiding connection timeout delays.
 
 ### 3.2 Spring Boot Actuator Prometheus Metrics (`LettaMemoryService`)
-- **Location**: [LettaMemoryService.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java)
+- **Location**: [LettaMemoryService.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - **Dependency**: Uses Micrometer Core (`MeterRegistry` / `Counter`).
 - **Metric Specifications**:
   - **Counter Name**: `letta.fallback.triggers`
@@ -101,9 +101,9 @@ sequenceDiagram
 
 ### 3.3 OpenTelemetry Distributed Tracing Polish
 - **Locations**:
-  - [PythonGovernanceAdapter.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapter.java)
-  - [LettaConfig.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java)
-  - [GeminiFreeAdapter.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/gemini/GeminiFreeAdapter.java)
+- [PythonGovernanceAdapter.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapter.java)
+  - [LettaConfig.java](../backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java)
+  - [GeminiFreeAdapter.java](../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/gemini/GeminiFreeAdapter.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - **Mechanism**: Removed manual `new RestTemplate()` instantiations. Injected `RestTemplateBuilder` into REST client constructors. 
 - **Rationale**: Standard `new RestTemplate()` instances bypass Spring Boot's OpenTelemetry tracer interceptors. By utilizing `RestTemplateBuilder` configured beans, OpenTelemetry automatically injects W3C `traceparent` headers into outgoing requests, enabling downstream services to associate child spans to the parent trace context.
 

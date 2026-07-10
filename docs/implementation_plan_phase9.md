@@ -26,21 +26,21 @@ docker compose -f docker-compose-local.yml up -d postgres-letta phoenix
 - Remove the `pii_filter` override completely or change it to `redact` to enforce data sovereignty for coder agent outputs.
 
 ### 3. Context Grounding in Self-Correction Feedback Loop
-#### [MODIFY] [loop.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/evaluator/loop.py)
+#### [MODIFY] [loop.py](../homelab-ai-governance/src/governance/evaluator/loop.py) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - Update `_FEEDBACK_TEMPLATE` to include a `### CONTEXT DOCUMENTS` section containing `{context_docs}`.
 - Format `feedback_prompt` with the `context_docs` variable inside `run_self_correction_loop`.
 
 ### 4. PII Redaction in Default RAG context document
-#### [MODIFY] [memory_mesh.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/stubs/memory_mesh.py)
+#### [MODIFY] [memory_mesh.py](../homelab-ai-governance/src/governance/stubs/memory_mesh.py) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - Import `redact_pii` from `governance.guardrails.pii_patterns`.
 - Update `_get_default_document` to apply `redact_pii(query)` to prevent raw PII from leaking into context.
 
 ### 5. CCR Scoring Adjustment for Redaction Placeholders
-#### [MODIFY] [metrics.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/evaluator/metrics.py)
+#### [MODIFY] [metrics.py](../homelab-ai-governance/src/governance/evaluator/metrics.py)
 - In `compute_context_conservation`, add redaction-related tokens (`redacted`, `email`, `ssn`, `phone`, `card`, `ip`, `address`, `connection`, `string`, `api`, `key`) to the ignore list so that correctly redacted outputs do not trigger grounding penalties.
 
 ### 6. Timeout Tuning
-#### [MODIFY] [routing_config.yaml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/config/routing_config.yaml)
+#### [MODIFY] [routing_config.yaml](../homelab-ai-governance/config/routing_config.yaml) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 - Increase the classifier's `timeout_ms` from 10000 (10s) to 30000 (30s) to absorb model loading latency on cold starts.
 
 ---

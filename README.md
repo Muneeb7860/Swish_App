@@ -140,6 +140,14 @@ To prevent write locks and reconcile database performance with cost controls:
 *   **Analytical Archive (MongoDB):** Low-cost, tiered document database acting as a cold-archive for high-throughput, non-critical telemetry logs (e.g. GPS coordinates, local weather, and historical bidding traces). Sharded to prevent dual-write performance bottlenecks.
 *   **Distributed Session State (Redis):** Cluster cache capturing autocomplete inventory structures, courier presence markers, and token buckets. Bypasses relational disk writes for 70% of read requests.
 
+#### 🗃️ Data Schema Map
+| Data Type | Primary DB | Archive | TTL / Expiry | Example Fields |
+| :--- | :--- | :--- | :--- | :--- |
+| **Orders & Checkout** | PostgreSQL | MongoDB | ∞ | `order_id`, `status`, `total_amount` |
+| **Ledger Auditing** | PostgreSQL | WORM (S3/GCS) | ∞ | `transaction_id`, `hash_chain`, `signature` |
+| **Inventory & Products**| PostgreSQL | Redis | 1 hour cache | `product_id`, `stock_count`, `price` |
+| **GPS Telemetry** | Redis (Buffer) | MongoDB | 24 hours | `rider_id`, `latitude`, `longitude` |
+| **Bidding Logs** | MongoDB | — | 30 days | `bid_id`, `wholesaler_name`, `proposed_price` | (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 ### 3. Asynchronous Event Pipeline (Transactional Outbox)
 To avoid dual-write inconsistencies (where a database update succeeds but a corresponding message broker write fails):
 1.  Both the primary transaction and the pending event metadata are committed to a database-backed `outbox` table within the same ACID unit of work.
@@ -148,7 +156,7 @@ To avoid dual-write inconsistencies (where a database update succeeds but a corr
 
 ---
 
-## 🤖 B2B Agentic OS & Guardrails
+## 🤖 B2B Agentic OS, LLM Strategy & Safety Guardrails (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 Swish OS features a multi-domain agentic pipeline that manages stock replenishment and operational exceptions:
 
@@ -167,9 +175,40 @@ Swish OS features a multi-domain agentic pipeline that manages stock replenishme
        └─► (Violates bounds) ──► [Write to HitlQueue] ──► [L1/L2 Operator Release] ───────┘
 ```
 
-*   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers.
+### 🧠 AI & LLM Execution Strategy
+
+To ensure zero external cloud dependencies, offline functionality, and predictable token costs, the platform implements a tiered hybrid execution model:
+
+#### 1. Local Inference (Primary)
+*   **Execution Engine:** Self-hosted **Ollama** serving containerized models.
+*   **Default Model:** `qwen:14b` or `llama2:13b` serving B2B negotiations and agent mesh calls locally.
+*   **Memory Preserving layer:** Uses **Letta (formerly MemGPT)** to manage stateful memory contexts (Core Memory + Archival Database Vector search using pgvector) for long-running multi-turn Wholesaler RFQ negotiations.
+
+#### 2. Cloud Fallback (Secondary)
+*   **Execution Engine:** **Spring AI** (`spring-ai-openai-spring-boot-starter`).
+*   **Trigger Condition:** Automatically trips via the `ResilientLlmGateway` circuit breaker if the local Ollama instance timeouts or crashes.
+*   **Cost Management:** PII is redacted at the gateway before sending requests to public cloud endpoints; a strict `$5/day` token budget counter checks usage dynamically.
+
+---
+
+### 🛡️ Safety Guardrails & Payload Verification
+
+Before query routing and model output deliveries, the governance layer executes two safety guardrail systems:
+
+#### 1. NVIDIA NeMo Guardrails (Colang Dialog Safety)
+*   **Safety Scripting:** Active rails defined in [config.yml](./homelab-ai-governance/config/nemo_guardrails/config.yml) and [flows.co](./homelab-ai-governance/config/nemo_guardrails/flows.co) enforce conversation flow boundaries.
+*   **Input Blocking:** Matches prompts against safety intents (e.g., system configuration overrides, malicious bypasses, or requests for competitor pricing). If violated, the flow triggers a direct bot safety response, short-circuiting downstream LLM costs.
+
+#### 2. Guardrails AI (Structured Output Validation)
+*   **Schema Enforcement:** Model outputs are parsed and validated against strict Pydantic schemas (e.g. `CustomerSupportSchema`, `DynamicPricingSchema`).
+*   **Recursive Self-Correction:** If the model outputs malformed JSON or invalid values (e.g., negative prices, invalid barcodes), the enforcer extracts field-level error messages and re-submits a structured correction request to the model (up to 3 retries) before escalating to local fallback.
+
+---
+
+### 🧑‍💻 Core Platform Agents
+*   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers and conducts restock negotiations.
 *   **ProcurementGuardrailsEngine:** Evaluates contract proposals against strict financial bounds (e.g., maximum cost thresholds and wholesale price variance ceilings).
-*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator.
+*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 *   **Additional Domain Agents:**
     *   *FraudAgent:* Checks order frequencies, trust scores, and transactions to detect identity/payment fraud.
     *   *PricingAgent:* Adapts delivery pricing dynamically based on local congestion, weather, and inventory counts.
@@ -214,6 +253,29 @@ Swish OS features a multi-domain agentic pipeline that manages stock replenishme
 
 ---
 
+## ⚙️ Service Inventory
+
+The platform is transitioning from a monolithic core to a microservices architecture. The current deployment state of each service is as follows:
+
+| Service / Component | Purpose | Local Port | Status / Deployment |
+| :--- | :--- | :--- | :--- |
+| **`backend/`** | Hexagonal Core Engine. Manages order lifecycles, payments, sensor calibration, and agent mesh execution. | `8083` | **Active** (Java Spring Boot) |
+| **`platform-gateway/`** | API Ingress gateway. Executes JWT checks, routing, and token bucket rate-limiting. | `8080` | **Active** (Spring Cloud Gateway) |
+| **`core-business-engine/`** | Standalone B2B checkout & catalog management engine. | `8081` | *Under Extraction / Development* |
+| **`notification-engine/`** | Kafka listener broadcasting real-time updates over WebSockets. | `8082` | *Under Extraction / Development* |
+| **`shared-async-services/`** | Universal domain entities & accounting schemas. | — | *Under Extraction / Development* |
+
+---
+
+## 🎨 Module Federation & Micro-Frontends
+
+Micro-Frontends (MFEs) are decoupled client apps federated at runtime using `@originjs/vite-plugin-federation` (v1.4.1). Mismatches are avoided by pinning shared library versions in `vite.config.ts` across all MFEs:
+
+*   **`react` / `react-dom`:** Pinned to `^18.2.0`
+*   **`zustand`:** Pinned to `^4.5.2` for shared client store state
+*   **`@swish/design-system`:** Local UI component library ensuring style uniformity across Customer, Rider, and Admin screens.
+
+--- (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 ## 🚀 Quick Start Guide (5 Minutes)
 
 Spin up the entire local infrastructure footprint—including frontends, microservices, databases, event brokers, and complete telemetry pipelines—using a single command.
@@ -279,3 +341,12 @@ bash scripts/chaos.sh
     *   *DevOps (CI/CD):* **Weight 5** (Automated matrix testing of backend containers).
     *   *Service Management (ITIL v4):* **Weight 4** (SLA monitoring, cold chain telemetry tracking).
     *   *Governance (COBIT 2019):* **Weight 5** (Tamper-evident ledger, secrets rotation).
+---
+
+## 🔗 Related Documentation Index
+*   📐 **[System Architecture](./docs/ARCHITECTURE.md)**: Architectural patterns, structural layout, and C4 context levels.
+*   💼 **[Business Requirements Document (BRD)](./docs/BRD.md)**: Enterprise scope, customer segments, subscription tiers, andpicking/delivery SLAs.
+*   📈 **[High Level Design (HLD)](./docs/HLD.md)**: Network topology, distributed database layouts, and outbox schema structures.
+*   🔍 **[Low Level Design (LLD)](./docs/LLD.md)**: Interface bindings, class/object relations, and micro-frontend federation configs.
+*   🔒 **[Security Architecture Audit](./docs/SECURITY.md)**: Cryptographic signature chains, TLS termination details, and GDPR purge rules.
+*   🧪 **[User Acceptance Testing (UAT)](./docs/UAT_TEST_CASES.md)**: Detailed test scripts, validations, and administrative scenario flows. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)

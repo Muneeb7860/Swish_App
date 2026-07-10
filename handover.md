@@ -16,77 +16,77 @@ During the current development cycle, we successfully implemented and validated 
 Here is the exact mapping of modified and newly created files in the repository:
 
 ### 1. Agent Mesh Collaboration (Phase 5)
-*   **[CustomerSupportAgent.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java) [MODIFY]**:
+*   **[CustomerSupportAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java) [MODIFY]**:
     - Declared public constants `TOOL_ORDER_STATUS` and `TOOL_DYNAMIC_PRICING` to prevent prompt/executor name drifts.
     - Updated the system prompt inside `analyze` to allow the LLM to route pricing-related queries (surges, discounts, price checks) to the pricing agent.
-*   **[AgentToolExecutor.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentToolExecutor.java) [MODIFY]**:
+*   **[AgentToolExecutor.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentToolExecutor.java) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Injected `DynamicPricingAgent`.
     - Declared a static nested class `ToolResult` containing both `content` (output string) and `cost` (double token cost).
     - Refactored `executeTool` to return `ToolResult`.
     - Implemented a parser for the `DYNAMIC_PRICING` tool arguments with try-catch parse guards. Garbled payloads default gracefully to in-house pricing rule values (`competitorPrice` = 0.0, `vipDensity` = 0.0) without throwing exceptions.
-*   **[MasterOrchestratorService.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) [MODIFY]**:
+*   **[MasterOrchestratorService.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) [MODIFY]**:
     - Updated the tool invocation call site to handle `ToolResult`.
     - Multi-agent token costs are now accumulated via `trackUsage(toolResult.cost)` and added to `accumulatedCost` before executing the final response. This prevents mesh-hop LLM token leakages from bypassing the $5/day budget guardrail (ADR-007).
     - Hardened with B2B procurement cost accumulation and a budget breach check: if the daily limit is reached, it bypasses LLM negotiations and falls back to a deterministic 10% discount bid.
-*   **[CustomerSupportDynamicPricingTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) [NEW]**:
+*   **[CustomerSupportDynamicPricingTest.java](./backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) [NEW]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Verifies the dynamic pricing routing path, cost accumulation across the orchestrator, robust parse-guards with defaults, and Letta non-JSON malformed string fallback to the HITL queue.
     - Added a test case verifying the B2B procurement daily budget-bypass guardrail.
 
 ### 2. Letta Agent Memory (Phase 4)
-*   **[LettaConfig.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java) [NEW]**:
+*   **[LettaConfig.java](./backend/src/main/java/ch/swissqcommerce/backend/config/LettaConfig.java) [NEW]**:
     Registers properties and maps the `lettaRestTemplate` bean. Configures a **5s connect timeout** and **10s read timeout** via `SimpleClientHttpRequestFactory` to prevent blocking the main Spring threads if the Letta container lags.
     - Added configurable properties to dynamically resolve API Token and model target overrides.
-*   **[LettaMemoryService.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) [NEW]**:
+*   **[LettaMemoryService.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/LettaMemoryService.java) [NEW]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     The stateful client adapter. Maps the client `conversationId` into a formatted Letta agent identifier (`agent-conv-conversationId`). It handles the following:
     - Lists active agents (`GET /v1/agents`) using `Object.class` to dynamically support both JSON array (`List`) and object wrappers containing `items`, `results`, or `agents`.
     - Automatically provisions a new agent (`POST /v1/agents`) if it doesn't already exist.
     - Sends conversation turns (`POST /v1/agents/{agent_id}/messages`) and parses the response list to extract the final `assistant` response.
-*   **[LettaMemoryServiceTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/LettaMemoryServiceTest.java) [NEW]**:
+*   **[LettaMemoryServiceTest.java](./backend/src/test/java/ch/swissqcommerce/backend/service/LettaMemoryServiceTest.java) [NEW]**:
     Verifies messaging on existing agents, new agent auto-creation, and connection-refused resilient fallback to direct LLM execution.
     - Added a test case verifying that configurable Letta API Token and model override properties are correctly applied to the outgoing HTTP headers and request bodies.
-*   **[B2BProcurementActivitiesImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementActivitiesImpl.java) [MODIFY]**:
+*   **[B2BProcurementActivitiesImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementActivitiesImpl.java) [MODIFY]**:
     Wired with `LettaMemoryService`. Maps procurement sessions into unique keys based on the restock item and wholesaler name (`procurement-[itemId]-[wholesalerName]`) to ensure the agent maintains multi-turn context during long-running procurement negotiations.
-*   **[application.properties](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/resources/application.properties) [MODIFY]**:
+*   **[application.properties](./backend/src/main/resources/application.properties) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     Exposes Letta server URL, token, and model defaults:
     ```properties
     swish.letta.api.url=${SWISH_LETTA_API_URL:http://localhost:8283}
     swish.letta.api.token=${SWISH_LETTA_API_TOKEN:dummy-key}
     swish.letta.model=${SWISH_LETTA_MODEL:openai/gpt-4o}
     ```
-*   **[docker-compose-local.yml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docker-compose-local.yml) [MODIFY]**:
+*   **[docker-compose-local.yml](./docker-compose-local.yml) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     Added two local containers to the homelab compose file:
     - `postgres-letta`: Uses image `pgvector/pgvector:pg16` on port `5434` for Letta's core metadata and semantic vector indices (eliminating the need for a separate Chroma DB instance).
     - `letta`: Exposed on port `8283`, connecting to the `postgres-letta` DB.
 
 ### 3. Temporal Workflow Orchestration Hardening (Phase 3)
-*   **[B2BProcurementWorkflowImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementWorkflowImpl.java) [MODIFY]**:
+*   **[B2BProcurementWorkflowImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementWorkflowImpl.java) [MODIFY]**:
     Added `RetryOptions` limiting the activity execution attempts to `3`. This prevents tests from entering infinite high-CPU retry loops when an activity fails.
-*   **[B2BProcurementAgent.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java) [MODIFY]**:
+*   **[B2BProcurementAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java) [MODIFY]**:
     Added a default (no-argument) constructor to `B2BProcurementAgent.NegotiationAnalysis` to allow successful Jackson deserialization of workflow payloads in Temporal.
-*   **[B2BProcurementWorkflowTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/service/B2BProcurementWorkflowTest.java) [NEW]**:
+*   **[B2BProcurementWorkflowTest.java](./backend/src/test/java/ch/swissqcommerce/backend/service/B2BProcurementWorkflowTest.java) [NEW]**:
     Isolated Temporal testing file. Replaces the Mockito mock activities with a custom class `B2BProcurementActivitiesStub` that implements the activity interface directly. This bypasses the Mockito proxy reflection bug where activity interface annotations (`@ActivityMethod`) were incorrectly copied.
-*   **[pom.xml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/pom.xml) [MODIFY]**:
+*   **[pom.xml](./backend/pom.xml) [MODIFY]**:
     Added `temporal-testing` as a test scope dependency.
 
 ### 4. Method Security Hardening (Domain 8)
-*   **[HitlQueueController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/governance/adapter/in/web/HitlQueueController.java) [MODIFY]**:
+*   **[HitlQueueController.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/governance/adapter/in/web/HitlQueueController.java) [MODIFY]**:
     - Annotated all three HITL endpoints (`getPendingApprovals` GET, `approve` POST, `reject` POST) with `@PreAuthorize("hasRole('ADMIN')")` to enforce method-level role authorization.
-*   **[AdminController.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java) [MODIFY]**:
+*   **[AdminController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java) [MODIFY]**:
     - Added `@PreAuthorize("hasRole('ADMIN')")` at the class level to ensure method-level role authorization restricts all administrative endpoints (chaos engineering, onboarding gate, HITL queue, health) to the admin role.
-*   **[SecurityHardeningIntegrationTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/SecurityHardeningIntegrationTest.java) [MODIFY]**:
+*   **[SecurityHardeningIntegrationTest.java](./backend/src/test/java/ch/swissqcommerce/backend/integration/SecurityHardeningIntegrationTest.java) [MODIFY]**:
     - Wired `HitlQueueController` and `AdminController` and implemented `testHitlQueueControllerEndpointsEnforceAdminRole` and `testAdminControllerEndpointsEnforceAdminRole` to verify that unauthenticated/non-admin users (e.g. `ROLE_CUSTOMER`) receive an `AccessDeniedException` while admin users (`ROLE_ADMIN`) successfully pass method security.
 
 ### 5. Vector Search Grounding (RAG - Phase 6)
-*   **[memory_mesh.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/src/governance/stubs/memory_mesh.py) [MODIFY]**:
+*   **[memory_mesh.py](./homelab-ai-governance/src/governance/stubs/memory_mesh.py) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Queries `postgres-letta` via `psycopg2-binary` using cosine similarity (`<=>` operator) on a `vector(768)` embedding.
     - Generates search embeddings dynamically using the local Ollama `nomic-embed-text:latest` model.
     - Auto-bootstraps the database schema (creating table `knowledge_base` and column `embedding`) and auto-seeds it if empty.
     - Catches connection/Ollama errors and falls back gracefully to standard in-memory stubs to prevent crashes.
-*   **[test_memory_mesh.py](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/tests/test_router/test_memory_mesh.py) [NEW]**:
+*   **[test_memory_mesh.py](./homelab-ai-governance/tests/test_router/test_memory_mesh.py) [NEW]**:
     - Unit tests validating disabled RAG stubs, database connection offline fallbacks, and successful pgvector cosine similarity query execution.
-*   **[routing_config.yaml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/config/routing_config.yaml) [MODIFY]**:
+*   **[routing_config.yaml](./homelab-ai-governance/config/routing_config.yaml) [MODIFY]**:
     - Added a `rag` configuration block specifying database URL, embedding model, embedding url, and similarity threshold (`0.60`).
-*   **[pyproject.toml](file:///Users/muneeb/Documents/GitHub/Swish_App-1/homelab-ai-governance/pyproject.toml) [MODIFY]**:
+*   **[pyproject.toml](./homelab-ai-governance/pyproject.toml) [MODIFY]**: (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Appended `psycopg2-binary>=2.9.0` to project dependencies.
 
 ---
@@ -146,11 +146,7 @@ To run the complete governed, stateful agent pipeline:
     ```bash
     export SWISH_GOVERNANCE_API_URL=http://localhost:8000
     export SWISH_LETTA_API_URL=http://localhost:8283
-<<<<<<< HEAD
-    export JWT_SECRET=my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long
-=======
-    export JWT_SECRET_KEY=my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long
->>>>>>> origin/develop
+export JWT_SECRET_KEY=my-secret-key-that-is-long-enough-to-be-secure-for-jwt-signature-verification-32bytes-long/develop
     cd backend
     mvn spring-boot:run
     ```
@@ -165,11 +161,11 @@ To run the complete governed, stateful agent pipeline:
 
 We have completed **Phase 9: Recursive AI Governance Alignment & AI Hardening**. The 5 core architectural and governance alignment documents are now available in the `docs/` directory of the project for incoming agents to read before starting:
 
-1. **[Architect Recommendations](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/architect_recommendations.md)**: Details the scaling and stateful options evaluated for future phases (vLLM, Letta, Temporal, Guardrails, Arize Phoenix, Promptfoo).
-2. **[Observability & Hardening Report](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/architectural_report_circuit_breakers_metrics_tracing.md)**: Highlights the design and sequence flows of MemoryMesh circuit breakers, Prometheus actuator metrics, and OpenTelemetry distributed tracing context propagation.
-3. **[Detailed Project Handover](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/detailed_project_handover.md)**: Summarizes Phase 9 specific fixes (redaction safety refusals, CCR ignore lists, DeepSeek data sovereignty redaction, cold-start timeouts).
-4. **[Implementation Plan - Phase 9](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/implementation_plan_phase9.md)**: The plan and validation criteria executed for Phase 9 alignment.
-5. **[Security Architecture Audit Report](file:///Users/muneeb/Documents/GitHub/Swish_App-1/docs/security_architecture_audit_report.md)**: Validates overall Agentic OS security posture against PII privacy, 1s SLAs, method security, and transactional outbox auditing.
+1. **[Architect Recommendations](./docs/architect_recommendations.md)**: Details the scaling and stateful options evaluated for future phases (vLLM, Letta, Temporal, Guardrails, Arize Phoenix, Promptfoo).
+2. **[Observability & Hardening Report](./docs/architectural_report_circuit_breakers_metrics_tracing.md)**: Highlights the design and sequence flows of MemoryMesh circuit breakers, Prometheus actuator metrics, and OpenTelemetry distributed tracing context propagation.
+3. **[Detailed Project Handover](./docs/detailed_project_handover.md)**: Summarizes Phase 9 specific fixes (redaction safety refusals, CCR ignore lists, DeepSeek data sovereignty redaction, cold-start timeouts).
+4. **[Implementation Plan - Phase 9](./docs/implementation_plan_phase9.md)**: The plan and validation criteria executed for Phase 9 alignment.
+5. **[Security Architecture Audit Report](./docs/security_architecture_audit_report.md)**: Validates overall Agentic OS security posture against PII privacy, 1s SLAs, method security, and transactional outbox auditing. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ### Cycle update (2026-06-13) — Epic 2, Epic 2.5 & Phase 8 (A+B) landed
 
@@ -197,7 +193,7 @@ This section summarizes the frontend (FE) hardening changes implemented, ensurin
 ## 🎨 Completed Upgrades & Changes
 
 ### 1. Customer Super App (`frontend-customer`)
-* **Green Neon ESG Toggle**: Replaced the default browser checkbox for bag returns in [CustomerApp.tsx](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-customer/src/components/CustomerApp.tsx) with a custom green neon sliding switch (`.switch-input-customer` + `.switch-label`) matching the customer branding.
+* **Green Neon ESG Toggle**: Replaced the default browser checkbox for bag returns in [CustomerApp.tsx](./frontend-customer/src/components/CustomerApp.tsx) with a custom green neon sliding switch (`.switch-input-customer` + `.switch-label`) matching the customer branding. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 * **Premium VIP Membership Hub**:
   * Added conditional styling using the gold-glowing class `.vip-card-glow` and gold header text `.vip-gold-text` when a user's VIP status is active.
   * Rebuilt the Trust Shield rating to use a progress bar and visual checking indicators (`Lucide.ShieldCheck` / `Lucide.ShieldAlert`).
@@ -270,45 +266,45 @@ We successfully audited Phase 6 and completed the implementation and validation 
 We successfully implemented and validated the board-mandated compliance and audit capability enhancements:
 
 * **Telemetry Audit Schema (Flyway Migration)**:
-  - Created [V29__telemetry_audit_hardening.sql](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V29__telemetry_audit_hardening.sql) adding calibration tracking columns (`last_calibrated_at`, `calibration_status`) and cryptographic chaining columns (`previous_reading_hash`, `reading_hash`) to database entities.
+- Created [V29__telemetry_audit_hardening.sql](./backend/src/main/resources/db/migration/V29__telemetry_audit_hardening.sql) adding calibration tracking columns (`last_calibrated_at`, `calibration_status`) and cryptographic chaining columns (`previous_reading_hash`, `reading_hash`) to database entities.
 
 * **Telemetry Invariant Auditing**:
-  - Updated models and entity mappings ([SensorEntity.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorEntity.java), [SensorReadingEntity.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorReadingEntity.java)) and fixed a gap in [SensorPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorPersistenceAdapter.java) to correctly persist hashes.
-  - Implemented dynamic SHA-256 chaining of telemetry readings on ingestion inside [SensorServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/core/service/SensorServiceImpl.java).
+  - Updated models and entity mappings ([SensorEntity.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorEntity.java), [SensorReadingEntity.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorReadingEntity.java)) and fixed a gap in [SensorPersistenceAdapter.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/out/persistence/SensorPersistenceAdapter.java) to correctly persist hashes.
+  - Implemented dynamic SHA-256 chaining of telemetry readings on ingestion inside [SensorServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/core/service/SensorServiceImpl.java).
 
 * **Telemetry Chain Verification Audit Engine**:
-  - Implemented `verifySensorIntegrity(String sensorId)` in `SensorServiceImpl` to verify telemetry chain integrity and exposed `/api/v1/sensors/{sensorId}/verify-integrity` in [SensorController.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/in/web/SensorController.java).
+  - Implemented `verifySensorIntegrity(String sensorId)` in `SensorServiceImpl` to verify telemetry chain integrity and exposed `/api/v1/sensors/{sensorId}/verify-integrity` in [SensorController.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/sensor/adapter/in/web/SensorController.java).
 
 * **Continuous Calibration Logs & B2B Replenishment Rerouting**:
   - Exposed `/calibrate` endpoint for sensor calibration check logs.
-  - Modified [WholesalerServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/wholesaler/core/service/WholesalerServiceImpl.java) to verify store sensor calibration compliance and dynamically reroute B2B restock order generation to alternative compliant dark stores if any temperature/GPS sensors have failed.
+  - Modified [WholesalerServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/wholesaler/core/service/WholesalerServiceImpl.java) to verify store sensor calibration compliance and dynamically reroute B2B restock order generation to alternative compliant dark stores if any temperature/GPS sensors have failed.
 
 * **Human Override Justification Hashing**:
-  - Enforced non-blank override reasons in all resolution handlers in [GovernanceServiceImpl.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/governance/core/service/GovernanceServiceImpl.java).
+  - Enforced non-blank override reasons in all resolution handlers in [GovernanceServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/governance/core/service/GovernanceServiceImpl.java). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
   - Computed the SHA-256 hash of all non-blank reasons and saved them under `"HITL-OVERRIDE-HASH:<hash>"` event logs in the double-entry `SecurityTrustLedger`.
 
 * **Verification**:
   - **Backend Test Suite**: 100% green (`BUILD SUCCESS` with 326 tests). Includes new unit tests verifying dynamic rerouting, calibration status changes, and telemetry chain validation under normal/tampered scenarios.
   - **Frontend Build Suite**: All React micro-frontends compile cleanly (`npm run build:all` success).
-  - **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](file:///c:/Users/DELL%209420/Documents/swiss_App/docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features.
+- **Living Docs**: Updated [AS_BUILT_VS_TARGET.md](./docs/AS_BUILT_VS_TARGET.md) to reconciliate and log these compliance features. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ### Cycle Update (2026-06-13) — Cypress E2E Hardening & Actuator Health Fix [DONE]
 
 We successfully hardened the Cypress E2E suite and resolved connection-related test failures arising from missing/optional services (Redis and Kafka) in localized/CI test profiles.
 
 * **Cypress Configuration Mapping**:
-  - Modified [cypress.config.js](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-customer/cypress.config.js)'s `setupNodeEvents` block to map incoming environment variables from the CI pipeline (`CYPRESS_API_URL` and `CYPRESS_ADMIN_TOKEN`) to the camelCase properties (`apiUrl` and `adminToken`) expected by the E2E spec files.
+- Modified [cypress.config.js](./frontend-customer/cypress.config.js)'s `setupNodeEvents` block to map incoming environment variables from the CI pipeline (`CYPRESS_API_URL` and `CYPRESS_ADMIN_TOKEN`) to the camelCase properties (`apiUrl` and `adminToken`) expected by the E2E spec files.
 
 * **Spring Boot Caching Fallback**:
-  - Annotated [RedisCacheConfig.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/config/RedisCacheConfig.java) with `@Profile("!dev")` to prevent instantiating the custom Redis Cache Manager during local development where a Redis container may not be active.
-  - Configured `spring.cache.type=simple` in [application-dev.properties](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/application-dev.properties) so local caching defaults to JVM in-memory concurrent map caching.
+  - Annotated [RedisCacheConfig.java](./backend/src/main/java/ch/swissqcommerce/backend/config/RedisCacheConfig.java) with `@Profile("!dev")` to prevent instantiating the custom Redis Cache Manager during local development where a Redis container may not be active.
+  - Configured `spring.cache.type=simple` in [application-dev.properties](./backend/src/main/resources/application-dev.properties) so local caching defaults to JVM in-memory concurrent map caching.
 
 * **Actuator & Observability Health Probe Hardening**:
-  - Globally disabled the Kafka health check indicator in [application.properties](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/application.properties) via `management.health.kafka.enabled=false`, as the CI pipeline and local environments do not spin up active Kafka brokers.
-  - Disabled the Redis health check indicator in [application-dev.properties](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/application-dev.properties) via `management.health.redis.enabled=false`.
+  - Globally disabled the Kafka health check indicator in [application.properties](./backend/src/main/resources/application.properties) via `management.health.kafka.enabled=false`, as the CI pipeline and local environments do not spin up active Kafka brokers.
+  - Disabled the Redis health check indicator in [application-dev.properties](./backend/src/main/resources/application-dev.properties) via `management.health.redis.enabled=false`.
 
 * **E2E Assertions Adjustments**:
-  - Updated [04-admin.cy.ts](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-customer/cypress/e2e/04-admin.cy.ts) to use `to.include.keys` rather than `to.have.all.keys` on the `/api/admin/health` response validation. This allows the backend to return extra metrics (such as order and inventory counts) while ensuring the mandatory health status keys are still fully verified.
+  - Updated [04-admin.cy.ts](./frontend-customer/cypress/e2e/04-admin.cy.ts) to use `to.include.keys` rather than `to.have.all.keys` on the `/api/admin/health` response validation. This allows the backend to return extra metrics (such as order and inventory counts) while ensuring the mandatory health status keys are still fully verified. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 * **Verification**:
   - **Cypress E2E Suite**: 100% green locally (`42/42 tests passing` across all specs: `01-auth`, `02-order-placement`, `03-rider-delivery`, `04-admin`, and `05-wholesaler`).
@@ -318,22 +314,22 @@ We successfully hardened the Cypress E2E suite and resolved connection-related t
 As the Lead Tester, I have verified and validated the entire application stack after implementing Epic 2 (Observability Hardening) and Kimi LLM Integration.
 
 * **Transactional Outbox Payload Encryption (`core-business-engine`)**:
-  - **Database Migration**: Created [V2__outbox_payload_encryption.sql](file:///c:/Users/DELL%209420/Documents/swiss_App/core-business-engine/src/main/resources/db/migration/V2__outbox_payload_encryption.sql) updating `payload` from `JSONB` to `TEXT`.
-  - **Encryption/Decryption Logic**: Verified that outbox payloads are transparently encrypted using AES-256 via [AesEncryptionConverter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/core-business-engine/src/main/java/com/platform/core/common/AesEncryptionConverter.java) upon persistence and explicitly decrypted inside [OutboxRelayConfiguration.java](file:///c:/Users/DELL%209420/Documents/swiss_App/core-business-engine/src/main/java/com/platform/core/common/OutboxRelayConfiguration.java) when the JDBC polling channel relays database outbox entries to Kafka.
-  - **Tests**: Asserted and passed integration unit tests in [OutboxEntityTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/core-business-engine/src/test/java/com/platform/core/common/OutboxEntityTest.java) and [OutboxRelayConfigurationTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/core-business-engine/src/test/java/com/platform/core/common/OutboxRelayConfigurationTest.java).
+- **Database Migration**: Created [V2__outbox_payload_encryption.sql](./core-business-engine/src/main/resources/db/migration/V2__outbox_payload_encryption.sql) updating `payload` from `JSONB` to `TEXT`.
+  - **Encryption/Decryption Logic**: Verified that outbox payloads are transparently encrypted using AES-256 via [AesEncryptionConverter.java](./core-business-engine/src/main/java/com/platform/core/common/AesEncryptionConverter.java) upon persistence and explicitly decrypted inside [OutboxRelayConfiguration.java](./core-business-engine/src/main/java/com/platform/core/common/OutboxRelayConfiguration.java) when the JDBC polling channel relays database outbox entries to Kafka.
+  - **Tests**: Asserted and passed integration unit tests in [OutboxEntityTest.java](./core-business-engine/src/test/java/com/platform/core/common/OutboxEntityTest.java) and [OutboxRelayConfigurationTest.java](./core-business-engine/src/test/java/com/platform/core/common/OutboxRelayConfigurationTest.java).
 
 * **Centralized Cost Budget Tracking (`backend`)**:
-  - **Tracker Component**: Verified the thread-safe implementation of [AgentBudgetTracker.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentBudgetTracker.java) restricting the agent to a daily limit of $5.0 and recording metrics via a Micrometer Counter.
-  - **Orchestrator Enforcement**: Ensured [MasterOrchestratorService.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) intercepts client requests upon daily budget exhaustion to return a human handoff fallback ticket.
-  - **Dynamic Tracking**: Confirmed that token usage is logged at the execution gateway layer ([ResilientLlmGateway.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java) and [CustomerSupportAgent.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java) for Letta memory state calls) to avoid duplicate metrics tracking.
+  - **Tracker Component**: Verified the thread-safe implementation of [AgentBudgetTracker.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/AgentBudgetTracker.java) restricting the agent to a daily limit of $5.0 and recording metrics via a Micrometer Counter.
+  - **Orchestrator Enforcement**: Ensured [MasterOrchestratorService.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) intercepts client requests upon daily budget exhaustion to return a human handoff fallback ticket.
+  - **Dynamic Tracking**: Confirmed that token usage is logged at the execution gateway layer ([ResilientLlmGateway.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java) and [CustomerSupportAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java) for Letta memory state calls) to avoid duplicate metrics tracking.
   - **Procurement Fallback**: Verified rule-based restock discount calculations are triggered on budget breach.
 
 * **Kimi LLM Failover Integration (`backend`)**:
-  - **API Client**: Implemented [KimiLlmAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/kimi/KimiLlmAdapter.java) targeting `https://api.moonshot.ai/v1/chat/completions`.
-  - **Resilient Fallback**: Confirmed the Kimi client successfully registers as a cloud-level secondary failover inside [ResilientLlmGateway.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java).
+  - **API Client**: Implemented [KimiLlmAdapter.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/kimi/KimiLlmAdapter.java) targeting `https://api.moonshot.ai/v1/chat/completions`.
+  - **Resilient Fallback**: Confirmed the Kimi client successfully registers as a cloud-level secondary failover inside [ResilientLlmGateway.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java).
 
 * **Validation Reports**:
-  - **Spring Boot Backend**: 100% green (`BUILD SUCCESS` with 335 tests). Hardened [CustomerSupportDynamicPricingTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) to inject mock dependencies and assert correct fallback ticket escalation.
+  - **Spring Boot Backend**: 100% green (`BUILD SUCCESS` with 335 tests). Hardened [CustomerSupportDynamicPricingTest.java](./backend/src/test/java/ch/swissqcommerce/backend/service/CustomerSupportDynamicPricingTest.java) to inject mock dependencies and assert correct fallback ticket escalation. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
   - **Multi-Module Microservice Engine**: 100% green (`BUILD SUCCESS` across all module reactors).
   - **Frontend Compilation**: Verified that React micro-frontends (host, customer, rider, and admin) build cleanly under Vite with 0 compilation errors (`npm run build:all` success).
 
@@ -351,10 +347,10 @@ As the Lead Tester, I have verified and validated the entire application stack a
 ### Cycle Update (2026-06-14) — Redis Caching for Product Catalog [DONE]
 
 * **Redis Caching implementation for Catalog Context**:
-  - Annotated catalog core service methods inside [CatalogServiceImpl.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/catalog/core/service/CatalogServiceImpl.java):
+- Annotated catalog core service methods inside [CatalogServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/catalog/core/service/CatalogServiceImpl.java):
     - Added `@Cacheable(value = "catalog", key = "#productId")` to `getListing(productId)` to cache product detail queries.
     - Added `@CachePut(value = "catalog", key = "#result.productId")` to `createListing(listing)` to populate the cache during product creation.
-  - Hardened [CacheIntegrationTest.java](file:///Users/muneeb/Documents/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/CacheIntegrationTest.java):
+  - Hardened [CacheIntegrationTest.java](./backend/src/test/java/ch/swissqcommerce/backend/integration/CacheIntegrationTest.java): (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - Wired `CatalogUseCase` and `CatalogRepository` to verify integration behaviors.
     - Added `"catalog"` to the cache-clear set in `setUp()` and `tearDown()` and database cleaning hooks in `tearDown()` (`catalogRepository.deleteAll()`).
     - Implemented integration tests `testGetProductListingIsCached()` and `testCreateProductListingPopulatesCache()` to assert correct Redis catalog caching and cache synchronization behavior.
@@ -370,11 +366,11 @@ As the Lead Tester, I have verified and validated the entire application stack a
 
 *   **B2B Retailer Hub Micro-Frontend Integration**:
     - Reclaimed the dormant `frontend-b2b` module on port `5002` to serve as the "B2B Retailer Hub" remote MFE instead of introducing a redundant directory.
-    - Added the `b2b` remote entry config (`b2b: "http://127.0.0.1:5002/assets/remoteEntry.js"`) in [vite.config.ts](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-host/vite.config.ts).
-    - Registered remote/lazy import, preloaded it, verified origins, and routed the host tab "B2B Retailer Hub" (formerly Business Console) to load `<B2bDashboard />` in [App.tsx](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-host/src/App.tsx).
-    - Updated root [package.json](file:///c:/Users/DELL%209420/Documents/swiss_App/package.json) with scripts `"dev:b2b"` and updated `"build:all"` to compile the `frontend-b2b` remote component.
+- Added the `b2b` remote entry config (`b2b: "http://127.0.0.1:5002/assets/remoteEntry.js"`) in [vite.config.ts](./frontend-host/vite.config.ts).
+    - Registered remote/lazy import, preloaded it, verified origins, and routed the host tab "B2B Retailer Hub" (formerly Business Console) to load `<B2bDashboard />` in [App.tsx](./frontend-host/src/App.tsx).
+    - Updated root [package.json](./package.json) with scripts `"dev:b2b"` and updated `"build:all"` to compile the `frontend-b2b` remote component.
 *   **FR-01 Self-Service Onboarding & Sensor Provisioning Portal**:
-    - Developed the B2B dashboard tab navigation inside [B2bDashboard.tsx](file:///c:/Users/DELL%209420/Documents/swiss_App/frontend-b2b/src/B2bDashboard.tsx) containing onboarding and device provisioning controls.
+    - Developed the B2B dashboard tab navigation inside [B2bDashboard.tsx](./frontend-b2b/src/B2bDashboard.tsx) containing onboarding and device provisioning controls. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - **Retailer Onboarding Portal**: Built a retailer sign-up form, an interactive 3-gate compliance checking simulator (Document review, Sanctions check, Risk assessment), and a secure API key generation box with a single-reveal visibility toggle.
     - **IoT Sensor Provisioning Hub**: Enabled retailers to provision sensors, trigger calibrations (recording compliance audits), and verify the SHA-256 cryptographic hash chaining integrity of stored telemetry readings.
     - Integrated a visual sandbox logging sidebar terminal to trace lifecycle and mock API events dynamically.
@@ -416,13 +412,13 @@ Sprint 5 is locked, tagged, and green. 434 tests passing, zero network hangs, an
 *   **BUG-013: Onboarding Application Null Constraint Violation Fix**:
     - **Impact**: In staging and CI environments, creating onboarding applications (e.g. during E2E Cypress tests) could crash the database transaction with `null value in column "approval_ops" of relation "onboarding_applications" violates not-null constraint`.
     - **Root Cause**: The domain model `OnboardingApplication` passed uninitialized boolean fields (like `approvalOps`, `approvalCompliance`, and `approvalAdmin`) as `null` through `EnrollmentPersistenceAdapter.java` to `OnboardingApplicationEntity.java`. Hibernate attempted to persist these fields explicitly as `null` instead of letting database defaults take over.
-    - **Fix**: Wrapped mapped values with `Boolean.TRUE.equals(...)` in the mapping logic of [EnrollmentPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java) to safely coerce null values to `false`.
+- **Fix**: Wrapped mapped values with `Boolean.TRUE.equals(...)` in the mapping logic of [EnrollmentPersistenceAdapter.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java) to safely coerce null values to `false`. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - **Result**: Successfully resolved E2E database crashes on onboarding application creation.
 
 *   **BUG-012: Kafka Connection Hang Fix**:
     - **Impact**: `PaymentIntegrationTest` and tests invoking transactional outbox listener commits would block/hang for 60 seconds per event waiting for a local Kafka connection on `localhost:9092`.
     - **Root Cause**: `@TransactionalEventListener` triggers when the transaction commits, executing before test execution wraps up. Since the test context did not define a mocked `KafkaTemplate` bean, the default production configuration attempted to connect to a live broker.
-    - **Fix**: Added `@MockBean KafkaTemplate` in [PaymentIntegrationTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and changed [TestConfig.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) to `@AutoConfiguration` loaded globally via [AutoConfiguration.imports](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports).
+- **Fix**: Added `@MockBean KafkaTemplate` in [PaymentIntegrationTest.java](./backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and changed [TestConfig.java](./backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) to `@AutoConfiguration` loaded globally via [AutoConfiguration.imports](./backend/src/test/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
     - **Result**: Verification build (`mvn clean verify`) now runs all **434 tests** successfully in ~4 minutes instead of timing out at 30 minutes.
 
 *   **v0.3.0-routing-hardened: Final State**:
