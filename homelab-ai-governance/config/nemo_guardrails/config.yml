@@ -1,0 +1,12 @@
+# NeMo Guardrails configuration
+models:
+  - type: main
+    engine: ollama
+    model: gemma:2b
+
+rails:
+  input:
+    flows:
+      - competitor pricing check
+      - prompt injection attempt
+      - system config access check
