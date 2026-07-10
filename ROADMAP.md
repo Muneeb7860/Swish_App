@@ -45,4 +45,13 @@ Below is our current backlog status and road map.
 - [x] **Self-Hosted LLM Observability (Arize Phoenix)**: Deploy a self-hosted **Arize Phoenix** container. Export OpenTelemetry LLM trace logs directly to the local collector to ensure 100% PII privacy, auditing intermediate prompt/response spans and token costs locally.
 - [x] **Automated Prompt Red-Teaming (Promptfoo)**: Integrate **Promptfoo** into the CI pipeline to run automated regression and security tests (e.g., checking 100+ prompt injection, jailbreak, and PII leakage scenarios) against the governance service before merging PRs.
 
+## Epic 6: Enterprise Service Modernization & Zero-Trust Governance (TPM & Architect Recommendations) [BACKLOG]
+*Transitioning the Swish OS from prototype integrations to a production-grade, secure, and fully decoupled service mesh.*
+
+- [ ] **Decoupled Microservice Extraction**: Define target sprint milestones and Gantt delivery phases to complete the Strangler Fig extraction of `core-business-engine`, `notification-engine`, and `shared-async-services` out of the monolithic backend.
+- [ ] **Zero-Trust SPIFFE/SPIRE mTLS Mesh**: Deploy the planned Kubernetes pod mesh with Envoy sidecar proxies, implementing mutual TLS (mTLS) and cryptographically verifiable SPIFFE/SPIRE identities.
+- [ ] **Pessimistic Concurrency Auditing**: Audit all transactional hexagonal ports/adapters to ensure strict database-level locking (`SELECT ... FOR UPDATE`) on concurrent grocery order checkouts.
+- [ ] **Automated Secrets Rotation**: Connect GCP Secret Manager / HashiCorp Vault with local GitOps pipelines to enforce automatic rotating credentials, eliminating static `.env` dependencies.
+- [ ] **Cypress E2E Pipeline Stabilization**: Optimize Electron headless browser parameters and caching layers to prevent test run resource exhaustion and timeout flakiness.
+
 

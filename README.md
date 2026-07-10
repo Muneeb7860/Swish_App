@@ -57,6 +57,7 @@
 *   📐 **[Architecture Decision Records (ADR) Registry](#-architecture-decision-records-adr-registry)**
 *   🚀 **[Homelab Dev Setup & Troubleshooting](#-homelab-dev-setup--troubleshooting)**
 *   🧪 **[Testing, Quality Gates & Chaos Engineering](#-testing-quality-gates--chaos-engineering)**
+*   📈 **[Feature Plan & Roadmap](#-feature-plan--roadmap)**
 
 ---
 
@@ -323,6 +324,21 @@ Trigger random container network drops, database latencies, and message queue fa
 ```bash
 bash scripts/chaos.sh
 ```
+
+---
+
+## 📈 Feature Plan & Roadmap
+
+The Swish OS roadmap coordinates our transition from local monolithic configurations to an enterprise-grade, zero-trust cloud service mesh:
+
+| Epic / Phase | Target Status | Key Deliverables & Highlights |
+| :--- | :--- | :--- |
+| **Epic 1: CI/CD & DevOps Ingress** | ✅ **Completed** | GitHub Actions workflows, Spotless Java auto-formatting gates, Biome checks, Flyway DB schema migrations. |
+| **Epic 2: Observability Monitoring**| ✅ **Completed** | Actuator metrics scrape endpoints, Grafana memory/CPU panels, Zipkin distributed tracing graphs. |
+| **Epic 3: Scale & Resilience** | ✅ **Completed** | Temporal durable B2B workflow transitions, Kafka Dead Letter Queues, Redis query cache layers. |
+| **Epic 4: Integration Verification** | ✅ **Completed** | Cypress E2E customer journey scripts, automated test recovery scenarios, telemetry Zipkin spans audit. |
+| **Epic 5: Hardened Agentic Core** | ✅ **Completed** | PagedAttention local vLLM agent, Letta stateful core memories, NeMo Colang safety filters, Guardrails AI RAIL enforcers. |
+| **Epic 6: Zero-Trust & Mesh** | 🛣️ **Backlog** | Strangler Fig microservice extraction, Zero-trust SPIFFE/SPIRE mTLS mesh, PostgreSQL database pessimistic locking audits, automated secrets rotation pipelines. |
 
 ---
 
