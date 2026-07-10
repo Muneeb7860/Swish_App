@@ -73,29 +73,29 @@ The routing workflow executed by the `ResilientLlmGateway` is as follows:
 All task items have been implemented and checked off as part of the Windows workstation development cycle:
 
 - [x] **Task 1: Create Resilient Gateway Adapter**
-  - [x] Create [ResilientLlmGateway.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java) implementing `LlmGatewayPort`.
+- [x] Create [ResilientLlmGateway.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGateway.java) implementing `LlmGatewayPort`. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
   - [x] Mark with `@Primary` to intercept all injections of the port.
   - [x] Implement the Java-side regex PII scanner using Python-identical regex patterns.
   - [x] Program the fallback logic chain (Python Governance $\to$ local PII Gate $\to$ Gemini $\to$ Mock).
 
 - [x] **Task 2: Refactor Core Agents to depend on LlmGatewayPort**
-  - [x] Refactor [CustomerSupportAgent.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java).
-  - [x] Refactor [DynamicPricingAgent.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/DynamicPricingAgent.java).
-  - [x] Refactor [B2BProcurementAgent.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java).
+- [x] Refactor [CustomerSupportAgent.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/CustomerSupportAgent.java).
+  - [x] Refactor [DynamicPricingAgent.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/DynamicPricingAgent.java).
+  - [x] Refactor [B2BProcurementAgent.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java).
   - [x] Delete all legacy `getLlmGateway()` methods from the core agents.
 
 - [x] **Task 3: Refactor PythonGovernanceAdapter**
-  - [x] Remove fields, constructor args, and autowiring for `GeminiFreeAdapter` and `MockLlmAdapter` from [PythonGovernanceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapter.java).
+  - [x] Remove fields, constructor args, and autowiring for `GeminiFreeAdapter` and `MockLlmAdapter` from [PythonGovernanceAdapter.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapter.java).
   - [x] Ensure it throws exceptions on failure/unconfigured states rather than carrying out direct fallback calls.
 
 - [x] **Task 4: Remove Redundant Rate Limiter Check**
-  - [x] Modify [MasterOrchestratorService.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) to delete the `hourlyRequestCount >= 100` restriction.
+  - [x] Modify [MasterOrchestratorService.java](../../backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/MasterOrchestratorService.java) to delete the `hourlyRequestCount >= 100` restriction.
   - [x] Preserve daily budget cost accumulation (`dailyCost >= 5.0`) for HITL routing.
 
 - [x] **Task 5: Update Unit and Integration Test Suites**
-  - [x] Adjust [DynamicPricingAgentTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/service/DynamicPricingAgentTest.java) to mock `LlmGatewayPort` directly.
-  - [x] Rewrite [PythonGovernanceAdapterTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapterTest.java) to reflect exception throwing instead of internal fallbacks.
-  - [x] Create [ResilientLlmGatewayTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGatewayTest.java) to thoroughly test PII detection, routing paths, and fail-safe blocking.
+  - [x] Adjust [DynamicPricingAgentTest.java](../../backend/src/test/java/ch/swissqcommerce/backend/service/DynamicPricingAgentTest.java) to mock `LlmGatewayPort` directly.
+  - [x] Rewrite [PythonGovernanceAdapterTest.java](../../backend/src/test/java/ch/swissqcommerce/backend/domain/agent/adapter/out/governance/PythonGovernanceAdapterTest.java) to reflect exception throwing instead of internal fallbacks.
+  - [x] Create [ResilientLlmGatewayTest.java](../../backend/src/test/java/ch/swissqcommerce/backend/domain/agent/adapter/out/resilient/ResilientLlmGatewayTest.java) to thoroughly test PII detection, routing paths, and fail-safe blocking. (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
   - [x] Verify complete integration test suite passes via Maven.
 
 ---

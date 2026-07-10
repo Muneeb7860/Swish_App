@@ -2,6 +2,7 @@ package ch.swissqcommerce.backend.domain.catalog.adapter.in.web;
 
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.port.in.CatalogUseCase;
+import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase;
 import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CatalogController {
     private final CatalogUseCase catalogUseCase;
+    private final FmcgCatalogUseCase fmcgCatalogUseCase;
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductListing> getProduct(@PathVariable String id) {
@@ -41,5 +43,15 @@ public class CatalogController {
                     .body(Map.of("error", "basePrice must be present and non-negative."));
         }
         return ResponseEntity.ok(catalogUseCase.createListing(listing));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/import-fmcg")
+    public ResponseEntity<?> importFmcg(
+            @RequestParam(required = false) Boolean isRaining,
+            @RequestParam(required = false) Double riderToOrderRatio,
+            @RequestParam(required = false) Double vipDensity) {
+        return ResponseEntity.ok(
+                fmcgCatalogUseCase.importFmcgProducts(isRaining, riderToOrderRatio, vipDensity));
     }
 }

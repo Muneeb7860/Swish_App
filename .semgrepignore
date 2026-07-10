@@ -1,0 +1,19 @@
+# Build output, vendored deps, and generated artifacts — not our source to scan.
+node_modules/
+**/node_modules/
+target/
+**/target/
+dist/
+**/dist/
+build/
+**/build/
+.venv/
+**/.venv/
+**/__pycache__/
+*.min.js
+**/apache-maven-*/
+coverage/
+**/coverage/
+cypress/screenshots/
+cypress/videos/
+.git/

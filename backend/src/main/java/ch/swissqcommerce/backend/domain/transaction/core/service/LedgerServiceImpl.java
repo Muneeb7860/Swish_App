@@ -190,6 +190,39 @@ public class LedgerServiceImpl implements LedgerUseCase {
         }
     }
 
+    /** Genesis marker for the first entry's previousEntryHash (64 hex zeros). */
+    private static final String GENESIS_HASH =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+
+    @Override
+    public LedgerIntegrityReport verifyChainIntegrity() {
+        List<JournalEntryEntity> entries = journalEntryRepository.findAllByOrderByEntryIdAsc();
+        String expectedPrev = GENESIS_HASH;
+        for (JournalEntryEntity e : entries) {
+            // 1. Chain linkage: this entry must point at the prior entry's hash
+            //    (genesis for the first) — catches reordering and deletion.
+            if (!expectedPrev.equals(e.getPreviousEntryHash())) {
+                return new LedgerIntegrityReport(
+                        false, e.getEntryId(), "chain linkage broken: previousEntryHash mismatch");
+            }
+            // 2. Recompute: the stored hash must match a fresh hash of the entry's
+            //    inputs — catches tampered content or a doctored hash.
+            String recomputed =
+                    computeSHA256Hash(
+                            e.getEntryUuid().toString(),
+                            e.getReference(),
+                            e.getDescription(),
+                            e.getPreviousEntryHash());
+            if (!recomputed.equals(e.getEntryHash())) {
+                return new LedgerIntegrityReport(
+                        false, e.getEntryId(), "entry hash mismatch: tampered content or hash");
+            }
+            expectedPrev = e.getEntryHash();
+        }
+        return new LedgerIntegrityReport(
+                true, null, "chain intact (" + entries.size() + " entries)");
+    }
+
     private String computeSHA256Hash(
             String uuid, String reference, String description, String prevHash) {
         try {

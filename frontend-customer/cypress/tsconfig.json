@@ -7,7 +7,8 @@
 		"strict": false,
 		"types": ["cypress"],
 		"esModuleInterop": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"ignoreDeprecations": "6.0"
 	},
 	"include": ["**/*.ts"]
 }

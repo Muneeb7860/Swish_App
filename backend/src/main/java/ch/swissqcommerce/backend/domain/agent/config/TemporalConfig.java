@@ -26,7 +26,7 @@ public class TemporalConfig {
     @Bean
     public WorkflowServiceStubs workflowServiceStubs() {
         log.info("Initializing Temporal WorkflowServiceStubs connecting to {}", serviceAddress);
-        return WorkflowServiceStubs.newInstance(
+        return WorkflowServiceStubs.newServiceStubs(
                 WorkflowServiceStubsOptions.newBuilder().setTarget(serviceAddress).build());
     }
 
