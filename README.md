@@ -275,25 +275,55 @@ We document all system constraints and architectural pivot histories in `docs/ad
 
 ---
 
-## 🚀 Homelab Dev Setup & Troubleshooting
+## 🚀 Homelab Dev Setup & Deployment Specifications
 
 ### Prerequisites
 *   **Java Development Kit (JDK) 17**: Ensure your `JAVA_HOME` points strictly to JDK 17 (Lombok fails processing under JDK 26+).
 *   **Node.js**: v18.0.0+ (required for Micro-Frontend bundling).
-*   **Docker & Compose**: For running Kafka, PostgreSQL, MongoDB, and Redis.
+*   **Docker & Compose**: For running local infrastructure containers.
 
-### Dev Environment Ingress Boot
-Set up the entire local infrastructure and verify compilation inside the directories:
+---
 
-```bash
-# 1. Boot local infrastructure services
-docker compose -f docker-compose-local.yml up -d
+### 🏠 Local/Homelab Quick Start (On-Premises Profile)
+To run Swish OS entirely offline on self-hosted local infrastructure (e.g. for development or UAT):
 
-# 2. Compile Java Backend with Java 17
-export JAVA_HOME="/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home"
-export PATH="$JAVA_HOME/bin:$PATH"
-cd backend && mvn clean compile -DskipTests
-```
+1. **Boot On-Premises Container Stack**:
+   Spin up Postgres, HashiCorp Vault, MinIO (WORM object storage), Redis, Kafka, MongoDB, and Ollama:
+   ```bash
+   docker compose -f infrastructure/docker-compose-onprem.yml up -d
+   ```
+
+2. **Run Backend with On-Premises Profile**:
+   Activate the `onprem` profile to bind secrets from Vault, audit ledgers via MinIO, and route inference queries through local Ollama:
+   ```bash
+   cd backend
+   mvn spring-boot:run -Dspring-boot.run.profiles=dev,onprem
+   ```
+
+---
+
+### ☁️ Google Cloud Footprint (GCP Profile)
+To run Swish OS connected to enterprise Google Cloud services (matching production specifications):
+
+1. **Boot Development Database & Message Bus**:
+   ```bash
+   docker compose -f docker-compose-local.yml up -d
+   ```
+
+2. **Authenticate with Google Cloud**:
+   Ensure you have Application Default Credentials (ADC) configured locally:
+   ```bash
+   gcloud auth application-default login
+   ```
+
+3. **Run Backend with GCP Profile**:
+   Activate the `gcp` profile to load credentials dynamically from Secret Manager, upload WORM audit ledgers to GCS, and route queries to Vertex AI Gemini endpoints:
+   ```bash
+   cd backend
+   mvn spring-boot:run -Dspring-boot.run.profiles=dev,gcp
+   ```
+
+---
 
 ### Port Map Reference
 Access the developer dashboards at these local addresses:

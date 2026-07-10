@@ -60,6 +60,19 @@ export interface OrderHistoryItem {
 	status: string;
 }
 
+const FMCG_BASE_PRICES: Record<string, number> = {
+	"brand-7613035449626": 4.5,
+	"brand-7622202225512": 2.2,
+	"brand-3045140118502": 3.0,
+	"brand-5449000000996": 1.8,
+	"brand-3168930173373": 2.9,
+	"brand-8712100441660": 5.5,
+	"brand-8901207025365": 6.5,
+	"brand-8901138834165": 7.9,
+	"brand-8901725198129": 3.5,
+	"brand-8001090224577": 12.9,
+};
+
 export interface CustomerAppProps {
 	products: Product[];
 	cart: CartItem[];
@@ -126,6 +139,7 @@ export default function CustomerApp({
 	const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
 	const [subTargetItem, setSubTargetItem] = useState<Product | null>(null);
 	const [activeCategory, setActiveCategory] = useState("All");
+	const [activeBrand, setActiveBrand] = useState<string | null>(null);
 	const [activePromoFilter, setActivePromoFilter] = useState<string | null>(
 		null,
 	);
@@ -895,6 +909,36 @@ export default function CustomerApp({
 		});
 	};
 
+	const getProductBrand = (p: Product): string | null => {
+		if (!p.id.startsWith("brand-")) return null;
+		const nameLower = p.name.toLowerCase();
+		if (nameLower.includes("nestle") || nameLower.includes("chocapic"))
+			return "Nestle";
+		if (nameLower.includes("cadbury") || nameLower.includes("oreo"))
+			return "Cadbury";
+		if (nameLower.includes("milka") || nameLower.includes("mondelez"))
+			return "Mondelez";
+		if (nameLower.includes("coca-cola") || nameLower.includes("coca"))
+			return "Coca-Cola";
+		if (nameLower.includes("doritos") || nameLower.includes("pepsi"))
+			return "PepsiCo";
+		if (nameLower.includes("maille") || nameLower.includes("unilever"))
+			return "Unilever";
+		if (nameLower.includes("dabur") || nameLower.includes("honey"))
+			return "Dabur";
+		if (nameLower.includes("himalaya") || nameLower.includes("wash"))
+			return "Himalaya";
+		if (
+			nameLower.includes("sunfeast") ||
+			nameLower.includes("dark fantasy") ||
+			nameLower.includes("itc")
+		)
+			return "ITC";
+		if (nameLower.includes("pampers") || nameLower.includes("p&g"))
+			return "P&G";
+		return "Other";
+	};
+
 	const matchingProducts = getMatchingProducts();
 
 	const addMatchingToCart = () => {
@@ -1097,13 +1141,31 @@ export default function CustomerApp({
 		const isFavorite = favorites.includes(p.id);
 
 		let discountBadge: string | null = null;
-		if (p.id.startsWith("mock-")) {
+		let badgeBgColor = "rgba(16, 185, 129, 0.9)";
+
+		if (p.id.startsWith("brand-")) {
+			const basePrice = FMCG_BASE_PRICES[p.id];
+			if (basePrice !== undefined) {
+				if (p.price > basePrice) {
+					discountBadge = `+$${(p.price - basePrice).toFixed(2)} Surge`;
+					badgeBgColor = "rgba(239, 68, 68, 0.9)";
+				} else if (p.price < basePrice) {
+					const pct = Math.round(((basePrice - p.price) / basePrice) * 100);
+					discountBadge = `${pct}% OFF`;
+					badgeBgColor = "rgba(16, 185, 129, 0.9)";
+				} else {
+					discountBadge = "FMCG Real";
+					badgeBgColor = "var(--color-business)";
+				}
+			}
+		} else if (p.id.startsWith("mock-")) {
 			if (p.category === "Imported") {
 				discountBadge = "Imported";
 			} else if (p.category === "Monsoon") {
 				discountBadge = "Monsoon Special";
 			} else if (p.id === "mock-greeting" || p.id === "mock-candle") {
 				discountBadge = "90% OFF";
+				badgeBgColor = "rgba(239, 68, 68, 0.9)";
 			} else if (p.price > 30) {
 				discountBadge = "Grab Deal";
 			}
@@ -1134,11 +1196,8 @@ export default function CustomerApp({
 							position: "absolute",
 							top: "0.5rem",
 							left: "0.5rem",
-							background:
-								discountBadge === "90% OFF"
-									? "rgba(239, 68, 68, 0.9)"
-									: "rgba(16, 185, 129, 0.9)",
-							color: "#fff",
+							background: badgeBgColor,
+							color: discountBadge === "FMCG Real" ? "#070a13" : "#fff",
 							padding: "0.15rem 0.4rem",
 							borderRadius: "4px",
 							fontSize: "0.65rem",
@@ -1742,6 +1801,7 @@ export default function CustomerApp({
 											setActiveCategory(cat);
 											setActivePromoFilter(null);
 											setSearchQuery("");
+											setActiveBrand(null);
 										}}
 										style={{
 											background:
@@ -1763,6 +1823,82 @@ export default function CustomerApp({
 										}}
 									>
 										{cat === "All" ? "🌐 All Products" : cat}
+									</button>
+								))}
+							</div>
+						</div>
+
+						{/* Shop by Brand Section */}
+						<div style={{ marginBottom: "1.5rem" }}>
+							<span
+								style={{
+									fontSize: "0.65rem",
+									fontWeight: 700,
+									color: "var(--text-muted)",
+									textTransform: "uppercase",
+									letterSpacing: "0.05em",
+									display: "block",
+									marginBottom: "0.5rem",
+								}}
+							>
+								Shop by Top FMCG Brand
+							</span>
+							<div
+								className="brand-pills"
+								style={{
+									display: "flex",
+									gap: "0.5rem",
+									overflowX: "auto",
+									paddingBottom: "0.4rem",
+									scrollbarWidth: "none",
+								}}
+							>
+								{[
+									{ name: "Nestle", label: "🍫 Nestlé" },
+									{ name: "Cadbury", label: "🍬 Cadbury" },
+									{ name: "Mondelez", label: "🍪 Mondelez" },
+									{ name: "Coca-Cola", label: "🥤 Coca-Cola" },
+									{ name: "PepsiCo", label: "🍟 PepsiCo" },
+									{ name: "Unilever", label: "🧼 Unilever" },
+									{ name: "Dabur", label: "🍯 Dabur" },
+									{ name: "Himalaya", label: "🌿 Himalaya" },
+									{ name: "ITC", label: "🥞 ITC" },
+									{ name: "P&G", label: "🧻 P&G" },
+								].map((b) => (
+									<button
+										type="button"
+										key={b.name}
+										className={`brand-pill ${activeBrand === b.name ? "active" : ""}`}
+										onClick={() => {
+											if (activeBrand === b.name) {
+												setActiveBrand(null);
+											} else {
+												setActiveBrand(b.name);
+												setActiveCategory("All");
+												setActivePromoFilter(null);
+												setSearchQuery("");
+											}
+										}}
+										style={{
+											background:
+												activeBrand === b.name
+													? "rgba(147, 51, 234, 0.15)"
+													: "rgba(255, 255, 255, 0.02)",
+											border: `1px solid ${activeBrand === b.name ? "var(--color-business)" : "var(--border-default)"}`,
+											color:
+												activeBrand === b.name
+													? "var(--color-business)"
+													: "var(--text-secondary)",
+											padding: "0.4rem 1rem",
+											borderRadius: "9999px",
+											fontSize: "0.75rem",
+											fontWeight: 600,
+											cursor: "pointer",
+											whiteSpace: "nowrap",
+											transition: "all 0.2s ease",
+										}}
+									>
+										{b.label}
 									</button>
 								))}
 							</div>
@@ -1861,7 +1997,9 @@ export default function CustomerApp({
 						</div>
 
 						{/* Selected Filter Indicator Banner */}
-						{(activePromoFilter !== null || activeCategory !== "All") && (
+						{(activePromoFilter !== null ||
+							activeCategory !== "All" ||
+							activeBrand !== null) && (
 							<div
 								className="weather-sla-banner"
 								style={{
@@ -1886,7 +2024,9 @@ export default function CustomerApp({
 									{activePromoFilter
 										? PROMO_BANNERS.find((b) => b.id === activePromoFilter)
 												?.name
-										: activeCategory}{" "}
+										: activeBrand
+											? activeBrand
+											: activeCategory}{" "}
 									items
 								</span>
 								<button
@@ -1894,6 +2034,7 @@ export default function CustomerApp({
 									onClick={() => {
 										setActivePromoFilter(null);
 										setActiveCategory("All");
+										setActiveBrand(null);
 									}}
 									style={{
 										background: "rgba(255, 255, 255, 0.05)",
@@ -1976,6 +2117,25 @@ export default function CustomerApp({
 							) : (
 								<div className="product-shelf-grid">
 									{getPromoFilteredProducts().map((p) => renderProductCard(p))}
+								</div>
+							)
+						) : activeBrand !== null ? (
+							allProducts.filter((p) => getProductBrand(p) === activeBrand)
+								.length === 0 ? (
+								<div
+									style={{
+										textAlign: "center",
+										padding: "3rem",
+										color: "var(--text-muted)",
+									}}
+								>
+									<p>No products in brand "{activeBrand}"</p>
+								</div>
+							) : (
+								<div className="product-shelf-grid">
+									{allProducts
+										.filter((p) => getProductBrand(p) === activeBrand)
+										.map((p) => renderProductCard(p))}
 								</div>
 							)
 						) : activeCategory !== "All" ? (
