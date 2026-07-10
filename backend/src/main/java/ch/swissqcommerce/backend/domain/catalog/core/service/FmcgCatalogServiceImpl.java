@@ -1,10 +1,10 @@
 package ch.swissqcommerce.backend.domain.catalog.core.service;
 
 import ch.swissqcommerce.backend.domain.agent.core.service.DynamicPricingAgent;
-import ch.swissqcommerce.backend.domain.catalog.adapter.out.api.CompetitorPricingClient;
 import ch.swissqcommerce.backend.domain.catalog.core.model.ProductListing;
 import ch.swissqcommerce.backend.domain.catalog.port.in.FmcgCatalogUseCase;
 import ch.swissqcommerce.backend.domain.catalog.port.out.CatalogPort;
+import ch.swissqcommerce.backend.domain.catalog.port.out.CompetitorPricingPort;
 import ch.swissqcommerce.backend.domain.catalog.port.out.FmcgApiPort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.DarkStorePort;
 import ch.swissqcommerce.backend.domain.transaction.port.out.InventoryPort;
@@ -33,7 +33,7 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
     private final CatalogPort catalogPort;
     private final DynamicPricingAgent dynamicPricingAgent;
     private final FmcgApiPort fmcgApiPort;
-    private final CompetitorPricingClient competitorPricingClient;
+    private final CompetitorPricingPort competitorPricingPort;
 
     private static final Map<String, FmcgFallback> FALLBACKS =
             Map.of(
@@ -185,7 +185,7 @@ public class FmcgCatalogServiceImpl implements FmcgCatalogUseCase {
             // competitor price is 5% cheaper, 45 (daysToExpiry) (or 2 if perishable to trigger
             // discounts), 0.20 (vipDensity)
             double competitorPriceVal =
-                    competitorPricingClient
+                    competitorPricingPort
                             .fetchCompetitorPrice(barcode)
                             .orElse(basePrice.multiply(new BigDecimal("0.95")).doubleValue());
             double surge = 1.0;
