@@ -248,12 +248,6 @@ export default function App() {
 	const {
 		activeRole,
 		setActiveRole,
-		weather,
-		setWeather,
-		merchantWallet,
-		setMerchantWallet,
-		customerOrderCount,
-		setCustomerOrderCount,
 		customerRefundCount,
 		setCustomerRefundCount,
 		customerTab,
