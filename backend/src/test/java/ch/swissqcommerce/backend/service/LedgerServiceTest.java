@@ -134,4 +134,88 @@ public class LedgerServiceTest {
         assertEquals("C1", lines.get(0).getActorId());
         assertEquals(BigDecimal.TEN, lines.get(0).getDebit());
     }
+
+    // ── OWASP A08 (Software/Data Integrity): ledger hash-chain tamper detection ──
+
+    private static final String GENESIS =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+
+    /** Mirror of LedgerServiceImpl.computeSHA256Hash — builds valid chain fixtures. */
+    private static String sha256(String uuid, String ref, String desc, String prev) {
+        try {
+            byte[] h =
+                    java.security.MessageDigest.getInstance("SHA-256")
+                            .digest(
+                                    (uuid + ref + desc + prev)
+                                            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : h) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence
+                    .JournalEntryEntity
+            entry(int id, java.util.UUID uuid, String ref, String desc, String prev) {
+        return ch.swissqcommerce.backend.domain.transaction.adapter.out.persistence
+                .JournalEntryEntity.builder()
+                .entryId(id)
+                .entryUuid(uuid)
+                .reference(ref)
+                .description(desc)
+                .previousEntryHash(prev)
+                .entryHash(sha256(uuid.toString(), ref, desc, prev))
+                .build();
+    }
+
+    @Test
+    public void testVerifyChainIntegrity_CleanChain_IsValid() {
+        var u1 = java.util.UUID.randomUUID();
+        var u2 = java.util.UUID.randomUUID();
+        var u3 = java.util.UUID.randomUUID();
+        var e1 = entry(1, u1, "R1", "D1", GENESIS);
+        var e2 = entry(2, u2, "R2", "D2", e1.getEntryHash());
+        var e3 = entry(3, u3, "R3", "D3", e2.getEntryHash());
+        when(journalEntryRepository.findAllByOrderByEntryIdAsc()).thenReturn(List.of(e1, e2, e3));
+
+        LedgerUseCase.LedgerIntegrityReport report = ledgerService.verifyChainIntegrity();
+
+        assertTrue(report.valid(), "clean chain must verify");
+        assertNull(report.firstBrokenEntryId());
+    }
+
+    @Test
+    public void testVerifyChainIntegrity_TamperedContent_IsDetected() {
+        var u1 = java.util.UUID.randomUUID();
+        var u2 = java.util.UUID.randomUUID();
+        var e1 = entry(1, u1, "R1", "D1", GENESIS);
+        var e2 = entry(2, u2, "R2", "D2", e1.getEntryHash());
+        // Tamper: mutate the description but leave the (now stale) stored hash.
+        e2.setDescription("TAMPERED-AMOUNT");
+        when(journalEntryRepository.findAllByOrderByEntryIdAsc()).thenReturn(List.of(e1, e2));
+
+        LedgerUseCase.LedgerIntegrityReport report = ledgerService.verifyChainIntegrity();
+
+        assertFalse(report.valid(), "tampered entry must be detected");
+        assertEquals(2, report.firstBrokenEntryId());
+    }
+
+    @Test
+    public void testVerifyChainIntegrity_DeletedEntry_BreaksLinkage() {
+        var u1 = java.util.UUID.randomUUID();
+        var u2 = java.util.UUID.randomUUID();
+        var u3 = java.util.UUID.randomUUID();
+        var e1 = entry(1, u1, "R1", "D1", GENESIS);
+        var e2 = entry(2, u2, "R2", "D2", e1.getEntryHash());
+        var e3 = entry(3, u3, "R3", "D3", e2.getEntryHash());
+        // Delete e2 from the chain — e3 now links to a missing predecessor.
+        when(journalEntryRepository.findAllByOrderByEntryIdAsc()).thenReturn(List.of(e1, e3));
+
+        LedgerUseCase.LedgerIntegrityReport report = ledgerService.verifyChainIntegrity();
+
+        assertFalse(report.valid(), "deletion must break chain linkage");
+        assertEquals(3, report.firstBrokenEntryId());
+    }
 }

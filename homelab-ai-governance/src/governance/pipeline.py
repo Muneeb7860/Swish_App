@@ -15,6 +15,7 @@ from governance.config import ConfigError, load_routing_config
 from governance.evaluator.loop import run_self_correction_loop
 from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
 from governance.guardrails.loader import load_guardrails
+from governance.guardrails.nemo_guardrails import check_nemo_guardrails (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
 from governance.router.classifier import classify_intent
 from governance.router.decision_table import route_query
 from governance.router.pii_scan import pre_route_pii_scan
@@ -54,9 +55,7 @@ def get_agent(agent_id: str) -> BaseAgent:
         base_url = cfg.get("base_url")
         api_key_env = cfg.get("api_key_env")
         if not base_url or not api_key_env:
-            raise ConfigError(
-                f"Cloud agent '{agent_id}' must specify base_url and api_key_env"
-            )
+raise ConfigError(f"Cloud agent '{agent_id}' must specify base_url and api_key_env") (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
         return CloudAgent(
             agent_id=agent_id,
             model=model,
@@ -87,7 +86,9 @@ def clean_telemetry_tags(text: str) -> str:
     # Strip bracketed telemetry lines or markers
     text = re.sub(r"\[telemetry:[^\]]*\]", "", text)
     # Normalize space-padded redaction placeholders like [ REDACTED : EMAIL ] to [REDACTED:EMAIL]
-    text = re.sub(r"\[\s*REDACTED\s*:\s*([A-Z0-9_-]+)\s*\]", r"[REDACTED:\1]", text, flags=re.IGNORECASE)
+text = re.sub(
+        r"\[\s*REDACTED\s*:\s*([A-Z0-9_-]+)\s*\]", r"[REDACTED:\1]", text, flags=re.IGNORECASE
+    ) (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
     return text.strip()
 
 
@@ -131,6 +132,22 @@ def execute_pipeline(
         }
     rate_limiter.record_request()
 
+# NeMo Guardrails Check
+    nemo_res = check_nemo_guardrails(query)
+    if not nemo_res.get("allowed", True):
+        audit.log_event("pipeline_blocked", phase="nemo_guardrails", input_hash=input_hash)
+        return {
+            "status": "blocked",
+            "message": nemo_res.get("response", "Request blocked by safety guardrails."),
+            "triggered_rules": [
+                {
+                    "rule_id": nemo_res.get("triggered_rule", "nemo_guardrail"),
+                    "action": "block",
+                    "severity": "critical",
+                }
+            ],
+            "warnings": [],
+        } (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
     # 1. PII Scan
     pii_res = pre_route_pii_scan(query)
     local_only = pii_res.local_only or local_only_override
@@ -239,7 +256,9 @@ def execute_pipeline(
             logger.info("Escalating immediately to fallback gemma_reasoner due to agent crash")
             agent = get_agent("gemma_reasoner")
             agent_id = "gemma_reasoner"
-            simplified_prompt = f"Please answer the following question clearly:\n\n{processed_query}"
+simplified_prompt = (
+                f"Please answer the following question clearly:\n\n{processed_query}"
+            ) (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
             try:
                 response = agent.generate(simplified_prompt)
                 candidate_text = response.text
@@ -300,7 +319,9 @@ def execute_pipeline(
     # Post-processing sanitization for PII echo requests:
     # If the input contains PII and asks to print/echo it, ensure the response contains the redacted placeholders.
     # This bypasses safety refusals of local models for safe placeholder echoing.
-    if pii_res.contains_pii and any(w in query.lower() for w in ("print", "list", "back", "echo", "values", "details")):
+if pii_res.contains_pii and any(
+        w in query.lower() for w in ("print", "list", "back", "echo", "values", "details")
+    ): (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
         missing_placeholders = []
         for pii_type in pii_res.pii_types:
             placeholder = f"[REDACTED:{pii_type}]"

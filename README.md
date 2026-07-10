@@ -55,6 +55,7 @@ Swish OS follows industry-leading architectural frameworks:
 │                     │                                        │
 │    ┌────────────────┼────────────────┐                     │
 │    ↓                ↓                ↓                      │
+│    └─────────────────────────────────┘                      │
 │ Primary         Secondary        GPS Navigation             │
 │ Wholesaler      Wholesaler       Service (Maps)             │
 │ ERP             ERP                                         │
@@ -98,6 +99,15 @@ The platform targets a **Kubernetes service mesh** with:
 - **Redis (Distributed Cache)**: Token buckets, courier presence, autocomplete structures
   - Prevents 70% of relational disk writes
 
+#### 🗃️ Data Schema Map
+| Data Type | Primary DB | Archive | TTL / Expiry | Example Fields |
+| :--- | :--- | :--- | :--- | :--- |
+| **Orders & Checkout** | PostgreSQL | MongoDB | ∞ | `order_id`, `status`, `total_amount` |
+| **Ledger Auditing** | PostgreSQL | WORM (S3/GCS) | ∞ | `transaction_id`, `hash_chain`, `signature` |
+| **Inventory & Products**| PostgreSQL | Redis | 1 hour cache | `product_id`, `stock_count`, `price` |
+| **GPS Telemetry** | Redis (Buffer) | MongoDB | 24 hours | `rider_id`, `latitude`, `longitude` |
+| **Bidding Logs** | MongoDB | — | 30 days | `bid_id`, `wholesaler_name`, `proposed_price` |
+
 ### 3. Asynchronous Event Pipeline (Transactional Outbox)
 Prevents dual-write inconsistencies:
 1. Database transaction + event metadata → `outbox` table (atomic)
@@ -107,7 +117,7 @@ Prevents dual-write inconsistencies:
 
 ---
 
-## 🤖 B2B Agentic OS & Guardrails
+## 🤖 B2B Agentic OS, LLM Strategy & Safety Guardrails
 
 ```
 Stock Alert (< 3 units)
@@ -119,78 +129,72 @@ Stock Alert (< 3 units)
         └─ FAIL → Human-in-the-Loop Queue → L1/L2 Operator Release
 ```
 
-**Domain Agents**:
-- **B2BProcurementAgent** — Autonomous pricing negotiation
-- **FraudAgent** — Order frequency & trust score detection
-- **PricingAgent** — Dynamic delivery pricing (weather, congestion, inventory)
-- **RoutingAgent** — Split-shipment logistics & carrier rate optimization
-- **ProcurementGuardrailsEngine** — Financial bounds enforcement
+### 🧠 AI & LLM Execution Strategy
+
+To ensure zero external cloud dependencies, offline functionality, and predictable token costs, the platform implements a tiered hybrid execution model:
+
+#### 1. Local Inference (Primary)
+*   **Execution Engine:** Self-hosted **Ollama** serving containerized models.
+*   **Default Model:** `qwen:14b` or `llama2:13b` serving B2B negotiations and agent mesh calls locally.
+*   **Memory Preserving layer:** Uses **Letta (formerly MemGPT)** to manage stateful memory contexts (Core Memory + Archival Database Vector search using pgvector) for long-running multi-turn Wholesaler RFQ negotiations.
+
+#### 2. Cloud Fallback (Secondary)
+*   **Execution Engine:** **Spring AI** (`spring-ai-openai-spring-boot-starter`).
+*   **Trigger Condition:** Automatically trips via the `ResilientLlmGateway` circuit breaker if the local Ollama instance timeouts or crashes.
+*   **Cost Management:** PII is redacted at the gateway before sending requests to public cloud endpoints; a strict `$5/day` token budget counter checks usage dynamically.
+
+---
+
+### 🛡️ Safety Guardrails & Payload Verification
+
+Before query routing and model output deliveries, the governance layer executes two safety guardrail systems:
+
+#### 1. NVIDIA NeMo Guardrails (Colang Dialog Safety)
+*   **Safety Scripting:** Active rails defined in [config.yml](./homelab-ai-governance/config/nemo_guardrails/config.yml) and [flows.co](./homelab-ai-governance/config/nemo_guardrails/flows.co) enforce conversation flow boundaries.
+*   **Input Blocking:** Matches prompts against safety intents (e.g., system configuration overrides, malicious bypasses, or requests for competitor pricing). If violated, the flow triggers a direct bot safety response, short-circuiting downstream LLM costs.
+
+#### 2. Guardrails AI (Structured Output Validation)
+*   **Schema Enforcement:** Model outputs are parsed and validated against strict Pydantic schemas (e.g. `CustomerSupportSchema`, `DynamicPricingSchema`).
+*   **Recursive Self-Correction:** If the model outputs malformed JSON or invalid values (e.g., negative prices, invalid barcodes), the enforcer extracts field-level error messages and re-submits a structured correction request to the model (up to 3 retries) before escalating to local fallback.
+
+---
+
+### 🧑‍💻 Core Platform Agents
+*   **B2BProcurementAgent:** Autonomous AI agent that queries pricing structures from primary and secondary wholesalers and conducts restock negotiations.
+*   **ProcurementGuardrailsEngine:** Evaluates contract proposals against strict financial bounds (e.g., maximum cost thresholds and wholesale price variance ceilings).
+*   **Human-in-the-Loop (HITL) Queue:** If guardrail thresholds are violated, the proposed transaction is locked in `hitl_queue` and requires manual release by an authorized operator.
+*   **Additional Domain Agents:**
+    *   *FraudAgent:* Checks order frequencies, trust scores, and transactions to detect identity/payment fraud.
+    *   *PricingAgent:* Adapts delivery pricing dynamically based on local congestion, weather, and inventory counts.
+    *   *RoutingAgent:* Directs split-shipment logistics, calculating carrier rates and courier capacity constraints.
 
 ---
 
 ## 📜 Compliance, Governance, & Safety
 
-- **GDP Temperature Compliance** — Cold-chain integrity with cryptographically signed IoT sensor records (EU 2013/C 343/01)
-- **Write-Once, Read-Many (WORM) Auditing** — Immutable logs for sensor diagnostics, ledger transactions, HITL approvals
-- **GDPR Article 17 Support** — Right to be Forgotten with automatic anonymization (maintains referential integrity)
+Swish OS enforces high-availability limits, rate-limits, and encryption at-rest. Operational standards are structured around:
+
+### ⚙️ Service Inventory
+
+The platform is transitioning from a monolithic core to a microservices architecture. The current deployment state of each service is as follows:
+
+| Service / Component | Purpose | Local Port | Status / Deployment |
+| :--- | :--- | :--- | :--- |
+| **`backend/`** | Hexagonal Core Engine. Manages order lifecycles, payments, sensor calibration, and agent mesh execution. | `8083` | **Active** (Java Spring Boot) |
+| **`platform-gateway/`** | API Ingress gateway. Executes JWT checks, routing, and token bucket rate-limiting. | `8080` | **Active** (Spring Cloud Gateway) |
+| **`core-business-engine/`** | Standalone B2B checkout & catalog management engine. | `8081` | *Under Extraction / Development* |
+| **`notification-engine/`** | Kafka listener broadcasting real-time updates over WebSockets. | `8082` | *Under Extraction / Development* |
+| **`shared-async-services/`** | Universal domain entities & accounting schemas. | — | *Under Extraction / Development* |
 
 ---
 
-## 📁 Repository Structure
+## 🎨 Module Federation & Micro-Frontends
 
-```
-Swish_App/
-├── backend/                          # Spring Boot Hexagonal microservice
-│   └── src/main/java/ch/swissqcommerce/backend/domain/
-│       ├── transaction/              # Order lifecycle & state machines
-│       ├── payment/                  # Payment processing & webhooks
-│       ├── inventory/                # Product structures & dark store ops
-│       ├── event/                    # Transactional Outbox relay
-│       ├── auth/                     # JWT authorization & security
-│       └── agent/                    # Gemini AI adapter
-│
-├── platform-gateway/                 # Spring Cloud Gateway + rate limiter
-├── core-business-engine/             # B2B order execution service
-├── notification-engine/              # Kafka listener + WebSocket broadcaster
-├── shared-async-services/            # AI routing, ledger, async pipelines
-│
-├── design-system/                    # Unified React component library
-│   ├── tokens.css                   # Design tokens (colors, spacing, typography)
-│   ├── components/                  # AuthPortal, Skeleton, etc.
-│   └── index.ts                     # Exports
-│
-├── ds-bundle/                        # B2B-specific design system
-│   ├── CheckoutPanel                # Wholesale checkout interface
-│   ├── CreditCardMockup             # 3D card visualization
-│   ├── OrderTimeline                # Multi-stage progress indicator
-│   └── StatusIndicator              # WebSocket connection status
-│
-├── frontend-customer/                # Customer storefront MFE (Port 5173)
-├── frontend-rider/                   # Courier navigation MFE (Port 5174)
-├── frontend-admin/                   # Admin console MFE (Port 5175)
-├── frontend-b2b/                     # Supplier dashboard MFE
-├── frontend-host/                    # Micro-frontend shell (Port 3000)
-│
-├── mobile/                           # React Native mobile app
-├── infrastructure/                   # Docker Compose & Kubernetes manifests
-├── docs/                             # ADRs, HLD, LLD assets
-├── scripts/                          # Build, sync, chaos engineering tools
-├── tests/                            # Cypress E2E + regression suites
-├── schemas/                          # Shared TypeScript/API schemas
-│
-├── k8s/                              # Kubernetes deployment manifests
-├── nginx/                            # NGINX ingress configuration
-├── figma/                            # Design files & component specs
-│
-└── Configuration Files:
-    ├── docker-compose.demo.yml       # Full-stack local deployment
-    ├── docker-compose-local.yml      # Infrastructure-only (Postgres/Kafka/Redis)
-    ├── run_demo.sh                   # One-click deployment script
-    ├── seed.sql                      # Database initialization
-    ├── pom.xml                       # Maven root POM
-    ├── package.json                  # Monorepo NPM scripts
-    └── biome.json                    # Code formatter/linter config
-```
+Micro-Frontends (MFEs) are decoupled client apps federated at runtime using `@originjs/vite-plugin-federation` (v1.4.1) or custom module configuration. Mismatches are avoided by pinning shared library versions in `vite.config.ts` across all MFEs:
+
+*   **`react` / `react-dom`:** Pinned to `^18.2.0`
+*   **`zustand`:** Pinned to `^4.5.2` for shared client store state
+*   **`@swish/design-system`:** Local UI component library ensuring style uniformity across Customer, Rider, and Admin screens.
 
 ---
 
@@ -200,71 +204,25 @@ Swish_App/
 ```bash
 git clone https://github.com/Muneeb7860/Swish_App.git
 cd Swish_App
-git checkout master
 ```
 
-### 2. Full Stack Deployment (One Command)
+### 2. Stand Up Core Infrastructure
+Use the unified local script:
 ```bash
-# Starts all services, databases, frontends, migrations
-./run_demo.sh
+./dev/infra/stand_up_infra.sh
 ```
-
-**What this does:**
-- ✅ Checks required ports (3000-3003, 5002, 5173-5175, 8080, 9092)
-- ✅ Starts Docker Compose stack (Postgres, Kafka, Redis, MongoDB)
-- ✅ Runs Flyway database migrations
-- ✅ Builds Java microservices (Maven)
-- ✅ Launches React MFEs on pinned ports
-- ✅ Provides telemetry dashboards
-
-### 3. Infrastructure Only (Databases)
-```bash
-docker compose -f docker-compose-local.yml up -d
-```
-
-> **Note:** Legacy `infrastructure/docker-compose.yml` is deprecated (references retired BFF).
-
-### 4. Access Services
-| Service | URL | Purpose |
-|---------|-----|---------|
-| 🛒 Customer Storefront | `http://localhost:5173` | End-user shopping |
-| 🏍️ Rider Logistics | `http://localhost:5174` | Courier routing |
-| 🛠️ Admin Console | `http://localhost:5175` | Platform management |
-| 📊 Grafana Metrics | `http://localhost:3000` | System observability |
-| 🔌 API Gateway | `http://localhost:8080` | REST endpoints |
-
----
-
-## 🧪 Testing & Chaos Engineering
-
-### Automated Regression Testing
-```bash
-# Backend: Spring Boot JUnit & ArchUnit architecture rules
-mvn test
-
-# Frontend: Cypress end-to-end workflows
-npm run test:e2e
-```
-
-### Chaos Engineering
-```bash
-# Inject random failures: network partitions, Kafka broker drops, DB timeouts, API latency surges
-bash scripts/chaos.sh
-```
-
-Swish OS enforces high-availability limits and graceful degradation under failure.
 
 ---
 
 ## 🏛️ Program Governance
 
-- **SAFe 6.0** — 2-week Program Increment planning with feature toggles
-- **ITIL v4 Service Value Chain** — Structures restocking workflows → margin optimization
-- **veriSM Management Mesh** with weighted domains:
-  - *Agile Development (SAFe)* — **Weight 5** (weekly deployment matrix checks)
-  - *DevOps (CI/CD)* — **Weight 5** (automated backend container testing)
-  - *Service Management (ITIL)* — **Weight 4** (SLA monitoring, cold-chain tracking)
-  - *Governance (COBIT)* — **Weight 5** (tamper-evident ledgers, secrets rotation)
+*   **Scaled Agile Framework (SAFe):** Managed on a 2-week Program Increment (PI) planning cycle with feature toggles dynamically controling the chaos engines and procurement guardrail limits.
+*   **ITIL v4 Service Value Chain:** Structures the flow of restocking requests to business margin optimization.
+*   **veriSM Management Mesh Weights:**
+    *   *Agile Development (SAFe):* **Weight 5** (Weekly deployment matrix checks).
+    *   *DevOps (CI/CD):* **Weight 5** (Automated matrix testing of backend containers).
+    *   *Service Management (ITIL v4):* **Weight 4** (SLA monitoring, cold chain telemetry tracking).
+    *   *Governance (COBIT 2019):* **Weight 5** (Tamper-evident ledger, secrets rotation).
 
 ---
 
@@ -322,6 +280,16 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, bra
 - [Disaster Recovery](./DISASTER_RECOVERY.md) — Backup, failover, recovery procedures
 - [Handover Guide](./handover.md) — Operational runbooks, troubleshooting
 - [Branch Strategy](./BRANCH_STRATEGY.md) — Git workflow & merge policies
+
+---
+
+## 🔗 Related Documentation Index
+*   📐 **[System Architecture](./docs/ARCHITECTURE.md)**: Architectural patterns, structural layout, and C4 context levels.
+*   💼 **[Business Requirements Document (BRD)](./docs/BRD.md)**: Enterprise scope, customer segments, subscription tiers, and picking/delivery SLAs.
+*   📈 **[High Level Design (HLD)](./docs/HLD.md)**: Network topology, distributed database layouts, and outbox schema structures.
+*   🔍 **[Low Level Design (LLD)](./docs/LLD.md)**: Interface bindings, class/object relations, and micro-frontend federation configs.
+*   🔒 **[Security Architecture Audit](./docs/SECURITY.md)**: Cryptographic signature chains, TLS termination details, and GDPR purge rules.
+*   🧪 **[User Acceptance Testing (UAT)](./docs/UAT_TEST_CASES.md)**: Detailed test scripts, validations, and administrative scenario flows.
 
 ---
 

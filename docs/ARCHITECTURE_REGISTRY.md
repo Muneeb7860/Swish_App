@@ -43,7 +43,7 @@ Traffic enters exclusively via the unified entry point **Port 8080** managed by 
 
 ## 🎨 Micro-Frontend (MFE) State Sharing Contracts
 
-All MFEs utilize the central Zustand state manager defined in [store.ts](file:///C:/Users/DELL%209420/Documents/swiss_App/frontend-host/src/store.ts).
+All MFEs utilize the central Zustand state manager defined in [store.ts](../frontend-host/src/store.ts). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ### Unified `hitlQueue` Schema
 To present a single queue inside the MFE Admin Panel, tickets from both backend queues are mapped as follows:

@@ -1,6 +1,6 @@
 # Low-Level Design (LLD): Swiss Quick Commerce System
 
-This Low-Level Design (LLD) document translates the High-Level Design (HLD) architecture and Business Requirements Document (BRD) into concrete operational models. It maps directly to the API contracts ([bff-openapi.yaml](file:///C:/Users/DELL%209420/Documents/swiss_App/bff-openapi.yaml)) and database schemas ([V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)).
+This Low-Level Design (LLD) document translates the High-Level Design (HLD) architecture and Business Requirements Document (BRD) into concrete operational models. It maps directly to the API contracts ([bff-openapi.yaml](./bff-openapi.yaml)) and database schemas ([V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ---
 
@@ -64,7 +64,7 @@ usecaseDiagram
 
 ### 2.1 Domain Class Model
 
-This class diagram represents the Object-Relational mapping directly derived from [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql).
+This class diagram represents the Object-Relational mapping directly derived from [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql). (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 classDiagram
@@ -136,42 +136,42 @@ classDiagram
 This diagram shows the physical table structures in the PostgreSQL database separated logically by schema domains (Customer, Catalog, Order), along with the unstructured MongoDB analytical collections.
 
 #### Database Schema References:
-- **PostgreSQL `oltp` Schema Tables ([V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)):**
+- **PostgreSQL `oltp` Schema Tables ([V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)):**
   - Customer Domain:
-    - [oltp.customers](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L12)
-    - [oltp.customer_addresses](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L29)
-    - [oltp.customer_payment_cards](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L40)
+    - [oltp.customers](./backend/src/main/resources/db/migration/V1__init_schema.sql#L12)
+    - [oltp.customer_addresses](./backend/src/main/resources/db/migration/V1__init_schema.sql#L29)
+    - [oltp.customer_payment_cards](./backend/src/main/resources/db/migration/V1__init_schema.sql#L40)
   - Catalog Domain:
-    - [oltp.dark_stores](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L71)
-    - [oltp.inventory](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L105)
-    - [oltp.wholesalers](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L92)
+    - [oltp.dark_stores](./backend/src/main/resources/db/migration/V1__init_schema.sql#L71)
+    - [oltp.inventory](./backend/src/main/resources/db/migration/V1__init_schema.sql#L105)
+    - [oltp.wholesalers](./backend/src/main/resources/db/migration/V1__init_schema.sql#L92)
   - Order Domain & System Operations:
-    - [oltp.orders](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L119)
-    - [oltp.order_items](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L136)
-    - [oltp.b2b_restock_orders](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L145)
-    - [oltp.order_telemetry_logs](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L157)
-    - [oltp.hitl_queue](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L219)
+    - [oltp.orders](./backend/src/main/resources/db/migration/V1__init_schema.sql#L119)
+    - [oltp.order_items](./backend/src/main/resources/db/migration/V1__init_schema.sql#L136)
+    - [oltp.b2b_restock_orders](./backend/src/main/resources/db/migration/V1__init_schema.sql#L145)
+    - [oltp.order_telemetry_logs](./backend/src/main/resources/db/migration/V1__init_schema.sql#L157)
+    - [oltp.hitl_queue](./backend/src/main/resources/db/migration/V1__init_schema.sql#L219)
   - Double-Entry Auditing Ledger:
-    - [oltp.journal_entries](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L173)
-    - [oltp.ledger_lines](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L184)
-    - [oltp.security_trust_ledger](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L196)
+    - [oltp.journal_entries](./backend/src/main/resources/db/migration/V1__init_schema.sql#L173)
+    - [oltp.ledger_lines](./backend/src/main/resources/db/migration/V1__init_schema.sql#L184)
+    - [oltp.security_trust_ledger](./backend/src/main/resources/db/migration/V1__init_schema.sql#L196)
   - Onboarding & Governance:
-    - [oltp.riders](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L50)
-    - [oltp.rider_academy_certificates](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L63)
-    - [oltp.pickers](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L82)
-    - [oltp.onboarding_applications](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L207)
-    - [oltp.system_configurations](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L231)
-    - [oltp.chaos_fault_logs](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L238)
+    - [oltp.riders](./backend/src/main/resources/db/migration/V1__init_schema.sql#L50)
+    - [oltp.rider_academy_certificates](./backend/src/main/resources/db/migration/V1__init_schema.sql#L63)
+    - [oltp.pickers](./backend/src/main/resources/db/migration/V1__init_schema.sql#L82)
+    - [oltp.onboarding_applications](./backend/src/main/resources/db/migration/V1__init_schema.sql#L207)
+    - [oltp.system_configurations](./backend/src/main/resources/db/migration/V1__init_schema.sql#L231)
+    - [oltp.chaos_fault_logs](./backend/src/main/resources/db/migration/V1__init_schema.sql#L238)
   - Transactional Outbox Events:
-    - Mapped to [OutboxEvent.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/model/OutboxEvent.java) (No physical DDL defined in V1__init_schema.sql)
-- **PostgreSQL `olap` Schema Tables ([V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)):**
-  - [olap.dw_revenue_facts](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L252)
-  - [olap.dw_delivery_sla_dimension](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L261)
-  - [olap.dw_iot_temperature_violations](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L271)
-  - [olap.dw_customer_fraud_risk_scores](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L280)
-  - [olap.dw_esg_carbon_facts](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql#L290)
+    - Mapped to [OutboxEvent.java](./backend/src/main/java/ch/swissqcommerce/backend/model/OutboxEvent.java) (No physical DDL defined in V1__init_schema.sql)
+- **PostgreSQL `olap` Schema Tables ([V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql)):**
+  - [olap.dw_revenue_facts](./backend/src/main/resources/db/migration/V1__init_schema.sql#L252)
+  - [olap.dw_delivery_sla_dimension](./backend/src/main/resources/db/migration/V1__init_schema.sql#L261)
+  - [olap.dw_iot_temperature_violations](./backend/src/main/resources/db/migration/V1__init_schema.sql#L271)
+  - [olap.dw_customer_fraud_risk_scores](./backend/src/main/resources/db/migration/V1__init_schema.sql#L280)
+  - [olap.dw_esg_carbon_facts](./backend/src/main/resources/db/migration/V1__init_schema.sql#L290)
 - **MongoDB `olap` Schema Documents:**
-  - [olap.negotiation_history_logs](file:///C:/Users/DELL%209420/Documents/swiss_App/docs/PRD.md#L34) (Unstructured document logs defined in product requirements)
+  - [olap.negotiation_history_logs](./docs/PRD.md#L34) (Unstructured document logs defined in product requirements) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 erDiagram
@@ -506,10 +506,10 @@ erDiagram
 ### 3.1 Autonomous Restock Order & Wholesaler Negotiation Flow
 Maps to: `POST /api/wholesaler/restocks`
 Implementation files:
-* Controller: [WholesalerController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
-* Service: [WholesalerService.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
-* Negotiation Agent: [B2BProcurementAgent.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Controller: [WholesalerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
+* Service: [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
+* Negotiation Agent: [B2BProcurementAgent.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/agent/core/service/B2BProcurementAgent.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -561,8 +561,8 @@ sequenceDiagram
 ### 3.2 OAuth2/OIDC Authentication Redirect via BFF & Session Replication
 Maps to: `GET /api/wholesaler/invoices` or any secured endpoint.
 Implementation files:
-* Filter: [EdgeJwtVerificationFilter.java](file:///C:/Users/DELL%209420/Documents/swiss_App/bff/src/main/java/ch/swissqcommerce/bff/filter/EdgeJwtVerificationFilter.java)
-* BFF Main: [BffApplication.java](file:///C:/Users/DELL%209420/Documents/swiss_App/bff/src/main/java/ch/swissqcommerce/bff/BffApplication.java)
+* Filter: [EdgeJwtVerificationFilter.java](./bff/src/main/java/ch/swissqcommerce/bff/filter/EdgeJwtVerificationFilter.java)
+* BFF Main: [BffApplication.java](./bff/src/main/java/ch/swissqcommerce/bff/BffApplication.java) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -606,8 +606,8 @@ sequenceDiagram
 ### 3.3 Asynchronous Outbox/CQRS Event Loop
 Maps to: `OutboxEventScheduler.processPendingEvents()` scheduler.
 Implementation files:
-* Outbox Scheduler: [OutboxEventScheduler.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/event/core/service/OutboxEventScheduler.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Outbox Scheduler: [OutboxEventScheduler.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/event/core/service/OutboxEventScheduler.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -652,10 +652,10 @@ sequenceDiagram
 ### 3.4 B2B Human-In-The-Loop (HITL) Procurement Approval Flow
 Maps to: `POST /api/wholesaler/restocks/{id}/fulfill` and `POST /api/admin/hitl/queue/{id}/resolve`
 Implementation files:
-* Wholesaler Controller: [WholesalerController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
-* Wholesaler Service: [WholesalerService.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
-* Admin Controller: [AdminController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Wholesaler Controller: [WholesalerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/WholesalerController.java)
+* Wholesaler Service: [WholesalerService.java](./backend/src/main/java/ch/swissqcommerce/backend/service/WholesalerService.java)
+* Admin Controller: [AdminController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -697,8 +697,8 @@ sequenceDiagram
 ### 3.5 B2B IoT Cold Chain Replenishment Telemetry Tracking & Mitigation
 Maps to: `POST /api/telemetry/tick` and `POST /api/telemetry/{orderId}/dry-ice`
 Implementation files:
-* Telemetry Controller: [TelemetryController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/TelemetryController.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Telemetry Controller: [TelemetryController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/TelemetryController.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -729,8 +729,8 @@ sequenceDiagram
 ### 3.6 GDPR Right to be Forgotten (B2B User Profile Anonymization)
 Maps to: `POST /api/customer/profile/purge`
 Implementation files:
-* Customer Controller: [CustomerController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/CustomerController.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Customer Controller: [CustomerController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/CustomerController.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -750,9 +750,9 @@ sequenceDiagram
 ### 3.7 B2B Partner Onboarding & Compliance Queue
 Maps to: `POST /api/rider/onboard` and `POST /api/admin/onboard/queue/{id}/approve`
 Implementation files:
-* Controller: [RiderController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/in/web/RiderController.java)
-* Service Implementation: [RiderServiceImpl.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/core/service/RiderServiceImpl.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Controller: [RiderController.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/in/web/RiderController.java)
+* Service Implementation: [RiderServiceImpl.java](./backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/core/service/RiderServiceImpl.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -779,8 +779,8 @@ sequenceDiagram
 ### 3.8 MFC Bulk Picking & Lightning Fulfillment Optimization
 Maps to: `POST /api/inventory/picker/handover`
 Implementation files:
-* Inventory Controller: [InventoryController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/InventoryController.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Inventory Controller: [InventoryController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/InventoryController.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
@@ -801,8 +801,8 @@ sequenceDiagram
 ### 3.9 Chaos Engineering Fault Injection & System Outage Mitigation
 Maps to: `POST /api/admin/chaos/faults`
 Implementation files:
-* Admin Controller: [AdminController.java](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
-* Database Schema: [V1__init_schema.sql](file:///C:/Users/DELL%209420/Documents/swiss_App/backend/src/main/resources/db/migration/V1__init_schema.sql)
+* Admin Controller: [AdminController.java](./backend/src/main/java/ch/swissqcommerce/backend/controller/AdminController.java)
+* Database Schema: [V1__init_schema.sql](./backend/src/main/resources/db/migration/V1__init_schema.sql) (docs: resolve path mismatches, document LLM strategy, service inventory, and database schema mappings)
 
 ```mermaid
 sequenceDiagram
