@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import java.util.Map;
-import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -24,9 +24,14 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * wholesaler-invoices — 10 min (financial summary, infrequent mutations) academy-courses — 60 min
  * (static reference data) system-health — 30 sec (dashboard poll; stale-ok) catalog — 60 min
  * (product catalog, rarely changes)
+ *
+ * <p>Active only when {@code spring.cache.type} is {@code redis} or unset (production default).
+ * Profiles that set {@code spring.cache.type=simple} (dev/E2E, no Redis available) fall back to
+ * Spring Boot's auto-configured in-memory cache manager instead. {@code @EnableCaching} itself
+ * lives in {@link CachingConfig} so cache annotations stay active in every environment.
  */
 @Configuration
-@EnableCaching
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
 public class RedisCacheConfig {
 
     /** Shared Jackson serializer that stores type information alongside the value. */
