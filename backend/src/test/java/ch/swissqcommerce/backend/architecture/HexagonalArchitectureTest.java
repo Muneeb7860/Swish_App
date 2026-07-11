@@ -110,6 +110,37 @@ public class HexagonalArchitectureTest {
                     .as("No other domain may depend on payment core implementations");
 
     @ArchTest
+    public static final ArchRule notificationCoreShouldBeIsolated =
+            noClasses()
+                    .that()
+                    .resideInAPackage("ch.swissqcommerce.backend.domain.notification.core..")
+                    .should()
+                    .dependOnClassesThat(
+                            com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage(
+                                            "ch.swissqcommerce.backend.domain..")
+                                    .and(
+                                            com.tngtech.archunit.core.domain.JavaClass.Predicates
+                                                    .resideOutsideOfPackage(
+                                                            "ch.swissqcommerce.backend.domain.notification..")))
+                    .as(
+                            "Notification core domain must not depend on any other domain core or"
+                                    + " ports");
+
+    @ArchTest
+    public static final ArchRule notificationShouldOnlyBeAccessedViaPorts =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackage("ch.swissqcommerce.backend.domain.notification..")
+                    .and()
+                    .resideOutsideOfPackage("ch.swissqcommerce.backend.config..")
+                    .and()
+                    .resideOutsideOfPackage("ch.swissqcommerce.backend.model..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage("ch.swissqcommerce.backend.domain.notification.core..")
+                    .as("No other domain may depend on notification core implementations");
+
+    @ArchTest
     public static final ArchRule schedulerShouldNotDependOnCoreServicesDirectly =
             noClasses()
                     .that()

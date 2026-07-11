@@ -1,9 +1,9 @@
 {
-  "name": "competitor-pricing-server",
-  "version": "1.0.0",
-  "main": "index.js",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.1",
-    "express": "^4.21.2"
-  }
+	"name": "competitor-pricing-server",
+	"version": "1.0.0",
+	"main": "index.js",
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.0.1",
+		"express": "^4.21.2"
+	}
 }

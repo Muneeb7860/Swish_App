@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 from pydantic import BaseModel, Field, field_validator
-from governance.guardrails.guardrails_ai import Guard (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+from governance.guardrails.guardrails_ai import Guard
 
 logger = logging.getLogger(__name__)
 
@@ -200,32 +200,32 @@ def compute_format_integrity(
                     "error": "Exceeded maximum JSON nesting depth of 20",
                 }
 
-json.loads(target_str)
+            json.loads(target_str)
 
-            # Pydantic schema validation based on the original prompt context using Guardrails AI (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+            # Pydantic schema validation based on the original prompt context using Guardrails AI
             prompt_lower = original_prompt.lower()
             schema_name = "generic"
             if "customer support agent" in prompt_lower:
                 schema_name = "customer_support"
-guard = Guard.from_pydantic(CustomerSupportSchema)
+                guard = Guard.from_pydantic(CustomerSupportSchema)
                 res = guard.parse(candidate)
-                if not res.validation_passed: (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+                if not res.validation_passed:
                     return 0.0, {
                         "valid_json": True,
                         "valid_schema": False,
                         "schema": schema_name,
-"error": f"Schema validation failed: {'; '.join(res.errors)}",
+                        "error": f"Schema validation failed: {'; '.join(res.errors)}",
                     }
             elif "dynamic pricing agent" in prompt_lower:
                 schema_name = "dynamic_pricing"
                 guard = Guard.from_pydantic(DynamicPricingSchema)
                 res = guard.parse(candidate)
-                if not res.validation_passed: (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+                if not res.validation_passed:
                     return 0.0, {
                         "valid_json": True,
                         "valid_schema": False,
                         "schema": schema_name,
-"error": f"Schema validation failed: {'; '.join(res.errors)}", (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+                        "error": f"Schema validation failed: {'; '.join(res.errors)}",
                     }
 
             return 1.0, {
@@ -358,7 +358,7 @@ def compute_context_conservation(candidate: str, context_docs: str) -> tuple[flo
         "string",
         "api",
         "key",
-"us", (feat(governance): integrate NVIDIA NeMo Guardrails dialog flows and Guardrails AI structured output validation)
+        "us",
     }
     meaningful_candidate = candidate_tokens - stop_words - redaction_tokens
     meaningful_grounded = grounded - stop_words - redaction_tokens

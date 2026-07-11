@@ -38,7 +38,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Muneeb7860/Swish_App/actions"><img src="https://img.shields.io/badge/Quality%20Gates-Passed-success?style=for-the-badge&logo=github&logoColor=white&color=10b981" alt="Quality Gates" /></a>
+  <a href="https://github.com/Muneeb7860/Swish_App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Muneeb7860/Swish_App/ci.yml?style=for-the-badge&logo=github&logoColor=white&label=Quality%20Gates" alt="Quality Gates" /></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&color=eab308" alt="License: MIT" /></a>
   <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive.html"><img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk&logoColor=white&color=f97316" alt="Java Version" /></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge&logo=springboot&logoColor=white&color=22c55e" alt="Spring Boot" /></a>
@@ -55,7 +55,7 @@
 *   🤖 **[B2B Agentic OS & LLM Strategy](#-b2b-agentic-os--llm-strategy)**
 *   📜 **[Compliance, Governance & Security](#-compliance-governance--security)**
 *   📐 **[Architecture Decision Records (ADR) Registry](#-architecture-decision-records-adr-registry)**
-*   🚀 **[Homelab Dev Setup & Troubleshooting](#-homelab-dev-setup--troubleshooting)**
+*   🚀 **[Homelab Dev Setup & Deployment Specifications](#-homelab-dev-setup--deployment-specifications)**
 *   🧪 **[Testing, Quality Gates & Chaos Engineering](#-testing-quality-gates--chaos-engineering)**
 *   📈 **[Feature Plan & Roadmap](#-feature-plan--roadmap)**
 
@@ -187,16 +187,17 @@ The workspace is organized into discrete service folders separating backend APIs
 | :--- | :--- | :--- | :--- |
 | 🔌 **[platform-gateway](./platform-gateway)** | Java Spring Cloud Gateway | Ingress routing, JWT checks, rate-limiting | `8080` |
 | ☕ **[backend](./backend)** | Java 17, Spring Boot, Lombok | Hexagonal Core (order states, auth, DB) | `8083` |
-| 🤖 **[homelab-ai-governance](./homelab-ai-governance)** | Python 3.14, FastAPI, NeMo | AI Guardrails, Pydantic RAIL enforcers | `5002` |
-| 🏷️ **[competitor-pricing-server](./competitor-pricing-server)** | Node.js, Express, Axios | External mockup mock pricing server | `8085` |
+| 🤖 **[homelab-ai-governance](./homelab-ai-governance)** | Python 3.11+, FastAPI, NeMo | Semantic routing & AI guardrail engine | `8000` |
+| 🏷️ **[competitor-pricing-server](./competitor-pricing-server)** | Node.js, Express, Axios | External competitor pricing mock server | `8089` |
 | 📦 **[core-business-engine](./core-business-engine)** | Java Spring Boot | Standalone B2B procurement & checkout | `8081` |
 | 🔔 **[notification-engine](./notification-engine)** | Java Spring Boot, Kafka | Kafka consumer & WebSocket event server | `8082` |
 | 📊 **[shared-async-services](./shared-async-services)** | Java Spring Boot | AI routing ports & double-entry ledger | — |
 | 🎨 **[design-system](./design-system)** | React, Vanilla CSS, Vite | Unified UI component library (`@swish/ds`) | — |
+| 🏠 **[frontend-host](./frontend-host)** | React, TypeScript, Module Federation | Host shell composing all MFE remotes | `5173` |
 | 🛒 **[frontend-customer](./frontend-customer)** | React, TypeScript, Zustand | Customer shopping storefront MFE | `3001` |
 | 🏍️ **[frontend-rider](./frontend-rider)** | React, TypeScript, Leaflet | Courier tracking & route navigation MFE | `3002` |
 | 🛠️ **[frontend-admin](./frontend-admin)** | React, TypeScript, Recharts | Ops panel (chaos toggles, HITL, compliance) | `3003` |
-| 💼 **[frontend-b2b](./frontend-b2b)** | React, TypeScript | Wholesaler bid negotiation & invoice MFE | `3004` |
+| 💼 **[frontend-b2b](./frontend-b2b)** | React, TypeScript | Wholesaler bid negotiation & invoice MFE | `5002` |
 | 📱 **[mobile](./mobile)** | React Native, Expo | Courier/Operator companion native app | — |
 | 🛡️ **[infrastructure](./infrastructure)** | Docker Compose, Postgres GIS | Local infrastructure setups (Postgres, Mongo, Kafka) | — |
 
@@ -275,25 +276,55 @@ We document all system constraints and architectural pivot histories in `docs/ad
 
 ---
 
-## 🚀 Homelab Dev Setup & Troubleshooting
+## 🚀 Homelab Dev Setup & Deployment Specifications
 
 ### Prerequisites
 *   **Java Development Kit (JDK) 17**: Ensure your `JAVA_HOME` points strictly to JDK 17 (Lombok fails processing under JDK 26+).
 *   **Node.js**: v18.0.0+ (required for Micro-Frontend bundling).
-*   **Docker & Compose**: For running Kafka, PostgreSQL, MongoDB, and Redis.
+*   **Docker & Compose**: For running local infrastructure containers.
 
-### Dev Environment Ingress Boot
-Set up the entire local infrastructure and verify compilation inside the directories:
+---
 
-```bash
-# 1. Boot local infrastructure services
-docker compose -f docker-compose-local.yml up -d
+### 🏠 Local/Homelab Quick Start (On-Premises Profile)
+To run Swish OS entirely offline on self-hosted local infrastructure (e.g. for development or UAT):
 
-# 2. Compile Java Backend with Java 17
-export JAVA_HOME="/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home"
-export PATH="$JAVA_HOME/bin:$PATH"
-cd backend && mvn clean compile -DskipTests
-```
+1. **Boot On-Premises Container Stack**:
+   Spin up Postgres, HashiCorp Vault, MinIO (WORM object storage), Redis, Kafka, MongoDB, and Ollama:
+   ```bash
+   docker compose -f infrastructure/docker-compose-onprem.yml up -d
+   ```
+
+2. **Run Backend with On-Premises Profile**:
+   Activate the `onprem` profile to bind secrets from Vault, audit ledgers via MinIO, and route inference queries through local Ollama:
+   ```bash
+   cd backend
+   mvn spring-boot:run -Dspring-boot.run.profiles=dev,onprem
+   ```
+
+---
+
+### ☁️ Google Cloud Footprint (GCP Profile)
+To run Swish OS connected to enterprise Google Cloud services (matching production specifications):
+
+1. **Boot Development Database & Message Bus**:
+   ```bash
+   docker compose -f docker-compose-local.yml up -d
+   ```
+
+2. **Authenticate with Google Cloud**:
+   Ensure you have Application Default Credentials (ADC) configured locally:
+   ```bash
+   gcloud auth application-default login
+   ```
+
+3. **Run Backend with GCP Profile**:
+   Activate the `gcp` profile to load credentials dynamically from Secret Manager, upload WORM audit ledgers to GCS, and route queries to Vertex AI Gemini endpoints:
+   ```bash
+   cd backend
+   mvn spring-boot:run -Dspring-boot.run.profiles=dev,gcp
+   ```
+
+---
 
 ### Port Map Reference
 Access the developer dashboards at these local addresses:

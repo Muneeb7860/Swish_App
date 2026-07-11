@@ -133,3 +133,12 @@ demo/*.log
 .agent-scratch/
 **/.agents/
 
+
+# ─── iCloud sync duplicates ──────────────────────────────────────────────────
+# The repo lives in iCloud-synced ~/Documents; sync conflicts spawn copies
+# named "file 2", "dir 3", "cli 2.py", etc. Never commit them — delete on
+# sight (originals keep their unnumbered names).
+* [0-9]
+* [0-9].*
+* [0-9][0-9]
+* [0-9][0-9].*
