@@ -42,7 +42,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&color=eab308" alt="License: MIT" /></a>
   <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive.html"><img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk&logoColor=white&color=f97316" alt="Java Version" /></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge&logo=springboot&logoColor=white&color=22c55e" alt="Spring Boot" /></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react&logoColor=white&color=06b6d4" alt="React" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react&logoColor=white&color=06b6d4" alt="React" /></a>
 </p>
 
 ---
@@ -120,7 +120,7 @@ graph TB
   subgraph k8s-service-mesh [Kubernetes Pod Mesh]
     GW[platform-gateway<br>Spring Cloud Gateway Port 8080]:::gateway
     
-    subgraph core-services [Core Services (Envoy mTLS Sidecars)]
+    subgraph core-services ["Core Services (Envoy mTLS Sidecars)"]
       Backend[backend Service<br>Hexagonal Core Port 8083]:::container
       BusinessEngine[core-business-engine<br>Checkout & Inventory Port 8081]:::container
       NotifEngine[notification-engine<br>Kafka WebSockets Port 8082]:::container
@@ -193,7 +193,7 @@ The workspace is organized into discrete service folders separating backend APIs
 | 🔔 **[notification-engine](./notification-engine)** | Java Spring Boot, Kafka | Kafka consumer & WebSocket event server | `8082` |
 | 📊 **[shared-async-services](./shared-async-services)** | Java Spring Boot | AI routing ports & double-entry ledger | — |
 | 🎨 **[design-system](./design-system)** | React, Vanilla CSS, Vite | Unified UI component library (`@swish/ds`) | — |
-| 🏠 **[frontend-host](./frontend-host)** | React, TypeScript, Module Federation | Host shell composing all MFE remotes | `5173` |
+| 🏠 **[frontend-host](./frontend-host)** | React, TypeScript, Module Federation | Host shell composing all MFE remotes | `3000` |
 | 🛒 **[frontend-customer](./frontend-customer)** | React, TypeScript, Zustand | Customer shopping storefront MFE | `3001` |
 | 🏍️ **[frontend-rider](./frontend-rider)** | React, TypeScript, Leaflet | Courier tracking & route navigation MFE | `3002` |
 | 🛠️ **[frontend-admin](./frontend-admin)** | React, TypeScript, Recharts | Ops panel (chaos toggles, HITL, compliance) | `3003` |
@@ -233,7 +233,7 @@ Swish OS features an agentic pipeline executing B2B restocks and protecting oper
 
 ### 🧠 LLM Execution & Hybrid Fallback Strategy
 To guarantee offline reliability and contain token budgets, Swish OS runs a local-first inference pipeline:
-1.  **Local Inference (Primary)**: Uses local **Ollama** serving `qwen:14b` or `llama2:13b` to process B2B bids. Stateful conversation logs are managed using **Letta (formerly MemGPT)** to maintain long-term memory.
+1.  **Local Inference (Primary)**: Uses local **Ollama** serving `qwen2.5:7b` (with `qwen2.5:3b` for semantic routing) to process B2B bids. Stateful conversation logs are managed using **Letta (formerly MemGPT)** to maintain long-term memory.
 2.  **Cloud Fallback (Secondary)**: Trips to **Spring AI** using OpenAI/Gemini endpoints if local latency breaches SLAs. Sensitive identifiers are anonymized at the gateway before routing to the cloud.
 
 ### 🛡️ Safety Guardrails
@@ -328,10 +328,13 @@ To run Swish OS connected to enterprise Google Cloud services (matching producti
 
 ### Port Map Reference
 Access the developer dashboards at these local addresses:
-*   🛒 **Host Front-End / Customer MFE**: `http://localhost:5173`
+*   🏠 **Host Shell (MFE orchestrator)**: `http://localhost:3000`
+*   🛒 **Customer Storefront MFE**: `http://localhost:3001`
 *   🏍️ **Rider Delivery Dashboard**: `http://localhost:3002`
-*   🛠️ **Platform Ingress Gateway**: `http://localhost:8080`
-*   📊 **Grafana Monitor Console**: `http://localhost:3000`
+*   🛠️ **Admin Ops Panel**: `http://localhost:3003`
+*   💼 **B2B Supplier Portal**: `http://localhost:5002`
+*   🔌 **Platform Ingress Gateway**: `http://localhost:8080`
+*   📊 **Grafana Monitor Console**: `http://localhost:3300`
 
 ---
 
