@@ -40,7 +40,23 @@ graph TD
 
 ---
 
-## 2. Sprint Milestones (5-Sprint Roadmap)
+## 2. Extraction-Readiness Baseline & Fitness Functions
+
+Before beginning the extraction, we measured the coupling metrics of our key modular contexts (measured 2026-06-11) to establish an extraction-readiness baseline:
+
+| Context | Couples OUT | Coupled IN | Seam to manage | Order |
+| :--- | :--- | :--- | :--- | :-: |
+| **payment** | `transaction`/ledger (6 imports) | none | payment → ledger posting | **1** |
+| **telemetry** | ledger (write-off) | rider/enrollment | telemetry → ledger; device ingest | 2 |
+| **notification** | none (consumes events) | many (events) | already a module | 3 |
+
+*   **Inbound Coupling Rule**: Inbound coupling is the primary extraction blocker. The `payment` domain has zero inbound coupling, making it the highest-priority candidate for extraction.
+*   **No Cross-Schema SQL**: Each context must touch only its own database schema (e.g. `oltp`, `wholesaler`, `dispatch`), avoiding cross-schema SQL statements.
+*   **Hexagonal Ports Enforcement**: All cross-context writes must go through defined ports. This ensures that extraction is a simple adapter swap (in-process calls replaced by HTTP/Kafka events) rather than a code rewrite.
+
+---
+
+## 3. Sprint Milestones (5-Sprint Roadmap)
 
 The extraction is executed incrementally over 5 two-week sprints.
 
@@ -86,7 +102,7 @@ The extraction is executed incrementally over 5 two-week sprints.
 
 ---
 
-## 3. Gantt Delivery Phases
+## 4. Gantt Delivery Phases
 
 The Gantt chart below visualizes the timeline, task sequences, and dependencies across the 5 sprints.
 
@@ -127,7 +143,7 @@ gantt
 
 ---
 
-## 4. Rollout, Fallback & Operational Runbook
+## 5. Rollout, Fallback & Operational Runbook
 
 To ensure zero-downtime migrations:
 
@@ -162,7 +178,7 @@ To ensure zero-downtime migrations:
 
 ---
 
-## 5. Architectural & SRE Hardening Decisions
+## 6. Architectural & SRE Hardening Decisions
 
 Following the formal joint review by the TPO, SRE, and Enterprise Architect roles, the following decisions are baked into this roadmap:
 
