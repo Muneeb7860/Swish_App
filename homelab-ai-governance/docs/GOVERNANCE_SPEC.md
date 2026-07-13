@@ -90,7 +90,7 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 
 | Layer | On violation | On engine error | Verdict |
 | --- | --- | --- | --- |
-| G1 input gate | Block + audit `pipeline_blocked` | **ALLOW (fail-open)** — `nemo_guardrails.py` returns `{"allowed": True}` on exception | 🐞 **DEFECT → Phase 1** |
+| G1 input gate | Block + audit `pipeline_blocked` | **BLOCK (fail-closed)** + audit `guardrail_engine_error`; unloadable config refuses startup and `/health` → 503 DEGRADED | ✅ fixed in Phase 1 |
 | G2 PII scan | Force `local_only` routing | Regex can't "error"; missing pattern = silent miss | ⚠️ coverage-tested in Phase 2 |
 | R2 budget/local_only | Downgrade cloud→local, audit | n/a (in-memory) | ✅ correct |
 | G3 output enforcer | Retry ≤3, then `blocked_response` | attach warnings, fail toward block | ✅ acceptable |
@@ -140,7 +140,7 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 
 ## 5. Implementation plan (simplified, phased, each phase shippable alone)
 
-### Phase 1 — Fail-closed input gate 🔴 *do first, ~half day*
+### Phase 1 — Fail-closed input gate ✅ *DONE (2026-07-13)*
 - `check_nemo_guardrails()` exception path → `{"allowed": False, "response": <safe msg>,
   "triggered_rule": "guardrail_engine_error"}` + audit event `guardrail_engine_error`.
 - Loader (`config.yml` / `flows.co` parse) failures raise at startup — a governance

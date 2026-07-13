@@ -6,9 +6,10 @@ import threading
 import time
 from typing import Any
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from governance.guardrails.nemo_guardrails import GuardrailConfigError, get_nemo_engine
 from governance.pipeline import execute_pipeline
 from governance.router.classifier import get_classifier_stats
 from governance.stubs.memory_mesh import MemoryMesh
@@ -17,7 +18,29 @@ from governance.stubs.memory_mesh import MemoryMesh
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Homelab AI Governance Service", version="0.1.0")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    # Fail fast: a governance service with unloadable guardrails must not serve
+    # traffic (GOVERNANCE_SPEC.md Phase 1). Requests that arrive anyway are
+    # still fail-closed by check_nemo_guardrails.
+    try:
+        engine = get_nemo_engine()
+        logger.info(
+            "Guardrail engine loaded: %d intents, %d flows, %d active",
+            len(engine.intents),
+            len(engine.flows),
+            len(engine.active_flows),
+        )
+    except GuardrailConfigError:
+        logger.critical("Guardrail config invalid — refusing to start")
+        raise
+    yield
+
+
+app = FastAPI(title="Homelab AI Governance Service", version="0.1.0", lifespan=_lifespan)
 
 # Instrument with OpenTelemetry
 if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
@@ -137,9 +160,21 @@ def stats() -> dict[str, Any]:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    """Check service health."""
-    return {"status": "UP"}
+def health() -> Any:
+    """Check service health, including the input guardrail gate.
+
+    Returns 503 DEGRADED if the guardrail engine cannot load — traffic is
+    still fail-closed in that state, but orchestrators should restart us.
+    """
+    try:
+        get_nemo_engine()
+        # Body shape is a contract with PythonGovernanceAdapter — do not extend.
+        return {"status": "UP"}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "DEGRADED", "reason": f"guardrail engine: {e}"},
+        )
 
 
 @app.get("/metrics", response_class=PlainTextResponse)

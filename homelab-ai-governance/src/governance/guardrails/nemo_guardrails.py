@@ -1,7 +1,23 @@
+import logging
 import os
 import re
 import yaml
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+BLOCKED_ON_ERROR_MESSAGE = (
+    "Request blocked: the safety guardrail engine is unavailable. "
+    "This is a fail-closed response — see GOVERNANCE_SPEC.md §3."
+)
+
+
+class GuardrailConfigError(RuntimeError):
+    """Guardrail configuration is missing, unparseable, or inconsistent.
+
+    Raised at engine construction so a governance service with unloadable
+    guardrails refuses to serve traffic (GOVERNANCE_SPEC.md Phase 1).
+    """
 
 
 class NemoGuardrailsEngine:
@@ -13,30 +29,46 @@ class NemoGuardrailsEngine:
         self.active_flows: List[str] = []
         self.load_config()
         self.load_flows()
+        self._validate_loaded_rules()
 
     def load_config(self):
         config_path = os.path.join(self.config_dir, "config.yml")
         if not os.path.exists(config_path):
-            return
+            raise GuardrailConfigError(f"guardrail config not found: {config_path}")
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config_data = yaml.safe_load(f)
-                if config_data and "rails" in config_data:
-                    input_rails = config_data["rails"].get("input", {})
-                    self.active_flows = input_rails.get("flows", [])
-        except Exception:
-            pass
+        except Exception as exc:
+            raise GuardrailConfigError(f"cannot parse {config_path}: {exc}") from exc
+        if config_data and "rails" in config_data:
+            input_rails = config_data["rails"].get("input", {})
+            self.active_flows = input_rails.get("flows", [])
 
     def load_flows(self):
         flows_path = os.path.join(self.config_dir, "flows.co")
         if not os.path.exists(flows_path):
-            return
+            raise GuardrailConfigError(f"guardrail flows not found: {flows_path}")
         try:
             with open(flows_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.parse_colang(content)
-        except Exception:
-            pass
+        except Exception as exc:
+            raise GuardrailConfigError(f"cannot parse {flows_path}: {exc}") from exc
+
+    def _validate_loaded_rules(self):
+        """A gate that parsed to nothing is a silently-disabled gate — refuse it."""
+        if not self.intents or not self.flows:
+            raise GuardrailConfigError(
+                f"guardrail config in {self.config_dir} parsed to zero "
+                f"intents/flows — the input gate would allow everything"
+            )
+        flow_names = {flow["name"] for flow in self.flows}
+        missing = [name for name in self.active_flows if name not in flow_names]
+        if missing:
+            raise GuardrailConfigError(
+                f"config.yml activates undefined flows: {missing} "
+                f"(defined: {sorted(flow_names)})"
+            )
 
     def parse_colang(self, content: str):
         lines = content.splitlines()
@@ -144,8 +176,28 @@ def get_nemo_engine() -> NemoGuardrailsEngine:
 
 
 def check_nemo_guardrails(query: str) -> Dict[str, Any]:
+    """Input gate wrapper — FAILS CLOSED (GOVERNANCE_SPEC.md §0 goal 1).
+
+    An engine error must never grant weaker safety treatment: the request is
+    blocked and a `guardrail_engine_error` audit event is written. Because the
+    gate is a pure pattern matcher, failing closed costs no latency (goal 2).
+    """
     try:
         return get_nemo_engine().check_query(query)
-    except Exception:
-        # Resilient fallback: allow query if engine has internal errors
-        return {"allowed": True}
+    except Exception as exc:
+        logger.exception("Guardrail engine error — failing closed")
+        try:
+            from governance.audit import get_audit_logger
+
+            get_audit_logger().log_event(
+                "guardrail_engine_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+        except Exception:
+            logger.exception("Could not write guardrail_engine_error audit event")
+        return {
+            "allowed": False,
+            "response": BLOCKED_ON_ERROR_MESSAGE,
+            "triggered_rule": "guardrail_engine_error",
+        }
