@@ -206,3 +206,14 @@ uv run pytest                                   # unit + contract tests
 bash scripts/smoke_governance.sh                # end-to-end guardrail smoke
 python benchmarks/slm_benchmark.py              # refresh §2 latency table
 ```
+
+**Required local models** (agents fail honestly when missing — no mocks in prod):
+
+```bash
+ollama pull qwen2.5:3b gemma3:4b mistral:latest deepseek-coder:latest qwen2.5:7b
+```
+
+The classifier model (`qwen2.5:3b`) is pre-warmed and pinned at server startup;
+the others load on first routed request. Verified live 2026-07-13: guardrail
+blocks < 0.5 s, `/metrics` histogram scraped by Prometheus (job `governance`),
+`GovernanceLatencyHigh` loaded, Grafana panel on `:3300`, live p95 ≈ 0.47 s.

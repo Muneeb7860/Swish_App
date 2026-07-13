@@ -20,6 +20,33 @@ logger = logging.getLogger(__name__)
 
 from contextlib import asynccontextmanager
 
+import httpx
+
+from governance.concurrency import CLASSIFIER_KEEP_ALIVE
+from governance.config import load_routing_config
+
+
+def _warm_classifier() -> None:
+    """Pre-load & pin the classifier model (GOVERNANCE_SPEC.md §3b).
+
+    The classifier sits on the floor of every request; without this the first
+    user request pays the multi-second cold load from disk and falls back to
+    keyword classification. Runs in a daemon thread — never blocks startup.
+    """
+    try:
+        cfg = load_routing_config().get("classifier", {})
+        model = cfg.get("model", "qwen2.5:3b")
+        url = cfg.get("ollama_url", "http://localhost:11434").rstrip("/")
+        # Empty generate = load-only; keep_alive=-1 pins it resident.
+        httpx.post(
+            f"{url}/api/generate",
+            json={"model": model, "keep_alive": CLASSIFIER_KEEP_ALIVE},
+            timeout=180,
+        ).raise_for_status()
+        logger.info("Classifier model %s warmed and pinned", model)
+    except Exception as e:
+        logger.warning("Classifier warm-up skipped: %s", e)
+
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI):
@@ -37,6 +64,7 @@ async def _lifespan(_: FastAPI):
     except GuardrailConfigError:
         logger.critical("Guardrail config invalid — refusing to start")
         raise
+    threading.Thread(target=_warm_classifier, daemon=True).start()
     yield
 
 
