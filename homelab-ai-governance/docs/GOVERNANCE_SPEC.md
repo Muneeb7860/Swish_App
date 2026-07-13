@@ -9,6 +9,24 @@
 
 ---
 
+## 0. Product goals (owner-set, non-negotiable)
+
+1. **Security is never compromised.** Guardrails and evals exist for exactly this;
+   a request must never receive weaker safety treatment because a component failed
+   or because we wanted speed.
+2. **Latency & concurrency are never compromised by default.** Guardrails and evals
+   are extra compute — invoke the expensive ones **only when needed**.
+
+**Resolution rule (how both hold at once):** every enforcement layer must be either
+- **(a) always-on AND ~free** (< 5 ms, no model call, no lock) — these never come off, or
+- **(b) risk-triggered** — heavy compute (model calls, retry loops, full detector
+  suites) fires only on an explicit risk signal (§3b), never unconditionally.
+
+A layer that is neither free nor risk-triggered does not ship. Fail-closed applies to
+the *always-on* gates — which costs zero latency, so the two goals never conflict there.
+
+---
+
 ## 1. Principles (the four hats)
 
 | Hat | Rule |
@@ -77,6 +95,33 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 | R2 budget/local_only | Downgrade cloud→local, audit | n/a (in-memory) | ✅ correct |
 | G3 output enforcer | Retry ≤3, then `blocked_response` | attach warnings, fail toward block | ✅ acceptable |
 
+### 3b. Conditional enforcement policy (goal 2 operationalized)
+
+**Risk signals** (any one ⇒ request is *elevated*):
+- G2 PII hit (`contains_pii = true`)
+- Intent ∈ {`sensitive_query`, `system_admin`}
+- Route resolves to a **cloud** agent (data leaves the box)
+- G1 near-miss / engine-error path (anything other than a clean pass)
+
+| Layer | Normal request | Elevated request |
+| --- | --- | --- |
+| G1 pattern gate (free) | always on | always on |
+| G2 PII regex (free) | always on | always on |
+| G3 detector suite | light set (injection + secrets) | **full suite** |
+| Self-correction retries | max **1** | max **3** |
+| Eval loop (evaluator/loop.py) | skip | run |
+| Audit detail | standard event | full payload hashes + rule trace |
+
+**Concurrency guards (single Ollama host, 16 GB):**
+- One in-flight generation per model — a per-model semaphore, not a global lock, so
+  the classifier and an agent model can overlap but two agent calls queue.
+- `keep_alive` pinned for the classifier model (it is on the floor of every request);
+  agent models load on demand.
+- Never trigger two model loads simultaneously — memory pressure on 16 GB stalls
+  everything (goal 2 failure mode).
+- Retries and eval loops count against the same semaphore — an elevated request may
+  be slower, but it must never starve normal traffic.
+
 ---
 
 ## 4. Explicit non-features (do NOT reference these as if they exist)
@@ -115,6 +160,16 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
   gauge for end-to-end `/govern` to the existing metrics recorder.
 - Prometheus: single-window alert `GovernanceLatencyHigh: p95 > 2.5s for 5m`. That's it.
 - **Acceptance:** Grafana (localhost:3300) shows the p95 panel.
+
+### Phase 3b — Conditional enforcement + concurrency guards 🟡 *~1 day*
+- Implement §3b: elevated-vs-normal detector sets, retry caps (1 vs 3), eval loop
+  only on elevated requests.
+- Per-model asyncio semaphores around Ollama calls; `keep_alive` for the classifier.
+- Tests: a normal request never invokes the eval loop; an elevated request always
+  runs the full suite (goal 1 check); two concurrent normal requests don't serialize
+  behind each other's enforcement (goal 2 check).
+- **Acceptance:** p95 for normal requests unchanged vs Phase 3 baseline while an
+  elevated request is in flight.
 
 ### Phase 4 — Risk tiers & shed-vs-downgrade ⚪ *deferred; requires §6 sign-off*
 - Only if a real consumer needs it. Design sketch: map intents → risk tier in
