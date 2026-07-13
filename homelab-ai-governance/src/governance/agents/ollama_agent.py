@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any
 
@@ -67,6 +68,15 @@ class OllamaAgent(BaseAgent):
                 "load_duration_ns": data.get("load_duration"),
             }
         except Exception as e:
+            # Goal 1 honesty gate: a mocked "governed" response that no model
+            # produced must never reach production. Mock fallback is opt-in for
+            # tests/CI only; otherwise the error propagates and the pipeline
+            # reports an honest failure (GOVERNANCE_SPEC.md §3).
+            if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() not in (
+                "1",
+                "true",
+            ):
+                raise
             logger.warning(
                 "Ollama chat inference failed for agent %s (model: %s): %s. Falling back to mock generation.",
                 self.agent_id,

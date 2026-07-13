@@ -94,6 +94,7 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 | G2 PII scan | Force `local_only` routing | Regex can't "error"; missing pattern = silent miss | ⚠️ coverage-tested in Phase 2 |
 | R2 budget/local_only | Downgrade cloud→local, audit | n/a (in-memory) | ✅ correct |
 | G3 output enforcer | Retry ≤3, then `blocked_response` | attach warnings, fail toward block | ✅ acceptable |
+| A agent execution | fallback → gemma, else honest `failed` status | mock responses are **opt-in** (`GOVERNANCE_ALLOW_MOCK_FALLBACK=1`, tests/CI only) — production never fabricates a governed answer | ✅ gated 2026-07-13 |
 
 ### 3b. Conditional enforcement policy (goal 2 operationalized)
 

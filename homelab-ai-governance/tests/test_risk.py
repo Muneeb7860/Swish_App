@@ -229,6 +229,27 @@ def test_same_model_serializes():
         assert sem.acquire(timeout=0.05) is False  # second caller must wait
 
 
+def test_mock_fallback_is_opt_in(monkeypatch):
+    """Goal 1 honesty: without the env opt-in, an unreachable model raises
+    instead of fabricating a 'governed' response."""
+    from governance.agents.ollama_agent import OllamaAgent
+
+    agent = OllamaAgent(
+        agent_id="gemma_reasoner",
+        model="nonexistent-model-test",
+        ollama_url="http://localhost:1",  # guaranteed refused
+        timeout_ms=200,
+    )
+
+    monkeypatch.delenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", raising=False)
+    with pytest.raises(Exception):
+        agent.generate("hello")
+
+    monkeypatch.setenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", "1")
+    res = agent.generate("hello")
+    assert res.metadata.get("mocked") is True
+
+
 def test_semaphore_registry_is_thread_safe():
     results = []
 
