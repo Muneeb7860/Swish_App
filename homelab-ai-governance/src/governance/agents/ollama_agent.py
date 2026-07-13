@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from governance.agents.base import AgentResponse, BaseAgent
+from governance.concurrency import get_model_semaphore
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,10 @@ class OllamaAgent(BaseAgent):
 
         start = time.perf_counter()
         try:
-            resp = self._client.post(url, json=payload)
+            # Per-model gate (GOVERNANCE_SPEC.md §3b): same-model generations
+            # queue; different models may overlap. Held only for the HTTP call.
+            with get_model_semaphore(self.model):
+                resp = self._client.post(url, json=payload)
             resp.raise_for_status()
             elapsed_ms = (time.perf_counter() - start) * 1000
             data: dict[str, Any] = resp.json()

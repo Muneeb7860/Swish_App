@@ -14,6 +14,7 @@ import instructor
 from openai import OpenAI
 from pydantic import BaseModel, Field, field_validator
 
+from governance.concurrency import CLASSIFIER_KEEP_ALIVE, get_model_semaphore
 from governance.config import load_routing_config
 
 logger = logging.getLogger(__name__)
@@ -188,16 +189,21 @@ def classify_intent(
         )
 
         logger.info("Classifying intent using instructor on model '%s'", model_name)
-        response: ClassificationSchema = client.chat.completions.create(
-            model=model_name,
-            response_model=ClassificationSchema,
-            messages=[
-                {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Query: {query}"}
-            ],
-            timeout=timeout_ms / 1000,
-            max_retries=2
-        )
+        # Per-model gate + keep_alive pin (GOVERNANCE_SPEC.md §3b): the
+        # classifier is on the floor of every request, so it stays resident
+        # in Ollama and same-model calls queue instead of thrashing the host.
+        with get_model_semaphore(model_name):
+            response: ClassificationSchema = client.chat.completions.create(
+                model=model_name,
+                response_model=ClassificationSchema,
+                messages=[
+                    {"role": "system", "content": _CLASSIFIER_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"Query: {query}"}
+                ],
+                timeout=timeout_ms / 1000,
+                max_retries=2,
+                extra_body={"keep_alive": CLASSIFIER_KEEP_ALIVE},
+            )
 
         _stats["model_calls"] += 1
         return ClassificationResult(

@@ -107,10 +107,15 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 | --- | --- | --- |
 | G1 pattern gate (free) | always on | always on |
 | G2 PII regex (free) | always on | always on |
-| G3 detector suite | light set (injection + secrets) | **full suite** |
+| G3 detector suite | all **critical/high** rules (injection, PII/secrets, hate speech, catastrophic code); advisory medium/low skipped | **full suite** |
 | Self-correction retries | max **1** | max **3** |
-| Eval loop (evaluator/loop.py) | skip | run |
-| Audit detail | standard event | full payload hashes + rule trace |
+| Eval loop (evaluator/loop.py) | skip — unless caller passes `expected_format`, then run at the normal retry cap | run |
+| Audit detail | `risk_assessed` + `eval_loop_skipped` events | `risk_assessed` with signal list |
+
+*Implementation: `risk.py` (signals + severity-based rule selection — unknown
+severity fails toward enforcement), `concurrency.py` (per-model gates),
+wired in `pipeline.py` steps 6b/9/10/11. The `/govern` response now carries
+`risk.elevated` + `risk.signals`.*
 
 **Concurrency guards (single Ollama host, 16 GB):**
 - One in-flight generation per model — a per-model semaphore, not a global lock, so
@@ -161,7 +166,7 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 - Prometheus: single-window alert `GovernanceLatencyHigh: p95 > 2.5s for 5m`. That's it.
 - **Acceptance:** Grafana (localhost:3300) shows the p95 panel.
 
-### Phase 3b — Conditional enforcement + concurrency guards 🟡 *~1 day*
+### Phase 3b — Conditional enforcement + concurrency guards ✅ *DONE (2026-07-13)*
 - Implement §3b: elevated-vs-normal detector sets, retry caps (1 vs 3), eval loop
   only on elevated requests.
 - Per-model asyncio semaphores around Ollama calls; `keep_alive` for the classifier.
