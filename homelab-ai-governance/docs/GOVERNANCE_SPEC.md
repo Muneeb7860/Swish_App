@@ -149,13 +149,13 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 - **Acceptance:** kill the flows file on a running stack → `/api/v1/govern` blocks,
   audit log shows `guardrail_engine_error`, `/health` degrades.
 
-### Phase 2 — PII test hardening 🟠 *CI-only, ~half day*
+### Phase 2 — PII test hardening ✅ *DONE (2026-07-13)*
 - Parametrized matrix: one positive + one negative case for **every** pattern in
   `pii_patterns.py` (email, credit card, phone, + all others present).
 - Obfuscation cases (spaces/dashes in card numbers, `(at)` emails).
 - **Acceptance:** deleting any single pattern from `pii_patterns.py` fails CI.
 
-### Phase 3 — Latency truth & SLO wiring 🟡 *~1 hour*
+### Phase 3 — Latency truth & SLO wiring ✅ *DONE (2026-07-13)*
 - §2 table is canonical; `/api/v1/stats` already exposes classifier latency — add p95
   gauge for end-to-end `/govern` to the existing metrics recorder.
 - Prometheus: single-window alert `GovernanceLatencyHigh: p95 > 2.5s for 5m`. That's it.

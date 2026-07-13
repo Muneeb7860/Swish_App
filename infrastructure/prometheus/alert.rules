@@ -231,3 +231,24 @@ groups:
           summary: "Critical volume of routing tasks sent to HITL"
           description: "Routing agent suggestions requiring human-in-the-loop is above 50/hour (current rate: {{ $value }}). Check for potential warehouse outages or capacity constraints."
 
+
+  - name: swish_governance
+    rules:
+      - alert: GovernanceLatencyHigh
+        # End-to-end /govern p95 above the 2.5s SLO (homelab-ai-governance
+        # GOVERNANCE_SPEC.md §2 — budget derived from measured classifier
+        # p99 + overhead, not aspiration). Goal 2: latency is a product goal.
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(governance_pipeline_latency_seconds_bucket{job="governance"}[5m])) by (le)
+          ) > 2.5
+        for: 5m
+        labels:
+          severity: warning
+          domain: governance
+        annotations:
+          summary: "Governance /govern p95 latency above 2.5s SLO"
+          description: >-
+            p95 end-to-end governance latency is {{ $value }}s (SLO 2.5s).
+            Check Ollama load and model keep_alive on the classifier; see
+            homelab-ai-governance/docs/GOVERNANCE_SPEC.md §2.

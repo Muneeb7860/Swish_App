@@ -72,12 +72,18 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
 
 
 
+# Histogram bucket bounds (seconds). 2.5 is the end-to-end SLO edge
+# (GOVERNANCE_SPEC.md §2); the rest bracket the measured classifier costs.
+LATENCY_BUCKET_BOUNDS = (0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0, 30.0)
+
+
 class MetricsTracker:
     def __init__(self):
         self.lock = threading.Lock()
         self.requests_total = 0
         self.failures_total = 0
         self.latency_sum = 0.0
+        self.latency_bucket_counts = [0] * (len(LATENCY_BUCKET_BOUNDS) + 1)
         self.pii_redacted_total = 0
         self.fallback_total = 0
         self.attempts_total = 0
@@ -93,10 +99,20 @@ class MetricsTracker:
             "procurement": 0,
         }
 
+    def _observe_latency(self, latency: float) -> None:
+        """Record into the first bucket whose bound fits (non-cumulative store;
+        emitted cumulatively in /metrics per the Prometheus histogram format)."""
+        for i, bound in enumerate(LATENCY_BUCKET_BOUNDS):
+            if latency <= bound:
+                self.latency_bucket_counts[i] += 1
+                return
+        self.latency_bucket_counts[-1] += 1  # +Inf
+
     def record_request(self, latency: float, result: dict[str, Any]):
         with self.lock:
             self.requests_total += 1
             self.latency_sum += latency
+            self._observe_latency(latency)
 
             # Check if request contained PII or override triggered local only routing
             routing = result.get("routing_decision", {})
@@ -116,13 +132,37 @@ class MetricsTracker:
             if loop.get("fallback_used", False):
                 self.fallback_total += 1
 
-    def record_failure(self):
+    def record_failure(self, latency: float | None = None):
         with self.lock:
             self.requests_total += 1
             self.failures_total += 1
+            if latency is not None:
+                self.latency_sum += latency
+                self._observe_latency(latency)
 
 
 metrics_tracker = MetricsTracker()
+
+
+def _latency_histogram_lines() -> list[str]:
+    """Cumulative Prometheus histogram series for the /govern latency."""
+    with metrics_tracker.lock:
+        bucket_counts = list(metrics_tracker.latency_bucket_counts)
+        latency_sum = metrics_tracker.latency_sum
+    lines = []
+    cumulative = 0
+    for bound, count in zip(LATENCY_BUCKET_BOUNDS, bucket_counts):
+        cumulative += count
+        lines.append(
+            f'governance_pipeline_latency_seconds_bucket{{le="{bound}"}} {cumulative}'
+        )
+    cumulative += bucket_counts[-1]
+    lines.append(
+        f'governance_pipeline_latency_seconds_bucket{{le="+Inf"}} {cumulative}'
+    )
+    lines.append(f"governance_pipeline_latency_seconds_sum {latency_sum}")
+    lines.append(f"governance_pipeline_latency_seconds_count {cumulative}")
+    return lines
 
 
 class GovernRequest(BaseModel):
@@ -148,7 +188,7 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         metrics_tracker.record_request(latency, res)
         return res
     except Exception as e:
-        metrics_tracker.record_failure()
+        metrics_tracker.record_failure(time.perf_counter() - start)
         logger.exception("Governance pipeline execution failed")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -191,12 +231,9 @@ def metrics() -> str:
         "# HELP governance_exceptions_total Total number of governance pipeline failures.",
         "# TYPE governance_exceptions_total counter",
         f"governance_exceptions_total {metrics_tracker.failures_total}",
-        "# HELP governance_pipeline_latency_seconds_sum Sum of governance pipeline latencies.",
-        "# TYPE governance_pipeline_latency_seconds_sum counter",
-        f"governance_pipeline_latency_seconds_sum {metrics_tracker.latency_sum}",
-        "# HELP governance_pipeline_latency_seconds_count Count of requests recorded for latency.",
-        "# TYPE governance_pipeline_latency_seconds_count counter",
-        f"governance_pipeline_latency_seconds_count {metrics_tracker.requests_total}",
+        "# HELP governance_pipeline_latency_seconds End-to-end /govern latency (SLO p95 <= 2.5s, GOVERNANCE_SPEC.md).",
+        "# TYPE governance_pipeline_latency_seconds histogram",
+        *_latency_histogram_lines(),
         "# HELP governance_pii_redactions_total Total requests triggering PII redaction or local routing.",
         "# TYPE governance_pii_redactions_total counter",
         f"governance_pii_redactions_total {metrics_tracker.pii_redacted_total}",
