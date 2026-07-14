@@ -70,6 +70,16 @@ class TestVllmAgent:
         assert response.input_tokens > 0
         assert response.output_tokens > 0
 
+    @patch("httpx.Client.post")
+    def test_generate_failure_without_optin_raises(self, mock_post, monkeypatch):
+        """Honesty gate: without GOVERNANCE_ALLOW_MOCK_FALLBACK, failures propagate."""
+        monkeypatch.delenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", raising=False)
+        mock_post.side_effect = httpx.ConnectError("Connection refused")
+
+        agent = VllmAgent(agent_id="test_vllm", model="qwen-coder-7b")
+        with pytest.raises(httpx.ConnectError):
+            agent.generate("Generate dynamic pricing agent results.")
+
     @patch("httpx.Client.get")
     def test_is_available_true(self, mock_get):
         mock_response = MagicMock()
