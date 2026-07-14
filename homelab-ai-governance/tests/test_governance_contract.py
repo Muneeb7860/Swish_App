@@ -55,6 +55,23 @@ def test_health_contract():
     assert r.json() == {"status": "UP"}
 
 
+def test_health_degrades_when_guardrail_engine_unloadable(monkeypatch):
+    """Phase 1 (GOVERNANCE_SPEC.md): broken guardrail config → 503 DEGRADED,
+    so orchestrators restart us instead of routing traffic to a service whose
+    input gate can only fail-closed everything."""
+    import governance.server as server_mod
+
+    def broken_engine():
+        raise RuntimeError("flows.co unreadable")
+
+    monkeypatch.setattr(server_mod, "get_nemo_engine", broken_engine)
+    r = client.get("/health")
+    assert r.status_code == 503
+    body = r.json()
+    assert body["status"] == "DEGRADED"
+    assert "guardrail engine" in body["reason"]
+
+
 def test_govern_success_contract(monkeypatch):
     """On success the body carries status=='success' and a string `response`
     (the field PythonGovernanceAdapter reads). Also exercises optional-field binding."""

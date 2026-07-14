@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any
 
 import httpx
 
 from governance.agents.base import AgentResponse, BaseAgent
+from governance.concurrency import get_model_semaphore
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,10 @@ class OllamaAgent(BaseAgent):
 
         start = time.perf_counter()
         try:
-            resp = self._client.post(url, json=payload)
+            # Per-model gate (GOVERNANCE_SPEC.md §3b): same-model generations
+            # queue; different models may overlap. Held only for the HTTP call.
+            with get_model_semaphore(self.model):
+                resp = self._client.post(url, json=payload)
             resp.raise_for_status()
             elapsed_ms = (time.perf_counter() - start) * 1000
             data: dict[str, Any] = resp.json()
@@ -63,6 +68,15 @@ class OllamaAgent(BaseAgent):
                 "load_duration_ns": data.get("load_duration"),
             }
         except Exception as e:
+            # Goal 1 honesty gate: a mocked "governed" response that no model
+            # produced must never reach production. Mock fallback is opt-in for
+            # tests/CI only; otherwise the error propagates and the pipeline
+            # reports an honest failure (GOVERNANCE_SPEC.md §3).
+            if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() not in (
+                "1",
+                "true",
+            ):
+                raise
             logger.warning(
                 "Ollama chat inference failed for agent %s (model: %s): %s. Falling back to mock generation.",
                 self.agent_id,

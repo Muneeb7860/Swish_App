@@ -79,6 +79,7 @@ def run_self_correction_loop(
     context_docs: str = "",
     expected_format: str | None = None,
     fallback_agent: BaseAgent | None = None,
+    max_retries_override: int | None = None,
 ) -> LoopResult:
     """Execute the recursive validation and self-correction loop.
 
@@ -95,7 +96,12 @@ def run_self_correction_loop(
     """
     routing_cfg = load_routing_config()
     eval_cfg = routing_cfg.get("evaluation_rules", {})
-    max_retries = eval_cfg.get("max_self_correction_retries", 3)
+    if max_retries_override is not None:
+        # Conditional enforcement (GOVERNANCE_SPEC.md §3b): elevated requests
+        # may spend model calls on quality; normal requests are capped lower.
+        max_retries = max_retries_override
+    else:
+        max_retries = eval_cfg.get("max_self_correction_retries", 3)
     threshold = eval_cfg.get("passing_threshold", 0.75)
     weights = eval_cfg.get("weights")
     audit = get_audit_logger()

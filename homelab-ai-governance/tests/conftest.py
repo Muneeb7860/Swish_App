@@ -14,6 +14,10 @@ import pytest
 # <5s suite into 13+ minutes.
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
+# Tests may run without a live Ollama; the deterministic mock fallback is
+# opt-in (production fails honestly instead — GOVERNANCE_SPEC.md §3).
+os.environ["GOVERNANCE_ALLOW_MOCK_FALLBACK"] = "1"
+
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
