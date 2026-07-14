@@ -218,3 +218,11 @@ def validate_output(
 def list_schemas() -> list[str]:
     """Return canonical (non-alias) schema names."""
     return [k for k in _SCHEMA_REGISTRY if k[0].isupper()]
+
+
+def is_rail_schema(name: str | None) -> bool:
+    """True if `name` is a registered RAIL schema (not the legacy "json" flag
+    or None). Call sites must guard with this before invoking validate_output —
+    "json" selects metrics.py's raw-JSON format check, a different mechanism,
+    and is deliberately NOT a registry key."""
+    return name is not None and name in _SCHEMA_REGISTRY

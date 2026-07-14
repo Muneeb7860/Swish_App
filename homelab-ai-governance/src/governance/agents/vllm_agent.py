@@ -18,6 +18,12 @@ class VllmAgent(BaseAgent):
     """Agent backed by a locally-running vLLM server exposing an OpenAI-compatible API.
 
     Uses the /v1/chat/completions endpoint for chat-based inference.
+
+    Deliberately has NO per-model semaphore (contrast OllamaAgent /
+    concurrency.py): vLLM does continuous batching server-side, so serializing
+    calls here would fight the scheduler instead of protecting it — the §3b
+    single-model-queue guard is an Ollama-specific workaround, not a general
+    "gate every local model" rule.
     """
 
     def __init__(

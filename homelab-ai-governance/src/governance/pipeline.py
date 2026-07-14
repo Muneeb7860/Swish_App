@@ -15,7 +15,7 @@ from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
 from governance.evaluator.loop import LoopResult, run_self_correction_loop
 from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
-from governance.guardrails.schemas import validate_output
+from governance.guardrails.schemas import is_rail_schema
 from governance.guardrails.loader import load_guardrails
 from governance.guardrails.nemo_guardrails import check_nemo_guardrails
 from governance.risk import assess_risk, max_retries_for, select_output_rules
@@ -317,43 +317,18 @@ def execute_pipeline(
 
     candidate_text = output_guardrail["content"]
 
-    # 9b. Pydantic RAIL Schema Validation (output structure gate)
-    #     When the caller specifies expected_format, validate the candidate output
-    #     against the corresponding Pydantic schema. On failure, inject the schema
-    #     errors into the self-correction prompt as an additional validation error
-    #     so the model can fix its own output in the next loop iteration.
-    schema_valid: bool = True
-    schema_errors: list[str] = []
-    if expected_format:
-        schema_valid, schema_errors, _ = validate_output(candidate_text, expected_format)
-        if not schema_valid:
-            audit.log_event(
-                "schema_validation_failure",
-                agent_id=agent_id,
-                schema=expected_format,
-                errors=schema_errors,
-                input_hash=input_hash,
-            )
-            logger.info(
-                "Schema validation failed for agent '%s' (schema=%s): %s",
-                agent_id,
-                expected_format,
-                schema_errors,
-            )
-            # Inject schema errors into expected_format hint so the self-correction
-            # loop builds a feedback prompt that includes them.
-            schema_error_block = (
-                "\n\nSCHEMA VALIDATION ERRORS (fix these in your corrected response):\n"
-                + "\n".join(f"  - {e}" for e in schema_errors)
-            )
-            # Temporarily augment the candidate with the error annotation so the
-            # _build_error_summary inside loop.py picks up format failures.
-            candidate_text = candidate_text + schema_error_block
-
     # 10. Recursive Self-Correction Loop — conditional (GOVERNANCE_SPEC.md §3b).
     # Runs for elevated requests, or when the caller explicitly asked for a
     # validated format. Normal free-text requests skip it entirely: quality
     # evaluation and correction retries are model-call-priced compute.
+    #
+    # Pydantic RAIL schema validation (guardrails/schemas.py) is NOT a
+    # pre-loop, single-shot check: it is enforced by the loop itself on
+    # EVERY attempt (including the fallback response), via schema_name below.
+    # A one-off pre-loop check could pass a candidate that a later correction
+    # then breaks, and its error text must never be spliced into the
+    # user-facing candidate — both were bugs in the earlier version of this
+    # gate. See run_self_correction_loop() for the enforcement.
     run_eval_loop = risk.elevated or expected_format is not None
 
     if run_eval_loop:
@@ -366,6 +341,7 @@ def execute_pipeline(
             expected_format=expected_format,
             fallback_agent=fallback_agent,
             max_retries_override=max_retries_for(risk.elevated),
+            schema_name=expected_format,
         )
     else:
         audit.log_event(
@@ -424,25 +400,44 @@ def execute_pipeline(
         attempts=loop_result.attempts,
     )
 
+    # Schema conformance for the response we're actually returning. The real
+    # gate already ran on every loop attempt (run_self_correction_loop); this
+    # just reads its verdict rather than re-validating a third time — the
+    # loop's `sanitized_response` may differ from `loop_result.final_response`
+    # only by telemetry-tag/guardrail stripping, which cannot change JSON
+    # validity, so the loop's last-attempt verdict still applies.
+    final_schema_valid = True
+    final_schema_errors: list[str] = []
+    if is_rail_schema(expected_format) and loop_result.scores is not None:
+        schema_details = loop_result.scores.details.get("schema")
+        if schema_details:
+            final_schema_valid = schema_details.get("valid", True)
+            final_schema_errors = schema_details.get("errors", [])
+    if not final_schema_valid:
+        logger.warning(
+            "Response does not conform to schema '%s' after %d attempt(s): %s",
+            expected_format,
+            loop_result.attempts,
+            final_schema_errors,
+        )
+        audit.log_event(
+            "schema_validation_failure",
+            agent_id="gemma_reasoner" if loop_result.fallback_used else agent_id,
+            schema=expected_format,
+            errors=final_schema_errors,
+            input_hash=input_hash,
+        )
+
     all_warnings = (
         input_guardrail.get("warnings", [])
         + output_guardrail.get("warnings", [])
         + final_output_guardrail.get("warnings", [])
     )
-
-    # Re-validate final response against schema (after self-correction may have fixed it)
-    final_schema_valid: bool = schema_valid
-    final_schema_errors: list[str] = schema_errors
-    if expected_format and not schema_valid:
-        final_schema_valid, final_schema_errors, _ = validate_output(
-            sanitized_response, expected_format
-        )
-        if final_schema_valid:
-            logger.info(
-                "Schema validation passed after self-correction (schema=%s, agent=%s)",
-                expected_format,
-                "gemma_reasoner" if loop_result.fallback_used else agent_id,
-            )
+    if not final_schema_valid:
+        all_warnings = all_warnings + [
+            f"Response did not conform to schema '{expected_format}' after "
+            f"{loop_result.attempts} attempt(s)."
+        ]
 
     return {
         "status": "success",

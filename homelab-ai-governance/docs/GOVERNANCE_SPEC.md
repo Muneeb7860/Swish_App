@@ -95,6 +95,7 @@ SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 | R2 budget/local_only | Downgrade cloud→local, audit | n/a (in-memory) | ✅ correct |
 | G3 output enforcer | Retry ≤3, then `blocked_response` | attach warnings, fail toward block | ✅ acceptable |
 | A agent execution | fallback → gemma, else honest `failed` status | mock responses are **opt-in** (`GOVERNANCE_ALLOW_MOCK_FALLBACK=1`, tests/CI only) — production never fabricates a governed answer | ✅ gated 2026-07-13 |
+| G3b RAIL schema (`guardrails/schemas.py`, Epic 5) | Errors feed the correction prompt only — never the response text; re-checked on **every** loop attempt incl. fallback; persistent failure → `warnings` + `schema_validation.valid=false`, still `status: success` (format gate, not a safety gate) | `"json"` is not a registry key — `is_rail_schema()` guards every call site so the legacy raw-JSON flag never hits this path | ✅ fixed 2026-07-14 (was: one-shot pre-loop check, error text spliced into the response) |
 
 ### 3b. Conditional enforcement policy (goal 2 operationalized)
 

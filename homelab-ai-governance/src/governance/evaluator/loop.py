@@ -18,6 +18,7 @@ from governance.agents.base import AgentResponse, BaseAgent
 from governance.audit import get_audit_logger
 from governance.config import load_routing_config
 from governance.evaluator.metrics import EvaluationScores, evaluate_output
+from governance.guardrails.schemas import is_rail_schema, validate_output
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,7 @@ def run_self_correction_loop(
     expected_format: str | None = None,
     fallback_agent: BaseAgent | None = None,
     max_retries_override: int | None = None,
+    schema_name: str | None = None,
 ) -> LoopResult:
     """Execute the recursive validation and self-correction loop.
 
@@ -88,12 +90,18 @@ def run_self_correction_loop(
         candidate: The initial candidate output to evaluate.
         original_prompt: The original user prompt.
         context_docs: Retrieved context documents for CCR grounding.
-        expected_format: Expected output format ("json" or None).
+        expected_format: Expected output format ("json" or None) — feeds the
+            metrics.py format-integrity score.
         fallback_agent: Agent to use if all retries are exhausted.
+        schema_name: A registered RAIL schema (see guardrails.schemas) to
+            re-validate on EVERY attempt, including the fallback response.
+            Ignored if not a registered schema (e.g. the legacy "json" flag,
+            which expected_format already covers via metrics.py).
 
     Returns:
         LoopResult with the final response, scores, and attempt history.
     """
+    check_schema = is_rail_schema(schema_name)
     routing_cfg = load_routing_config()
     eval_cfg = routing_cfg.get("evaluation_rules", {})
     if max_retries_override is not None:
@@ -119,6 +127,17 @@ def run_self_correction_loop(
             weights=weights,
             threshold=threshold,
         )
+
+        # RAIL schema gate — re-checked every attempt, including corrections,
+        # so a corrected-but-still-invalid output can never be reported as
+        # success (this is the actual output-structure enforcement; the
+        # single pre-loop check the pipeline used to do could pass here and
+        # still ship a non-conformant response).
+        if check_schema:
+            schema_valid, schema_errors, _ = validate_output(current_candidate, schema_name)
+            if not schema_valid:
+                scores.passed = False
+                scores.details["schema"] = {"valid": False, "errors": schema_errors}
 
         attempt_record = {
             "attempt": attempt,
@@ -208,12 +227,23 @@ def run_self_correction_loop(
                 weights=weights,
                 threshold=threshold,
             )
+            fallback_passed = fallback_scores.passed
+            if check_schema:
+                schema_valid, schema_errors, _ = validate_output(
+                    fallback_response.text, schema_name
+                )
+                if not schema_valid:
+                    fallback_passed = False
+                    fallback_scores.details["schema"] = {
+                        "valid": False,
+                        "errors": schema_errors,
+                    }
 
             return LoopResult(
                 final_response=fallback_response.text,
                 scores=fallback_scores,
                 attempts=max_retries + 2,  # +1 for fallback attempt
-                passed=fallback_scores.passed,
+                passed=fallback_passed,
                 fallback_used=True,
                 attempt_history=attempt_history,
             )
@@ -268,6 +298,11 @@ def _build_error_summary(scores: EvaluationScores) -> str:
             f"Grounded tokens: {details.get('grounded_tokens', '?')}"
             f"/{details.get('candidate_tokens', '?')}"
         )
+
+    schema_details = scores.details.get("schema")
+    if schema_details and not schema_details.get("valid", True):
+        for err in schema_details.get("errors", []):
+            errors.append(f"- SCHEMA VALIDATION: {err}")
 
     if not errors:
         errors.append("- Total quality score below threshold.")
