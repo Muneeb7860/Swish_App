@@ -10,10 +10,12 @@ from governance.agents.base import BaseAgent
 from governance.agents.cloud_agent import CloudAgent
 from governance.agents.letta_agent import LettaAgent
 from governance.agents.ollama_agent import OllamaAgent
+from governance.agents.vllm_agent import VllmAgent
 from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
 from governance.evaluator.loop import LoopResult, run_self_correction_loop
 from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
+from governance.guardrails.schemas import validate_output
 from governance.guardrails.loader import load_guardrails
 from governance.guardrails.nemo_guardrails import check_nemo_guardrails
 from governance.risk import assess_risk, max_retries_for, select_output_rules
@@ -72,6 +74,14 @@ def get_agent(agent_id: str) -> BaseAgent:
             model=model,
             letta_url=letta_url,
             api_token=api_token,
+            timeout_ms=timeout_ms,
+        )
+    elif backend == "vllm":
+        vllm_url = cfg.get("vllm_url", "http://localhost:8000")
+        return VllmAgent(
+            agent_id=agent_id,
+            model=model,
+            vllm_url=vllm_url,
             timeout_ms=timeout_ms,
         )
     else:
@@ -307,6 +317,39 @@ def execute_pipeline(
 
     candidate_text = output_guardrail["content"]
 
+    # 9b. Pydantic RAIL Schema Validation (output structure gate)
+    #     When the caller specifies expected_format, validate the candidate output
+    #     against the corresponding Pydantic schema. On failure, inject the schema
+    #     errors into the self-correction prompt as an additional validation error
+    #     so the model can fix its own output in the next loop iteration.
+    schema_valid: bool = True
+    schema_errors: list[str] = []
+    if expected_format:
+        schema_valid, schema_errors, _ = validate_output(candidate_text, expected_format)
+        if not schema_valid:
+            audit.log_event(
+                "schema_validation_failure",
+                agent_id=agent_id,
+                schema=expected_format,
+                errors=schema_errors,
+                input_hash=input_hash,
+            )
+            logger.info(
+                "Schema validation failed for agent '%s' (schema=%s): %s",
+                agent_id,
+                expected_format,
+                schema_errors,
+            )
+            # Inject schema errors into expected_format hint so the self-correction
+            # loop builds a feedback prompt that includes them.
+            schema_error_block = (
+                "\n\nSCHEMA VALIDATION ERRORS (fix these in your corrected response):\n"
+                + "\n".join(f"  - {e}" for e in schema_errors)
+            )
+            # Temporarily augment the candidate with the error annotation so the
+            # _build_error_summary inside loop.py picks up format failures.
+            candidate_text = candidate_text + schema_error_block
+
     # 10. Recursive Self-Correction Loop — conditional (GOVERNANCE_SPEC.md §3b).
     # Runs for elevated requests, or when the caller explicitly asked for a
     # validated format. Normal free-text requests skip it entirely: quality
@@ -387,6 +430,20 @@ def execute_pipeline(
         + final_output_guardrail.get("warnings", [])
     )
 
+    # Re-validate final response against schema (after self-correction may have fixed it)
+    final_schema_valid: bool = schema_valid
+    final_schema_errors: list[str] = schema_errors
+    if expected_format and not schema_valid:
+        final_schema_valid, final_schema_errors, _ = validate_output(
+            sanitized_response, expected_format
+        )
+        if final_schema_valid:
+            logger.info(
+                "Schema validation passed after self-correction (schema=%s, agent=%s)",
+                expected_format,
+                "gemma_reasoner" if loop_result.fallback_used else agent_id,
+            )
+
     return {
         "status": "success",
         "response": sanitized_response,
@@ -403,6 +460,11 @@ def execute_pipeline(
             "attempts": loop_result.attempts,
             "passed": loop_result.passed,
             "fallback_used": loop_result.fallback_used,
+        },
+        "schema_validation": {
+            "schema": expected_format,
+            "valid": final_schema_valid,
+            "errors": final_schema_errors,
         },
         "warnings": all_warnings,
     }

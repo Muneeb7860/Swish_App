@@ -57,6 +57,14 @@ agents:
     timeout_ms: 30000
     role: stateful_support
 
+  vllm_reasoner:
+    backend: vllm
+    model: qwen2.5-coder-7b-instruct
+    vllm_url: http://localhost:8000
+    timeout_ms: 45000
+    role: reasoner
+
+
 evaluation_rules:
   passing_threshold: 0.75
   max_self_correction_retries: 3
