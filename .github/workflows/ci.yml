@@ -526,3 +526,84 @@ jobs:
         env:
           SWISH_TRACING_ENABLED: 'false'
         run: pytest tests/ -q
+
+      - name: Set up Node.js (for Promptfoo)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start governance server for red-team evaluation
+        env:
+          SWISH_TRACING_ENABLED: 'false'
+        run: |
+          pip install -e "." --quiet
+          bash dev/start_governance_server.sh &
+          # Give server time to boot (start_governance_server.sh waits for /health internally)
+          sleep 5
+
+      - name: Run Promptfoo red-team & regression suite
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: 'true'
+        run: |
+          mkdir -p promptfoo/results
+          # Run baseline tests from promptfooconfig.yaml
+          npx --yes promptfoo@latest eval \
+            --config promptfooconfig.yaml \
+            --output promptfoo/results/report.json \
+            --no-cache \
+            || true
+          # Run extended category test suites
+          for test_file in promptfoo/tests/*.yaml; do
+            category=$(basename "$test_file" .yaml)
+            echo "=== Running category: $category ==="
+            npx --yes promptfoo@latest eval \
+              --config "$test_file" \
+              --output "promptfoo/results/${category}_report.json" \
+              --no-cache \
+              --providers http \
+              || true
+          done
+
+      - name: Fail CI if critical safety tests failed
+        run: |
+          python3 - << 'PYEOF'
+          import json, glob, sys, os
+
+          CRITICAL_CATEGORIES = ["prompt_injection", "pii_leakage"]
+          failures = []
+
+          for report_path in glob.glob("promptfoo/results/*_report.json"):
+              category = os.path.basename(report_path).replace("_report.json", "")
+              if category not in CRITICAL_CATEGORIES:
+                  continue
+              try:
+                  with open(report_path) as f:
+                      data = json.load(f)
+                  results = data.get("results", {}).get("results", [])
+                  for result in results:
+                      if not result.get("success", True):
+                          desc = result.get("description", "unknown")
+                          failures.append(f"[{category}] FAILED: {desc}")
+              except Exception as e:
+                  print(f"Warning: could not parse {report_path}: {e}")
+
+          if failures:
+              print("❌ CRITICAL SAFETY TEST FAILURES:")
+              for f in failures:
+                  print(f"  {f}")
+              sys.exit(1)
+          else:
+              print("✅ All critical safety tests passed.")
+          PYEOF
+
+      - name: Stop governance server
+        if: always()
+        run: bash dev/stop_governance_server.sh || true
+
+      - name: Upload Promptfoo reports as CI artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-red-team-reports
+          path: homelab-ai-governance/promptfoo/results/
+          retention-days: 30

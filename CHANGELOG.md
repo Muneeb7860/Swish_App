@@ -15,8 +15,8 @@ All notable changes to the **Swish Q-Commerce Platform** are documented in this 
 *   **Ops Alerting Rules**: Configured Prometheus alerts to page operations when the human-in-the-loop task rate exceeds 10/hour (Warning) or 50/hour (Critical).
 
 ### 🛠️ Fixed
-*   **BUG-012 (Transactional Outbox Test Hang)**: Resolved Kafka connection blocks during integration test executions by declaring a mocked `KafkaTemplate` in [PaymentIntegrationTest.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and auto-loading [TestConfig.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) globally.
-*   **BUG-013 (Onboarding Null Constraint Violation)**: Resolved database crashes during E2E onboarding flows by wrapping boolean DTO fields with `Boolean.TRUE.equals(...)` in [EnrollmentPersistenceAdapter.java](file:///c:/Users/DELL%209420/Documents/swiss_App/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java).
+*   **BUG-012 (Transactional Outbox Test Hang)**: Resolved Kafka connection blocks during integration test executions by declaring a mocked `KafkaTemplate` in [PaymentIntegrationTest.java](file:///Users/muneeb/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/PaymentIntegrationTest.java) and auto-loading [TestConfig.java](file:///Users/muneeb/GitHub/Swish_App-1/backend/src/test/java/ch/swissqcommerce/backend/integration/TestConfig.java) globally.
+*   **BUG-013 (Onboarding Null Constraint Violation)**: Resolved database crashes during E2E onboarding flows by wrapping boolean DTO fields with `Boolean.TRUE.equals(...)` in [EnrollmentPersistenceAdapter.java](file:///Users/muneeb/GitHub/Swish_App-1/backend/src/main/java/ch/swissqcommerce/backend/domain/enrollment/adapter/out/persistence/EnrollmentPersistenceAdapter.java).
 
 ---
 

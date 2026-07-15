@@ -323,6 +323,35 @@ services:
     networks:
       - backend-tier
 
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: swiss_vllm
+    # CPU fallback is used by default. If a GPU is available, uncomment the deploy block below.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    environment:
+      - OMP_NUM_THREADS=4
+      - VLLM_LOGGING_LEVEL=WARNING
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    command: --model Qwen/Qwen2.5-Coder-7B-Instruct --port 8000 --device cpu
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - backend-tier
+
+
 networks:
   frontend-tier:
     driver: bridge

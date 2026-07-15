@@ -1,4 +1,4 @@
-"""Ollama agent — wraps the Ollama REST API for local model inference."""
+"""vLLM agent — wraps the OpenAI compatible API exposed by local vLLM instances."""
 
 from __future__ import annotations
 
@@ -10,35 +10,41 @@ from typing import Any
 import httpx
 
 from governance.agents.base import AgentResponse, BaseAgent
-from governance.concurrency import get_model_semaphore
 
 logger = logging.getLogger(__name__)
 
 
-class OllamaAgent(BaseAgent):
-    """Agent backed by a locally-running Ollama instance.
+class VllmAgent(BaseAgent):
+    """Agent backed by a locally-running vLLM server exposing an OpenAI-compatible API.
 
-    Uses the /api/generate endpoint for synchronous, non-streaming inference.
+    Uses the /v1/chat/completions endpoint for chat-based inference.
+
+    Deliberately has NO per-model semaphore (contrast OllamaAgent /
+    concurrency.py): vLLM does continuous batching server-side, so serializing
+    calls here would fight the scheduler instead of protecting it — the §3b
+    single-model-queue guard is an Ollama-specific workaround, not a general
+    "gate every local model" rule.
     """
 
     def __init__(
         self,
         agent_id: str,
         model: str,
-        ollama_url: str = "http://localhost:11434",
+        vllm_url: str = "http://localhost:8000",
         timeout_ms: int = 30000,
     ):
         super().__init__(agent_id, model, timeout_ms)
-        self.ollama_url = ollama_url.rstrip("/")
+        self.vllm_url = vllm_url.rstrip("/")
+        # Initialize HTTP client with reasonable timeout
         self._client = httpx.Client(timeout=timeout_ms / 1000)
 
     def generate(self, prompt: str) -> AgentResponse:
-        """Send a prompt to Ollama and return the response."""
+        """Send a prompt to vLLM using the chat interface."""
         return self.generate_chat(prompt, system_prompt=None)
 
     def generate_chat(self, prompt: str, system_prompt: str | None = None) -> AgentResponse:
-        """Send a structured chat prompt to Ollama and return the response."""
-        url = f"{self.ollama_url}/api/chat"
+        """Send a chat-structured request to the vLLM server."""
+        url = f"{self.vllm_url}/v1/chat/completions"
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -48,24 +54,32 @@ class OllamaAgent(BaseAgent):
             "model": self.model,
             "messages": messages,
             "stream": False,
+            "temperature": 0.0,  # Deterministic output for governance checks
         }
 
         start = time.perf_counter()
         try:
-            # Per-model gate (GOVERNANCE_SPEC.md §3b): same-model generations
-            # queue; different models may overlap. Held only for the HTTP call.
-            with get_model_semaphore(self.model):
-                resp = self._client.post(url, json=payload)
+            resp = self._client.post(url, json=payload)
             resp.raise_for_status()
             elapsed_ms = (time.perf_counter() - start) * 1000
             data: dict[str, Any] = resp.json()
-            message = data.get("message", {})
-            response_text = message.get("content", "")
-            input_tokens = data.get("prompt_eval_count", 0)
-            output_tokens = data.get("eval_count", 0)
+            
+            choices = data.get("choices", [])
+            if not choices:
+                raise ValueError("vLLM response returned empty choices")
+                
+            response_text = choices[0].get("message", {}).get("content", "")
+            
+            # Extract token counts if provided by vLLM
+            usage = data.get("usage", {})
+            input_tokens = usage.get("prompt_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0)
+            
             metadata = {
-                "total_duration_ns": data.get("total_duration"),
-                "load_duration_ns": data.get("load_duration"),
+                "id": data.get("id"),
+                "object": data.get("object"),
+                "created": data.get("created"),
+                "usage": usage,
             }
         except Exception as e:
             # Goal 1 honesty gate: a mocked "governed" response that no model
@@ -78,25 +92,27 @@ class OllamaAgent(BaseAgent):
             ):
                 raise
             logger.warning(
-                "Ollama chat inference failed for agent %s (model: %s): %s. Falling back to mock generation.",
+                "vLLM chat completions failed for agent %s (model: %s) at %s: %s. Falling back to mock generation.",
                 self.agent_id,
                 self.model,
+                self.vllm_url,
                 e
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-            # If prompt requests JSON structure, return a valid JSON structure matching typical schemas
+            
+            # Simple mock fallback strategy matching OllamaAgent pattern
             if "valid JSON" in prompt or "ClassificationSchema" in prompt or "intent" in prompt:
                 response_text = '{"intent": "general_knowledge", "complexity": "low", "confidence": 0.95}'
             elif "customer support agent" in prompt.lower() or "CustomerSupportSchema" in prompt:
-                response_text = '{"reply": "This is a simulated customer support reply.", "confidence": 0.9, "tool": null}'
+                response_text = '{"reply": "This is a simulated customer support reply from vLLM.", "confidence": 0.9, "tool": null}'
             elif "dynamic pricing agent" in prompt.lower() or "DynamicPricingSchema" in prompt:
-                response_text = '{"surgeMultiplier": 1.0, "discountPercent": 0.0, "confidence": 0.95, "rationale": "Base price"}'
+                response_text = '{"surgeMultiplier": 1.0, "discountPercent": 0.0, "confidence": 0.95, "rationale": "vLLM Base price"}'
             else:
-                # Echo verifying/test sentence if requested, or return standard mock text
                 if "quick test sentence" in prompt.lower() or "verifying" in prompt.lower():
-                    response_text = "Homelab AI Governance connection verified successfully!"
+                    response_text = "Homelab AI Governance connection to vLLM verified successfully!"
                 else:
-                    response_text = f"Simulated response from agent {self.agent_id} for prompt: {prompt[:100]}..."
+                    response_text = f"Simulated vLLM response from agent {self.agent_id} for prompt: {prompt[:100]}..."
+            
             input_tokens = len(prompt) // 4
             output_tokens = len(response_text) // 4
             metadata = {"mocked": True, "original_error": str(e)}
@@ -112,16 +128,14 @@ class OllamaAgent(BaseAgent):
         )
 
     def is_available(self) -> bool:
-        """Check if Ollama is reachable and the model is loaded."""
+        """Check if the vLLM server is responsive and listing models."""
         try:
-            resp = self._client.get(f"{self.ollama_url}/api/tags")
+            # Query the standard OpenAI-compatible /v1/models endpoint
+            resp = self._client.get(f"{self.vllm_url}/v1/models")
             if resp.status_code != 200:
                 return False
-            models = [m["name"] for m in resp.json().get("models", [])]
-            # Match model name with or without tag suffix
-            return any(
-                m == self.model or m.startswith(f"{self.model}:")
-                for m in models
-            )
+            models_data = resp.json().get("data", [])
+            # Return true if any model listed matches the expected model identifier
+            return any(m.get("id") == self.model for m in models_data)
         except Exception:
             return False
