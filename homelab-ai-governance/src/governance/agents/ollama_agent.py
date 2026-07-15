@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from typing import Any
 
 import httpx
 
+from governance.agents._mock import build_mock_response, mock_fallback_enabled
 from governance.agents.base import AgentResponse, BaseAgent
 from governance.concurrency import get_model_semaphore
 
@@ -68,14 +68,9 @@ class OllamaAgent(BaseAgent):
                 "load_duration_ns": data.get("load_duration"),
             }
         except Exception as e:
-            # Goal 1 honesty gate: a mocked "governed" response that no model
-            # produced must never reach production. Mock fallback is opt-in for
-            # tests/CI only; otherwise the error propagates and the pipeline
-            # reports an honest failure (GOVERNANCE_SPEC.md §3).
-            if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() not in (
-                "1",
-                "true",
-            ):
+            # Goal 1 honesty gate (GOVERNANCE_SPEC.md §3): opt-in mock only for
+            # tests/CI; otherwise propagate so the pipeline fails honestly.
+            if not mock_fallback_enabled():
                 raise
             logger.warning(
                 "Ollama chat inference failed for agent %s (model: %s): %s. Falling back to mock generation.",
@@ -84,22 +79,10 @@ class OllamaAgent(BaseAgent):
                 e
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-            # If prompt requests JSON structure, return a valid JSON structure matching typical schemas
-            if "valid JSON" in prompt or "ClassificationSchema" in prompt or "intent" in prompt:
-                response_text = '{"intent": "general_knowledge", "complexity": "low", "confidence": 0.95}'
-            elif "customer support agent" in prompt.lower() or "CustomerSupportSchema" in prompt:
-                response_text = '{"reply": "This is a simulated customer support reply.", "confidence": 0.9, "tool": null}'
-            elif "dynamic pricing agent" in prompt.lower() or "DynamicPricingSchema" in prompt:
-                response_text = '{"surgeMultiplier": 1.0, "discountPercent": 0.0, "confidence": 0.95, "rationale": "Base price"}'
-            else:
-                # Echo verifying/test sentence if requested, or return standard mock text
-                if "quick test sentence" in prompt.lower() or "verifying" in prompt.lower():
-                    response_text = "Homelab AI Governance connection verified successfully!"
-                else:
-                    response_text = f"Simulated response from agent {self.agent_id} for prompt: {prompt[:100]}..."
+            response_text, metadata = build_mock_response(prompt, self.agent_id)
+            metadata["original_error"] = str(e)
             input_tokens = len(prompt) // 4
             output_tokens = len(response_text) // 4
-            metadata = {"mocked": True, "original_error": str(e)}
 
         return AgentResponse(
             text=response_text,

@@ -80,16 +80,20 @@ class DynamicPricingSchema(BaseModel):
 class ClassificationSchema(BaseModel):
     """Response from the intent classifier."""
 
+    # Source of truth is the live classifier's Literal (router/classifier.py,
+    # ClassificationSchema.intent) mirrored in routing_config.yaml `intents`.
+    # These MUST stay in sync — test_schema_gate.py enforces it — otherwise the
+    # "classification" RAIL schema rejects every real classifier output.
     VALID_INTENTS: ClassVar[set[str]] = {
         "general_knowledge",
-        "inventory",
-        "rider",
-        "order",
-        "support",
-        "pricing",
+        "code_generation",
+        "code_debugging",
+        "code_review",
+        "summarization",
+        "creative_writing",
+        "data_analysis",
         "system_admin",
-        "logistics",
-        "procurement",
+        "sensitive_query",
     }
     VALID_COMPLEXITIES: ClassVar[set[str]] = {"low", "medium", "high"}
 

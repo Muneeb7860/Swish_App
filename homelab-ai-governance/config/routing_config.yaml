@@ -57,10 +57,16 @@ agents:
     timeout_ms: 30000
     role: stateful_support
 
+  # STAGED / NOT ROUTED: no decision-table rule targets vllm_reasoner (see
+  # router/decision_table.py) and no vLLM host runs locally — vLLM has no
+  # Apple-Silicon/Metal backend, so this only activates against a remote/Linux
+  # vLLM server. Registered so the agent factory + tests exercise the backend;
+  # do NOT add a routing rule until a real vLLM endpoint exists.
+  # Port 8001, NOT 8000 — the governance service itself owns 8000.
   vllm_reasoner:
     backend: vllm
     model: qwen2.5-coder-7b-instruct
-    vllm_url: http://localhost:8000
+    vllm_url: http://localhost:8001
     timeout_ms: 45000
     role: reasoner
 
