@@ -84,6 +84,16 @@ update this table.
 There is **no** 15–20 ms or 70–80 ms guardrail budget. Any doc claiming a synchronous
 SLM stage under 100 ms on this hardware contradicts our own benchmark by ~15×.
 
+> **Model-store latency (verified 2026-07-15).** These budgets assume models on
+> **SSD**. Cold model load measured **110 s** off the external HDD vs **7.5 s** off
+> the Samsung T7 SSD — a 15× gap that alone made goal 2 unachievable and timed out
+> every live `/govern` call (classifier + agent both reload; 45 s agent
+> `timeout_ms` never survives a 110 s load). The store now lives on the T7
+> (`~/.ollama` → `/Volumes/T7`); a full normal request runs in ~4.8 s live, an
+> elevated (PII) request ~2.8 s. **No code change substitutes for SSD-backed
+> models.** Keep the classifier pinned (`keep_alive=-1`); the 16 GB host holds
+> classifier + one agent, so avoid a third resident model.
+
 ---
 
 ## 3. Enforcement matrix (current truth, including defects)
