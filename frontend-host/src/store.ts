@@ -199,7 +199,12 @@ export interface AppSlice {
 	setBotInputText: (val: any) => void;
 	botMessages: any;
 	setBotMessages: (val: any) => void;
+	theme: string;
+	setTheme: (val: any) => void;
+	language: string;
+	setLanguage: (val: any) => void;
 }
+
 
 export interface AuthSlice {
 	isAuthenticated: any;
@@ -763,7 +768,49 @@ export const createAppSlice: StateCreator<State, [], [], AppSlice> = (set) => ({
 					botMessages: typeof val === "function" ? val(state.botMessages) : val,
 				}) as any,
 		),
+	theme: (() => {
+		if (typeof window !== "undefined") {
+			const saved = localStorage.getItem("swish-theme");
+			if (saved) return saved;
+		}
+		const hour = new Date().getHours();
+		return hour >= 7 && hour < 19 ? "light" : "dark";
+	})(),
+	setTheme: (val) =>
+		set(
+			(state: any) => {
+				const nextTheme = typeof val === "function" ? val(state.theme) : val;
+				if (typeof window !== "undefined") {
+					localStorage.setItem("swish-theme", nextTheme);
+					document.documentElement.setAttribute("data-theme", nextTheme);
+					if (nextTheme === "light") {
+						document.body.classList.add("light-theme");
+					} else {
+						document.body.classList.remove("light-theme");
+					}
+				}
+				return { theme: nextTheme };
+			}
+		),
+	language: (() => {
+		if (typeof window !== "undefined") {
+			const saved = localStorage.getItem("swish-language");
+			if (saved) return saved;
+		}
+		return "en";
+	})(),
+	setLanguage: (val) =>
+		set(
+			(state: any) => {
+				const nextLang = typeof val === "function" ? val(state.language) : val;
+				if (typeof window !== "undefined") {
+					localStorage.setItem("swish-language", nextLang);
+				}
+				return { language: nextLang };
+			}
+		),
 });
+
 
 export const createAuthSlice: StateCreator<State, [], [], AuthSlice> = (
 	set,
