@@ -20,6 +20,24 @@ from governance.pipeline import execute_pipeline
 from governance.router.classifier import ClassificationResult
 
 
+def test_classification_schema_taxonomy_matches_live_classifier():
+    """The 'classification' RAIL schema must accept exactly what the live
+    classifier emits. If these drift, validate_output rejects every real
+    classification (the Epic-5 fork: schemas had Swish business domains
+    {inventory,rider,order,…} while the classifier emits {code_generation,
+    sensitive_query,…})."""
+    from typing import get_args
+
+    from governance.guardrails.schemas import ClassificationSchema as RailSchema
+    from governance.router.classifier import ClassificationSchema as LiveSchema
+
+    live_intents = set(get_args(LiveSchema.model_fields["intent"].annotation))
+    assert RailSchema.VALID_INTENTS == live_intents, (
+        f"taxonomy drift: RAIL {RailSchema.VALID_INTENTS ^ live_intents} "
+        f"differs from live classifier"
+    )
+
+
 def test_json_flag_is_not_a_rail_schema():
     """'json' must never be looked up in the RAIL schema registry — it isn't
     one, and treating it as one previously injected an 'Unknown schema' error

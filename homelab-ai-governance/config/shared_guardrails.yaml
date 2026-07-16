@@ -83,6 +83,17 @@ rules:
         - pattern: '(?i)override\s+(mode|instructions|rules)'
         - pattern: '(?i)(?:assistant|ai|bot)\s*:\s*'
         - pattern: '(?i)<<\s*(?:SYS|INST|system)\s*>>'
+        # ── Semantic jailbreak signatures (added 2026-07-16 after live red-team;
+        # the patterns above catch direct "ignore instructions" but missed DAN /
+        # developer-mode / hypothetical / roleplay-unrestricted framings, which
+        # reached the model and got compliance). Anchored on unambiguous jailbreak
+        # phrasing — verified to catch JB-01/02/09/14 + INJ-14 without matching any
+        # clean_queries payload (incl. CQ-05's legit "you are a pricing agent").
+        - pattern: '(?i)\bdo\s+anything\s+now\b'
+        - pattern: '(?i)\bdeveloper\s+mode\b'
+        - pattern: '(?i)\b(ai|assistant|chatbot|llm)\b.{0,20}\b(no|without|zero)\s+(restriction|safety|safeguard|ethical|moral|filter)'
+        - pattern: '(?i)safety\s+(system|protocol|feature|filter|rule)s?\s+(are\s+|is\s+)?(disabled|off|removed|bypassed|turned\s+off)'
+        - pattern: '(?i)(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(instructions|rules|prompts)\s+(you\s+(got|received)\s+)?(before|earlier|previously)'
 
   - id: profanity_filter
     description: "Filters profanity in output"

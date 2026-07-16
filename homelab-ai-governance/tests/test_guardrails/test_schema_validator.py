@@ -141,10 +141,10 @@ class TestDynamicPricingSchema:
 
 class TestClassificationSchema:
     def test_valid(self):
-        text = json.dumps({"intent": "order", "complexity": "low", "confidence": 0.95})
+        text = json.dumps({"intent": "code_generation", "complexity": "low", "confidence": 0.95})
         valid, errors, parsed = validate_output(text, "ClassificationSchema")
         assert valid is True
-        assert parsed["intent"] == "order"
+        assert parsed["intent"] == "code_generation"
 
     def test_invalid_intent(self):
         text = json.dumps({"intent": "garbage_intent", "complexity": "low", "confidence": 0.8})
@@ -153,25 +153,28 @@ class TestClassificationSchema:
         assert any("intent" in e for e in errors)
 
     def test_invalid_complexity(self):
-        text = json.dumps({"intent": "order", "complexity": "extreme", "confidence": 0.8})
+        text = json.dumps({"intent": "general_knowledge", "complexity": "extreme", "confidence": 0.8})
         valid, errors, _ = validate_output(text, "ClassificationSchema")
         assert valid is False
         assert any("complexity" in e for e in errors)
 
     def test_confidence_boundary_zero(self):
-        text = json.dumps({"intent": "support", "complexity": "medium", "confidence": 0.0})
+        text = json.dumps({"intent": "summarization", "complexity": "medium", "confidence": 0.0})
         valid, _, _ = validate_output(text, "ClassificationSchema")
         assert valid is True
 
     def test_confidence_boundary_one(self):
-        text = json.dumps({"intent": "pricing", "complexity": "high", "confidence": 1.0})
+        text = json.dumps({"intent": "code_review", "complexity": "high", "confidence": 1.0})
         valid, _, _ = validate_output(text, "ClassificationSchema")
         assert valid is True
 
     def test_all_valid_intents(self):
+        # Canonical taxonomy — must match router/classifier.py (enforced by
+        # test_schema_gate.py::test_classification_schema_taxonomy_matches_live_classifier)
         intents = [
-            "general_knowledge", "inventory", "rider", "order",
-            "support", "pricing", "system_admin", "logistics", "procurement"
+            "general_knowledge", "code_generation", "code_debugging", "code_review",
+            "summarization", "creative_writing", "data_analysis", "system_admin",
+            "sensitive_query",
         ]
         for intent in intents:
             text = json.dumps({"intent": intent, "complexity": "low", "confidence": 0.9})

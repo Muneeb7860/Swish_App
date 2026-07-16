@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from typing import Any
 
 import httpx
 
+from governance.agents._mock import build_mock_response, mock_fallback_enabled
 from governance.agents.base import AgentResponse, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -82,14 +82,9 @@ class VllmAgent(BaseAgent):
                 "usage": usage,
             }
         except Exception as e:
-            # Goal 1 honesty gate: a mocked "governed" response that no model
-            # produced must never reach production. Mock fallback is opt-in for
-            # tests/CI only; otherwise the error propagates and the pipeline
-            # reports an honest failure (GOVERNANCE_SPEC.md §3).
-            if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() not in (
-                "1",
-                "true",
-            ):
+            # Goal 1 honesty gate (GOVERNANCE_SPEC.md §3): opt-in mock only for
+            # tests/CI; otherwise propagate so the pipeline fails honestly.
+            if not mock_fallback_enabled():
                 raise
             logger.warning(
                 "vLLM chat completions failed for agent %s (model: %s) at %s: %s. Falling back to mock generation.",
@@ -99,23 +94,10 @@ class VllmAgent(BaseAgent):
                 e
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-            
-            # Simple mock fallback strategy matching OllamaAgent pattern
-            if "valid JSON" in prompt or "ClassificationSchema" in prompt or "intent" in prompt:
-                response_text = '{"intent": "general_knowledge", "complexity": "low", "confidence": 0.95}'
-            elif "customer support agent" in prompt.lower() or "CustomerSupportSchema" in prompt:
-                response_text = '{"reply": "This is a simulated customer support reply from vLLM.", "confidence": 0.9, "tool": null}'
-            elif "dynamic pricing agent" in prompt.lower() or "DynamicPricingSchema" in prompt:
-                response_text = '{"surgeMultiplier": 1.0, "discountPercent": 0.0, "confidence": 0.95, "rationale": "vLLM Base price"}'
-            else:
-                if "quick test sentence" in prompt.lower() or "verifying" in prompt.lower():
-                    response_text = "Homelab AI Governance connection to vLLM verified successfully!"
-                else:
-                    response_text = f"Simulated vLLM response from agent {self.agent_id} for prompt: {prompt[:100]}..."
-            
+            response_text, metadata = build_mock_response(prompt, self.agent_id, source="vLLM")
+            metadata["original_error"] = str(e)
             input_tokens = len(prompt) // 4
             output_tokens = len(response_text) // 4
-            metadata = {"mocked": True, "original_error": str(e)}
 
         return AgentResponse(
             text=response_text,

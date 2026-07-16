@@ -18,6 +18,115 @@ import { syncProductsFromFirebase } from "./firebaseSync";
 import { useEnvProfiles } from "./hooks/useEnvProfiles";
 import { useStore } from "./store";
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+	en: {
+		tagline: "Quick Commerce Architecture V1.0 (Federated MFEs)",
+		envSelector: "Env Profile",
+		activeRoleText: "Active Persona",
+		weatherText: "Weather",
+		role_customer: "Customer",
+		role_rider: "Rider",
+		role_business: "B2B",
+		role_inventory: "Dark Store",
+		role_admin: "Admin",
+		role_engine: "Engine",
+		auth_req: "MFA Authentication Required",
+		tab_customer: "Customer Super App",
+		tab_rider: "Rider Light",
+		tab_inventory: "Dark Store Inventory",
+		tab_business: "B2B Retailer Hub",
+		tab_admin: "System Admin",
+		tab_logout: "Lock Cockpit",
+		tab_show_monitor: "Show Monitor",
+		tab_hide_monitor: "Hide Monitor",
+	},
+	fr: {
+		tagline: "Architecture Quick Commerce V1.0 (MFEs Fédérés)",
+		envSelector: "Profil Env",
+		activeRoleText: "Rôle Actif",
+		weatherText: "Météo",
+		role_customer: "Client",
+		role_rider: "Livreur",
+		role_business: "B2B",
+		role_inventory: "Magasin",
+		role_admin: "Admin",
+		role_engine: "Moteur",
+		auth_req: "Authentification MFA Requise",
+		tab_customer: "Client Super App",
+		tab_rider: "Espace Coursier",
+		tab_inventory: "Inventaire Magasin",
+		tab_business: "Portail Grossiste",
+		tab_admin: "Cockpit Admin",
+		tab_logout: "Verrouiller",
+		tab_show_monitor: "Afficher Console",
+		tab_hide_monitor: "Masquer Console",
+	},
+	de: {
+		tagline: "Quick-Commerce-Architektur V1.0 (Federated MFEs)",
+		envSelector: "Umgebung",
+		activeRoleText: "Aktive Rolle",
+		weatherText: "Wetter",
+		role_customer: "Kunde",
+		role_rider: "Fahrer",
+		role_business: "B2B",
+		role_inventory: "Lager",
+		role_admin: "Admin",
+		role_engine: "Motor",
+		auth_req: "MFA-Authentifizierung erforderlich",
+		tab_customer: "Kunden-App",
+		tab_rider: "Fahrer-Bereich",
+		tab_inventory: "Dunkellager-Bestand",
+		tab_business: "B2B Händler-Hub",
+		tab_admin: "System-Admin",
+		tab_logout: "Cockpit sperren",
+		tab_show_monitor: "Monitor zeigen",
+		tab_hide_monitor: "Monitor ausblenden",
+	},
+	it: {
+		tagline: "Architettura Quick Commerce V1.0 (MFE Federati)",
+		envSelector: "Profilo Env",
+		activeRoleText: "Ruolo Attivo",
+		weatherText: "Meteo",
+		role_customer: "Cliente",
+		role_rider: "Fattorino",
+		role_business: "B2B",
+		role_inventory: "Magazzino",
+		role_admin: "Admin",
+		role_engine: "Motore",
+		auth_req: "Autenticazione MFA Richiesta",
+		tab_customer: "Super App Cliente",
+		tab_rider: "Area Rider",
+		tab_inventory: "Inventario Magazzino",
+		tab_business: "Hub B2B Rivenditore",
+		tab_admin: "Admin di Sistema",
+		tab_logout: "Blocca Cockpit",
+		tab_show_monitor: "Mostra Monitor",
+		tab_hide_monitor: "Nascondi Monitor",
+	},
+	ar: {
+		tagline: "بنية التجارة السريعة V1.0 (تطبيقات الويب المصغرة الموحدة)",
+		envSelector: "بيئة العمل",
+		activeRoleText: "الدور النشط",
+		weatherText: "الطقس",
+		role_customer: "العميل",
+		role_rider: "السائق",
+		role_business: "B2B",
+		role_inventory: "المخزن المغلق",
+		role_admin: "مدير النظام",
+		role_engine: "المحرك",
+		auth_req: "يتطلب مصادقة ثنائية MFA",
+		tab_customer: "تطبيق العميل الفائق",
+		tab_rider: "تطبيق السائق",
+		tab_inventory: "مخزون المتجر المظلم",
+		tab_business: "مركز تجار B2B",
+		tab_admin: "مدير النظام",
+		tab_logout: "قفل قمرة القيادة",
+		tab_show_monitor: "عرض شاشة المراقبة",
+		tab_hide_monitor: "إخفاء شاشة المراقبة",
+	},
+};
+
+
 // Strict MFE Origin Whitelist Check to prevent module hijacking
 const MFE_WHITELIST = (
 	import.meta.env.VITE_MFE_WHITELIST || "localhost,127.0.0.1"
@@ -417,6 +526,10 @@ export default function App() {
 		setSavedCards,
 		vouchers,
 		setVouchers,
+		theme,
+		setTheme,
+		language,
+		setLanguage,
 	} = useStore();
 	const {
 		envProfiles,
@@ -497,6 +610,15 @@ export default function App() {
 		const timer = setTimeout(preloadMfes, 1500);
 		return () => clearTimeout(timer);
 	}, []);
+
+	useEffect(() => {
+		document.documentElement.setAttribute("data-theme", theme);
+		if (theme === "light") {
+			document.body.classList.add("light-theme");
+		} else {
+			document.body.classList.remove("light-theme");
+		}
+	}, [theme]);
 
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	useEffect(() => {
@@ -1902,17 +2024,82 @@ export default function App() {
 		}
 	};
 
-	const runRulesEngine = (text, attachmentUrl) => {
+	const runRulesEngine = (text: string, attachmentUrl: string | null) => {
 		setTimeout(() => {
-			let botResponse = `I received: "${text}". How can I help resolve this operational request?`;
+			const lower = text.toLowerCase();
+			let botResponse = "";
+
+			const resTrans: Record<string, Record<string, string>> = {
+				en: {
+					defaultResponse: `I received: "${text}". How can I help resolve this operational request?`,
+					riderEmergency: "🚨 EMERGENCY DISPATCH: Vehicle breakdown/accident detected. Automatically routing backup rider to salvage cargo. Transit SLA paused. Incident report logged.",
+					riderTraffic: "🚦 TRAFFIC ALERT: Congestion detected on primary route. Alternative GPS route generated: Take Expressway bypass. Verify perishable seal.",
+					invDamage: "🍌 ITEM DAMAGE LOGGED: Damaged produce reported. Auto-dispatched a B2B replenishment reorder for safety. Damaged items written off.",
+					invCongested: "📦 PICKER BACKLOG CONGESTION: Queue delays detected. Recommend deploying the Dark Store operations backup picker to restore standard speeds.",
+					refundLowTrust: "⛔ REFUND REFUSED: Your Customer Trust Score is below the 65-point safety threshold. Account flagged.",
+					refundGdpr: "⛔ REFUND REFUSED: Your account is currently under GDPR Anonymization Probation. Automated bot refunds are blocked until completing 3 successful orders.",
+					refundFraud: "⛔ REFUND BLOCKED: Telemetry Correlation Audit Failed. Rider GPS logs indicate delivery took place at coordinates (12.971, 77.594) but customer profile claims geofence breach. Furthermore, uploaded photo EXIF metadata indicates timestamp mismatch. Refund request rejected.",
+					refundSuccess: "✅ REFUND REQUESTED: Telemetry and EXIF audits passed. Your refund request of $8.97 has been submitted. Awaiting Admin HITL approval.",
+					trackOrder: "📍 ORDER TRACKING: Your order is currently with courier rider **RIDER-902**. Perishable temperature signature: **4.2°C** (GDP compliant). ETA: **4 minutes**.",
+					agentConsult: "🤖 AI AGENT ASSISTANT: Connected to Swish OS B2B/Checkout gateway. Processing request with qwen2.5:7b via Letta memory context... Letta memory updated. Response: Action logged successfully.",
+				},
+				fr: {
+					defaultResponse: `Reçu: "${text}". Comment puis-je vous aider ?`,
+					riderEmergency: "🚨 EXPÉDITION D'URGENCE: Panne/accident de véhicule détecté. Redirection automatique d'un coursier de rechange pour récupérer la cargaison. SLA suspendu. Rapport d'incident consigné.",
+					riderTraffic: "🚦 ALERTE TRAFIC: Encombrement détecté sur l'itinéraire principal. Itinéraire GPS alternatif généré: Prendre le contournement de l'autoroute. Vérifier le sceau périssable.",
+					invDamage: "🍌 DOMMAGE SIGNALÉ: Produit endommagé signalé. Commande de réapprovisionnement B2B auto-générée par sécurité. Articles endommagés amortis.",
+					invCongested: "📦 CONGESTION INVENTAIRE: Délais de préparation détectés. Recommandation d'activer le préparateur de secours du Dark Store pour rétablir les vitesses standard.",
+					refundLowTrust: "⛔ REMBOURSEMENT REFUSÉ: Votre score de confiance client est inférieur au seuil de 65 points. Compte signalé.",
+					refundGdpr: "⛔ REMBOURSEMENT REFUSÉ: Votre compte est sous probation d'anonymisation GDPR. Les remboursements automatisés sont bloqués jusqu'à 3 commandes réussies.",
+					refundFraud: "⛔ REMBOURSEMENT BLOQUÉ: Échec de l'audit de corrélation télémétrique. Les journaux GPS indiquent que la livraison a eu lieu aux coordonnées (12.971, 77.594) mais le client prétend le contraire. De plus, les métadonnées de la photo indiquent un décalage d'horodatage. Demande rejetée.",
+					refundSuccess: "✅ REMBOURSEMENT DEMANDÉ: Audits télémétrie et EXIF réussis. Demande de remboursement de 8,97 $ soumise. En attente de l'approbation de l'administrateur.",
+					trackOrder: "📍 SUIVI DE COMMANDE: Votre commande est en cours de livraison par le coursier **RIDER-902**. Température de la cargaison: **4.2°C** (conforme GDP). Arrivée estimée: **4 minutes**.",
+					agentConsult: "🤖 ASSISTANT AGENT AI: Connecté à la passerelle Swish OS B2B. Traitement de la demande avec qwen2.5:7b via Letta... Mémoire Letta mise à jour. Réponse: Action consignée avec succès.",
+				},
+				de: {
+					defaultResponse: `Erhalten: "${text}". Wie kann ich Ihnen helfen?`,
+					riderEmergency: "🚨 NOTFALL-DISPATCH: Fahrzeugpanne/Unfall erkannt. Automatisches Routing eines Ersatzfahrers zur Bergung der Ladung. Transit-SLA pausiert. Vorfallsbericht protokolliert.",
+					riderTraffic: "🚦 STAU-WARNUNG: Stau auf der Hauptroute erkannt. Alternative GPS-Route generiert: Schnellstraßen-Bypass nutzen. Verderblichkeits-Siegel prüfen.",
+					invDamage: "🍌 WARENSCHADEN PROTOKOLLIERT: Beschädigte Ware gemeldet. Automatische B2B-Nachbestellung zur Sicherheit ausgelöst. Defekte Artikel abgeschrieben.",
+					invCongested: "📦 LAGER-ENGPASS: Verzögerungen in der Warteschlange erkannt. Empfehlung: Backup-Kommissionierer einsetzen, um normale Geschwindigkeit wiederherzustellen.",
+					refundLowTrust: "⛔ ERSTATTUNG ABGELEHNT: Ihr Kunden-Vertrauenswert liegt unter dem Schwellenwert von 65 Punkten. Konto markiert.",
+					refundGdpr: "⛔ ERSTATTUNG ABGELEHNT: Ihr Konto unterliegt der DSGVO-Anonymisierungsbewährung. Automatische Erstattungen sind bis zu 3 erfolgreichen Bestellungen gesperrt.",
+					refundFraud: "⛔ ERSTATTUNG GESPERRT: Telemetrie-Korrelationsaudit fehlgeschlagen. GPS-Protokolle des Fahrers zeigen Lieferung an Koordinaten (12.971, 77.594), Kundenprofil behauptet jedoch Geofence-Verstoß. Hochgeladenes Foto hat Zeitstempel-Fehler. Abgelehnt.",
+					refundSuccess: "✅ ERSTATTUNG ANGEFORDERT: Telemetrie- und EXIF-Audits bestanden. Ihre Erstattungsanfrage über 8,97 $ wurde eingereicht. Wartet auf Freigabe.",
+					trackOrder: "📍 BESTELLVERFOLGUNG: Ihre Bestellung befindet sich beim Fahrer **RIDER-902**. Temperatur der Fracht: **4,2°C** (DSG/GDP-konform). Voraussichtliche Ankunft: **4 Minuten**.",
+					agentConsult: "🤖 AI-AGENTEN-ASSISTENT: Verbunden mit dem Swish OS B2B-Gateway. Verarbeitung der Anfrage mit qwen2.5:7b über Letta... Letta-Speicher aktualisiert. Antwort: Aktion erfolgreich protokolliert.",
+				},
+				it: {
+					defaultResponse: `Ricevuto: "${text}". Come posso aiutarti?`,
+					riderEmergency: "🚨 SPEDIZIONE DI EMERGENZA: Rilevato guasto/incidente del veicolo. Instradamento automatico di un rider di backup per recuperare il carico. SLA sospeso. Rapporto sull'incidente registrato.",
+					riderTraffic: "🚦 AVVISO TRAFFICO: Rilevata congestione sulla rotta principale. Percorso GPS alternativo generato: Prendi la tangenziale. Verifica sigillo merce deperibile.",
+					invDamage: "🍌 DANNO REGISTRATO: Segnalato prodotto danneggiato. Rifornimento B2B automatico per sicurezza. Articoli danneggiati stornati.",
+					invCongested: "📦 CONGESTIONE MAGAZZINO: Rilevati ritardi nella coda. Si consiglia di impiegare il picker di backup del Dark Store per ripristinare la velocità standard.",
+					refundLowTrust: "⛔ RIMBORSO RIFIUTATO: Il tuo punteggio di fiducia cliente è inferiore alla soglia di 65 punti. Account segnalato.",
+					refundGdpr: "⛔ RIMBORSO RIFIUTATO: Il tuo account è sotto prova di anonimizzazione GDPR. I rimborsi automatici sono bloccati per 3 ordini completati.",
+					refundFraud: "⛔ RIMBORSO BLOCCATO: Audit di correlazione telemetrica fallito. I registri GPS indicano la consegna alle coordinate (12.971, 77.594) ma il cliente sostiene il contrario. Inoltre, i metadati della foto indicano una discrepanza temporale. Richiesta rifiutata.",
+					refundSuccess: "✅ RIMBORSO RICHIESTO: Audit telemetria ed EXIF superati. La tua richiesta di rimborso di $8.97 è stata inviata. In attesa di approvazione.",
+					trackOrder: "📍 TRACCIAMENTO ORDINE: Il tuo ordine è con il rider **RIDER-902**. Temperatura della merce: **4.2°C** (conforme GDP). Arrivo stimato: **4 minuti**.",
+					agentConsult: "🤖 ASSISTENTE AGENTE AI: Connesso al gateway Swish OS B2B. Elaborazione della richiesta con qwen2.5:7b tramite Letta... Memoria Letta aggiornata. Risposta: Azione registrata con successo.",
+				},
+			};
+
+			const activeLang = language || "en";
+			const trans = resTrans[activeLang] || resTrans.en;
+
+			botResponse = trans.defaultResponse;
+
+			const isBreakdown = lower.includes("breakdown") || lower.includes("accident") || lower.includes("panne") || lower.includes("unfall") || lower.includes("guasto") || lower.includes("incidente") || attachmentUrl;
+			const isTraffic = lower.includes("traffic") || lower.includes("blocked") || lower.includes("delay") || lower.includes("trafic") || lower.includes("bloqué") || lower.includes("retard") || lower.includes("stau") || lower.includes("blockiert") || lower.includes("verspätung") || lower.includes("traffico") || lower.includes("bloccato") || lower.includes("ritardo");
+			const isDamage = lower.includes("damaged") || lower.includes("spoiled") || lower.includes("endommagé") || lower.includes("gâté") || lower.includes("beschädigt") || lower.includes("defekt") || lower.includes("danneggiato") || lower.includes("scaduto");
+			const isCongested = lower.includes("congested") || lower.includes("backlog") || lower.includes("encombré") || lower.includes("lager-engpass") || lower.includes("congestione");
+			const isRefund = lower.includes("refund") || lower.includes("remboursement") || lower.includes("erstattung") || lower.includes("rimborso");
+			const isTrack = lower.includes("track") || lower.includes("suivre") || lower.includes("verfolgen") || lower.includes("traccia");
+			const isAgent = lower.includes("consult") || lower.includes("consulter") || lower.includes("konsultieren") || lower.includes("consulta");
 
 			if (activeRole === "rider") {
-				if (
-					text.toLowerCase().includes("breakdown") ||
-					text.toLowerCase().includes("accident") ||
-					attachmentUrl
-				) {
-					botResponse = `🚨 EMERGENCY DISPATCH: Vehicle breakdown/accident detected. Automatically routing backup rider to salvage cargo. Transit SLA paused. Incident report logged.`;
+				if (isBreakdown) {
+					botResponse = trans.riderEmergency;
 					updateRiderTrust(-5, "Breakdown reported in transit");
 					setHitlQueue((prev) => [
 						...prev,
@@ -1929,12 +2116,8 @@ export default function App() {
 						"incident_reported",
 						"Emergency breakdown logged. Salvage protocols initiated.",
 					);
-				} else if (
-					text.toLowerCase().includes("traffic") ||
-					text.toLowerCase().includes("blocked") ||
-					text.toLowerCase().includes("delay")
-				) {
-					botResponse = `🚦 TRAFFIC ALERT: Congestion detected on primary route. Alternative GPS route generated: Take Expressway bypass. Verify perishable seal.`;
+				} else if (isTraffic) {
+					botResponse = trans.riderTraffic;
 					logKafka(
 						"rider",
 						"rerouted",
@@ -1942,11 +2125,8 @@ export default function App() {
 					);
 				}
 			} else if (activeRole === "inventory" || activeRole === "admin") {
-				if (
-					text.toLowerCase().includes("damaged") ||
-					text.toLowerCase().includes("spoiled")
-				) {
-					botResponse = `🍌 ITEM DAMAGE LOGGED: Damaged produce reported. Auto-dispatched a B2B replenishment reorder for safety. Damaged items written off.`;
+				if (isDamage) {
+					botResponse = trans.invDamage;
 					setProducts((prev) =>
 						prev.map((p) =>
 							p.id === "p2" ? { ...p, stock: Math.max(0, p.stock - 2) } : p,
@@ -1964,20 +2144,17 @@ export default function App() {
 						"item_damaged",
 						"Bananas written off due to shelf damage. Triggering B2B reorder.",
 					);
-				} else if (
-					text.toLowerCase().includes("congested") ||
-					text.toLowerCase().includes("backlog")
-				) {
-					botResponse = `📦 PICKER BACKLOG CONGESTION: Queue delays detected. Recommend deploying the Dark Store operations backup picker to restore standard speeds.`;
+				} else if (isCongested) {
+					botResponse = trans.invCongested;
 				}
 			} else {
-				if (text.toLowerCase().includes("refund")) {
+				if (isRefund) {
 					if (customerTrustScore < 65) {
-						botResponse = `⛔ REFUND REFUSED: Your Customer Trust Score is below the 65-point safety threshold. Account flagged.`;
+						botResponse = trans.refundLowTrust;
 					} else if (gdprTokenProbation) {
-						botResponse = `⛔ REFUND REFUSED: Your account is currently under GDPR Anonymization Probation. Automated bot refunds are blocked until completing 3 successful orders.`;
+						botResponse = trans.refundGdpr;
 					} else if (simulateTelemetryFraud) {
-						botResponse = `⛔ REFUND BLOCKED: Telemetry Correlation Audit Failed. Rider GPS logs indicate delivery took place at coordinates (12.971, 77.594) but customer profile claims geofence breach. Furthermore, uploaded photo EXIF metadata indicates timestamp mismatch. Refund request rejected.`;
+						botResponse = trans.refundFraud;
 						updateCustomerTrust(-25, "Telemetry check fraud alert");
 						logKafka(
 							"system",
@@ -1985,7 +2162,7 @@ export default function App() {
 							"Fraud Shield Check: Telemetry correlation mismatch. GPS / EXIF validation failed. Rejected refund request for Customer.",
 						);
 					} else {
-						botResponse = `✅ REFUND REQUESTED: Telemetry and EXIF audits passed. Your refund request of $8.97 has been submitted. Awaiting Admin HITL approval.`;
+						botResponse = trans.refundSuccess;
 						setHitlQueue((prev) => [
 							...prev,
 							{
@@ -2001,6 +2178,10 @@ export default function App() {
 							"system",
 						);
 					}
+				} else if (isTrack) {
+					botResponse = trans.trackOrder;
+				} else if (isAgent) {
+					botResponse = trans.agentConsult;
 				}
 			}
 
@@ -2176,6 +2357,7 @@ export default function App() {
 		<div
 			className="app-container premium-background-glow"
 			data-active-role={activeRole}
+			dir={language === "ar" ? "rtl" : "ltr"}
 			style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
 		>
 			<style>{`
@@ -2286,7 +2468,7 @@ export default function App() {
 						</h1>
 					</div>
 					<span className="brand-badge">
-						Quick Commerce Architecture V1.0 (Federated MFEs)
+						{TRANSLATIONS[language]?.tagline || TRANSLATIONS.en.tagline}
 					</span>
 
 					<div
@@ -2302,6 +2484,7 @@ export default function App() {
 						}}
 					>
 						<Lucide.Globe size={12} className="event-system" />
+
 						<select
 							id="select-env-profile"
 							value={activeProfileKey}
@@ -2349,7 +2532,71 @@ export default function App() {
 							</option>
 						</select>
 					</div>
+
+					<div
+						style={{
+							marginLeft: "0.5rem",
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "0.4rem",
+							background: "rgba(255,255,255,0.03)",
+							padding: "0.2rem 0.5rem",
+							borderRadius: "6px",
+							border: "1px solid var(--border-default)",
+						}}
+					>
+						<Lucide.Languages size={12} className="event-system" />
+						<select
+							id="select-lang"
+							value={language}
+							onChange={(e) => {
+								const newLang = e.target.value;
+								setLanguage(newLang);
+								triggerToast(
+									`LANGUAGE CHANGED: Switched interface to [${newLang.toUpperCase()}].`,
+									"system",
+								);
+							}}
+							style={{
+								background: "transparent",
+								color: "var(--text-primary)",
+								border: "none",
+								fontSize: "0.7rem",
+								fontWeight: "bold",
+								fontFamily: "var(--font-sans)",
+								outline: "none",
+								cursor: "pointer",
+							}}
+						>
+							<option value="en" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>EN</option>
+							<option value="de" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>DE</option>
+							<option value="fr" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>FR</option>
+							<option value="it" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>IT</option>
+							<option value="ar" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>AR (العربية)</option>
+						</select>
+					</div>
+
+					<button
+						aria-label="Toggle Theme"
+						id="btn-theme-toggle"
+						onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+						style={{
+							marginLeft: "0.5rem",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							background: "rgba(255,255,255,0.03)",
+							padding: "0.3rem",
+							borderRadius: "6px",
+							border: "1px solid var(--border-default)",
+							cursor: "pointer",
+							color: "var(--text-primary)",
+						}}
+					>
+						{theme === "light" ? <Lucide.Moon size={14} /> : <Lucide.Sun size={14} />}
+					</button>
 				</div>
+
 
 				<nav className="role-navigation">
 					<button
@@ -2361,7 +2608,7 @@ export default function App() {
 						onClick={() => handleRoleChange("customer")}
 					>
 						<Lucide.ShoppingBag size={15} />
-						<span>Customer Super App</span>
+						<span>{TRANSLATIONS[language]?.tab_customer || TRANSLATIONS.en.tab_customer}</span>
 					</button>
 					<button
 						type="button"
@@ -2372,7 +2619,7 @@ export default function App() {
 						onClick={() => handleRoleChange("rider")}
 					>
 						<Lucide.Bike size={15} />
-						<span>Rider Light</span>
+						<span>{TRANSLATIONS[language]?.tab_rider || TRANSLATIONS.en.tab_rider}</span>
 					</button>
 					<button
 						type="button"
@@ -2383,7 +2630,7 @@ export default function App() {
 						onClick={() => handleRoleChange("inventory")}
 					>
 						<Lucide.Package size={15} />
-						<span>Dark Store Inventory</span>
+						<span>{TRANSLATIONS[language]?.tab_inventory || TRANSLATIONS.en.tab_inventory}</span>
 					</button>
 					<button
 						type="button"
@@ -2394,7 +2641,7 @@ export default function App() {
 						onClick={() => handleRoleChange("business")}
 					>
 						<Lucide.BarChart3 size={15} />
-						<span>B2B Retailer Hub</span>
+						<span>{TRANSLATIONS[language]?.tab_business || TRANSLATIONS.en.tab_business}</span>
 					</button>
 					<button
 						type="button"
@@ -2405,7 +2652,7 @@ export default function App() {
 						onClick={() => handleRoleChange("admin")}
 					>
 						<Lucide.ShieldCheck size={15} />
-						<span>System Admin</span>
+						<span>{TRANSLATIONS[language]?.tab_admin || TRANSLATIONS.en.tab_admin}</span>
 					</button>
 					{isAuthenticated && (
 						<button
@@ -2420,7 +2667,7 @@ export default function App() {
 							onClick={handleLogout}
 						>
 							<Lucide.LogOut size={15} />
-							<span>Lock Cockpit</span>
+							<span>{TRANSLATIONS[language]?.tab_logout || TRANSLATIONS.en.tab_logout}</span>
 						</button>
 					)}
 					<button
@@ -2445,7 +2692,7 @@ export default function App() {
 						) : (
 							<Lucide.Eye size={15} />
 						)}
-						<span>{showEngineRoom ? "Hide Monitor" : "Show Monitor"}</span>
+						<span>{showEngineRoom ? (TRANSLATIONS[language]?.tab_hide_monitor || TRANSLATIONS.en.tab_hide_monitor) : (TRANSLATIONS[language]?.tab_show_monitor || TRANSLATIONS.en.tab_show_monitor)}</span>
 					</button>
 				</nav>
 			</header>
@@ -2829,6 +3076,10 @@ export default function App() {
 				triggerToast={triggerToast}
 				activeRole={activeRole}
 				isBotTyping={isBotTyping}
+				theme={theme}
+				setTheme={setTheme}
+				language={language}
+				setLanguage={setLanguage}
 			/>
 		</div>
 	);
