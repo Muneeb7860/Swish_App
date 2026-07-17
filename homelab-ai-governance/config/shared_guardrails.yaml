@@ -40,6 +40,30 @@ rules:
         - name: api_key
           pattern: '(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*["'']?[a-zA-Z0-9_\-]{16,}'
 
+  # ── Output-side jailbreak defense (added 2026-07-17). The input jailbreak
+  # signatures (prompt_injection_filter) are necessary but not sufficient — a
+  # novel framing will slip past them. This second layer inspects the MODEL'S
+  # RESPONSE for the acceptance/compliance markers a jailbroken model emits
+  # ("I am now operating as…", "let's proceed with this roleplay", "no safety
+  # rules", "theoretical aspects of malware"), which are near-impossible in
+  # legitimate B2B grocery responses. Regex-only ⇒ always-on and ~free (goal 2);
+  # critical ⇒ never skipped for normal requests (§3b select_output_rules).
+  - id: harmful_compliance_filter
+    description: "Blocks model responses that accept a jailbreak or emit harmful instructions"
+    applies_to: [output]
+    default_action: block
+    severity: critical
+    detector:
+      type: heuristic
+      rules:
+        - pattern: '(?i)developer\s+mode\s+(enabled|activated|is\s+on)'
+        - pattern: '(?i)\bi\s+am\s+(now\s+)?operating\s+as\b'
+        - pattern: '(?i)\b(as|being)\s+dan\b|\bdan\s+(mode|has\s+broken)\b'
+        - pattern: '(?i)\b(no|lacking|without|zero)\s+safety\s+(rule|filter|guideline|guardrail|protocol)s?'
+        - pattern: '(?i)\blet''?s\s+(proceed|continue|go)\b.{0,25}\broleplay\b'
+        - pattern: '(?i)(theoretical\s+aspects\s+of|how\s+to\s+(make|synthesi[sz]e|manufacture|build|create|produce)).{0,30}(malware|ransomware|\bvirus\b|exploit|weapon|explosive|\bbomb\b|methamphetamine|\bmeth\b|cocaine|heroin)'
+        - pattern: '(?i)step[-\s]by[-\s]step\s+(instructions?|guide|process|method).{0,45}(synthesi[sz]|manufactur|malware|ransomware|weapon|explosive|\bmeth\b|cocaine|hack\s+into|exploit)'
+
   - id: hate_speech_filter
     description: "Detects toxic, hateful, or harassing content"
     applies_to: [input, output]
