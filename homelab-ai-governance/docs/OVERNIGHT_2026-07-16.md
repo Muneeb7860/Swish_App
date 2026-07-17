@@ -91,10 +91,38 @@ categories re-ran clean after a server restart).
 - `refactor(governance): close Epic 5 / vLLM loose ends`
 - (earlier) governance spec + Phases 1–3b + schema-gate fix + T7 latency finding
 
+## Follow-up session — Priorities 1–3 completed (later same night)
+
+All three actionable recommendations are done, committed, and pushed. Full
+suite **221 passed**.
+
+1. **Output-side harmful-content guardrail (the robust jailbreak fix).** New
+   `harmful_compliance_filter` (output phase, critical, always-on regex) inspects
+   the model's *response* for jailbreak-acceptance / harmful-instruction markers,
+   so a novel input framing that still produces harmful compliance is blocked at
+   output. 14/14 unit test (6 real captured jailbroken outputs blocked; 8 benign
+   pass incl. a defensive "protect against malware" line and a business "safety
+   rules" sentence). Live sanity: clean succeeds, jailbreak blocks. **This is the
+   layer that would catch all 5 red-team gaps at once, regardless of framing.**
+2. **Fixed the false-green CI red-team.** Replaced the broken promptfoo steps with
+   `python scripts/redteam.py --ci` (fails the build if any critical category
+   regresses); server runs with `GOVERNANCE_ALLOW_MOCK_FALLBACK=1` so gates run
+   deterministically without a live Ollama. **Confirm on the next CI run** — YAML
+   valid, `--ci` gating validated locally.
+3. **Vendored the harness** to `scripts/redteam.py` — no more dependence on the
+   flaky promptfoo install. Validated: jailbreak 20/20, injection 25/25 incl. the
+   now-blocked INJ-14, `--ci` exit 0.
+
+> ⚠️ **Coordination note:** a concurrent actor is committing to this same
+> `~/swish-bench` checkout — the "Arabic language support" and "add redteam.py
+> harness" (`c5c9c9b`) commits both landed from another session using my
+> uncommitted working tree. Content is correct and pushed; if you have another
+> Claude/agent session open on this repo, close it to avoid mid-edit collisions.
+
 ## Suggested next actions (your call)
 
-1. **Design the output-side harmful-content guardrail** (the real jailbreak fix).
-2. **Fix the CI red-team wiring** so it genuinely gates on the category files.
+1. ~~Output-side harmful-content guardrail~~ — **done** (Priority 1 above).
+2. ~~Fix the CI red-team wiring~~ — **done** (Priority 2); confirm on next CI run.
 3. Phase 4 (risk-tier shedding) — still blocked on your TPO decision.
 4. Tier 3 (Java ↔ Python governance integration) — a proper session, not overnight.
 
