@@ -122,6 +122,21 @@ def test_check_nemo_guardrails_fails_closed_on_engine_error(monkeypatch):
     assert audit.events[0][1]["error_type"] == "RuntimeError"
 
 
+def test_force_degraded_env_toggles_engine_error_path(monkeypatch):
+    """GOVERNANCE_FORCE_DEGRADED=1 forces the guardrail_engine_error path (for
+    live Phase 4 shed testing) without touching the real engine — and off by
+    default it does not interfere."""
+    # A query that the healthy engine would normally ALLOW.
+    monkeypatch.setenv("GOVERNANCE_FORCE_DEGRADED", "1")
+    res = check_nemo_guardrails("what is the weather today?")
+    assert res["allowed"] is False
+    assert res["triggered_rule"] == "guardrail_engine_error"
+
+    monkeypatch.delenv("GOVERNANCE_FORCE_DEGRADED", raising=False)
+    res2 = check_nemo_guardrails("what is the weather today?")
+    assert res2["allowed"] is True  # healthy engine, normal pass
+
+
 def test_check_nemo_guardrails_fails_closed_even_if_audit_breaks(monkeypatch):
     monkeypatch.setattr(
         ng, "get_nemo_engine", lambda: (_ for _ in ()).throw(RuntimeError("boom"))

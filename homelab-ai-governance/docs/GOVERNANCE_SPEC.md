@@ -205,6 +205,12 @@ wired in `pipeline.py` steps 6b/9/10/11. The `/govern` response now carries
   propagate. Covered by `PythonGovernanceAdapterTest` shed/outage tests.
 - Tests: `test_phase4_shed.py`, `test_action_level_defenses.py`, 503 contract
   test; live red-team `action_level` 5/5.
+- **Live end-to-end (2026-07-18):** `GOVERNANCE_FORCE_DEGRADED=1` (test/staging
+  hook, off by default) forces the degraded path so the shed-503 is inducible on
+  a running service. `PythonGovernanceAdapterLiveIT` (Java, opt-in via
+  `GOVERNANCE_LIVE_URL`) drives the real adapter against the live degraded
+  service over real HTTP and asserts the 503 shed is returned, not thrown —
+  proving the full cross-language boundary with two real processes.
 
 ### Phase 5 — Optional hardening ⚪ *deferred*
 - Multi-window burn-rate alerts (Prometheus-only).

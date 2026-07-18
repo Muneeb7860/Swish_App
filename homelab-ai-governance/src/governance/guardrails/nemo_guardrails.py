@@ -181,7 +181,19 @@ def check_nemo_guardrails(query: str) -> Dict[str, Any]:
     An engine error must never grant weaker safety treatment: the request is
     blocked and a `guardrail_engine_error` audit event is written. Because the
     gate is a pure pattern matcher, failing closed costs no latency (goal 2).
+
+    Test/staging hook: GOVERNANCE_FORCE_DEGRADED=1 forces the fail-closed
+    (`guardrail_engine_error`) path without actually breaking the engine, so the
+    Phase 4 shed-503 can be exercised live end-to-end. Off by default; logs
+    loudly when active. Never set in production.
     """
+    if os.environ.get("GOVERNANCE_FORCE_DEGRADED", "").lower() in ("1", "true"):
+        logger.warning("GOVERNANCE_FORCE_DEGRADED active — forcing guardrail_engine_error path")
+        return {
+            "allowed": False,
+            "response": BLOCKED_ON_ERROR_MESSAGE,
+            "triggered_rule": "guardrail_engine_error",
+        }
     try:
         return get_nemo_engine().check_query(query)
     except Exception as exc:
