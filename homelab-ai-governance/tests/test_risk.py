@@ -64,6 +64,35 @@ def test_single_signal_elevates(kwargs, expected_signal):
     assert expected_signal in r.signals
 
 
+def test_rule_of_two_lethal_trifecta():
+    """Meta's Agents Rule of Two: Private Data + Untrusted Content + External Comms = Lethal Trifecta."""
+    r = assess_risk(
+        contains_pii=False,
+        intent="general_knowledge",
+        agent_id="gemma_reasoner",
+        has_private_data=True,
+        has_untrusted_content=True,
+        has_external_comms=True,
+    )
+    assert r.elevated is True
+    assert "rule_of_two_lethal_trifecta" in r.signals
+
+
+def test_rule_of_two_partial_does_not_trigger():
+    """If missing any leg of the trifecta, rule_of_two_lethal_trifecta is not signaled."""
+    r = assess_risk(
+        contains_pii=False,
+        intent="general_knowledge",
+        agent_id="gemma_reasoner",
+        has_private_data=True,
+        has_untrusted_content=True,
+        has_external_comms=False,
+    )
+    assert r.elevated is False
+    assert "rule_of_two_lethal_trifecta" not in r.signals
+
+
+
 # ── select_output_rules: the goal-1 invariant ────────────────────────────────
 
 _RULESET = [

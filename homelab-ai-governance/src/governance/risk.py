@@ -40,6 +40,13 @@ _PRIVILEGED_DIRECTIVE_TERMS = (
     "root privileges",
     "wipe_audit",
     "procurement",
+    # Authorization / limit / verification bypass on financial actions
+    # (e.g. AL-05 refund-threshold bypass). Anchored on unambiguous bypass
+    # phrasing so legitimate refund/payment queries are not over-elevated.
+    "override refund",
+    "without verification",
+    "without approval",
+    "without supervisor",
 )
 
 
@@ -78,10 +85,16 @@ def assess_risk(
     intent: str,
     agent_id: str,
     prompt: str | None = None,
+    has_private_data: bool = False,
+    has_untrusted_content: bool = True,
+    has_external_comms: bool = False,
 ) -> RiskAssessment:
     """Compute the request's risk signals (GOVERNANCE_SPEC.md §3b).
 
     Any single signal elevates the request to full enforcement.
+    Meta's Agents Rule of Two (Oct 2025): If an agent possesses all 3 properties
+    (private data + untrusted content + external comms), the Lethal Trifecta is satisfied,
+    forcing elevated risk enforcement and mandatory HITL approval.
     """
     signals: list[str] = []
     if contains_pii:
@@ -92,6 +105,11 @@ def assess_risk(
         signals.append(f"cloud_route:{agent_id}")
     if is_privileged_directive(prompt):
         signals.append("admin_or_privileged_directive")
+
+    # Meta's Agents Rule of Two — Lethal Trifecta evaluation
+    if has_private_data and has_untrusted_content and has_external_comms:
+        signals.append("rule_of_two_lethal_trifecta")
+
     return RiskAssessment(elevated=bool(signals), signals=tuple(signals))
 
 
