@@ -188,12 +188,18 @@ wired in `pipeline.py` steps 6b/9/10/11. The `/govern` response now carries
 - **Acceptance:** p95 for normal requests unchanged vs Phase 3 baseline while an
   elevated request is in flight.
 
-### Phase 4 — Risk tiers & shed-vs-downgrade ⚪ *deferred; requires §6 sign-off*
-- Only if a real consumer needs it. Design sketch: map intents → risk tier in
-  `routing_config.yaml`; on guardrail degradation, HIGH-tier intents get fast-fail
-  (503-equivalent) instead of downgraded checks.
-- **Blocked on TPO answer:** "during a guardrail incident, is blocking sensitive
-  actions entirely acceptable, or must they degrade-but-serve?"
+### Phase 4 — Risk tiers & shed-vs-downgrade ✅ *DONE (2026-07-18)*
+- **Owner decision: SHED (fast 503)** — during guardrail degradation, HIGH-risk
+  requests are shed with HTTP 503 (never degrade-but-serve a sensitive action).
+- HIGH-risk = a privileged directive (`risk.is_privileged_directive`, fast keyword
+  check) OR a high-risk intent (`system_admin` / `sensitive_query`). Pipeline
+  returns status `unavailable`; `server.py` maps it to 503.
+- Paired with **action-level input defenses** (`destructive_command_filter`):
+  raw destructive DB/system commands and out-of-bounds pricing directives are
+  blocked at input; softer privileged directives elevate to full enforcement.
+- Non-high-risk requests during degradation stay fail-closed (Phase 1).
+- Tests: `test_phase4_shed.py`, `test_action_level_defenses.py`, 503 contract
+  test; live red-team `action_level` 5/5.
 
 ### Phase 5 — Optional hardening ⚪ *deferred*
 - Multi-window burn-rate alerts (Prometheus-only).
