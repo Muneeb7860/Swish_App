@@ -146,7 +146,6 @@ wired in `pipeline.py` steps 6b/9/10/11. The `/govern` response now carries
 - **Presidio** — PII is homegrown regex, not Presidio.
 - **GUARD_LEVEL flag / RiskRouter / LOW-MED-HIGH risk tiers** — routing is intent ×
   complexity; there is no risk-tier concept in code.
-- **503 shedding during guardrail incidents** — deferred design (§5, Phase 4).
 - **Async advisory guardrail pipeline** — not built; no consumer currently needs
   sub-second governed responses (homelab profile).
 - **WORM object storage** — audit is append-only local JSONL. Object-lock WORM arrives
