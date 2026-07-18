@@ -12,32 +12,8 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator
 from governance.guardrails.guardrails_ai import Guard
-
-logger = logging.getLogger(__name__)
-
-
-class CustomerSupportSchema(BaseModel):
-    reply: str = Field(..., min_length=1)
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    tool: Optional[str] = None
-    tool_argument: Optional[str] = None
-
-    @field_validator("tool")
-    @classmethod
-    def validate_tool(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v != "ORDER_STATUS":
-            raise ValueError("tool must be 'ORDER_STATUS' or null")
-        return v
-
-
-class DynamicPricingSchema(BaseModel):
-    surgeMultiplier: float = Field(..., ge=1.0, le=3.0)
-    discountPercent: float = Field(..., ge=0.0, le=50.0)
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    rationale: str = Field(..., min_length=1)
+from governance.guardrails.schemas import CustomerSupportSchema, DynamicPricingSchema
 
 
 @dataclass

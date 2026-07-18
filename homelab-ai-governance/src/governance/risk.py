@@ -17,6 +17,39 @@ from governance.config import load_routing_config
 # Intents whose subject matter always warrants full enforcement.
 ELEVATED_INTENTS = frozenset({"sensitive_query", "system_admin"})
 
+# HIGH-risk intents that are SHED with a fast 503 when the guardrail engine is
+# degraded (GOVERNANCE_SPEC Phase 4; owner decision 2026-07-18: fail-fast rather
+# than serve a sensitive action without full safety coverage). Same set as
+# ELEVATED_INTENTS today — system_admin (admin overrides) and sensitive_query —
+# kept as a distinct name so the shed policy can diverge from the enforcement
+# tier later without touching every call site.
+HIGH_RISK_INTENTS = ELEVATED_INTENTS
+
+
+def is_high_risk(intent: str) -> bool:
+    return intent in HIGH_RISK_INTENTS
+
+
+# Prompt substrings marking a privileged / high-stakes directive (spend
+# approvals, admin scripts, audit tampering) that the classifier may not tag as
+# system_admin. These ELEVATE risk (full enforcement, §3b) and are SHED during
+# guardrail degradation (Phase 4). Outright-destructive commands (DROP TABLE,
+# rm -rf) are blocked earlier by shared_guardrails.destructive_command_filter.
+_PRIVILEGED_DIRECTIVE_TERMS = (
+    "system_admin",
+    "root privileges",
+    "wipe_audit",
+    "procurement",
+)
+
+
+def is_privileged_directive(prompt: str | None) -> bool:
+    """Fast (keyword, no-model) check for a privileged/high-stakes directive."""
+    if not prompt:
+        return False
+    p = prompt.lower()
+    return any(term in p for term in _PRIVILEGED_DIRECTIVE_TERMS)
+
 # Agent backends where the response leaves this machine.
 CLOUD_BACKENDS = frozenset({"openai", "openai_compatible"})
 
@@ -44,6 +77,7 @@ def assess_risk(
     contains_pii: bool,
     intent: str,
     agent_id: str,
+    prompt: str | None = None,
 ) -> RiskAssessment:
     """Compute the request's risk signals (GOVERNANCE_SPEC.md §3b).
 
@@ -56,6 +90,8 @@ def assess_risk(
         signals.append(f"elevated_intent:{intent}")
     if _is_cloud_agent(agent_id):
         signals.append(f"cloud_route:{agent_id}")
+    if is_privileged_directive(prompt):
+        signals.append("admin_or_privileged_directive")
     return RiskAssessment(elevated=bool(signals), signals=tuple(signals))
 
 

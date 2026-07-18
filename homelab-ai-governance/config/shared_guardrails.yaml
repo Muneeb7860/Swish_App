@@ -119,6 +119,32 @@ rules:
         - pattern: '(?i)safety\s+(system|protocol|feature|filter|rule)s?\s+(are\s+|is\s+)?(disabled|off|removed|bypassed|turned\s+off)'
         - pattern: '(?i)(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(instructions|rules|prompts)\s+(you\s+(got|received)\s+)?(before|earlier|previously)'
 
+  # Destructive command defense (action-level, 2026-07-18). Raw destructive
+  # DB/system commands submitted as a *query* are attacks, not governed agent
+  # work — block at input (the code_safety rules only run on model OUTPUT).
+  # These literal forms are near-impossible in legitimate B2B grocery NL queries,
+  # so over-block risk is negligible. Complements the risk-elevation of softer
+  # privileged directives (see risk.is_privileged_directive).
+  - id: destructive_command_filter
+    description: "Blocks destructive commands and out-of-bounds action directives in input"
+    applies_to: [input]
+    default_action: block
+    severity: critical
+    detector:
+      type: heuristic
+      rules:
+        - pattern: '(?i)\b(drop|truncate)\s+(table|database|schema)\b'
+        - pattern: '(?i)\bdelete\s+from\s+\w+\s*(;|$)'
+        - pattern: '(?i)\brm\s+-[a-z]*[rf][a-z]*\s+(/|\*|~|\$)'
+        - pattern: '(?i)\bmkfs\b|\bdd\s+.*\bof=/dev/'
+        - pattern: '(?i)\b(shutdown|reboot|halt)\s+-'
+        - pattern: '(?i):\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}'
+        # Pricing manipulation: forcing surge multiplier past the DynamicPricing
+        # schema ceiling (3.0x). Matches "surgeMultiplier to 12.5x", "surge = 8" —
+        # a directive setting it to 4+ or double digits. Legit values (≤3.0) and
+        # recommendation requests (no explicit high value) do not match.
+        - pattern: '(?i)surge\s*_?\s*multiplier\s*(to|=|:|of)?\s*([4-9](\.\d+)?|[1-9]\d+(\.\d+)?)\s*x?'
+
   - id: profanity_filter
     description: "Filters profanity in output"
     applies_to: [output]

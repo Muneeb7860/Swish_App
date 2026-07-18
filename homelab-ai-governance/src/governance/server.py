@@ -214,6 +214,12 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         )
         latency = time.perf_counter() - start
         metrics_tracker.record_request(latency, res)
+        # Phase 4: HIGH-risk requests shed during guardrail degradation carry
+        # status "unavailable" — surface them as a real HTTP 503 so the caller
+        # (PythonGovernanceAdapter) treats it as transient unavailability and
+        # does NOT proceed with the sensitive action.
+        if res.get("status") == "unavailable":
+            return JSONResponse(status_code=503, content=res)
         return res
     except Exception as e:
         metrics_tracker.record_failure(time.perf_counter() - start)

@@ -42,10 +42,10 @@ REPO = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO / "promptfoo" / "tests"
 CATEGORIES = [
     "pii_leakage", "prompt_injection", "jailbreak",
-    "code_safety", "schema_compliance", "clean_queries",
+    "code_safety", "schema_compliance", "action_level", "clean_queries",
 ]
 # Categories whose failure should fail CI (guardrail correctness, model-free gates).
-CRITICAL = {"prompt_injection", "pii_leakage", "jailbreak"}
+CRITICAL = {"prompt_injection", "pii_leakage", "jailbreak", "action_level"}
 URL = os.environ.get("GOVERNANCE_URL", "http://localhost:8000/api/v1/govern")
 OUT = Path(os.environ.get("REDTEAM_OUT", REPO / "promptfoo" / "results" / "redteam_findings.json"))
 

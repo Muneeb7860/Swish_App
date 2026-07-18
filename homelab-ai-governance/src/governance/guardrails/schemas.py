@@ -44,6 +44,9 @@ class CustomerSupportSchema(BaseModel):
     tool: str | None = Field(
         None, description="Optional tool invoked to resolve the query."
     )
+    tool_argument: str | None = Field(
+        None, description="Optional argument passed to the tool."
+    )
 
     @field_validator("reply")
     @classmethod
@@ -57,10 +60,10 @@ class DynamicPricingSchema(BaseModel):
     """Response from the dynamic pricing agent."""
 
     surgeMultiplier: float = Field(  # noqa: N815 — matches existing API contract
-        ..., ge=0.5, le=5.0, description="Surge price multiplier (0.5x–5.0x)."
+        ..., ge=0.5, le=3.0, description="Surge price multiplier (0.5x–3.0x)."
     )
     discountPercent: float = Field(  # noqa: N815
-        ..., ge=0.0, le=100.0, description="Discount percentage to apply (0–100)."
+        ..., ge=0.0, le=50.0, description="Discount percentage to apply (0–50)."
     )
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Pricing decision confidence."

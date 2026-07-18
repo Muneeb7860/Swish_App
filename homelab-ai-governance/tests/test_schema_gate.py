@@ -246,3 +246,14 @@ def test_no_schema_requested_reports_trivially_valid(monkeypatch):
     _wire_agent(monkeypatch, ["A clean helpful answer."])
     res = execute_pipeline("What is the capital of Switzerland?")
     assert res["schema_validation"] == {"schema": None, "valid": True, "errors": []}
+
+
+def test_metrics_and_schemas_share_canonical_definitions():
+    """Verify that evaluator/metrics.py imports its schemas directly from
+    guardrails/schemas.py to prevent schema drift."""
+    import governance.evaluator.metrics as metrics_mod
+    import governance.guardrails.schemas as schemas_mod
+
+    assert metrics_mod.DynamicPricingSchema is schemas_mod.DynamicPricingSchema
+    assert metrics_mod.CustomerSupportSchema is schemas_mod.CustomerSupportSchema
+

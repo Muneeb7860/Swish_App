@@ -18,7 +18,13 @@ from governance.guardrails.enforcer import apply_rules, blocked_response, comput
 from governance.guardrails.schemas import is_rail_schema
 from governance.guardrails.loader import load_guardrails
 from governance.guardrails.nemo_guardrails import check_nemo_guardrails
-from governance.risk import assess_risk, max_retries_for, select_output_rules
+from governance.risk import (
+    assess_risk,
+    is_high_risk,
+    is_privileged_directive,
+    max_retries_for,
+    select_output_rules,
+)
 from governance.router.classifier import classify_intent
 from governance.router.decision_table import route_query
 from governance.router.pii_scan import pre_route_pii_scan
@@ -146,7 +152,38 @@ def execute_pipeline(
 # NeMo Guardrails Check
     nemo_res = check_nemo_guardrails(query)
     if not nemo_res.get("allowed", True):
-        audit.log_event("pipeline_blocked", phase="nemo_guardrails", input_hash=input_hash)
+        # Phase 4 (GOVERNANCE_SPEC §5; owner decision 2026-07-18 = "shed 503").
+        # Distinguish a guardrail-engine DEGRADATION (fail-closed marker set in
+        # Phase 1) from a normal policy block. When degraded, HIGH-risk intents
+        # are SHED with a 503 — the caller must treat it as transient
+        # unavailability, never proceed with the sensitive action. Non-high-risk
+        # requests stay fail-closed (Phase 1). Classification runs ONLY on the
+        # degraded path, so the healthy path pays nothing.
+        degraded = nemo_res.get("triggered_rule") == "guardrail_engine_error"
+        # HIGH-risk = a privileged directive (fast keyword check, short-circuits
+        # the model) OR a high-risk classified intent. Either is shed.
+        if degraded and (
+            is_privileged_directive(query) or is_high_risk(classify_intent(query).intent)
+        ):
+            audit.log_event("shed_high_risk_degraded", input_hash=input_hash)
+            return {
+                "status": "unavailable",
+                "shed": True,
+                "message": (
+                    "Safety guardrails are temporarily degraded; high-risk "
+                    "actions are unavailable. Please retry shortly."
+                ),
+                "triggered_rules": [
+                    {"rule_id": "guardrail_degraded_shed", "action": "shed", "severity": "critical"}
+                ],
+                "warnings": [],
+            }
+        audit.log_event(
+            "pipeline_blocked",
+            phase="nemo_guardrails",
+            input_hash=input_hash,
+            degraded=degraded,
+        )
         return {
             "status": "blocked",
             "message": nemo_res.get("response", "Request blocked by safety guardrails."),
@@ -185,6 +222,20 @@ def execute_pipeline(
     # 2. Context Enrichment
     context_docs = retrieve_context(query)
     context_str = construct_context(context_docs)
+
+    # 2b. RAG Context Input Gate (Indirect Prompt Injection Defense)
+    if context_str:
+        context_gate = apply_rules(
+            rules=load_guardrails(_PREROUTE_AGENT),
+            phase="input",
+            content=context_str,
+            agent_id=_PREROUTE_AGENT,
+            input_hash=input_hash,
+        )
+        if not context_gate["allowed"]:
+            audit.log_event("pipeline_blocked", phase="rag_context_injection", input_hash=input_hash)
+            return blocked_response(context_gate["triggered_rules"])
+        context_str = context_gate["content"]
 
     # 3. Intent Classification
     classification = classify_intent(query)
@@ -228,6 +279,7 @@ def execute_pipeline(
         contains_pii=pii_res.contains_pii,
         intent=classification.intent,
         agent_id=agent_id,
+        prompt=query,
     )
     audit.log_event(
         "risk_assessed",

@@ -96,6 +96,21 @@ def test_govern_success_contract(monkeypatch):
     assert isinstance(body.get("response"), str) and body["response"]
 
 
+def test_govern_shed_high_risk_returns_503(monkeypatch):
+    """Phase 4: a HIGH-risk request shed during guardrail degradation surfaces
+    as HTTP 503 (transient unavailability), so the adapter does not proceed with
+    the sensitive action."""
+    monkeypatch.setattr(
+        "governance.pipeline.check_nemo_guardrails",
+        lambda q: {"allowed": False, "triggered_rule": "guardrail_engine_error"},
+    )
+    r = client.post("/api/v1/govern", json={"query": "Approve procurement PO for 5000 units"})
+    assert r.status_code == 503
+    body = r.json()
+    assert body["status"] == "unavailable"
+    assert body["shed"] is True
+
+
 def test_govern_blocked_contract(monkeypatch):
     """On a governed block the body carries status=='blocked' and a string `message`,
     and must NOT smuggle a model `response` — Java treats any non-success as a definitive
