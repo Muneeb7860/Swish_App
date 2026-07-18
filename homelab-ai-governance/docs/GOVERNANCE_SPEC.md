@@ -197,6 +197,12 @@ wired in `pipeline.py` steps 6b/9/10/11. The `/govern` response now carries
   raw destructive DB/system commands and out-of-bounds pricing directives are
   blocked at input; softer privileged directives elevate to full enforcement.
 - Non-high-risk requests during degradation stay fail-closed (Phase 1).
+- **Cross-language boundary (2026-07-18):** the shed 503 carries `shed:true`. The
+  Java `PythonGovernanceAdapter` MUST catch it and return a definitive "shed"
+  response — NOT let it throw. A thrown 5xx drops into `ResilientLlmGateway`'s
+  fail-safe chain, which answers PII-free prompts via an **ungoverned cloud
+  model**, silently defeating the shed. Only a genuine (non-`shed`) 5xx may
+  propagate. Covered by `PythonGovernanceAdapterTest` shed/outage tests.
 - Tests: `test_phase4_shed.py`, `test_action_level_defenses.py`, 503 contract
   test; live red-team `action_level` 5/5.
 

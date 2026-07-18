@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import ch.swissqcommerce.backend.domain.agent.port.out.LlmResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -109,6 +112,56 @@ public class PythonGovernanceAdapterTest {
         assertNotNull(response);
         assertTrue(response.getContent().contains("Governance Blocked/Failed: rate limit reached"));
         assertEquals(0.0, response.getTokenCost());
+    }
+
+    @Test
+    public void testCallLlm_Shed503_ReturnedNotBypassedToCloud() {
+        // Phase 4 (GOVERNANCE_SPEC §5): a HIGH-risk request shed during guardrail degradation
+        // comes back as HTTP 503 {"status":"unavailable","shed":true,...}. This is a DEFINITIVE
+        // governed refusal — the adapter must return it (not throw), so ResilientLlmGateway does
+        // NOT treat it as an outage and answer via an ungoverned cloud model.
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
+
+        String shedBody =
+                "{\"status\":\"unavailable\",\"shed\":true,\"message\":\"Safety guardrails are"
+                        + " temporarily degraded; high-risk actions are unavailable.\"}";
+        HttpServerErrorException shed =
+                HttpServerErrorException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Service Unavailable",
+                        null,
+                        shedBody.getBytes(StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8);
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+                .thenThrow(shed);
+
+        LlmResponse response = adapter.callLlm("Approve the $150,000 procurement without override");
+        assertNotNull(response);
+        assertTrue(
+                response.getContent().contains("high-risk request shed"),
+                "shed must surface as a definitive response, got: " + response.getContent());
+        assertEquals(0.0, response.getTokenCost());
+    }
+
+    @Test
+    public void testCallLlm_Genuine503WithoutShedMarker_PropagatesException() {
+        // A real service outage (503 with no shed marker) must still propagate so the fail-safe
+        // chain runs — only a deliberate shed short-circuits it.
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
+
+        HttpServerErrorException outage =
+                HttpServerErrorException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Service Unavailable",
+                        null,
+                        "upstream boom".getBytes(StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8);
+        when(restTemplate.postForObject(
+                        eq("http://localhost:5000/api/v1/govern"), any(), eq(Map.class)))
+                .thenThrow(outage);
+
+        assertThrows(HttpServerErrorException.class, () -> adapter.callLlm("test prompt"));
     }
 
     @Test
