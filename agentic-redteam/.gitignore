@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-redteam_results.json
 *.egg-info/
+dist/
+build/
 .venv/
+redteam_results.json
