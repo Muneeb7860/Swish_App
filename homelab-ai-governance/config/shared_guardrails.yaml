@@ -61,8 +61,11 @@ rules:
         - pattern: '(?i)\b(as|being)\s+dan\b|\bdan\s+(mode|has\s+broken)\b'
         - pattern: '(?i)\b(no|lacking|without|zero)\s+safety\s+(rule|filter|guideline|guardrail|protocol)s?'
         - pattern: '(?i)\blet''?s\s+(proceed|continue|go)\b.{0,25}\broleplay\b'
-        - pattern: '(?i)(theoretical\s+aspects\s+of|how\s+to\s+(make|synthesi[sz]e|manufacture|build|create|produce)).{0,30}(malware|ransomware|\bvirus\b|exploit|weapon|explosive|\bbomb\b|methamphetamine|\bmeth\b|cocaine|heroin)'
-        - pattern: '(?i)step[-\s]by[-\s]step\s+(instructions?|guide|process|method).{0,45}(synthesi[sz]|manufactur|malware|ransomware|weapon|explosive|\bmeth\b|cocaine|hack\s+into|exploit)'
+        - pattern: '(?i)(theoretical\s+aspects\s+of|how\s+to\s+(make|synthesi[sz]e|manufacture|build|create|produce)).{0,30}(malware|ransomware|\bvirus\b|exploit|weapon|explosive|\bbomb\b|methamphetamine|\bmeth\b|cocaine|heroin|napalm|poison)'
+        - pattern: '(?i)step[-\s]by[-\s]step\s+(instructions?|guide|process|method).{0,45}(synthesi[sz]|manufactur|malware|ransomware|weapon|explosive|\bmeth\b|cocaine|hack\s+into|exploit|napalm|poison)'
+        - pattern: '(?i)your\s+system\s+prompt\s+is\s*:'
+        - pattern: '(?i)(dialogue|scene|script|character).{0,50}(poison|napalm|untraceable|chemical\s+weapon)'
+        - pattern: '(?i)(steps\s+for|how\s+we\s+made|producing|preparing).{0,50}(napalm|poison|chemical\s+weapon)'
 
   - id: hate_speech_filter
     description: "Detects toxic, hateful, or harassing content"
@@ -155,6 +158,14 @@ rules:
       source: detectors/profanity_terms.txt
       match_mode: word_boundary
 
+  - id: sql_ast_filter
+    description: "Blocks SQL outputs containing DDL statements or unconstrained DELETE statements"
+    applies_to: [output]
+    default_action: block
+    severity: critical
+    detector:
+      type: sql_ast
+
   - id: code_safety_catastrophic
     description: "Blocks code that could cause irreversible system-wide damage"
     applies_to: [output]
@@ -171,6 +182,14 @@ rules:
           pattern: '(?i)\b(mkfs)\b.*\b/dev/(sd[a-z]|nvme)\b'
         - name: drop_database
           pattern: '(?i)\bDROP\s+DATABASE\b'
+        - name: drop_table
+          pattern: '(?i)\bDROP\s+TABLE\b'
+        - name: truncate_table
+          pattern: '(?i)\bTRUNCATE\s+(TABLE\s+)?\w+'
+        - name: delete_unbounded
+          pattern: '(?i)\bDELETE\s+FROM\s+\w+\s*(;|$)'
+        - name: chmod_777
+          pattern: '(?i)\bchmod\s+(-R\s+)?777\b'
 
   - id: code_safety_cautionary
     description: "Warns on code with potentially destructive commands that may be intentional"

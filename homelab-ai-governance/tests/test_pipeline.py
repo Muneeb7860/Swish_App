@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 
 from governance.agents.base import AgentResponse
-from governance.config import load_shared_guardrails
 from governance.pipeline import execute_pipeline
 from governance.router.classifier import ClassificationResult
 

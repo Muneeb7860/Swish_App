@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from governance.guardrails.enforcer import (
     apply_rules,
