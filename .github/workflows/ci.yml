@@ -520,7 +520,10 @@ jobs:
           cache-dependency-path: ./homelab-ai-governance/pyproject.toml
 
       - name: Install governance package + dev deps
-        run: pip install -e ".[dev]"
+        run: |
+          pip install -e ".[dev]"
+          # Canonical red-team tool (repo root); scripts/redteam.py shims to it.
+          pip install -e ../agentic-redteam
 
       - name: Run governance test suite
         env:
