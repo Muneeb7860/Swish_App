@@ -4,11 +4,16 @@ import logging
 import os
 import threading
 import time
+from contextlib import asynccontextmanager
 from typing import Any
+
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from governance.concurrency import CLASSIFIER_KEEP_ALIVE
+from governance.config import load_routing_config
 from governance.guardrails.nemo_guardrails import GuardrailConfigError, get_nemo_engine
 from governance.pipeline import execute_pipeline
 from governance.router.classifier import get_classifier_stats
@@ -17,13 +22,6 @@ from governance.stubs.memory_mesh import MemoryMesh
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-from contextlib import asynccontextmanager
-
-import httpx
-
-from governance.concurrency import CLASSIFIER_KEEP_ALIVE
-from governance.config import load_routing_config
 
 
 def _warm_classifier() -> None:
@@ -97,7 +95,6 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
         logger.info("OpenTelemetry instrumentation active exporting to %s", otlp_endpoint)
     except Exception as e:
         logger.warning("Failed to initialize OpenTelemetry instrumentation: %s", e)
-
 
 
 # Histogram bucket bounds (seconds). 2.5 is the end-to-end SLO edge
@@ -181,13 +178,9 @@ def _latency_histogram_lines() -> list[str]:
     cumulative = 0
     for bound, count in zip(LATENCY_BUCKET_BOUNDS, bucket_counts):
         cumulative += count
-        lines.append(
-            f'governance_pipeline_latency_seconds_bucket{{le="{bound}"}} {cumulative}'
-        )
+        lines.append(f'governance_pipeline_latency_seconds_bucket{{le="{bound}"}} {cumulative}')
     cumulative += bucket_counts[-1]
-    lines.append(
-        f'governance_pipeline_latency_seconds_bucket{{le="+Inf"}} {cumulative}'
-    )
+    lines.append(f'governance_pipeline_latency_seconds_bucket{{le="+Inf"}} {cumulative}')
     lines.append(f"governance_pipeline_latency_seconds_sum {latency_sum}")
     lines.append(f"governance_pipeline_latency_seconds_count {cumulative}")
     return lines

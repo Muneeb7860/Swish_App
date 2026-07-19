@@ -13,7 +13,7 @@ import httpx
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from governance.router.classifier import classify_intent
+from governance.router.classifier import classify_intent  # noqa: E402  (after sys.path setup)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +24,7 @@ logger = logging.getLogger("slm_benchmark")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def load_dataset(dataset_path: Path) -> list[dict[str, Any]]:
     with open(dataset_path, "r", encoding="utf-8") as f:
@@ -66,6 +67,7 @@ def warm_up_model(model_name: str, ollama_url: str) -> None:
 
 # ── Per-model benchmark ───────────────────────────────────────────────────────
 
+
 def run_model_benchmark(
     model_name: str,
     dataset: list[dict[str, Any]],
@@ -89,7 +91,6 @@ def run_model_benchmark(
     for idx, tc in enumerate(dataset):
         q = tc["query"]
         exp_intent = tc["expected_intent"]
-        exp_complexity = tc["expected_complexity"]
 
         if exp_intent not in per_intent:
             per_intent[exp_intent] = {"correct": 0, "total": 0}
@@ -129,10 +130,10 @@ def run_model_benchmark(
                 refusal_count += 1
 
     n = len(dataset)
-    json_compliance     = json_compliant / n if n else 0.0
-    intent_accuracy     = intent_correct  / n if n else 0.0
-    false_refusal_rate  = refusal_count   / total_safe if total_safe else 0.0
-    keyword_fallback_rt = fallback_count  / n if n else 0.0
+    json_compliance = json_compliant / n if n else 0.0
+    intent_accuracy = intent_correct / n if n else 0.0
+    false_refusal_rate = refusal_count / total_safe if total_safe else 0.0
+    keyword_fallback_rt = fallback_count / n if n else 0.0
 
     p50 = calculate_percentile(latencies, 50)
     p95 = calculate_percentile(latencies, 95)
@@ -153,25 +154,26 @@ def run_model_benchmark(
     )
     return {
         "model": model_name,
-        "json_compliance":      json_compliance,
-        "intent_accuracy":      intent_accuracy,
-        "false_refusal_rate":   false_refusal_rate,
+        "json_compliance": json_compliance,
+        "intent_accuracy": intent_accuracy,
+        "false_refusal_rate": false_refusal_rate,
         "keyword_fallback_rate": keyword_fallback_rt,
         "latency_p50": p50,
         "latency_p95": p95,
         "latency_p99": p99,
-        "latencies":   latencies,
+        "latencies": latencies,
         "per_intent_accuracy_pct": per_intent_pct,
     }
 
 
 # ── Scoring & reporting ───────────────────────────────────────────────────────
 
+
 def compute_score(r: dict[str, Any]) -> float:
     """Weighted composite score (higher = better)."""
     return (
-        r["intent_accuracy"]      * 0.60
-        + r["json_compliance"]    * 0.30
+        r["intent_accuracy"] * 0.60
+        + r["json_compliance"] * 0.30
         - r["keyword_fallback_rate"] * 0.10
     )
 
@@ -183,7 +185,7 @@ def generate_report(
     output_dir: Path,
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    md_path   = output_dir / "benchmark_report.md"
+    md_path = output_dir / "benchmark_report.md"
     json_path = output_dir / "benchmark_raw.json"
 
     # Raw JSON
@@ -192,11 +194,8 @@ def generate_report(
             {
                 "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "dataset_size": dataset_size,
-                "ollama_url":   ollama_url,
-                "results": [
-                    {k: v for k, v in r.items() if k != "latencies"}
-                    for r in results
-                ],
+                "ollama_url": ollama_url,
+                "results": [{k: v for k, v in r.items() if k != "latencies"} for r in results],
             },
             f,
             indent=2,
@@ -207,14 +206,11 @@ def generate_report(
     best = max(results, key=compute_score)
 
     # All intents union
-    all_intents = sorted({
-        intent
-        for r in results
-        for intent in r.get("per_intent_accuracy_pct", {})
-    })
+    all_intents = sorted(
+        {intent for r in results for intent in r.get("per_intent_accuracy_pct", {})}
+    )
 
     with open(md_path, "w", encoding="utf-8") as f:
-
         f.write("# SLM Intent Classifier Benchmark Performance Report\n\n")
         f.write(f"**Date/Time:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"**Dataset size:** {dataset_size} queries\n")
@@ -223,19 +219,21 @@ def generate_report(
 
         # ── Summary matrix ────────────────────────────────────────────────
         f.write("## Performance Summary Matrix\n\n")
-        f.write("| Model | JSON Compliance | Intent Accuracy | Keyword Fallback | False Refusal Rate | Latency (p50) | Latency (p95) | Latency (p99) | Score |\n")
+        f.write(
+            "| Model | JSON Compliance | Intent Accuracy | Keyword Fallback | False Refusal Rate | Latency (p50) | Latency (p95) | Latency (p99) | Score |\n"
+        )
         f.write("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
         for r in results:
-            score    = compute_score(r)
-            acc_flag = "✅" if r["intent_accuracy"]      >= 0.85 else "❌"
-            fb_flag  = "✅" if r["keyword_fallback_rate"] <= 0.05 else "❌"
-            star     = " ⭐" if r["model"] == best["model"] else ""
+            score = compute_score(r)
+            acc_flag = "✅" if r["intent_accuracy"] >= 0.85 else "❌"
+            fb_flag = "✅" if r["keyword_fallback_rate"] <= 0.05 else "❌"
+            star = " ⭐" if r["model"] == best["model"] else ""
             f.write(
                 f"| **{r['model']}{star}** "
-                f"| {r['json_compliance']*100:.1f}% "
-                f"| {acc_flag} {r['intent_accuracy']*100:.1f}% "
-                f"| {fb_flag} {r['keyword_fallback_rate']*100:.1f}% "
-                f"| {r['false_refusal_rate']*100:.1f}% "
+                f"| {r['json_compliance'] * 100:.1f}% "
+                f"| {acc_flag} {r['intent_accuracy'] * 100:.1f}% "
+                f"| {fb_flag} {r['keyword_fallback_rate'] * 100:.1f}% "
+                f"| {r['false_refusal_rate'] * 100:.1f}% "
                 f"| {r['latency_p50']:.1f}ms "
                 f"| {r['latency_p95']:.1f}ms "
                 f"| {r['latency_p99']:.1f}ms "
@@ -246,40 +244,48 @@ def generate_report(
         if all_intents:
             f.write("\n## Per-Intent Accuracy Breakdown (%)\n\n")
             f.write("| Intent |" + "".join(f" {r['model']} |" for r in results) + "\n")
-            f.write("| --- |"    + "".join( " --- |"          for _  in results) + "\n")
+            f.write("| --- |" + "".join(" --- |" for _ in results) + "\n")
             for intent in all_intents:
                 row = f"| `{intent}` |"
                 for r in results:
-                    pct  = r.get("per_intent_accuracy_pct", {}).get(intent, 0.0)
+                    pct = r.get("per_intent_accuracy_pct", {}).get(intent, 0.0)
                     flag = "✅" if pct >= 85 else ("🟡" if pct >= 60 else "❌")
                     row += f" {flag} {pct:.0f}% |"
                 f.write(row + "\n")
 
         # ── Recommendation ────────────────────────────────────────────────
         f.write("\n## Evaluation & Recommendations\n\n")
-        meets_acc = best["intent_accuracy"]      >= 0.85
-        meets_fb  = best["keyword_fallback_rate"] <= 0.05
+        meets_acc = best["intent_accuracy"] >= 0.85
+        meets_fb = best["keyword_fallback_rate"] <= 0.05
         if meets_acc and meets_fb:
-            f.write(f"✅ **Recommended model**: `{best['model']}` — meets BOTH accuracy (≥85%) and fallback (≤5%) targets.\n\n")
+            f.write(
+                f"✅ **Recommended model**: `{best['model']}` — meets BOTH accuracy (≥85%) and fallback (≤5%) targets.\n\n"
+            )
         else:
-            f.write(f"⚠️ **Best available model**: `{best['model']}` — targets not fully met. Consider pulling larger 7B models.\n\n")
+            f.write(
+                f"⚠️ **Best available model**: `{best['model']}` — targets not fully met. Consider pulling larger 7B models.\n\n"
+            )
             if not meets_acc:
-                f.write(f"  - Intent accuracy: **{best['intent_accuracy']*100:.1f}%** (need ≥85%)\n")
+                f.write(
+                    f"  - Intent accuracy: **{best['intent_accuracy'] * 100:.1f}%** (need ≥85%)\n"
+                )
             if not meets_fb:
-                f.write(f"  - Keyword fallback rate: **{best['keyword_fallback_rate']*100:.1f}%** (need ≤5%)\n")
+                f.write(
+                    f"  - Keyword fallback rate: **{best['keyword_fallback_rate'] * 100:.1f}%** (need ≤5%)\n"
+                )
             f.write("\n")
 
         f.write("### Model Highlights & Details\n\n")
         for r in sorted(results, key=compute_score, reverse=True):
             score = compute_score(r)
-            star  = " ⭐ **RECOMMENDED**" if r["model"] == best["model"] else ""
+            star = " ⭐ **RECOMMENDED**" if r["model"] == best["model"] else ""
             f.write(f"#### {r['model']}{star}\n")
             f.write(f"- **Score (weighted):** {score:.3f}\n")
-            f.write(f"- **JSON Compliance:** {r['json_compliance']*100:.1f}%\n")
-            f.write(f"- **Intent Accuracy:** {r['intent_accuracy']*100:.1f}%\n")
-            f.write(f"- **Keyword Fallback Rate:** {r['keyword_fallback_rate']*100:.1f}%\n")
-            f.write(f"- **False Refusal Rate:** {r['false_refusal_rate']*100:.1f}%\n")
-            f.write(f"- **Inference Latency:**\n")
+            f.write(f"- **JSON Compliance:** {r['json_compliance'] * 100:.1f}%\n")
+            f.write(f"- **Intent Accuracy:** {r['intent_accuracy'] * 100:.1f}%\n")
+            f.write(f"- **Keyword Fallback Rate:** {r['keyword_fallback_rate'] * 100:.1f}%\n")
+            f.write(f"- **False Refusal Rate:** {r['false_refusal_rate'] * 100:.1f}%\n")
+            f.write("- **Inference Latency:**\n")
             f.write(f"  - p50: {r['latency_p50']:.1f}ms\n")
             f.write(f"  - p95: {r['latency_p95']:.1f}ms\n")
             f.write(f"  - p99: {r['latency_p99']:.1f}ms\n\n")
@@ -290,11 +296,12 @@ def generate_report(
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Offline SLM Intent Classifier Benchmark")
-    parser.add_argument("--ollama-url",  default="http://localhost:11434")
-    parser.add_argument("--output",      default="benchmarks/results")
-    parser.add_argument("--dataset",     default="benchmarks/dataset.json")
+    parser.add_argument("--ollama-url", default="http://localhost:11434")
+    parser.add_argument("--output", default="benchmarks/results")
+    parser.add_argument("--dataset", default="benchmarks/dataset.json")
     parser.add_argument(
         "--models",
         default=None,
@@ -324,8 +331,13 @@ def main() -> None:
             sys.exit(1)
     else:
         candidates = {
-            "gemma3", "phi3", "llama3.2", "llama3.1", "qwen2.5",
-            "mistral", "deepseek-coder",
+            "gemma3",
+            "phi3",
+            "llama3.2",
+            "llama3.1",
+            "qwen2.5",
+            "mistral",
+            "deepseek-coder",
         }
         models_to_run = [m for m in available if any(m.startswith(c) for c in candidates)]
         if not models_to_run:

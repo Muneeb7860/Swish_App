@@ -38,15 +38,9 @@ class CustomerSupportSchema(BaseModel):
     """Response from the customer support agent."""
 
     reply: str = Field(..., min_length=1, description="The agent's reply to the customer.")
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Agent confidence score (0.0–1.0)."
-    )
-    tool: str | None = Field(
-        None, description="Optional tool invoked to resolve the query."
-    )
-    tool_argument: str | None = Field(
-        None, description="Optional argument passed to the tool."
-    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Agent confidence score (0.0–1.0).")
+    tool: str | None = Field(None, description="Optional tool invoked to resolve the query.")
+    tool_argument: str | None = Field(None, description="Optional argument passed to the tool.")
 
     @field_validator("reply")
     @classmethod
@@ -65,9 +59,7 @@ class DynamicPricingSchema(BaseModel):
     discountPercent: float = Field(  # noqa: N815
         ..., ge=0.0, le=50.0, description="Discount percentage to apply (0–50)."
     )
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Pricing decision confidence."
-    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Pricing decision confidence.")
     rationale: str = Field(
         ..., min_length=1, description="Human-readable rationale for the pricing decision."
     )
@@ -109,8 +101,7 @@ class ClassificationSchema(BaseModel):
     def intent_valid(cls, v: str) -> str:
         if v not in cls.VALID_INTENTS:
             raise ValueError(
-                f"intent '{v}' is not recognised. "
-                f"Valid intents: {sorted(cls.VALID_INTENTS)}"
+                f"intent '{v}' is not recognised. Valid intents: {sorted(cls.VALID_INTENTS)}"
             )
         return v
 
@@ -196,7 +187,7 @@ def validate_output(
     # Extract JSON from markdown code fences if the model wrapped it
     if stripped.startswith("```"):
         lines = stripped.splitlines()
-        inner = [l for l in lines if not l.startswith("```")]
+        inner = [line for line in lines if not line.startswith("```")]
         stripped = "\n".join(inner).strip()
 
     try:
