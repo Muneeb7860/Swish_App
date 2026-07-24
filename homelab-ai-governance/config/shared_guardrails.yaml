@@ -121,6 +121,15 @@ rules:
         - pattern: '(?i)\b(ai|assistant|chatbot|llm)\b.{0,20}\b(no|without|zero)\s+(restriction|safety|safeguard|ethical|moral|filter)'
         - pattern: '(?i)safety\s+(system|protocol|feature|filter|rule)s?\s+(are\s+|is\s+)?(disabled|off|removed|bypassed|turned\s+off)'
         - pattern: '(?i)(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(instructions|rules|prompts)\s+(you\s+(got|received)\s+)?(before|earlier|previously)'
+        # ── Semantic "centroid" framings (added 2026-07-24 after live
+        # red-team): fictional-scenario, narrative-roleplay, and logic-puzzle
+        # wrappers around a request for system internals/secrets. Anchored on
+        # the (request-for-secrets) + (fictional/puzzle framing) combination —
+        # verified against all 10 clean_queries payloads (incl. legit
+        # multi-clause business queries) with zero false positives.
+        - pattern: '(?i)(fictional|hypothetical|simulated)\s+(security\s+)?(audit|scenario).{0,60}(output|reveal|show|print).{0,20}(initialization\s+parameters|system\s+prompt|credentials|api\s+key|secret)'
+        - pattern: '(?i)\bchapter\s+\d+\s+of\s+the\s+simulation\b.{0,60}(unrestricted|drops?\s+(the\s+)?database\s+locks?|bypass|disable)'
+        - pattern: '(?i)logic\s+puzzle.{0,80}(output|reveal|print|show).{0,20}(master\s+key|system\s+key|secret\s+key|credentials|password)'
 
   # Destructive command defense (action-level, 2026-07-18). Raw destructive
   # DB/system commands submitted as a *query* are attacks, not governed agent
