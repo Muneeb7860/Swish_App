@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -8,10 +9,16 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
+from governance.agent_auth import (
+    agent_signature_required,
+    sign_audit_proof,
+    verify_agent_signature,
+)
 from governance.concurrency import CLASSIFIER_KEEP_ALIVE
 from governance.config import load_routing_config
 from governance.guardrails.nemo_guardrails import GuardrailConfigError, get_nemo_engine
@@ -193,13 +200,62 @@ class GovernRequest(BaseModel):
     session_id: str | None = None
 
 
+def _rule_id(res: dict[str, Any]) -> str:
+    rules = res.get("triggered_rules") or [{}]
+    return rules[0].get("rule_id", "unknown")
+
+
 @app.post("/api/v1/govern")
-def govern(req: GovernRequest) -> dict[str, Any]:
+async def govern(req: GovernRequest, request: Request) -> Any:
     """Execute the query governance pipeline."""
     start = time.perf_counter()
+
+    # ASI07 inter-agent identity verification (agent_auth.py; GOVERNANCE_SPEC
+    # §5 staged rollout — off by default via GOVERNANCE_REQUIRE_AGENT_SIGNATURE
+    # until every caller signs). Runs before the pipeline so an
+    # unauthenticated/forged caller never reaches guardrails or a model.
+    #
+    # Verifies against the RAW request body bytes (re-parsed as JSON), NOT
+    # req.model_dump() — the Pydantic model fills in defaults for absent
+    # optional fields (expected_format=None, session_id=None, ...), which
+    # would produce a DIFFERENT canonical string than whatever subset of
+    # fields the caller actually signed, silently rejecting every correctly
+    # signed request. The raw body is exactly what the caller canonicalized.
+    if agent_signature_required():
+        try:
+            body_for_sig = json.loads(await request.body())
+        except Exception:
+            body_for_sig = {}
+        ok, msg = verify_agent_signature(dict(request.headers), body_for_sig)
+        if not ok:
+            logger.warning("Agent signature verification failed: %s", msg)
+            metrics_tracker.record_failure()
+            body = {
+                "status": "blocked",
+                "message": msg,
+                "triggered_rules": [
+                    {
+                        "rule_id": "agent_signature_invalid",
+                        "action": "block",
+                        "severity": "critical",
+                    }
+                ],
+                "warnings": [],
+            }
+            return JSONResponse(
+                status_code=401, content=body, headers=sign_audit_proof("agent_signature_invalid")
+            )
+
     try:
         logger.info("Governing query: %s", req.query[:100])
-        res = execute_pipeline(
+        # execute_pipeline is synchronous and IO-heavy (Ollama calls); run it
+        # off the event loop thread via the threadpool, same as FastAPI does
+        # automatically for a plain `def` endpoint — this handler is `async
+        # def` only because of the `await request.body()` above, and must
+        # not silently give up the concurrency this codebase is built around
+        # (per-model semaphores, §3b goal 2) by blocking the loop directly.
+        res = await run_in_threadpool(
+            execute_pipeline,
             query=req.query,
             expected_format=req.expected_format,
             local_only_override=req.local_only_override,
@@ -212,7 +268,15 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         # (PythonGovernanceAdapter) treats it as transient unavailability and
         # does NOT proceed with the sensitive action.
         if res.get("status") == "unavailable":
-            return JSONResponse(status_code=503, content=res)
+            return JSONResponse(
+                status_code=503, content=res, headers=sign_audit_proof(_rule_id(res))
+            )
+        # Audit-proof headers on every blocked response (always on, additive —
+        # proves the block is genuine, not a fabricated/hallucinated error).
+        if res.get("status") == "blocked":
+            return JSONResponse(
+                status_code=200, content=res, headers=sign_audit_proof(_rule_id(res))
+            )
         return res
     except Exception as e:
         metrics_tracker.record_failure(time.perf_counter() - start)
