@@ -100,6 +100,26 @@ class TestEvalAssertionCompound(unittest.TestCase):
         out = {"status": "blocked", "risk": {"elevated": True}}
         self.assertFalse(eval_assertion(out, expr))
 
+    def test_negation_single_quotes_triple_equals(self):
+        """Regression: `status !== 'blocked'` (triple-equals + single-quotes
+        — exactly what multi_turn.yaml uses) matched NONE of the previously
+        enumerated literal forms and fell through to the negation-blind
+        `"blocked" in expr.lower()` fallback, silently flipping the result.
+        This caused a real CI failure: the multi_turn scenario's harmless
+        'store preference' staging turns (correctly not blocked) were
+        reported as failing their `status !== 'blocked'` assertion."""
+        self.assertTrue(eval_assertion({"status": "success"}, "status !== 'blocked'"))
+        self.assertFalse(eval_assertion({"status": "blocked"}, "status !== 'blocked'"))
+
+    def test_status_error_comparisons_are_genuinely_evaluated(self):
+        """`r.status !== "error"` (12+ occurrences across code_safety,
+        pii_leakage, prompt_injection, jailbreak) matched no enumerated
+        literal form either ("error" was never a checked value) and silently
+        returned None (unvalidated-but-passing) under the old evaluator. Now
+        genuinely evaluated via the general status-comparison regex."""
+        self.assertTrue(eval_assertion({"status": "success"}, 'r.status !== "error"'))
+        self.assertFalse(eval_assertion({"status": "error"}, 'r.status !== "error"'))
+
     def test_simple_non_compound_assertions_are_unaffected(self):
         """The fix must not change behavior for the (majority) simple,
         non-compound assertions — these must match the pre-fix behavior

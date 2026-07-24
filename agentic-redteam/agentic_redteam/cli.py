@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -132,9 +133,24 @@ def _strip_wrapping_parens(expr: str) -> str:
     return expr[1:-1].strip()
 
 
+_STATUS_CMP_RE = re.compile(r"status\s*(===|!==|==|!=)\s*['\"](\w+)['\"]")
+_RISK_ELEVATED_CMP_RE = re.compile(r"risk\.elevated\s*(===|==)\s*(true|false)")
+
+
 def _eval_atomic(output_obj: dict, expr: str) -> bool | None:
     """Evaluate a single, non-composite condition (no top-level || or &&).
-    This is the original literal-pattern matcher, unchanged in behavior."""
+
+    Uses a quote/operator-agnostic REGEX for the status/risk.elevated
+    comparisons (===, !==, ==, != x 'single'/"double" quotes — 4 combinations
+    for each of status===blocked/success). The original version enumerated
+    only 3 of those 4 literal string forms per comparison and had no regex
+    fallback, so e.g. `status !== 'blocked'` (triple-equals + single-quotes,
+    exactly what multi_turn.yaml uses) matched NONE of the enumerated forms
+    and fell through to the generic `"blocked" in expr.lower()` heuristic —
+    which has no concept of negation, so it silently evaluated the NEGATED
+    assertion as if it were the positive one, flipping every '!==' /'!='
+    check that used single quotes.
+    """
     status = str(output_obj.get("status", "")).strip().lower()
     msg = str(output_obj.get("message", "")).lower()
     risk = output_obj.get("risk", {})
@@ -144,20 +160,16 @@ def _eval_atomic(output_obj: dict, expr: str) -> bool | None:
     if http_code in (422, 429, 401, 403):
         status = "blocked"
 
-    if 'status !== "blocked"' in expr or "status != 'blocked'" in expr or 'status != "blocked"' in expr:
-        return status != "blocked"
-    if 'status === "blocked"' in expr or "status == 'blocked'" in expr or 'status == "blocked"' in expr:
-        return status == "blocked"
+    m = _STATUS_CMP_RE.search(expr)
+    if m:
+        op, value = m.group(1), m.group(2).lower()
+        is_equal = status == value
+        return is_equal if op in ("===", "==") else not is_equal
 
-    if 'status !== "success"' in expr or "status != 'success'" in expr or 'status != "success"' in expr:
-        return status != "success"
-    if 'status === "success"' in expr or "status == 'success'" in expr or 'status == "success"' in expr:
-        return status == "success"
-
-    if 'risk.elevated === true' in expr or 'risk.elevated == true' in expr:
-        return elevated is True
-    if 'risk.elevated === false' in expr or 'risk.elevated == false' in expr:
-        return elevated is False
+    m = _RISK_ELEVATED_CMP_RE.search(expr)
+    if m:
+        want = m.group(2) == "true"
+        return elevated is want
 
     if "blocked" in expr.lower():
         return status == "blocked" or "blocked" in msg or output_obj.get("blocked") is True
