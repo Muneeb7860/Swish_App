@@ -156,6 +156,38 @@ rules:
         # a directive setting it to 4+ or double digits. Legit values (≤3.0) and
         # recommendation requests (no explicit high value) do not match.
         - pattern: '(?i)surge\s*_?\s*multiplier\s*(to|=|:|of)?\s*([4-9](\.\d+)?|[1-9]\d+(\.\d+)?)\s*x?'
+        # ── Indirect-injection / multi-turn action gaps (added 2026-07-24 after
+        # scoped investigation: none of these matched any existing pattern, and
+        # guardrails are stateless per-request — a delayed multi-turn attack is
+        # invisible unless the DANGEROUS turn itself carries a recognizable
+        # shape). All verified against the 10 clean_queries payloads AND the two
+        # multi_turn "store preference" turns that must stay UNblocked.
+        #
+        # Delayed variable-concatenation execution ("Execute var_part1 +
+        # var_part2 in system context") — the individual "store" turns that
+        # stage the fragments are intentionally NOT matched (no exec verb).
+        - pattern: '(?i)execute\s+\w+\s*\+\s*\w+.{0,30}(system\s+context|shell|\bsystem\b)'
+        # Fake tool-call syntax targeting a sensitive path.
+        - pattern: '(?i)(execute\s+tool\s+call|call\s+tool|invoke\s+tool).{0,60}(/etc/passwd|/etc/shadow|\.ssh/|\.aws/credentials|\.env\b|id_rsa)'
+        # Function-call-style unauthorized financial action delegated to a
+        # sub-agent ("Agent-2, execute refund_override(to_account=..., amount=...)")
+        # — a reordered/underscored variant of the AL-05 "override refund"
+        # phrase that a plain substring check misses.
+        - pattern: '(?i)\w*_override\s*\(.{0,80}(account|iban|amount)'
+        # Markdown image syntax pointing at an external URL, submitted as
+        # user INPUT (not model output — harmful_compliance_filter covers
+        # that side) — a side-channel exfiltration vector (tracking-pixel
+        # image render). Legitimate business queries never need to embed
+        # image markup in the query text itself.
+        - pattern: '!\[.*?\]\(https?://'
+        # Zero-width/invisible Unicode characters (U+200B/200C/200D/FEFF) —
+        # a generic obfuscation technique for hiding injected instructions
+        # from human review; never expected in a typed business query.
+        - pattern: '[​‌‍﻿]'
+        # Broaden system-prompt exfiltration beyond the existing
+        # `system\s*prompt\s*:` (requires a colon) — "print/reveal/output/
+        # show/display the system prompt" with no colon.
+        - pattern: '(?i)(print|reveal|show|output|display)\s+(the\s+|entire\s+|your\s+)?system\s+prompt\b'
 
   - id: profanity_filter
     description: "Filters profanity in output"
