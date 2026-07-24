@@ -32,6 +32,17 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
     @Value("${swish.governance.api.url:}")
     private String apiUrl;
 
+    // ASI07 inter-agent HMAC identity (GOVERNANCE_SPEC §5, staged rollout).
+    // Optional by design: signing activates only when a secret is configured
+    // (matches the governance service's GOVERNANCE_REQUIRE_AGENT_SIGNATURE,
+    // off by default) — an unconfigured secret means zero behavior change,
+    // same as before this feature existed.
+    @Value("${swish.governance.agent.id:swish-java-backend}")
+    private String agentId;
+
+    @Value("${swish.governance.agent.secret:}")
+    private String agentSecret;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -73,6 +84,14 @@ public class PythonGovernanceAdapter implements LlmGatewayPort {
         // If the prompt contains "Response MUST be a valid JSON", request JSON format
         if (prompt.contains("valid JSON") || prompt.contains("structure:")) {
             body.put("expected_format", "json");
+        }
+
+        // Sign AFTER `body` is fully built — the signature must cover exactly
+        // what gets sent. Wire order doesn't matter (the server re-parses and
+        // re-sorts before verifying), but the key/value SET must match.
+        if (agentSecret != null && !agentSecret.isBlank()) {
+            Map<String, String> sigHeaders = AgentSignatureUtil.sign(agentId, agentSecret, body);
+            sigHeaders.forEach(headers::set);
         }
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);

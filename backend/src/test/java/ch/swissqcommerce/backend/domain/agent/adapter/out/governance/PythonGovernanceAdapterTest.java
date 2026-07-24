@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -93,6 +94,88 @@ public class PythonGovernanceAdapterTest {
         assertNotNull(response);
         assertEquals("governed response text", response.getContent());
         assertTrue(response.getTokenCost() > 0.0);
+    }
+
+    @Test
+    public void testCallLlm_NoSecretConfigured_SendsNoSignatureHeaders() {
+        // Default/unconfigured state (ASI07 staged rollout) — zero behavior
+        // change from before this feature existed.
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
+        ReflectionTestUtils.setField(adapter, "agentSecret", "");
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        mockResponse.put("status", "success");
+        mockResponse.put("response", "ok");
+
+        ArgumentCaptor<HttpEntity> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForObject(anyString(), captor.capture(), eq(Map.class)))
+                .thenReturn(mockResponse);
+
+        adapter.callLlm("test prompt");
+
+        HttpHeaders sentHeaders = captor.getValue().getHeaders();
+        assertFalse(sentHeaders.containsKey("X-Agent-Signature"));
+        assertFalse(sentHeaders.containsKey("X-Agent-ID"));
+    }
+
+    @Test
+    public void testCallLlm_SecretConfigured_SignsRequest() {
+        ReflectionTestUtils.setField(adapter, "apiUrl", "http://localhost:5000");
+        ReflectionTestUtils.setField(adapter, "agentId", "swish-java-backend-test");
+        ReflectionTestUtils.setField(adapter, "agentSecret", "test-secret-for-adapter");
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        mockResponse.put("status", "success");
+        mockResponse.put("response", "ok");
+
+        ArgumentCaptor<HttpEntity> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForObject(anyString(), captor.capture(), eq(Map.class)))
+                .thenReturn(mockResponse);
+
+        adapter.callLlm("test prompt", "sess-42");
+
+        HttpEntity<?> sentEntity = captor.getValue();
+        HttpHeaders sentHeaders = sentEntity.getHeaders();
+        assertEquals("swish-java-backend-test", sentHeaders.getFirst("X-Agent-ID"));
+        assertNotNull(sentHeaders.getFirst("X-Agent-Timestamp"));
+        assertNotNull(sentHeaders.getFirst("X-Agent-Nonce"));
+        assertEquals(64, sentHeaders.getFirst("X-Agent-Signature").length());
+
+        // The signature must cover exactly the body that was actually sent —
+        // recompute independently (not via AgentSignatureUtil, to avoid a
+        // tautological test) and confirm it matches the captured signature.
+        @SuppressWarnings("unchecked")
+        Map<String, Object> sentBody = (Map<String, Object>) sentEntity.getBody();
+        String canonical =
+                new java.util.TreeMap<>(sentBody)
+                        .entrySet().stream()
+                                .map(e -> "\"" + e.getKey() + "\":\"" + e.getValue() + "\"")
+                                .collect(java.util.stream.Collectors.joining(",", "{", "}"));
+        String stringToSign =
+                "swish-java-backend-test"
+                        + ":"
+                        + sentHeaders.getFirst("X-Agent-Timestamp")
+                        + ":"
+                        + sentHeaders.getFirst("X-Agent-Nonce")
+                        + ":"
+                        + canonical;
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(
+                    new javax.crypto.spec.SecretKeySpec(
+                            "test-secret-for-adapter"
+                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                            "HmacSHA256"));
+            byte[] sigBytes =
+                    mac.doFinal(stringToSign.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : sigBytes) {
+                hex.append(String.format("%02x", b));
+            }
+            assertEquals(hex.toString(), sentHeaders.getFirst("X-Agent-Signature"));
+        } catch (Exception e) {
+            fail("Independent HMAC recomputation failed: " + e.getMessage());
+        }
     }
 
     @Test
