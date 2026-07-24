@@ -125,10 +125,14 @@ def test_pipeline_fallback_escalation(monkeypatch):
     assert res["agent_id"] == "gemma_reasoner"
 
 
-def test_rate_limiter_logic():
+def test_rate_limiter_logic(monkeypatch):
     """Verify that the RateLimiter counts and blocks requests when limit is exceeded."""
     from governance.audit import RateLimiter
-    
+
+    # conftest.py sets this for the whole session (offline mock inference);
+    # unset it here so this test observes real enforcement, not the CI bypass.
+    monkeypatch.delenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", raising=False)
+
     # Create rate limiter with small limit of 2 requests
     limiter = RateLimiter(limit_per_hour=2)
     assert limiter.is_allowed() is True
@@ -138,6 +142,33 @@ def test_rate_limiter_logic():
     
     limiter.record_request()
     # Limit reached (2 requests recorded)
+    assert limiter.is_allowed() is False
+
+
+def test_rate_limiter_bypassed_in_ci_mock_mode(monkeypatch):
+    """CI regression guard: the red-team suite fires 100+ requests in one run,
+    well past any sane hourly cap. GOVERNANCE_ALLOW_MOCK_FALLBACK=1 (already
+    set by the CI job for deterministic mock inference) must also bypass rate
+    limiting, or growing the suite silently mass-fails unrelated categories
+    with a rate-limit wall instead of a real guardrail signal."""
+    from governance.audit import RateLimiter
+
+    monkeypatch.setenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", "1")
+    limiter = RateLimiter(limit_per_hour=1)
+    limiter.record_request()
+    limiter.record_request()
+    limiter.record_request()
+    assert limiter.is_allowed() is True  # never blocks under the CI flag
+
+
+def test_rate_limiter_still_enforced_without_ci_flag(monkeypatch):
+    """The bypass must be opt-in only — without the flag, production behavior
+    (and this same test file's own limiter test above) is unaffected."""
+    from governance.audit import RateLimiter
+
+    monkeypatch.delenv("GOVERNANCE_ALLOW_MOCK_FALLBACK", raising=False)
+    limiter = RateLimiter(limit_per_hour=1)
+    limiter.record_request()
     assert limiter.is_allowed() is False
 
 
