@@ -1,13 +1,16 @@
 """Unit tests for agentic-redteam CLI module."""
 
+import json
+import os
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agentic_redteam.cli import eval_assertion, main
+from agentic_redteam.cli import call_target, eval_assertion, main
+from agentic_redteam.crypto import sign_payload, verify_payload_signature
 
 
 class TestAgenticRedteamCLI(unittest.TestCase):
@@ -137,6 +140,68 @@ class TestEvalAssertionCompound(unittest.TestCase):
         expr = '(r.status === "blocked") || (r.risk && r.risk.elevated === true)'
         out = {"status": "success", "risk": {"elevated": True}}
         self.assertTrue(self.harness_pass(eval_assertion(out, expr)))
+
+
+class TestCallTargetSigning(unittest.TestCase):
+    """ASI07 stage 3: call_target() must sign every outgoing request with
+    SWISH_AGENT_SHARED_SECRET when it's configured (so mandatory server-side
+    enforcement doesn't lock the harness's own 10 non-crypto_probes
+    categories out), and must stay backward compatible (no signature
+    headers) when it isn't."""
+
+    def _mock_urlopen(self, captured_requests):
+        def _fake_urlopen(req, timeout=None):
+            captured_requests.append(req)
+            resp = MagicMock()
+            resp.read.return_value = json.dumps({"status": "success"}).encode()
+            resp.__enter__.return_value = resp
+            resp.__exit__.return_value = False
+            return resp
+
+        return _fake_urlopen
+
+    def test_no_secret_configured_sends_no_signature_headers(self):
+        captured = []
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SWISH_AGENT_SHARED_SECRET", None)
+            with patch("urllib.request.urlopen", new=self._mock_urlopen(captured)):
+                call_target("http://localhost:8000/api/v1/govern", "hello")
+
+        self.assertEqual(len(captured), 1)
+        self.assertNotIn("X-Agent-Signature", captured[0].headers)
+
+    def test_secret_configured_signs_request_and_server_side_verification_succeeds(self):
+        """Not just 'headers look plausible' -- round-trip through the real
+        server-side verifier (crypto.verify_payload_signature) using the
+        exact payload dict call_target actually serializes, proving the
+        signed request would be accepted by a mandatory-enforcement server."""
+        captured = []
+        secret = "shared-test-secret"
+        with patch.dict(os.environ, {"SWISH_AGENT_SHARED_SECRET": secret, "SWISH_AGENT_ID": "harness-test"}):
+            with patch("urllib.request.urlopen", new=self._mock_urlopen(captured)):
+                call_target("http://localhost:8000/api/v1/govern", "probe query", session_id="sess-1")
+
+        self.assertEqual(len(captured), 1)
+        req = captured[0]
+        self.assertEqual(req.headers.get("X-agent-id"), "harness-test")
+        self.assertIsNotNone(req.headers.get("X-agent-signature"))
+
+        sent_payload = json.loads(req.data.decode("utf-8"))
+        ok, msg = verify_payload_signature(dict(req.header_items()), secret, sent_payload)
+        self.assertTrue(ok, msg)
+
+    def test_secret_configured_wrong_key_is_rejected(self):
+        """Sanity check that the round-trip verification above is genuinely
+        exercising HMAC comparison, not trivially passing."""
+        captured = []
+        with patch.dict(os.environ, {"SWISH_AGENT_SHARED_SECRET": "correct-secret"}):
+            with patch("urllib.request.urlopen", new=self._mock_urlopen(captured)):
+                call_target("http://localhost:8000/api/v1/govern", "probe query")
+
+        req = captured[0]
+        sent_payload = json.loads(req.data.decode("utf-8"))
+        ok, _ = verify_payload_signature(dict(req.header_items()), "wrong-secret", sent_payload)
+        self.assertFalse(ok)
 
 
 if __name__ == "__main__":

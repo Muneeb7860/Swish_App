@@ -19,11 +19,13 @@ try:
     from agentic_redteam.mutators import apply_mutations
     from agentic_redteam.crypto_probes import run_crypto_probes
     from agentic_redteam.fingerprint_test import run_fingerprint_tarpit_exhaustion
+    from agentic_redteam.crypto import sign_payload
 except ImportError:
     try:
         from mutators import apply_mutations
         from crypto_probes import run_crypto_probes
         from fingerprint_test import run_fingerprint_tarpit_exhaustion
+        from crypto import sign_payload
     except ImportError:
         def apply_mutations(text: str, mutation_types: list[str] | None = None) -> list[str]:
             return [text]
@@ -31,6 +33,8 @@ except ImportError:
             return []
         def run_fingerprint_tarpit_exhaustion(target_url: str, request_count: int = 5) -> dict:
             return {"passed": True, "note": "tarpit test module fallback"}
+        def sign_payload(agent_id: str, secret_key: str, payload: dict, **kwargs) -> dict:
+            return {}
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 PAYLOADS_DIR = PACKAGE_DIR / "payloads"
@@ -72,6 +76,11 @@ def call_target(
     headers = {"Content-Type": "application/json"}
     if session_id:
         headers["X-Session-ID"] = session_id
+
+    shared_secret = os.environ.get("SWISH_AGENT_SHARED_SECRET")
+    if shared_secret:
+        agent_id = os.environ.get("SWISH_AGENT_ID", "agentic-redteam-harness")
+        headers.update(sign_payload(agent_id, shared_secret, payload))
 
     req = urllib.request.Request(url, data=data, headers=headers)
     try:
