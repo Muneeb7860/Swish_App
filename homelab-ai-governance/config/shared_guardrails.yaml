@@ -27,6 +27,8 @@ rules:
       patterns:
         - name: email
           pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        - name: obfuscated_email
+          pattern: '(?i)[a-zA-Z0-9._%+-]+\s*(\(at\)|\[at\]|@)\s*[a-zA-Z0-9.-]+\s*(\(dot\)|\[dot\]|\.)\s*[a-zA-Z]{2,}'
         - name: ssn
           pattern: '\b\d{3}-\d{2}-\d{4}\b'
         - name: phone_us

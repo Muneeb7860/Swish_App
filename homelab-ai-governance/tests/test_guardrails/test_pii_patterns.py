@@ -42,6 +42,10 @@ POSITIVE_CASES: dict[str, list[str]] = {
         "reach me at jane.doe+test@example.co.uk",
         "support@example.ch handles tickets",
     ],
+    "OBFUSCATED_EMAIL": [
+        "reach me at jane (at) example (dot) com",
+        "contact info: john [at] test [dot] org",
+    ],
     "PHONE_NUMBER": [
         "call +41-44-123-4567 tomorrow",
         "hotline 555-123-4567 is open",
@@ -60,6 +64,7 @@ NEAR_MISS_CASES: dict[str, list[str]] = {
     "CREDIT_CARD": ["invoice 1234-5678-9012 (12 digits)"],
     "SSN": ["ref 123-45-678 is not an ssn", "date 2026-07-13 either"],
     "EMAIL": ["mention @channel in slack", "price is 5@10% margin"],
+    "OBFUSCATED_EMAIL": ["look at that cat over there", "no email pattern here"],
     "PHONE_NUMBER": ["room 42", "order #1234"],
     "IP_ADDRESS": ["version 2.0.0 shipped", "999.999.999.999 is not routable"],
 }
@@ -154,10 +159,5 @@ def test_redacted_output_is_stable():
 # ── Known gaps (documented, strict-xfail so a fix flips them loudly) ─────────
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="obfuscated emails ('(at)'/'[dot]') not yet covered — "
-    "GOVERNANCE_SPEC.md Phase 5 backlog",
-)
 def test_obfuscated_email_gap():
     assert contains_pii("reach me at jane (at) example (dot) com")
