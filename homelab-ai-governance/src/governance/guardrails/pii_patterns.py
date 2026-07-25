@@ -25,6 +25,9 @@ PII_PATTERNS: list[PIIPattern] = [
     PIIPattern("CREDIT_CARD", re.compile(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
     PIIPattern("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     PIIPattern("EMAIL", re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")),
+    PIIPattern("OBFUSCATED_EMAIL", re.compile(
+        r"(?i)[a-zA-Z0-9._%+-]+\s*(\(at\)|\[at\]|@)\s*[a-zA-Z0-9.-]+\s*(\(dot\)|\[dot\]|\.)\s*[a-zA-Z]{2,}"
+    )),
     PIIPattern("PHONE_NUMBER", re.compile(
         r"\+?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{2,4}[-.\s]?\d{2,4}|\b\d{3}-\d{3}-\d{4}\b"
     )),
