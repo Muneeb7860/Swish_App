@@ -1,0 +1,22 @@
+# vllm_reasoner.yaml — Agent configuration for a high-throughput vLLM instance.
+# STAGED: not routed by the decision table and requires a remote/Linux vLLM
+# host (no Apple-Silicon/Metal backend). Port 8001, NOT 8000 (the governance
+# service owns 8000).
+agent:
+  id: vllm_reasoner
+  name: "vLLM High-Performance Reasoner"
+  backend: vllm
+  model: qwen2.5-coder-7b-instruct
+  vllm_url: http://localhost:8001
+  timeout_ms: 45000
+  role: reasoner
+
+overrides:
+  # Do not block code safety warnings here — allow them but log/warn
+  code_safety_cautionary:
+    enabled: true
+    default_action: warn
+  
+  # Strip markdown formatting for cleaner raw output parsing if requested
+  markdown_formatting_filter:
+    enabled: false

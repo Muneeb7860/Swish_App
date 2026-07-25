@@ -1,14 +1,27 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
 import time
+from contextlib import asynccontextmanager
 from typing import Any
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
 
+import httpx
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
+
+from governance.agent_auth import (
+    agent_signature_required,
+    sign_audit_proof,
+    verify_agent_signature,
+)
+from governance.concurrency import CLASSIFIER_KEEP_ALIVE
+from governance.config import load_routing_config
+from governance.guardrails.nemo_guardrails import GuardrailConfigError, get_nemo_engine
 from governance.pipeline import execute_pipeline
 from governance.router.classifier import get_classifier_stats
 from governance.stubs.memory_mesh import MemoryMesh
@@ -17,7 +30,50 @@ from governance.stubs.memory_mesh import MemoryMesh
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Homelab AI Governance Service", version="0.1.0")
+
+def _warm_classifier() -> None:
+    """Pre-load & pin the classifier model (GOVERNANCE_SPEC.md §3b).
+
+    The classifier sits on the floor of every request; without this the first
+    user request pays the multi-second cold load from disk and falls back to
+    keyword classification. Runs in a daemon thread — never blocks startup.
+    """
+    try:
+        cfg = load_routing_config().get("classifier", {})
+        model = cfg.get("model", "qwen2.5:3b")
+        url = cfg.get("ollama_url", "http://localhost:11434").rstrip("/")
+        # Empty generate = load-only; keep_alive=-1 pins it resident.
+        httpx.post(
+            f"{url}/api/generate",
+            json={"model": model, "keep_alive": CLASSIFIER_KEEP_ALIVE},
+            timeout=180,
+        ).raise_for_status()
+        logger.info("Classifier model %s warmed and pinned", model)
+    except Exception as e:
+        logger.warning("Classifier warm-up skipped: %s", e)
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    # Fail fast: a governance service with unloadable guardrails must not serve
+    # traffic (GOVERNANCE_SPEC.md Phase 1). Requests that arrive anyway are
+    # still fail-closed by check_nemo_guardrails.
+    try:
+        engine = get_nemo_engine()
+        logger.info(
+            "Guardrail engine loaded: %d intents, %d flows, %d active",
+            len(engine.intents),
+            len(engine.flows),
+            len(engine.active_flows),
+        )
+    except GuardrailConfigError:
+        logger.critical("Guardrail config invalid — refusing to start")
+        raise
+    threading.Thread(target=_warm_classifier, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="Homelab AI Governance Service", version="0.1.0", lifespan=_lifespan)
 
 # Instrument with OpenTelemetry
 if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
@@ -48,6 +104,10 @@ if os.environ.get("SWISH_TRACING_ENABLED", "true").lower() == "true":
         logger.warning("Failed to initialize OpenTelemetry instrumentation: %s", e)
 
 
+# Histogram bucket bounds (seconds). 2.5 is the end-to-end SLO edge
+# (GOVERNANCE_SPEC.md §2); the rest bracket the measured classifier costs.
+LATENCY_BUCKET_BOUNDS = (0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0, 30.0)
+
 
 class MetricsTracker:
     def __init__(self):
@@ -55,6 +115,7 @@ class MetricsTracker:
         self.requests_total = 0
         self.failures_total = 0
         self.latency_sum = 0.0
+        self.latency_bucket_counts = [0] * (len(LATENCY_BUCKET_BOUNDS) + 1)
         self.pii_redacted_total = 0
         self.fallback_total = 0
         self.attempts_total = 0
@@ -70,10 +131,20 @@ class MetricsTracker:
             "procurement": 0,
         }
 
+    def _observe_latency(self, latency: float) -> None:
+        """Record into the first bucket whose bound fits (non-cumulative store;
+        emitted cumulatively in /metrics per the Prometheus histogram format)."""
+        for i, bound in enumerate(LATENCY_BUCKET_BOUNDS):
+            if latency <= bound:
+                self.latency_bucket_counts[i] += 1
+                return
+        self.latency_bucket_counts[-1] += 1  # +Inf
+
     def record_request(self, latency: float, result: dict[str, Any]):
         with self.lock:
             self.requests_total += 1
             self.latency_sum += latency
+            self._observe_latency(latency)
 
             # Check if request contained PII or override triggered local only routing
             routing = result.get("routing_decision", {})
@@ -93,13 +164,33 @@ class MetricsTracker:
             if loop.get("fallback_used", False):
                 self.fallback_total += 1
 
-    def record_failure(self):
+    def record_failure(self, latency: float | None = None):
         with self.lock:
             self.requests_total += 1
             self.failures_total += 1
+            if latency is not None:
+                self.latency_sum += latency
+                self._observe_latency(latency)
 
 
 metrics_tracker = MetricsTracker()
+
+
+def _latency_histogram_lines() -> list[str]:
+    """Cumulative Prometheus histogram series for the /govern latency."""
+    with metrics_tracker.lock:
+        bucket_counts = list(metrics_tracker.latency_bucket_counts)
+        latency_sum = metrics_tracker.latency_sum
+    lines = []
+    cumulative = 0
+    for bound, count in zip(LATENCY_BUCKET_BOUNDS, bucket_counts):
+        cumulative += count
+        lines.append(f'governance_pipeline_latency_seconds_bucket{{le="{bound}"}} {cumulative}')
+    cumulative += bucket_counts[-1]
+    lines.append(f'governance_pipeline_latency_seconds_bucket{{le="+Inf"}} {cumulative}')
+    lines.append(f"governance_pipeline_latency_seconds_sum {latency_sum}")
+    lines.append(f"governance_pipeline_latency_seconds_count {cumulative}")
+    return lines
 
 
 class GovernRequest(BaseModel):
@@ -109,13 +200,62 @@ class GovernRequest(BaseModel):
     session_id: str | None = None
 
 
+def _rule_id(res: dict[str, Any]) -> str:
+    rules = res.get("triggered_rules") or [{}]
+    return rules[0].get("rule_id", "unknown")
+
+
 @app.post("/api/v1/govern")
-def govern(req: GovernRequest) -> dict[str, Any]:
+async def govern(req: GovernRequest, request: Request) -> Any:
     """Execute the query governance pipeline."""
     start = time.perf_counter()
+
+    # ASI07 inter-agent identity verification (agent_auth.py; GOVERNANCE_SPEC
+    # §5 staged rollout — off by default via GOVERNANCE_REQUIRE_AGENT_SIGNATURE
+    # until every caller signs). Runs before the pipeline so an
+    # unauthenticated/forged caller never reaches guardrails or a model.
+    #
+    # Verifies against the RAW request body bytes (re-parsed as JSON), NOT
+    # req.model_dump() — the Pydantic model fills in defaults for absent
+    # optional fields (expected_format=None, session_id=None, ...), which
+    # would produce a DIFFERENT canonical string than whatever subset of
+    # fields the caller actually signed, silently rejecting every correctly
+    # signed request. The raw body is exactly what the caller canonicalized.
+    if agent_signature_required():
+        try:
+            body_for_sig = json.loads(await request.body())
+        except Exception:
+            body_for_sig = {}
+        ok, msg = verify_agent_signature(dict(request.headers), body_for_sig)
+        if not ok:
+            logger.warning("Agent signature verification failed: %s", msg)
+            metrics_tracker.record_failure()
+            body = {
+                "status": "blocked",
+                "message": msg,
+                "triggered_rules": [
+                    {
+                        "rule_id": "agent_signature_invalid",
+                        "action": "block",
+                        "severity": "critical",
+                    }
+                ],
+                "warnings": [],
+            }
+            return JSONResponse(
+                status_code=401, content=body, headers=sign_audit_proof("agent_signature_invalid")
+            )
+
     try:
         logger.info("Governing query: %s", req.query[:100])
-        res = execute_pipeline(
+        # execute_pipeline is synchronous and IO-heavy (Ollama calls); run it
+        # off the event loop thread via the threadpool, same as FastAPI does
+        # automatically for a plain `def` endpoint — this handler is `async
+        # def` only because of the `await request.body()` above, and must
+        # not silently give up the concurrency this codebase is built around
+        # (per-model semaphores, §3b goal 2) by blocking the loop directly.
+        res = await run_in_threadpool(
+            execute_pipeline,
             query=req.query,
             expected_format=req.expected_format,
             local_only_override=req.local_only_override,
@@ -123,9 +263,23 @@ def govern(req: GovernRequest) -> dict[str, Any]:
         )
         latency = time.perf_counter() - start
         metrics_tracker.record_request(latency, res)
+        # Phase 4: HIGH-risk requests shed during guardrail degradation carry
+        # status "unavailable" — surface them as a real HTTP 503 so the caller
+        # (PythonGovernanceAdapter) treats it as transient unavailability and
+        # does NOT proceed with the sensitive action.
+        if res.get("status") == "unavailable":
+            return JSONResponse(
+                status_code=503, content=res, headers=sign_audit_proof(_rule_id(res))
+            )
+        # Audit-proof headers on every blocked response (always on, additive —
+        # proves the block is genuine, not a fabricated/hallucinated error).
+        if res.get("status") == "blocked":
+            return JSONResponse(
+                status_code=200, content=res, headers=sign_audit_proof(_rule_id(res))
+            )
         return res
     except Exception as e:
-        metrics_tracker.record_failure()
+        metrics_tracker.record_failure(time.perf_counter() - start)
         logger.exception("Governance pipeline execution failed")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -137,9 +291,21 @@ def stats() -> dict[str, Any]:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    """Check service health."""
-    return {"status": "UP"}
+def health() -> Any:
+    """Check service health, including the input guardrail gate.
+
+    Returns 503 DEGRADED if the guardrail engine cannot load — traffic is
+    still fail-closed in that state, but orchestrators should restart us.
+    """
+    try:
+        get_nemo_engine()
+        # Body shape is a contract with PythonGovernanceAdapter — do not extend.
+        return {"status": "UP"}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "DEGRADED", "reason": f"guardrail engine: {e}"},
+        )
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
@@ -156,12 +322,9 @@ def metrics() -> str:
         "# HELP governance_exceptions_total Total number of governance pipeline failures.",
         "# TYPE governance_exceptions_total counter",
         f"governance_exceptions_total {metrics_tracker.failures_total}",
-        "# HELP governance_pipeline_latency_seconds_sum Sum of governance pipeline latencies.",
-        "# TYPE governance_pipeline_latency_seconds_sum counter",
-        f"governance_pipeline_latency_seconds_sum {metrics_tracker.latency_sum}",
-        "# HELP governance_pipeline_latency_seconds_count Count of requests recorded for latency.",
-        "# TYPE governance_pipeline_latency_seconds_count counter",
-        f"governance_pipeline_latency_seconds_count {metrics_tracker.requests_total}",
+        "# HELP governance_pipeline_latency_seconds End-to-end /govern latency (SLO p95 <= 2.5s, GOVERNANCE_SPEC.md).",
+        "# TYPE governance_pipeline_latency_seconds histogram",
+        *_latency_histogram_lines(),
         "# HELP governance_pii_redactions_total Total requests triggering PII redaction or local routing.",
         "# TYPE governance_pii_redactions_total counter",
         f"governance_pii_redactions_total {metrics_tracker.pii_redacted_total}",

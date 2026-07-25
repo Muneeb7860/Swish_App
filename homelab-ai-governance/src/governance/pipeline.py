@@ -10,12 +10,21 @@ from governance.agents.base import BaseAgent
 from governance.agents.cloud_agent import CloudAgent
 from governance.agents.letta_agent import LettaAgent
 from governance.agents.ollama_agent import OllamaAgent
+from governance.agents.vllm_agent import VllmAgent
 from governance.audit import get_audit_logger, get_rate_limiter
 from governance.config import ConfigError, load_routing_config
-from governance.evaluator.loop import run_self_correction_loop
+from governance.evaluator.loop import LoopResult, run_self_correction_loop
 from governance.guardrails.enforcer import apply_rules, blocked_response, compute_input_hash
+from governance.guardrails.schemas import is_rail_schema
 from governance.guardrails.loader import load_guardrails
 from governance.guardrails.nemo_guardrails import check_nemo_guardrails
+from governance.risk import (
+    assess_risk,
+    is_high_risk,
+    is_privileged_directive,
+    max_retries_for,
+    select_output_rules,
+)
 from governance.router.classifier import classify_intent
 from governance.router.decision_table import route_query
 from governance.router.pii_scan import pre_route_pii_scan
@@ -73,6 +82,14 @@ def get_agent(agent_id: str) -> BaseAgent:
             api_token=api_token,
             timeout_ms=timeout_ms,
         )
+    elif backend == "vllm":
+        vllm_url = cfg.get("vllm_url", "http://localhost:8000")
+        return VllmAgent(
+            agent_id=agent_id,
+            model=model,
+            vllm_url=vllm_url,
+            timeout_ms=timeout_ms,
+        )
     else:
         raise ConfigError(f"Unsupported backend type '{backend}' for agent '{agent_id}'")
 
@@ -85,6 +102,7 @@ def clean_telemetry_tags(text: str) -> str:
     text = re.sub(r"<!--\s*telemetry[\s\S]*?-->", "", text)
     # Strip bracketed telemetry lines or markers
     text = re.sub(r"\[telemetry:[^\]]*\]", "", text)
+    # Normalize space-padded redaction placeholders like [ REDACTED : EMAIL ] to [REDACTED:EMAIL]
     text = re.sub(
         r"\[\s*REDACTED\s*:\s*([A-Z0-9_-]+)\s*\]", r"[REDACTED:\1]", text, flags=re.IGNORECASE
     )
@@ -134,7 +152,38 @@ def execute_pipeline(
 # NeMo Guardrails Check
     nemo_res = check_nemo_guardrails(query)
     if not nemo_res.get("allowed", True):
-        audit.log_event("pipeline_blocked", phase="nemo_guardrails", input_hash=input_hash)
+        # Phase 4 (GOVERNANCE_SPEC §5; owner decision 2026-07-18 = "shed 503").
+        # Distinguish a guardrail-engine DEGRADATION (fail-closed marker set in
+        # Phase 1) from a normal policy block. When degraded, HIGH-risk intents
+        # are SHED with a 503 — the caller must treat it as transient
+        # unavailability, never proceed with the sensitive action. Non-high-risk
+        # requests stay fail-closed (Phase 1). Classification runs ONLY on the
+        # degraded path, so the healthy path pays nothing.
+        degraded = nemo_res.get("triggered_rule") == "guardrail_engine_error"
+        # HIGH-risk = a privileged directive (fast keyword check, short-circuits
+        # the model) OR a high-risk classified intent. Either is shed.
+        if degraded and (
+            is_privileged_directive(query) or is_high_risk(classify_intent(query).intent)
+        ):
+            audit.log_event("shed_high_risk_degraded", input_hash=input_hash)
+            return {
+                "status": "unavailable",
+                "shed": True,
+                "message": (
+                    "Safety guardrails are temporarily degraded; high-risk "
+                    "actions are unavailable. Please retry shortly."
+                ),
+                "triggered_rules": [
+                    {"rule_id": "guardrail_degraded_shed", "action": "shed", "severity": "critical"}
+                ],
+                "warnings": [],
+            }
+        audit.log_event(
+            "pipeline_blocked",
+            phase="nemo_guardrails",
+            input_hash=input_hash,
+            degraded=degraded,
+        )
         return {
             "status": "blocked",
             "message": nemo_res.get("response", "Request blocked by safety guardrails."),
@@ -174,6 +223,20 @@ def execute_pipeline(
     context_docs = retrieve_context(query)
     context_str = construct_context(context_docs)
 
+    # 2b. RAG Context Input Gate (Indirect Prompt Injection Defense)
+    if context_str:
+        context_gate = apply_rules(
+            rules=load_guardrails(_PREROUTE_AGENT),
+            phase="input",
+            content=context_str,
+            agent_id=_PREROUTE_AGENT,
+            input_hash=input_hash,
+        )
+        if not context_gate["allowed"]:
+            audit.log_event("pipeline_blocked", phase="rag_context_injection", input_hash=input_hash)
+            return blocked_response(context_gate["triggered_rules"])
+        context_str = context_gate["content"]
+
     # 3. Intent Classification
     classification = classify_intent(query)
 
@@ -207,6 +270,23 @@ def execute_pipeline(
         logger.error("Failed to load agent %s: %s. Defaulting to gemma_reasoner.", agent_id, e)
         agent = get_agent("gemma_reasoner")
         agent_id = "gemma_reasoner"
+
+    # 6b. Risk assessment — conditional enforcement (GOVERNANCE_SPEC.md §3b).
+    # Elevated requests get the full detector suite, 3 self-correction
+    # retries, and the eval loop; normal requests keep every critical/high
+    # rule but skip advisory detectors and quality-eval model calls.
+    risk = assess_risk(
+        contains_pii=pii_res.contains_pii,
+        intent=classification.intent,
+        agent_id=agent_id,
+        prompt=query,
+    )
+    audit.log_event(
+        "risk_assessed",
+        input_hash=input_hash,
+        elevated=risk.elevated,
+        signals=list(risk.signals),
+    )
 
     # 7. Apply Input Guardrails
     rules = load_guardrails(agent_id)
@@ -274,9 +354,10 @@ def execute_pipeline(
                 "warnings": [],
             }
 
-    # 9. Apply Initial Output Guardrails
+    # 9. Apply Initial Output Guardrails (light or full set per risk — §3b)
+    output_rules = select_output_rules(rules, risk.elevated)
     output_guardrail = apply_rules(
-        rules=rules,
+        rules=output_rules,
         phase="output",
         content=candidate_text,
         agent_id=agent_id,
@@ -288,20 +369,51 @@ def execute_pipeline(
 
     candidate_text = output_guardrail["content"]
 
-    # 10. Recursive Self-Correction Loop
-    fallback_agent = get_agent("gemma_reasoner") if agent_id != "gemma_reasoner" else None
+    # 10. Recursive Self-Correction Loop — conditional (GOVERNANCE_SPEC.md §3b).
+    # Runs for elevated requests, or when the caller explicitly asked for a
+    # validated format. Normal free-text requests skip it entirely: quality
+    # evaluation and correction retries are model-call-priced compute.
+    #
+    # Pydantic RAIL schema validation (guardrails/schemas.py) is NOT a
+    # pre-loop, single-shot check: it is enforced by the loop itself on
+    # EVERY attempt (including the fallback response), via schema_name below.
+    # A one-off pre-loop check could pass a candidate that a later correction
+    # then breaks, and its error text must never be spliced into the
+    # user-facing candidate — both were bugs in the earlier version of this
+    # gate. See run_self_correction_loop() for the enforcement.
+    run_eval_loop = risk.elevated or expected_format is not None
 
-    loop_result = run_self_correction_loop(
-        agent=agent,
-        candidate=candidate_text,
-        original_prompt=processed_query,
-        context_docs=context_str,
-        expected_format=expected_format,
-        fallback_agent=fallback_agent,
+    if run_eval_loop:
+        fallback_agent = get_agent("gemma_reasoner") if agent_id != "gemma_reasoner" else None
+        loop_result = run_self_correction_loop(
+            agent=agent,
+            candidate=candidate_text,
+            original_prompt=processed_query,
+            context_docs=context_str,
+            expected_format=expected_format,
+            fallback_agent=fallback_agent,
+            max_retries_override=max_retries_for(risk.elevated),
+            schema_name=expected_format,
+        )
+    else:
+        audit.log_event(
+            "eval_loop_skipped",
+            input_hash=input_hash,
+            reason="normal_request",
+        )
+        loop_result = LoopResult(
+            final_response=candidate_text,
+            scores=None,
+            attempts=1,
+            passed=True,
+            fallback_used=False,
+        )
+
+    # 11. Final Output Guardrails and Sanitization (same light/full set — §3b)
+    final_rules = select_output_rules(
+        load_guardrails("gemma_reasoner" if loop_result.fallback_used else agent_id),
+        risk.elevated,
     )
-
-    # 11. Final Output Guardrails and Sanitization
-    final_rules = load_guardrails("gemma_reasoner" if loop_result.fallback_used else agent_id)
     final_output_guardrail = apply_rules(
         rules=final_rules,
         phase="output",
@@ -340,11 +452,44 @@ def execute_pipeline(
         attempts=loop_result.attempts,
     )
 
+    # Schema conformance for the response we're actually returning. The real
+    # gate already ran on every loop attempt (run_self_correction_loop); this
+    # just reads its verdict rather than re-validating a third time — the
+    # loop's `sanitized_response` may differ from `loop_result.final_response`
+    # only by telemetry-tag/guardrail stripping, which cannot change JSON
+    # validity, so the loop's last-attempt verdict still applies.
+    final_schema_valid = True
+    final_schema_errors: list[str] = []
+    if is_rail_schema(expected_format) and loop_result.scores is not None:
+        schema_details = loop_result.scores.details.get("schema")
+        if schema_details:
+            final_schema_valid = schema_details.get("valid", True)
+            final_schema_errors = schema_details.get("errors", [])
+    if not final_schema_valid:
+        logger.warning(
+            "Response does not conform to schema '%s' after %d attempt(s): %s",
+            expected_format,
+            loop_result.attempts,
+            final_schema_errors,
+        )
+        audit.log_event(
+            "schema_validation_failure",
+            agent_id="gemma_reasoner" if loop_result.fallback_used else agent_id,
+            schema=expected_format,
+            errors=final_schema_errors,
+            input_hash=input_hash,
+        )
+
     all_warnings = (
         input_guardrail.get("warnings", [])
         + output_guardrail.get("warnings", [])
         + final_output_guardrail.get("warnings", [])
     )
+    if not final_schema_valid:
+        all_warnings = all_warnings + [
+            f"Response did not conform to schema '{expected_format}' after "
+            f"{loop_result.attempts} attempt(s)."
+        ]
 
     return {
         "status": "success",
@@ -357,10 +502,16 @@ def execute_pipeline(
             "matched_rule": decision.matched_rule,
             "local_only": local_only,
         },
+        "risk": {"elevated": risk.elevated, "signals": list(risk.signals)},
         "loop_result": {
             "attempts": loop_result.attempts,
             "passed": loop_result.passed,
             "fallback_used": loop_result.fallback_used,
+        },
+        "schema_validation": {
+            "schema": expected_format,
+            "valid": final_schema_valid,
+            "errors": final_schema_errors,
         },
         "warnings": all_warnings,
     }

@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from governance.config import ConfigError, load_terms
+from governance.guardrails.sql_ast import detect_unsafe_sql
 
 logger = logging.getLogger(__name__)
 
@@ -194,4 +195,5 @@ _DETECTOR_DISPATCH: dict[str, Any] = {
     "heuristic": _detect_heuristic,
     "fingerprint": _detect_fingerprint,
     "toxicity_scorer": _detect_toxicity,
+    "sql_ast": detect_unsafe_sql,
 }

@@ -48,7 +48,7 @@ Below is our current backlog status and road map.
 ## Epic 6: Enterprise Service Modernization & Zero-Trust Governance (TPM & Architect Recommendations) [BACKLOG]
 *Transitioning the Swish OS from prototype integrations to a production-grade, secure, and fully decoupled service mesh.*
 
-- [ ] **Decoupled Microservice Extraction**: Define target sprint milestones and Gantt delivery phases to complete the Strangler Fig extraction of `core-business-engine`, `notification-engine`, and `shared-async-services` out of the monolithic backend.
+- [x] **Decoupled Microservice Extraction**: Defined target sprint milestones and Gantt delivery phases to complete the Strangler Fig extraction of `core-business-engine`, `notification-engine`, and `shared-async-services` out of the monolithic backend (see [service_decoupling_plan.md](./docs/service_decoupling_plan.md)).
 - [ ] **Zero-Trust SPIFFE/SPIRE mTLS Mesh**: Deploy the planned Kubernetes pod mesh with Envoy sidecar proxies, implementing mutual TLS (mTLS) and cryptographically verifiable SPIFFE/SPIRE identities.
 - [ ] **Pessimistic Concurrency Auditing**: Audit all transactional hexagonal ports/adapters to ensure strict database-level locking (`SELECT ... FOR UPDATE`) on concurrent grocery order checkouts.
 - [ ] **Automated Secrets Rotation**: Connect GCP Secret Manager / HashiCorp Vault with local GitOps pipelines to enforce automatic rotating credentials, eliminating static `.env` dependencies.

@@ -76,6 +76,33 @@ public class ResilientLlmGatewayTest {
         verifyNoInteractions(mockLlmAdapter);
     }
 
+    // ─── Phase 4 boundary: a deliberate SHED must NOT reach cloud ─────────────
+
+    @Test
+    public void governanceShedsHighRisk_returnsShed_neverFallsBackToCloud() {
+        // GOVERNANCE_SPEC §5: the adapter converts a shed 503 into a definitive shed LlmResponse.
+        // The gateway must return it as-is — NOT treat it as an outage and answer via an ungoverned
+        // cloud model. Uses a CLEAN (PII-free) prompt, the DANGEROUS case: PII-free prompts are
+        // otherwise cloud-eligible, so this is exactly where a shed could leak to Gemini/Kimi.
+        when(pythonGovernanceAdapter.isConfigured()).thenReturn(true);
+        when(pythonGovernanceAdapter.callLlm(anyString(), any()))
+                .thenReturn(
+                        LlmResponse.builder()
+                                .content(
+                                        "Governance Unavailable (high-risk request shed): retry"
+                                                + " shortly")
+                                .tokenCost(0.0)
+                                .build());
+
+        LlmResponse res = gateway.callLlm(CLEAN_PROMPT);
+
+        assertTrue(res.getContent().contains("high-risk request shed"));
+        verify(pythonGovernanceAdapter).callLlm(eq(CLEAN_PROMPT), any());
+        verifyNoInteractions(geminiFreeAdapter);
+        verifyNoInteractions(kimiLlmAdapter);
+        verifyNoInteractions(mockLlmAdapter);
+    }
+
     // ─── THE FIX: governance down + PII must NOT reach cloud ──────────────────
 
     @Test

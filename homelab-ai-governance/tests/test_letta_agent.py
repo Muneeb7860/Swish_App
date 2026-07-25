@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import httpx
-import pytest
 from unittest.mock import MagicMock
 
 from governance.agents.letta_agent import LettaAgent

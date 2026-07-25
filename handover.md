@@ -551,3 +551,22 @@ We successfully resolved the CI build blocking issues on the `develop` branch an
 *   **Unified Demo Orchestrator (`run_demo.sh`)**:
     - Created a unified launch orchestrator shell script `run_demo.sh` to verify ports, start backend services in staging mode, boot the gateway, and run all 5 frontend apps on mapped ports.
     - Documented UAT and Demo readiness in `uat_readiness_assessment.md`.
+
+### Cycle Update (2026-07-16) — Demo Server Startup & Database Restoration [DONE]
+
+*   **Staging Backend Compilation**:
+    - Recompiled the Java backend code into `backend-1.0.0.jar` by executing `mvn clean package -DskipTests` in `backend`.
+    - Transferred the compiled package to the launchd program folder at `~/swish-demo/backend.jar`.
+
+*   **launchd Daemon Control**:
+    - Unloaded the running background daemon agent `ch.swissqcommerce.demo-backend` using `launchctl unload ~/Library/LaunchAgents/ch.swissqcommerce.demo-backend.plist` to free up port `8083`.
+    - Reloaded and started the updated background backend service using `launchctl load ~/Library/LaunchAgents/ch.swissqcommerce.demo-backend.plist`.
+
+*   **Database Cleanup & Initialization**:
+    - Dropped the existing docker-compose demo postgres volume (`swish-demo_swish_demo_pgdata`) to resolve Flyway validation checksum mismatches on version 25.
+    - Restarted the Docker container stack cleanly (`docker compose -f docker-compose.demo.yml up -d`).
+
+*   **Health and Proxy Verification**:
+    - Verified actuator health check on `http://localhost:8083/actuator/health` returns `{"status":"UP"}`.
+    - Confirmed Nginx correctly proxies route `/api/` to the backend.
+

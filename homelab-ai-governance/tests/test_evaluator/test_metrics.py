@@ -63,12 +63,12 @@ def test_schema_validations():
     assert details["valid_schema"] is True
     assert details["schema"] == "customer_support"
 
-    # Invalid Customer Support JSON (wrong tool)
-    invalid_cs_tool = (
-        '{"reply": "Hello!", "confidence": 0.9, "tool": "INVALID_TOOL", "tool_argument": null}'
+    # Invalid Customer Support JSON (confidence out of bounds)
+    invalid_cs_confidence = (
+        '{"reply": "Hello!", "confidence": 1.5, "tool": "ORDER_STATUS", "tool_argument": null}'
     )
     score, details = compute_format_integrity(
-        invalid_cs_tool, expected_format="json", original_prompt=cs_prompt
+        invalid_cs_confidence, expected_format="json", original_prompt=cs_prompt
     )
     assert score == 0.0
     assert details["valid_schema"] is False

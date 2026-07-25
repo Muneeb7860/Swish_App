@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 import pytest
 
-from governance.stubs.memory_mesh import MemoryMesh, retrieve_context
+from governance.stubs.memory_mesh import MemoryMesh
 
 @pytest.fixture(autouse=True)
 def reset_circuit_breakers():

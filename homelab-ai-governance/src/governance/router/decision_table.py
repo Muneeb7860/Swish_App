@@ -94,8 +94,13 @@ _RULES: list[dict[str, Any]] = [
     {"rule": 27, "intent": "sensitive_query", "complexity": "high", "agent": "gemma_reasoner"},
 ]
 
-# Agents that are local (Ollama-backed) vs cloud
-_LOCAL_AGENTS = {"gemma_reasoner", "mistral_summarizer", "deepseek_coder"}
+# Agents that are local (Ollama/vLLM-backed) vs cloud.
+# NOTE: vllm_reasoner is listed as local (so budget/local_only logic treats it
+# correctly IF ever selected) but NO _RULES entry routes to it — it is staged
+# and requires a remote vLLM host (see routing_config.yaml). Add a rule only
+# when a real vLLM endpoint exists.
+_LOCAL_AGENTS = {"gemma_reasoner", "mistral_summarizer", "deepseek_coder", "vllm_reasoner"}
+
 
 # Local fallback map: when a cloud agent is selected but can't be used
 _LOCAL_FALLBACK = {
