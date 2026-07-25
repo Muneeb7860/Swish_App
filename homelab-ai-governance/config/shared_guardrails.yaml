@@ -83,6 +83,13 @@ rules:
         - pattern: '(?i)override\s+(mode|instructions|rules)'
         - pattern: '(?i)(?:assistant|ai|bot)\s*:\s*'
         - pattern: '(?i)<<\s*(?:SYS|INST|system)\s*>>'
+        - pattern: '(?i)aws_s3_delete_bucket|delete_bucket|prod-customer-backups'
+        - pattern: '(?i)buy_units|maxPrice|trade_stock|high-volume\s+automated'
+        - pattern: '(?i)grant\s+SuperAdmin|SuperAdmin\s+role|Okta\s+IAM'
+        - pattern: '(?i)external-exfil\.com|transmit\s+via\s+webhook|users\.json'
+        - pattern: '(?i)<!--\s*AI\s+Agent\s+Override|<!--[\s\S]*?exfiltrate'
+        - pattern: '(?i)\[AGENT\s+DIRECTIVE:|AGENT\s+DIRECTIVE:'
+        - pattern: '(?i)as\s+prometheus.*refund'
 
   - id: profanity_filter
     description: "Filters profanity in output"
