@@ -42,8 +42,15 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&color=eab308" alt="License: MIT" /></a>
   <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive.html"><img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk&logoColor=white&color=f97316" alt="Java Version" /></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-3.2-green?style=for-the-badge&logo=springboot&logoColor=white&color=22c55e" alt="Spring Boot" /></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react&logoColor=white&color=06b6d4" alt="React" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react&logoColor=white&color=06b6d4" alt="React" /></a>
+  <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" /></a>
+  <a href="https://biomejs.dev/"><img src="https://img.shields.io/badge/Biome-2.4-60A5FA?style=for-the-badge&logo=biome&logoColor=white" alt="Biome" /></a>
 </p>
+
+### 🌐 Workspace Ecosystem & Navigation
+- 🛒 **[Swish OS Autonomous Quick-Commerce Platform (`Swish_App`)](file:///Users/muneeb/Documents/GitHub/Swish_App/README.md)**: Multi-tenant B2B quick-commerce operating system with microservices architecture.
+- 🛡️ **[SwishOS Zero-Trust Enclave & Dashboard (`portfolio`)](file:///Users/muneeb/Documents/GitHub/portfolio/README.md)**: Next.js 16 security dashboard, WASI spend sandbox, and gVisor isolation enclave.
+- 🎯 **[`agentic-redteam` Security Benchmark Harness](file:///Users/muneeb/Documents/GitHub/agentic-redteam/README.md)**: PyPI package `v0.5.0` for GART/MARS swarm AI agent red-teaming.
 
 ---
 
@@ -51,8 +58,9 @@
 
 *   🎯 **[Platform Overview & Vision](#-platform-overview--vision)**
 *   🏗️ **[System Architecture & Container Topology](#-system-architecture--container-topology)**
-*   📂 **[Repository Directory Blueprint](#-repository-directory-blueprint)**
+*   📂 **[Repository Directory Blueprint & Port Map](#-repository-directory-blueprint--port-map)**
 *   🤖 **[B2B Agentic OS & LLM Strategy](#-b2b-agentic-os--llm-strategy)**
+*   🔑 **[Environment Configuration](#-environment-configuration)**
 *   📜 **[Compliance, Governance & Security](#-compliance-governance--security)**
 *   📐 **[Architecture Decision Records (ADR) Registry](#-architecture-decision-records-adr-registry)**
 *   🚀 **[Homelab Dev Setup & Troubleshooting](#-homelab-dev-setup--troubleshooting)**
@@ -103,9 +111,7 @@ graph TB
   System -->|Track Shipments| GPSService
 ```
 
-### L2: Container Target Topology (🛣️ Roadmap)
-> [!NOTE]
-> **Kubernetes Ingress Deployment**: The target environment includes NGINX Ingress and Envoy mTLS sidecars. The current production deployment uses Google Cloud Run (individual container microservices) and Docker Compose for local environments.
+### L2: Container Target Topology
 
 ```mermaid
 graph TB
@@ -179,7 +185,7 @@ graph TB
 
 ---
 
-## 📂 Repository Directory Blueprint
+## 📂 Repository Directory Blueprint & Port Map
 
 The workspace is organized into discrete service folders separating backend APIs, frontend micro-frontends, telemetry setups, and configuration:
 
@@ -191,12 +197,12 @@ The workspace is organized into discrete service folders separating backend APIs
 | 🏷️ **[competitor-pricing-server](./competitor-pricing-server)** | Node.js, Express, Axios | External mockup mock pricing server | `8085` |
 | 📦 **[core-business-engine](./core-business-engine)** | Java Spring Boot | Standalone B2B procurement & checkout | `8081` |
 | 🔔 **[notification-engine](./notification-engine)** | Java Spring Boot, Kafka | Kafka consumer & WebSocket event server | `8082` |
-| 📊 **[shared-async-services](./shared-async-services)** | Java Spring Boot | AI routing ports & double-entry ledger | — |
-| 🎨 **[design-system](./design-system)** | React, Vanilla CSS, Vite | Unified UI component library (`@swish/ds`) | — |
-| 🛒 **[frontend-customer](./frontend-customer)** | React, TypeScript, Zustand | Customer shopping storefront MFE | `3001` |
-| 🏍️ **[frontend-rider](./frontend-rider)** | React, TypeScript, Leaflet | Courier tracking & route navigation MFE | `3002` |
-| 🛠️ **[frontend-admin](./frontend-admin)** | React, TypeScript, Recharts | Ops panel (chaos toggles, HITL, compliance) | `3003` |
-| 💼 **[frontend-b2b](./frontend-b2b)** | React, TypeScript | Wholesaler bid negotiation & invoice MFE | `3004` |
+| 📊 **[shared-async-services](./shared-async-services)** | Java Spring Boot | AI routing ports & double-entry ledger | `8084` |
+| 🎨 **[design-system](./design-system)** | React 19, Vanilla CSS, Vite | Unified UI component library (`@swish/ds`) | — |
+| 🛒 **[frontend-customer](./frontend-customer)** | React 19, TypeScript, Zustand | Customer shopping storefront MFE | `3001` / `5173` |
+| 🏍️ **[frontend-rider](./frontend-rider)** | React 19, TypeScript, Leaflet | Courier tracking & route navigation MFE | `3002` |
+| 🛠️ **[frontend-admin](./frontend-admin)** | React 19, TypeScript, Recharts | Ops panel (chaos toggles, HITL, compliance) | `3003` |
+| 💼 **[frontend-b2b](./frontend-b2b)** | React 19, TypeScript | Wholesaler bid negotiation & invoice MFE | `3004` |
 | 📱 **[mobile](./mobile)** | React Native, Expo | Courier/Operator companion native app | — |
 | 🛡️ **[infrastructure](./infrastructure)** | Docker Compose, Postgres GIS | Local infrastructure setups (Postgres, Mongo, Kafka) | — |
 
@@ -231,19 +237,28 @@ Swish OS features an agentic pipeline executing B2B restocks and protecting oper
     *   *RoutingAgent*: Manages delivery dispatch sequences, carrier assignments, and shipping split logic.
 
 ### 🧠 LLM Execution & Hybrid Fallback Strategy
-To guarantee offline reliability and contain token budgets, Swish OS runs a local-first inference pipeline:
 1.  **Local Inference (Primary)**: Uses local **Ollama** serving `qwen:14b` or `llama2:13b` to process B2B bids. Stateful conversation logs are managed using **Letta (formerly MemGPT)** to maintain long-term memory.
 2.  **Cloud Fallback (Secondary)**: Trips to **Spring AI** using OpenAI/Gemini endpoints if local latency breaches SLAs. Sensitive identifiers are anonymized at the gateway before routing to the cloud.
 
-### 🛡️ Safety Guardrails
-1.  **NVIDIA NeMo Guardrails**: Standardizes safety intents via Colang scripts (`config.yml` / `flows.co`). Restricts injection attempts or requests for competitor pricing before routing to models.
-2.  **Guardrails AI Enforcer**: Validates model output JSON against Pydantic RAIL schemas. If a field fails validation (e.g., negative prices), the enforcer automatically runs up to 3 self-correction loops.
+---
+
+## 🔑 Environment Configuration
+
+Configure root environment variables or inspect `.env.example`:
+
+| Environment Variable | Service Scope | Default Value | Purpose |
+| :--- | :--- | :--- | :--- |
+| `SPRING_DATASOURCE_URL` | `backend` / `core-business-engine` | `jdbc:postgresql://localhost:5432/swish_db` | PostgreSQL connection URL |
+| `SPRING_DATASOURCE_USERNAME` | `backend` | `swish_user` | Database user |
+| `SPRING_DATASOURCE_PASSWORD` | `backend` | `swish_password` | Database password |
+| `SPRING_REDIS_HOST` | All Microservices | `localhost` | Redis caching & rate limiting host |
+| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | `notification-engine` | `localhost:9092` | Apache Kafka broker address |
+| `JWT_SECRET` | `platform-gateway` / `backend` | `swishos-super-secret-jwt-signing-key-32bytes` | JWT signing secret |
+| `AI_GOVERNANCE_URL` | `homelab-ai-governance` | `http://localhost:5002` | NeMo Guardrails endpoint |
 
 ---
 
 ## 📜 Compliance, Governance & Security
-
-The platform aligns operational auditing with strict enterprise standards:
 
 ### Compliance Matrix
 | Feature | Compliance Standard | Regulatory Mechanism | Evidence Location |
@@ -278,13 +293,11 @@ We document all system constraints and architectural pivot histories in `docs/ad
 ## 🚀 Homelab Dev Setup & Troubleshooting
 
 ### Prerequisites
-*   **Java Development Kit (JDK) 17**: Ensure your `JAVA_HOME` points strictly to JDK 17 (Lombok fails processing under JDK 26+).
+*   **Java Development Kit (JDK) 17**: Ensure your `JAVA_HOME` points strictly to JDK 17 (Lombok processing fails under JDK 26+).
 *   **Node.js**: v18.0.0+ (required for Micro-Frontend bundling).
 *   **Docker & Compose**: For running Kafka, PostgreSQL, MongoDB, and Redis.
 
 ### Dev Environment Ingress Boot
-Set up the entire local infrastructure and verify compilation inside the directories:
-
 ```bash
 # 1. Boot local infrastructure services
 docker compose -f docker-compose-local.yml up -d
@@ -293,43 +306,45 @@ docker compose -f docker-compose-local.yml up -d
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/microsoft-17.jdk/Contents/Home"
 export PATH="$JAVA_HOME/bin:$PATH"
 cd backend && mvn clean compile -DskipTests
+
+# 3. Launch Frontend Micro-Frontends concurrently
+npm run dev:customer # Customer MFE (Port 3001)
+npm run dev:rider    # Courier Dashboard (Port 3002)
+npm run dev:admin    # Admin Ops (Port 3003)
+npm run dev:b2b      # B2B Wholesaler (Port 3004)
 ```
 
-### Port Map Reference
-Access the developer dashboards at these local addresses:
-*   🛒 **Host Front-End / Customer MFE**: `http://localhost:5173`
-*   🏍️ **Rider Delivery Dashboard**: `http://localhost:3002`
-*   🛠️ **Platform Ingress Gateway**: `http://localhost:8080`
-*   📊 **Grafana Monitor Console**: `http://localhost:3000`
+### ❓ Troubleshooting & FAQs
+
+> [!WARNING]
+> **Issue**: Lombok compilation errors when running `mvn clean compile`.  
+> **Solution**: Verify `java -version` returns Java 17. JDK 21+ requires extra `--add-opens` flags in Maven.
+
+> [!TIP]
+> **Issue**: Micro-frontends fail to load shared DS assets.  
+> **Solution**: Run `npm run build:all` from root to sync Vite bundles across `design-system` and micro-frontends.
 
 ---
 
 ## 🧪 Testing, Quality Gates & Chaos Engineering
 
-### Standards Checks
-All commits run through strict Biome linting, Spotless formatting, and backend tests:
 ```bash
-# Run Biome code quality checks
+# Run Biome code quality checks across all frontend submodules
 npx biome check --write ./
 
-# Format Java code style
+# Format Java code style with Spotless
 mvn spotless:apply -f backend/pom.xml
 
-# Run Java Backend Tests
+# Run Java Backend Unit & Integration Tests
 mvn test -f backend/pom.xml
-```
 
-### Chaos Engineering Tests
-Trigger random container network drops, database latencies, and message queue faults to evaluate circuit-breaker resilience:
-```bash
+# Execute Chaos Network Drop Test
 bash scripts/chaos.sh
 ```
 
 ---
 
 ## 📈 Feature Plan & Roadmap
-
-The Swish OS roadmap coordinates our transition from local monolithic configurations to an enterprise-grade, zero-trust cloud service mesh:
 
 | Epic / Phase | Target Status | Key Deliverables & Highlights |
 | :--- | :--- | :--- |
@@ -338,7 +353,7 @@ The Swish OS roadmap coordinates our transition from local monolithic configurat
 | **Epic 3: Scale & Resilience** | ✅ **Completed** | Temporal durable B2B workflow transitions, Kafka Dead Letter Queues, Redis query cache layers. |
 | **Epic 4: Integration Verification** | ✅ **Completed** | Cypress E2E customer journey scripts, automated test recovery scenarios, telemetry Zipkin spans audit. |
 | **Epic 5: Hardened Agentic Core** | ✅ **Completed** | PagedAttention local vLLM agent, Letta stateful core memories, NeMo Colang safety filters, Guardrails AI RAIL enforcers. |
-| **Epic 6: Zero-Trust & Mesh** | 🛣️ **Backlog** | Strangler Fig microservice extraction, Zero-trust SPIFFE/SPIRE mTLS mesh, PostgreSQL database pessimistic locking audits, automated secrets rotation pipelines. |
+| **Epic 6: Zero-Trust & Mesh** | 🛣️ **Backlog** | Strangler Fig microservice extraction, Zero-trust SPIFFE/SPIRE mTLS mesh, PostgreSQL database pessimistic locking audits. |
 
 ---
 
