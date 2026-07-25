@@ -94,10 +94,32 @@ def _detect_keyword_list(config: dict[str, Any], content: str) -> bool:
     return False
 
 
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _normalize_identifiers(content: str) -> str:
+    """Insert spaces at underscore/hyphen and camelCase boundaries so
+    word-boundary (\\b) patterns keyed on natural-language verbs/nouns still
+    match inside identifiers from tool-call-shaped input, e.g.
+    `aws_s3_delete_bucket` -> `aws s3 delete bucket`. `\\b` alone does not
+    split on `_` (a word character) or a lowercase-to-uppercase transition,
+    so a pattern like `\\bdelete\\b.{0,40}\\bbucket\\b` silently misses
+    `aws_s3_delete_bucket(...)` without this normalization."""
+    normalized = content.replace("_", " ").replace("-", " ")
+    return _CAMEL_BOUNDARY_RE.sub(" ", normalized)
+
+
 def _detect_heuristic(config: dict[str, Any], content: str) -> bool:
-    """Match heuristic rules — used for prompt injection detection."""
+    """Match heuristic rules — used for prompt injection detection.
+
+    Checks both the raw content and an identifier-normalized view (see
+    _normalize_identifiers) so patterns aren't defeated simply by the attack
+    being phrased as a snake_case/camelCase function call instead of prose.
+    """
+    normalized = _normalize_identifiers(content)
     for rule in config.get("rules", []):
-        if re.search(rule["pattern"], content):
+        pattern = rule["pattern"]
+        if re.search(pattern, content) or re.search(pattern, normalized):
             return True
     return False
 

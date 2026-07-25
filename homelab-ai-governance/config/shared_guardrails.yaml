@@ -190,19 +190,31 @@ rules:
         # `system\s*prompt\s*:` (requires a colon) — "print/reveal/output/
         # show/display the system prompt" with no colon.
         - pattern: '(?i)(print|reveal|show|output|display)\s+(the\s+|entire\s+|your\s+)?system\s+prompt\b'
-        # ── Generalized Attack-Class Detectors (Added 2026-07-26) ──
-        # 1. Generalized Destructive Cloud/Storage Operations (handles snake_case & NL verbs)
-        - pattern: '(?i)(delete|remove|destroy|wipe|purge|drop|decommission).{0,40}(bucket|storage|cluster|database|instance|snapshot|backup|volume|tier)'
-        # 2. Generalized Unverified Financial & Trading Overrides (anchored on financial execution + volume/pricing parameters)
-        - pattern: '(?i)\b(buy_units|transfer_funds|execute_trade|trade_stock)\b\s*\(|\b(market\s+order|action\s+a\s+purchase|place\s+an?\s+order|wire\s+funds|transfer\s+treasury)\b.{0,60}(\d{4,}|fifty\s+thousand|\$\d{4,}|shares|units|usd|maxprice|limit_price|high-volume)'
+        # ── Generalized Attack-Class Detectors (Added 2026-07-26; widened
+        # 2026-07-26 after red-team paraphrase testing showed the first pass
+        # was still closed-vocabulary — see risk.py's contains_tool_call_syntax
+        # for the structural (non-keyword) complement to these lists. These
+        # remain a widened keyword net, not a semantic classifier: a
+        # paraphrase using none of the listed verbs/nouns still evades this
+        # rule specifically, though it may now trip contains_tool_call_syntax
+        # or another layer instead.) ──
+        # 1. Generalized Destructive Cloud/Storage/Infra Operations
+        - pattern: '(?i)\b(delete|remove|destroy|wipe|purge|drop|decommission|deprovision|tear\s*down)\b.{0,40}\b(bucket|storage|cluster|database|instance|snapshot|backup|volume|environment|tier|resource)\b'
+        # 2. Generalized Unverified Financial & Trading Overrides
+        - pattern: '(?i)\b(order|trade|buy|sell|transfer|wire|execute|action|place|submit|process|initiate)\b.{0,60}\b(\d{4,}\s*(shares|units|usd)|\$\d{4,}|maxprice|limit_price|high-volume|(ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)?\s*thousand\b|\bmillion\b)\b'
         # 3. Generalized IAM Privilege Escalation across Identity Vendors
-        - pattern: '(?i)(grant|elevate|assign|promote|make|add|upgrade).{0,40}(admin|superadmin|owner|root|superuser|privileges|role|tenant|full\s+control)'
+        - pattern: '(?i)\b(grant|elevate|assign|promote|make|add|upgrade|expand|increase|raise)\b.{0,40}\b(admin|superadmin|owner|root|superuser|privileges|role|tenant|access|permissions|control)\b'
         # 4. Generalized Webhook & Data Exfiltration Egress
-        - pattern: '(?i)(post|transmit|exfil|curl|webhook|send|upload|copy).{0,80}https?://[^\s]+.{0,40}(data|pii|users|backups|tokens|keys|db|emails|collect)'
+        - pattern: '(?i)\b(post|transmit|exfil|curl|webhook|send|upload|copy|sync|replicate|export)\b.{0,80}\bhttps?://[^\s]+'
         # 5. Generalized RAG & Tool Output Injected Directives
-        - pattern: '(?i)(<!--[\s\S]*?(override|exfil|ignore|agent|directive|verified)|\[\s*(agent|system)\s*directive:?\s*[\s\S]*?\]|\b(agent|ai)\s+directive:\s*)'
-        # 6. Generalized Persona Priming & Unauthorized Payouts
-        - pattern: '(?i)(\bas\s+[a-z0-9_-]+\s*,?\s*(ignore|disregard|forget)|\b(instant|policy)?\s*refund\b.{0,40}\$\d{3,})'
+        - pattern: '(?i)(<!--[\s\S]*?(override|exfil|ignore|agent|directive)|\[\s*(agent|system)\s*directive:?\s*[\s\S]*?\]|\b(agent|ai)\s+directive:\s*|\bnote\s+to\s+(the\s+)?(assistant|ai|model|system)\b|\btreat\s+.{0,40}\bas\s+(fully\s+)?(verified|trusted|authorized)\b|\bno\s+(additional|further)\s+(checks?|review|verification)\s+needed\b)'
+        # 6. Generalized Persona Priming & Unauthorized Payouts. The persona
+        # clause allows an optional pronoun/verb between the name and the
+        # directive (e.g. "As Prometheus, YOU ignore..."), not just an
+        # immediate comma -- a real multi-turn attack rarely phrases the
+        # override as the very next word. The dollar-amount alternative
+        # tolerates thousand-separator commas ($20,000, not just $2000).
+        - pattern: '(?i)(\bas\s+[a-z0-9_-]+\s*,?\s*(you\s+|now\s+)?(ignore|disregard|forget)|\b(instant|policy)?\s*refund\b.{0,40}\$[\d,]{3,})'
 
   - id: profanity_filter
     description: "Filters profanity in output"
