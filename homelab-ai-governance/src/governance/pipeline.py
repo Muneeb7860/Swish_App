@@ -223,9 +223,8 @@ def execute_pipeline(
     # High-impact directives (bucket deletion, wire transfers, IAM elevation, raw tool calls)
     # pause execution for human-in-the-loop confirmation regardless of prompt syntax.
     if is_privileged_directive(query) or contains_tool_call_syntax(query):
-        import hmac, hashlib, time
-        approval_nonce = f"{input_hash}:{int(time.time())}"
-        approval_token = hmac.new(b"swishos_hitl_secret", approval_nonce.encode(), hashlib.sha256).hexdigest()[:16]
+        from governance.hitl import generate_hitl_token
+        approval_token, _ = generate_hitl_token(input_hash)
         audit.log_event("hitl_stepup_required", input_hash=input_hash, approval_token=approval_token)
         return {
             "status": "pending_approval",

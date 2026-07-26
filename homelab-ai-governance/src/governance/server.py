@@ -294,14 +294,14 @@ async def approve_hitl(req: GovernApproveRequest, request: Request) -> Any:
     """Resolve HITL Step-Up Authorization for a paused high-impact directive."""
     start = time.perf_counter()
     try:
-        import hmac, hashlib
         from governance.guardrails.enforcer import compute_input_hash
+        from governance.hitl import verify_hitl_token
         input_hash = compute_input_hash(req.query)
         
-        # Verify HMAC approval_token format & signature
-        expected_prefix = req.approval_token[:16]
-        if not expected_prefix:
-            raise HTTPException(status_code=400, detail="Invalid or missing approval_token")
+        # Verify constant-time HMAC approval_token signature & freshness (5-min window)
+        if not verify_hitl_token(input_hash, req.approval_token):
+            logger.warning("Invalid or forged HITL approval token attempt for input_hash: %s", input_hash)
+            raise HTTPException(status_code=403, detail="Invalid, expired, or forged HITL approval token")
 
         logger.info("HITL Step-Up Authorization GRANTED for query: %s", req.query[:100])
         # Execute pipeline bypassing the preroute HITL interceptor
@@ -312,6 +312,8 @@ async def approve_hitl(req: GovernApproveRequest, request: Request) -> Any:
         )
         res["hitl_authorized"] = True
         return res
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("HITL Step-Up Approval execution failed")
         raise HTTPException(status_code=500, detail=str(e))
