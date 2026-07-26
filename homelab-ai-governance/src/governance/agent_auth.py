@@ -40,8 +40,24 @@ _MAX_CLOCK_SKEW_SECONDS = 300  # 5 minutes — matches agentic_redteam/crypto.py
 
 # In-memory replay-nonce cache (per-process; fine for a single-instance
 # governance service — matches the red-team client's own in-memory model).
-_replay_nonce_cache: set[str] = set()
+# Maps nonce_key -> insertion time so eviction can drop only entries older
+# than _MAX_CLOCK_SKEW_SECONDS (a request with an older timestamp is already
+# rejected by the clock-skew check above, so nothing outside that window can
+# ever be legitimately replayed — safe to forget). A size-triggered
+# `.clear()` was tried first and reverted: wiping the WHOLE cache at 10k
+# entries also forgets nonces from the last few seconds, briefly reopening
+# the replay window at exactly the moment (high request volume) an attacker
+# is most likely to be probing.
+_replay_nonce_cache: dict[str, float] = {}
 _replay_lock = threading.Lock()
+
+
+def _evict_stale_nonces(now: float) -> None:
+    """Caller must hold _replay_lock. Drops entries older than the clock-skew
+    window; a request that old is already rejected before the nonce check."""
+    stale = [k for k, inserted_at in _replay_nonce_cache.items() if now - inserted_at > _MAX_CLOCK_SKEW_SECONDS]
+    for k in stale:
+        del _replay_nonce_cache[k]
 
 
 # ── 1. Audit-proof headers (always on, additive) ─────────────────────────────
@@ -121,7 +137,7 @@ def verify_agent_signature(
         return False, "Cryptographic signature mismatch: Unauthorized or spoofed agent payload."
 
     with _replay_lock:
-        if len(_replay_nonce_cache) > 10000:
-            _replay_nonce_cache.clear()
-        _replay_nonce_cache.add(nonce_key)
+        now = time.time()
+        _evict_stale_nonces(now)
+        _replay_nonce_cache[nonce_key] = now
     return True, "Valid Signature"
