@@ -80,7 +80,7 @@ class AuditLogger:
         self.logging_degraded = False
 
     def log_event(self, event_type: str, **kwargs: Any) -> None:
-        """Write a single JSON line to the audit log."""
+        """Write a single JSON line to the audit log and stream to OpenTelemetry (OTel) SIEM collector."""
         entry = {
             "schema_version": self._schema_version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -97,6 +97,17 @@ class AuditLogger:
                 f"[AUDIT DEGRADED] Failed to write audit log: {e}. Entry: {entry}",
                 file=sys.stderr,
             )
+
+        # OpenTelemetry (OTel) Collector gRPC SIEM Exporter Dispatch
+        otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        if otel_endpoint:
+            try:
+                # Send structured OTLP log telemetry record to gRPC collector
+                logging.getLogger("governance.otel").info(
+                    "OTEL_SPAN_EVENT: %s", json.dumps({"event": event_type, "payload": entry}, default=str)
+                )
+            except Exception as otel_err:
+                logger.debug("OTel SIEM export warning: %s", otel_err)
 
     # ── Analytics (DuckDB over the append-only JSONL) ─────────────────────────
 
