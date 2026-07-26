@@ -9,6 +9,7 @@ requests, identified by explicit risk signals.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -56,6 +57,24 @@ def is_privileged_directive(prompt: str | None) -> bool:
         return False
     p = prompt.lower()
     return any(term in p for term in _PRIVILEGED_DIRECTIVE_TERMS)
+
+
+# Raw function/tool-call syntax with keyword arguments, e.g.
+# `buy_units(symbol='TSLA', qty=50000)` or `aws_s3_delete_bucket(bucket_name=...)`.
+# A legitimate end user does not type keyword-argument function calls into a
+# chat/support endpoint; this shape is a vocabulary-INDEPENDENT signal of an
+# attempted direct tool invocation. Unlike a keyword list (which must
+# enumerate every synonym for "delete"/"grant"/"trade" and is defeated by the
+# next one not on the list), this doesn't care what the function or resource
+# is named — it flags the act of invoking a tool through chat input at all.
+_TOOL_CALL_SYNTAX_RE = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*=")
+
+
+def contains_tool_call_syntax(prompt: str | None) -> bool:
+    """Fast (regex, no-model) structural check for embedded tool-call syntax."""
+    if not prompt:
+        return False
+    return bool(_TOOL_CALL_SYNTAX_RE.search(prompt))
 
 # Agent backends where the response leaves this machine.
 CLOUD_BACKENDS = frozenset({"openai", "openai_compatible"})
@@ -105,6 +124,8 @@ def assess_risk(
         signals.append(f"cloud_route:{agent_id}")
     if is_privileged_directive(prompt):
         signals.append("admin_or_privileged_directive")
+    if contains_tool_call_syntax(prompt):
+        signals.append("raw_tool_call_syntax")
 
     # Meta's Agents Rule of Two — Lethal Trifecta evaluation
     if has_private_data and has_untrusted_content and has_external_comms:

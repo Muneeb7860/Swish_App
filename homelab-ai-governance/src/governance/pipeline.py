@@ -219,6 +219,25 @@ def execute_pipeline(
         audit.log_event("pipeline_blocked", phase="input_preroute", input_hash=input_hash)
         return blocked_response(base_input_gate["triggered_rules"])
 
+    # 1c. HITL Step-Up Authorization Interceptor
+    # High-impact directives (bucket deletion, wire transfers, IAM elevation, raw tool calls)
+    # pause execution for human-in-the-loop confirmation regardless of prompt syntax.
+    if is_privileged_directive(query) or contains_tool_call_syntax(query):
+        import hmac, hashlib, time
+        approval_nonce = f"{input_hash}:{int(time.time())}"
+        approval_token = hmac.new(b"swishos_hitl_secret", approval_nonce.encode(), hashlib.sha256).hexdigest()[:16]
+        audit.log_event("hitl_stepup_required", input_hash=input_hash, approval_token=approval_token)
+        return {
+            "status": "pending_approval",
+            "requires_hitl": True,
+            "message": "High-impact directive requires Human-in-the-Loop (HITL) step-up authorization.",
+            "approval_token": approval_token,
+            "triggered_rules": [
+                {"rule_id": "hitl_stepup_authorization", "action": "pause", "severity": "critical"}
+            ],
+            "warnings": ["Action paused pending human confirmation."],
+        }
+
     # 2. Context Enrichment
     context_docs = retrieve_context(query)
     context_str = construct_context(context_docs)
