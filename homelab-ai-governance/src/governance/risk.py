@@ -52,11 +52,57 @@ _PRIVILEGED_DIRECTIVE_TERMS = (
 
 
 def is_privileged_directive(prompt: str | None) -> bool:
-    """Fast (keyword, no-model) check for a privileged/high-stakes directive."""
+    """Fast (keyword, no-model) check for a privileged/high-stakes directive.
+
+    Deliberately broad (bare "procurement" included) — used for the soft
+    risk.elevated signal and Phase 4's conservative shed-when-degraded path,
+    where over-flagging just means "run full guardrails" or "503, retry,"
+    never a hard denial. Do NOT reuse this for a hard block/pause gate (see
+    requires_hitl_stepup) — an ordinary "I need to place a procurement
+    request for..." B2B query would trip it and get denied outright, which
+    is exactly the false positive found via CQ-06 in the red-team suite."""
     if not prompt:
         return False
     p = prompt.lower()
     return any(term in p for term in _PRIVILEGED_DIRECTIVE_TERMS)
+
+
+# Terms/patterns precise enough to justify a HARD stop (HITL pause/deny) --
+# narrower than _PRIVILEGED_DIRECTIVE_TERMS above on purpose. Excludes the
+# bare "procurement" term; adds a proximity-anchored pattern for the actual
+# bypass-of-oversight phrasing procurement abuse looks like (e.g. AL-01's
+# "...without requiring supervisor override" — "without supervisor" isn't an
+# exact substring there since "requiring" breaks the adjacency, so a plain
+# term list can't express it without either missing AL-01 or over-matching
+# CQ-06 by keying off "procurement" alone).
+_HARD_STOP_TERMS = (
+    "system_admin",
+    "root privileges",
+    "wipe_audit",
+    "override refund",
+    "without verification",
+    "without approval",
+    "without supervisor",
+)
+_HARD_STOP_PATTERNS = (
+    re.compile(
+        r"\bprocurement\b.{0,60}\b(without|bypass(?:ing)?|skip(?:ping)?|no)\b.{0,20}"
+        r"\b(approval|verification|supervisor|review|sign.?off|authoriz\w*)\b"
+    ),
+)
+
+
+def requires_hitl_stepup(prompt: str | None) -> bool:
+    """Fast (keyword/regex, no-model) check for directives that justify
+    pausing for human step-up authorization -- a real bypass/override signal,
+    not merely "mentions procurement" (see is_privileged_directive's broader,
+    softer use for risk elevation / Phase 4 shed)."""
+    if not prompt:
+        return False
+    p = prompt.lower()
+    if any(term in p for term in _HARD_STOP_TERMS):
+        return True
+    return any(pattern.search(p) for pattern in _HARD_STOP_PATTERNS)
 
 
 # Raw function/tool-call syntax with keyword arguments, e.g.

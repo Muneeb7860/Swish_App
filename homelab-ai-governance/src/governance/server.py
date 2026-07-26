@@ -304,11 +304,13 @@ async def approve_hitl(req: GovernApproveRequest, request: Request) -> Any:
             raise HTTPException(status_code=403, detail="Invalid, expired, or forged HITL approval token")
 
         logger.info("HITL Step-Up Authorization GRANTED for query: %s", req.query[:100])
-        # Execute pipeline bypassing the preroute HITL interceptor
+        # Execute pipeline bypassing the preroute HITL interceptor via the
+        # real hitl_approved flag (not a string prefix — see pipeline.py).
         res = await run_in_threadpool(
             execute_pipeline,
-            query=f"[HITL_APPROVED] {req.query}",
+            query=req.query,
             session_id=req.session_id,
+            hitl_approved=True,
         )
         res["hitl_authorized"] = True
         return res

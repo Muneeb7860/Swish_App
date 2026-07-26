@@ -20,9 +20,11 @@ from governance.guardrails.loader import load_guardrails
 from governance.guardrails.nemo_guardrails import check_nemo_guardrails
 from governance.risk import (
     assess_risk,
+    contains_tool_call_syntax,
     is_high_risk,
     is_privileged_directive,
     max_retries_for,
+    requires_hitl_stepup,
     select_output_rules,
 )
 from governance.router.classifier import classify_intent
@@ -114,6 +116,7 @@ def execute_pipeline(
     expected_format: str | None = None,
     local_only_override: bool = False,
     session_id: str | None = None,
+    hitl_approved: bool = False,
 ) -> dict[str, Any]:
     """Orchestrates the entire query governance pipeline.
 
@@ -222,8 +225,30 @@ def execute_pipeline(
     # 1c. HITL Step-Up Authorization Interceptor
     # High-impact directives (bucket deletion, wire transfers, IAM elevation, raw tool calls)
     # pause execution for human-in-the-loop confirmation regardless of prompt syntax.
-    if is_privileged_directive(query) or contains_tool_call_syntax(query):
-        from governance.hitl import generate_hitl_token
+    # `hitl_approved` (set only by server.py's /approve endpoint, itself gated
+    # on a verified token) skips this check — a real bool flag, not a string
+    # prefix spliced onto `query`. The original implementation re-ran the
+    # pipeline with `f"[HITL_APPROVED] {query}"` and relied on the interceptor
+    # not re-triggering on the SAME underlying content, which it always did:
+    # a human approving a request looped straight back into another
+    # pending_approval instead of ever actually executing. A string prefix
+    # also would have leaked into the guardrail/model input as literal noise.
+    if not hitl_approved and (requires_hitl_stepup(query) or contains_tool_call_syntax(query)):
+        from governance.hitl import generate_hitl_token, hitl_configured
+
+        if not hitl_configured():
+            # Fail closed (goal 1): with no secret configured, any
+            # "approval_token" we issued would be forgeable by anyone who
+            # reads this source file — that's not a step-up gate, it's a
+            # bypass with extra steps. Hard-block instead of pretending a
+            # human-approval flow exists when it cryptographically can't.
+            audit.log_event(
+                "hitl_stepup_unavailable_blocked", input_hash=input_hash,
+                reason="SWISHOS_HITL_SECRET not configured",
+            )
+            return blocked_response(
+                [{"rule_id": "hitl_stepup_unavailable", "action": "block", "severity": "critical"}]
+            )
         approval_token, _ = generate_hitl_token(input_hash)
         audit.log_event("hitl_stepup_required", input_hash=input_hash, approval_token=approval_token)
         return {

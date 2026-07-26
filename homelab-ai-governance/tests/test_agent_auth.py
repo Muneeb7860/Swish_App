@@ -11,6 +11,7 @@ canonical-string or constant drift between the two).
 from __future__ import annotations
 
 import os
+import time
 
 import pytest
 
@@ -159,3 +160,34 @@ def test_verify_fails_closed_when_enforcement_enabled_but_no_secret_configured(m
     )
     assert ok is False
     assert "shared secret" in msg.lower()
+
+
+def test_replay_cache_eviction_never_forgets_a_recent_nonce_under_load(monkeypatch):
+    """Regression test: the cache used to do a blanket `.clear()` once it
+    exceeded 10,000 entries, wiping recently-inserted (still-valid) nonces
+    along with genuinely stale ones — briefly reopening the replay window at
+    exactly the moment (high request volume) an attacker would most likely
+    be probing. Age-based eviction must never forget an entry inserted
+    within the clock-skew window, no matter how many entries pile up."""
+    from agentic_redteam.crypto import sign_payload
+    import governance.agent_auth as agent_auth_module
+
+    monkeypatch.setenv("SWISH_AGENT_SHARED_SECRET", "test-shared-secret")
+    monkeypatch.setattr(agent_auth_module, "_replay_nonce_cache", {})
+
+    payload = {"query": "hello"}
+    headers = sign_payload("agent-load-test", "test-shared-secret", payload, nonce="the-nonce-to-protect")
+    ok1, _ = verify_agent_signature(headers, payload)
+    assert ok1 is True
+
+    # Flood the cache well past the old 10,000-entry clear threshold with
+    # OTHER nonces, all inserted "now" (well within the clock-skew window).
+    now = time.time()
+    for i in range(10_500):
+        agent_auth_module._replay_nonce_cache[f"agent-flood:{i}"] = now
+
+    # The original nonce, inserted before the flood, must still be
+    # remembered — replaying it must still be rejected.
+    ok2, msg2 = verify_agent_signature(headers, payload)
+    assert ok2 is False
+    assert "Replay" in msg2

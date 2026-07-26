@@ -19,6 +19,47 @@ from governance.config import load_audit_config, load_shared_guardrails
 
 logger = logging.getLogger("governance.audit")
 
+_otel_log_handler_lock = threading.Lock()
+_otel_log_handler: logging.Handler | None = None
+_otel_init_attempted = False
+
+
+def _get_otel_log_handler() -> logging.Handler | None:
+    """Lazily build a real OTLP log exporter (HTTP, matching server.py's trace
+    exporter convention) on first use, gated by OTEL_EXPORTER_OTLP_ENDPOINT.
+
+    Returns None (and stays None on every subsequent call) if OTel isn't
+    configured or the SDK/exporter packages aren't importable — audit logging
+    to the local JSONL file must never depend on this succeeding.
+    """
+    global _otel_log_handler, _otel_init_attempted
+    if _otel_init_attempted:
+        return _otel_log_handler
+    with _otel_log_handler_lock:
+        if _otel_init_attempted:
+            return _otel_log_handler
+        _otel_init_attempted = True
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        if not endpoint:
+            return None
+        try:
+            from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+            from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+            from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+            from opentelemetry.sdk.resources import Resource
+
+            provider = LoggerProvider(
+                resource=Resource.create(attributes={"service.name": "homelab-ai-governance"})
+            )
+            logs_endpoint = endpoint.rstrip("/") + "/v1/logs" if not endpoint.endswith("/v1/logs") else endpoint
+            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter(endpoint=logs_endpoint)))
+            _otel_log_handler = LoggingHandler(level=logging.INFO, logger_provider=provider)
+            logger.info("OTel audit-log export active, streaming to %s", logs_endpoint)
+        except Exception as e:
+            logger.warning("Failed to initialize OTel log export (audit logging unaffected): %s", e)
+            _otel_log_handler = None
+    return _otel_log_handler
+
 
 class AuditLogger:
     """Append-only JSONL audit logger with on-demand DuckDB analytics.
@@ -98,16 +139,30 @@ class AuditLogger:
                 file=sys.stderr,
             )
 
-        # OpenTelemetry (OTel) Collector gRPC SIEM Exporter Dispatch
-        otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-        if otel_endpoint:
+        # Real OTLP log export (HTTP, per-record OTel log attributes) — a no-op
+        # if OTEL_EXPORTER_OTLP_ENDPOINT isn't set or the exporter failed to
+        # initialize; never affects the local JSONL write above.
+        handler = _get_otel_log_handler()
+        if handler is not None:
             try:
-                # Send structured OTLP log telemetry record to gRPC collector
-                logging.getLogger("governance.otel").info(
-                    "OTEL_SPAN_EVENT: %s", json.dumps({"event": event_type, "payload": entry}, default=str)
+                otel_record = logging.LogRecord(
+                    name="governance.otel",
+                    level=logging.INFO,
+                    pathname=__file__,
+                    lineno=0,
+                    msg=event_type,
+                    args=None,
+                    exc_info=None,
                 )
+                # LoggingHandler._get_attributes() reads flat vars(record), not
+                # a nested dict, and OTel attribute values must be primitives —
+                # so each field is set as its own attribute, not one dict blob.
+                for k, v in entry.items():
+                    if isinstance(v, (str, int, float, bool)):
+                        setattr(otel_record, k, v)
+                handler.emit(otel_record)
             except Exception as otel_err:
-                logger.debug("OTel SIEM export warning: %s", otel_err)
+                logger.debug("OTel log export warning: %s", otel_err)
 
     # ── Analytics (DuckDB over the append-only JSONL) ─────────────────────────
 

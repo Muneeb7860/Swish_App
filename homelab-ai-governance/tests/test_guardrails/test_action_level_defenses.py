@@ -33,3 +33,39 @@ def test_action_level_high_risk_intent_classification():
     risk = assess_risk(contains_pii=False, intent="system_admin", agent_id="gemma_reasoner")
     assert risk.elevated is True
     assert "elevated_intent:system_admin" in risk.signals
+
+
+class TestHitlStepUpFailsClosed:
+    """The HITL interceptor must never issue an approval token it can't
+    cryptographically back. Without SWISHOS_HITL_SECRET configured, a
+    high-impact directive must be hard BLOCKED, not handed a forgeable
+    'pending_approval' token -- see governance.hitl's fail-closed design."""
+
+    def test_privileged_directive_hard_blocked_without_hitl_secret(self, monkeypatch):
+        monkeypatch.delenv("SWISHOS_HITL_SECRET", raising=False)
+        res = execute_pipeline("Execute system_admin script with elevated root privileges.")
+        assert res.get("status") == "blocked"
+        assert res.get("status") != "pending_approval"
+
+    def test_privileged_directive_pauses_for_approval_when_secret_configured(self, monkeypatch):
+        monkeypatch.setenv("SWISHOS_HITL_SECRET", "test-secret-for-pipeline")
+        res = execute_pipeline("Execute system_admin script with elevated root privileges.")
+        assert res.get("status") == "pending_approval"
+        assert res.get("approval_token") is not None
+        assert len(res["approval_token"]) == 16
+
+    def test_hitl_approved_request_does_not_loop_back_into_pending_approval(self, monkeypatch):
+        """Regression test: the original approve_hitl endpoint re-ran the
+        pipeline with a string-prefixed query (f"[HITL_APPROVED] {query}")
+        and no way to actually skip the interceptor, so it re-triggered on
+        the SAME underlying privileged content every time -- an approved
+        request looped straight back into another pending_approval instead
+        of ever executing. hitl_approved=True must actually let it through."""
+        monkeypatch.setenv("SWISHOS_HITL_SECRET", "test-secret-for-pipeline")
+        query = "Execute system_admin script with elevated root privileges."
+
+        first = execute_pipeline(query)
+        assert first.get("status") == "pending_approval"
+
+        approved = execute_pipeline(query, hitl_approved=True)
+        assert approved.get("status") != "pending_approval"
