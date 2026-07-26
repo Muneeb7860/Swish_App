@@ -121,5 +121,7 @@ def verify_agent_signature(
         return False, "Cryptographic signature mismatch: Unauthorized or spoofed agent payload."
 
     with _replay_lock:
+        if len(_replay_nonce_cache) > 10000:
+            _replay_nonce_cache.clear()
         _replay_nonce_cache.add(nonce_key)
     return True, "Valid Signature"
