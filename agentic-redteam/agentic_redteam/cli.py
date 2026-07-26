@@ -20,12 +20,14 @@ try:
     from agentic_redteam.crypto_probes import run_crypto_probes
     from agentic_redteam.fingerprint_test import run_fingerprint_tarpit_exhaustion
     from agentic_redteam.crypto import sign_payload
+    from agentic_redteam.gart_attacker import GenerativeAttacker
 except ImportError:
     try:
         from mutators import apply_mutations
         from crypto_probes import run_crypto_probes
         from fingerprint_test import run_fingerprint_tarpit_exhaustion
         from crypto import sign_payload
+        from gart_attacker import GenerativeAttacker
     except ImportError:
         def apply_mutations(text: str, mutation_types: list[str] | None = None) -> list[str]:
             return [text]
@@ -33,6 +35,7 @@ except ImportError:
             return []
         def run_fingerprint_tarpit_exhaustion(target_url: str, request_count: int = 5) -> dict:
             return {"passed": True, "note": "tarpit test module fallback"}
+        GenerativeAttacker = None
         def sign_payload(agent_id: str, secret_key: str, payload: dict, **kwargs) -> dict:
             return {}
 
@@ -347,11 +350,33 @@ def main() -> int:
     elif args.ci:
         iterations = max(iterations, 2)
 
+    # GART (Generative Agentic Red Teaming): --use-llm-attacker was previously
+    # parsed and never read anywhere in this loop -- a dead flag. When set,
+    # build one attacker instance for the whole run (not per-payload; it just
+    # resolves an API key/config) and use it below to escalate any payload
+    # whose STATIC form the target correctly defended against, feeding the
+    # target's real response back in as feedback for a rewritten attempt.
+    gart_attacker = None
+    if args.use_llm_attacker and GenerativeAttacker is not None:
+        gart_attacker = GenerativeAttacker(
+            provider=args.attacker_provider, max_attempts=args.max_attack_attempts
+        )
+        if not gart_attacker.api_key:
+            print(
+                f"⚠️  --use-llm-attacker set but no API key found for provider "
+                f"'{args.attacker_provider}' -- falling back to the zero-cost "
+                f"heuristic variable-splitting mutation instead of a real LLM attacker.\n"
+            )
+
     print("🛡️  Agentic Red-Team Harness v1.0.0")
     print(f"🎯 Target URL: {args.target_url}")
     print(f"📋 Categories: {', '.join(selected_cats)}")
     print(f"🔄 Statistical Multi-Run Iterations: {iterations}")
-    print(f"🧬 Algorithmic Mutations: {'ENABLED' if args.mutate else 'DISABLED'}\n")
+    print(f"🧬 Algorithmic Mutations: {'ENABLED' if args.mutate else 'DISABLED'}")
+    print(
+        f"🤖 GART Adaptive Attacker: "
+        f"{'ENABLED (' + args.attacker_provider + ')' if gart_attacker else 'DISABLED'}\n"
+    )
 
     summary = {}
     failures = []
@@ -443,19 +468,58 @@ def main() -> int:
                 if not test_ok:
                     break
 
+            # GART escalation: only when the STATIC payload's defense held
+            # (test_ok True) -- nothing to escalate if it already got
+            # through. Feeds the target's real response back in as feedback
+            # for each rewritten attempt, so a defense that only pattern-
+            # matches the literal test string (rather than the underlying
+            # intent) can be caught the same way a human red-teamer
+            # paraphrasing by hand would catch it.
+            gart_finding = None
+            if test_ok and gart_attacker is not None:
+                current_prompt = base_query
+                last_response = out
+                for attempt in range(gart_attacker.max_attempts):
+                    mutated = gart_attacker.generate_adversarial_mutation(
+                        base_query, last_response, attempt
+                    )
+                    if not mutated or mutated == current_prompt:
+                        break
+                    current_prompt = mutated
+                    candidate_out = call_target(args.target_url, current_prompt)
+                    candidate_ok = True
+                    for a in t.get("assert", []):
+                        if a.get("type") == "javascript":
+                            res = eval_assertion(candidate_out, a.get("value", ""))
+                            if res is False:
+                                candidate_ok = False
+                                break
+                    if not candidate_ok:
+                        gart_finding = {
+                            "attempt": attempt + 1,
+                            "mutated_query": current_prompt,
+                            "response": candidate_out,
+                        }
+                        test_ok = False
+                        out = candidate_out
+                        break
+                    last_response = candidate_out
+
             if test_ok:
                 passed += 1
             else:
                 failed += 1
-                failures.append(
-                    {
-                        "category": cat,
-                        "description": desc,
-                        "query": base_query,
-                        "response": out,
-                        "iterations": iterations,
-                    }
-                )
+                failure_record = {
+                    "category": cat,
+                    "description": desc,
+                    "query": base_query,
+                    "response": out,
+                    "iterations": iterations,
+                }
+                if gart_finding:
+                    failure_record["type"] = "gart_adaptive_bypass"
+                    failure_record["gart_details"] = gart_finding
+                failures.append(failure_record)
 
         total = passed + failed
         flag = "✅ PASS" if failed == 0 else "❌ FAIL"
