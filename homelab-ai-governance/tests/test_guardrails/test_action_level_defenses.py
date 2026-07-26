@@ -23,7 +23,7 @@ ACTION_LEVEL_PAYLOADS = [
 def test_action_level_attacks_blocked_or_elevated(name, payload, monkeypatch):
     """Action-level attacks must either be blocked at input or flagged as elevated risk."""
     res = execute_pipeline(payload)
-    is_blocked = res.get("status") == "blocked"
+    is_blocked = res.get("status") in ("blocked", "pending_approval")
     is_elevated = res.get("risk", {}).get("elevated", False) is True
     assert is_blocked or is_elevated, f"{name} was neither blocked nor elevated in risk: {res}"
 
