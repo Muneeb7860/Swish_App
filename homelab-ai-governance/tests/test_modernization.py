@@ -11,6 +11,7 @@ need), so there are no tests for them here.
 
 from __future__ import annotations
 
+import pytest
 import threading
 from unittest.mock import patch
 
@@ -50,6 +51,7 @@ def test_memory_mesh_falls_back_to_stubs_when_disabled():
 
 def test_duckdb_audit_analytics(tmp_path):
     """AuditLogger writes JSONL and DuckDB analytics read it back by event type."""
+    pytest.importorskip("duckdb")
     audit = AuditLogger(log_dir=tmp_path)
     audit.log_event("classification", agent_id="a1", intent="code_generation")
     audit.log_event("classification", agent_id="a2", intent="summarization")
