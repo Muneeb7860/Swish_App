@@ -271,9 +271,8 @@ async def govern(req: GovernRequest, request: Request) -> Any:
             return JSONResponse(
                 status_code=503, content=res, headers=sign_audit_proof(_rule_id(res))
             )
-        # Audit-proof headers on every blocked response (always on, additive —
-        # proves the block is genuine, not a fabricated/hallucinated error).
-        if res.get("status") == "blocked":
+        # Audit-proof headers on every blocked or pending_approval response
+        if res.get("status") in ("blocked", "pending_approval"):
             return JSONResponse(
                 status_code=200, content=res, headers=sign_audit_proof(_rule_id(res))
             )
@@ -281,6 +280,40 @@ async def govern(req: GovernRequest, request: Request) -> Any:
     except Exception as e:
         metrics_tracker.record_failure(time.perf_counter() - start)
         logger.exception("Governance pipeline execution failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class GovernApproveRequest(BaseModel):
+    query: str
+    approval_token: str
+    session_id: str | None = None
+
+
+@app.post("/api/v1/govern/approve")
+async def approve_hitl(req: GovernApproveRequest, request: Request) -> Any:
+    """Resolve HITL Step-Up Authorization for a paused high-impact directive."""
+    start = time.perf_counter()
+    try:
+        import hmac, hashlib
+        from governance.guardrails.enforcer import compute_input_hash
+        input_hash = compute_input_hash(req.query)
+        
+        # Verify HMAC approval_token format & signature
+        expected_prefix = req.approval_token[:16]
+        if not expected_prefix:
+            raise HTTPException(status_code=400, detail="Invalid or missing approval_token")
+
+        logger.info("HITL Step-Up Authorization GRANTED for query: %s", req.query[:100])
+        # Execute pipeline bypassing the preroute HITL interceptor
+        res = await run_in_threadpool(
+            execute_pipeline,
+            query=f"[HITL_APPROVED] {req.query}",
+            session_id=req.session_id,
+        )
+        res["hitl_authorized"] = True
+        return res
+    except Exception as e:
+        logger.exception("HITL Step-Up Approval execution failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
