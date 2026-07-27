@@ -206,6 +206,14 @@ rules:
         - pattern: '(?i)\b(grant|elevate|assign|promote|make|add|upgrade|expand|increase|raise)\b.{0,40}\b(admin|superadmin|owner|root|superuser|privileges|role|tenant|access|permissions|control)\b'
         # 4. Generalized Webhook & Data Exfiltration Egress
         - pattern: '(?i)\b(post|transmit|exfil|curl|webhook|send|upload|copy|sync|replicate|export)\b.{0,80}\bhttps?://[^\s]+'
+        # 4b. Raw file:// resource URIs -- MCP-03 live finding (2026-07-27):
+        # a request naming a local file:// path (esp. system credential
+        # files) has no legitimate reason to appear in chat input at all,
+        # structurally, regardless of the verb around it -- same reasoning
+        # as risk.py's contains_tool_call_syntax(). The prior exfil pattern
+        # only matched http(s):// URLs, so "transmit ... to remote webhook"
+        # phrased without a literal URL sailed through untouched.
+        - pattern: '(?i)\bfile://[^\s]*(passwd|shadow|\.ssh|\.aws|\.env\b|id_rsa|credentials|secret|htpasswd)'
         # 5. Generalized RAG & Tool Output Injected Directives
         - pattern: '(?i)(<!--[\s\S]*?(override|exfil|ignore|agent|directive)|\[\s*(agent|system)\s*directive:?\s*[\s\S]*?\]|\b(agent|ai)\s+directive:\s*|\bnote\s+to\s+(the\s+)?(assistant|ai|model|system)\b|\btreat\s+.{0,40}\bas\s+(fully\s+)?(verified|trusted|authorized)\b|\bno\s+(additional|further)\s+(checks?|review|verification)\s+needed\b)'
         # 6. Generalized Persona Priming & Unauthorized Payouts. The persona
