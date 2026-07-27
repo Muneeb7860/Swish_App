@@ -118,11 +118,17 @@ def apply_rules(
 
 
 def blocked_response(triggered_rules: list[dict[str, Any]]) -> dict[str, Any]:
-    """Construct a blocked response payload."""
+    """Construct a blocked response payload.
+
+    AUDIT FIX F4: Added 'warnings' key for schema contract consistency —
+    all response dicts from the pipeline must include the same keys so
+    consumers don't need defensive .get() for every field.
+    """
     return {
         "status": "blocked",
         "message": "Request blocked by safety guardrails.",
         "triggered_rules": triggered_rules,
+        "warnings": [],
     }
 
 

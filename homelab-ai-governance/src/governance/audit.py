@@ -283,15 +283,46 @@ class CostTracker:
             self._daily_cost = 0.0
             self._reset_date = today
 
+    @staticmethod
+    def _agent_pricing(agent_id: str) -> tuple[float, float]:
+        """Load per-model pricing from routing config, falling back to defaults.
+
+        Returns (cost_per_1k_input, cost_per_1k_output).  The routing config
+        can define `pricing: {input_per_1k: 0.0001, output_per_1k: 0.0003}`
+        under each agent entry.  If absent, conservative GPT-4-class defaults
+        are used so the spend cap errs on the side of caution.
+        """
+        default_input, default_output = 0.005, 0.015
+        try:
+            from governance.config import load_routing_config
+            cfg = load_routing_config().get("agents", {}).get(agent_id, {})
+            pricing = cfg.get("pricing", {})
+            return (
+                float(pricing.get("input_per_1k", default_input)),
+                float(pricing.get("output_per_1k", default_output)),
+            )
+        except Exception:
+            return default_input, default_output
+
     def record_cloud_call(
         self,
         agent_id: str,
         input_tokens: int,
         output_tokens: int,
-        cost_per_1k_input: float = 0.005,
-        cost_per_1k_output: float = 0.015,
+        cost_per_1k_input: float | None = None,
+        cost_per_1k_output: float | None = None,
     ) -> float:
-        """Record a cloud API call and return the estimated cost."""
+        """Record a cloud API call and return the estimated cost.
+
+        If per-token pricing is not provided, loads from the agent's routing
+        config pricing block (F14 fix — avoids hardcoded GPT-4 defaults for
+        cheaper backends like Groq Llama).
+        """
+        if cost_per_1k_input is None or cost_per_1k_output is None:
+            cfg_input, cfg_output = self._agent_pricing(agent_id)
+            cost_per_1k_input = cost_per_1k_input if cost_per_1k_input is not None else cfg_input
+            cost_per_1k_output = cost_per_1k_output if cost_per_1k_output is not None else cfg_output
+
         cost = (input_tokens / 1000) * cost_per_1k_input + (
             output_tokens / 1000
         ) * cost_per_1k_output
@@ -318,7 +349,12 @@ class CostTracker:
 
 
 class RateLimiter:
-    """Tracks sliding-window hourly request count to prevent resource exhaustion."""
+    """Tracks sliding-window hourly request count to prevent resource exhaustion.
+
+    AUDIT FIX F1: is_allowed() and record_request() previously used separate
+    lock acquisitions, creating a TOCTOU race where concurrent requests could
+    all see count < limit and ALL pass.  Now uses atomic check_and_record().
+    """
 
     def __init__(self, limit_per_hour: int | None = None):
         self._explicit_limit = limit_per_hour
@@ -337,19 +373,35 @@ class RateLimiter:
         except Exception:
             return self._default_limit
 
-    def is_allowed(self) -> bool:
-        """Check if a new request is allowed within the hourly limit.
+    def check_and_record(self) -> bool:
+        """Atomically check whether a new request is allowed AND record it.
+
+        Returns True if the request is allowed (and has been recorded),
+        False if the rate limit has been exceeded (request NOT recorded).
+
+        AUDIT FIX F1: This replaces the split is_allowed() + record_request()
+        pattern that had a TOCTOU race — both operations now happen under a
+        single lock acquisition so concurrent callers cannot all see
+        count < limit simultaneously.
 
         CI/test escape hatch: the red-team suite legitimately fires 100+
-        requests in a single run (well past the production hourly cap meant
-        to bound resource exhaustion on a live deployment). It uses the same
-        GOVERNANCE_ALLOW_MOCK_FALLBACK flag the CI job already sets to get
-        deterministic mock inference — reusing it here means no new CI wiring
-        and no risk of this leaking into production, since a real deployment
-        never sets that flag. Without this, growing the red-team suite past
-        the hourly limit silently mass-fails unrelated test categories with a
-        confusing "rate limit exceeded" wall, not a real guardrail signal.
+        requests in a single run (well past the production hourly cap).
         """
+        if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() in ("1", "true"):
+            return True
+        with self._lock:
+            now = time.time()
+            limit = self.get_limit()
+            self.requests = [t for t in self.requests if now - t < 3600]
+            if len(self.requests) >= limit:
+                return False
+            self.requests.append(now)
+            return True
+
+    # Backward-compat wrappers — deprecated, use check_and_record() instead.
+
+    def is_allowed(self) -> bool:
+        """DEPRECATED: Use check_and_record() for atomic check+record."""
         if os.environ.get("GOVERNANCE_ALLOW_MOCK_FALLBACK", "").lower() in ("1", "true"):
             return True
         with self._lock:
@@ -359,7 +411,7 @@ class RateLimiter:
             return len(self.requests) < limit
 
     def record_request(self) -> None:
-        """Record a new request timestamp."""
+        """DEPRECATED: Use check_and_record() for atomic check+record."""
         with self._lock:
             self.requests.append(time.time())
 

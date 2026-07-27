@@ -1,3 +1,48 @@
+# AUDIT FIX F10: Comprehensive .gitignore
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
 *.egg-info/
+dist/
+build/
+*.whl
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment & secrets (CRITICAL — never commit secrets)
+.env
+.env.*
+.env.local
+.env.production
+
+# Test / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE configs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS Finder duplicates (Finding 5)
+*\ 2.*
+*\ 2
+
+# Data & logs (audit logs must not be committed)
 data/
+*.log
+*.jsonl
+
+# OS files
+.DS_Store
+Thumbs.db

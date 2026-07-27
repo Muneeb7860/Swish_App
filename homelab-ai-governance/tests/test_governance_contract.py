@@ -117,6 +117,9 @@ def test_govern_blocked_contract(monkeypatch):
     governed decision, never bypassed to an ungoverned model."""
 
     class _BlockedRateLimiter:
+        def check_and_record(self):
+            return False
+
         def is_allowed(self):
             return False
 

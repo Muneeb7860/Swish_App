@@ -176,6 +176,8 @@ def test_pipeline_blocked_by_rate_limiter(monkeypatch):
     """Verify that the pipeline immediately blocks execution when rate limit is exceeded."""
     # Force RateLimiter to report limit exceeded
     class MockRateLimiter:
+        def check_and_record(self):
+            return False
         def is_allowed(self):
             return False
         def get_limit(self):

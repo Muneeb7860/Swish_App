@@ -374,7 +374,11 @@ def metrics() -> str:
         "# HELP governed_requests_by_intent_total Total requests governed categorized by intent class.",
         "# TYPE governed_requests_by_intent_total counter",
     ]
-    for intent, count in metrics_tracker.intent_counts.items():
+    # AUDIT FIX F15: Snapshot intent_counts under lock to prevent
+    # RuntimeError: dictionary changed size during iteration
+    with metrics_tracker.lock:
+        intent_snapshot = dict(metrics_tracker.intent_counts)
+    for intent, count in intent_snapshot.items():
         lines.append(f'governed_requests_by_intent_total{{intent="{intent}"}} {count}')
 
     return "\n".join(lines) + "\n"

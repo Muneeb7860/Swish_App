@@ -137,8 +137,11 @@ def execute_pipeline(
     audit.log_event("pipeline_start", query=query, input_hash=input_hash)
 
     # Rate Limiting Hardening Gate (Slide-window check)
+    # AUDIT FIX F1: Atomic check_and_record() — the old split is_allowed() +
+    # record_request() had a TOCTOU race where concurrent requests could all
+    # see count < limit and ALL pass through.
     rate_limiter = get_rate_limiter()
-    if not rate_limiter.is_allowed():
+    if not rate_limiter.check_and_record():
         audit.log_event(
             "rate_limit_exceeded",
             input_hash=input_hash,
@@ -150,7 +153,6 @@ def execute_pipeline(
             "triggered_rules": [{"rule_id": "rate_limit", "action": "block", "severity": "high"}],
             "warnings": [],
         }
-    rate_limiter.record_request()
 
 # NeMo Guardrails Check
     nemo_res = check_nemo_guardrails(query)

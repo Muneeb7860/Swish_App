@@ -113,17 +113,54 @@ def requires_hitl_stepup(prompt: str | None) -> bool:
 # enumerate every synonym for "delete"/"grant"/"trade" and is defeated by the
 # next one not on the list), this doesn't care what the function or resource
 # is named — it flags the act of invoking a tool through chat input at all.
-_TOOL_CALL_SYNTAX_RE = re.compile(
-    r"\b[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*=|\btools/call\b|\bjsonrpc\b\s*:\s*[\"']2\.0[\"']|<\s*tool_call\s*>",
+#
+# AUDIT FIX F3: The original regex matched ANY `identifier(kwarg=` pattern,
+# including common Python builtins like print(end=""), dict(key=value),
+# sorted(key=lambda x: x), open(file=...), range(start=...).  This caused
+# HITL step-up on any Python question.  Fix: use a negative lookahead to
+# exclude known-safe Python builtins from the function-call branch.  The
+# MCP/JSON-RPC branches are unaffected (no false positives there).
+_PYTHON_BUILTINS = (
+    "print", "dict", "sorted", "open", "range", "list", "set", "map",
+    "filter", "len", "type", "str", "int", "float", "bool", "input",
+    "format", "super", "zip", "enumerate", "max", "min", "sum", "abs",
+    "round", "hash", "any", "all", "iter", "next", "reversed", "tuple",
+    "getattr", "setattr", "hasattr", "delattr", "isinstance", "issubclass",
+    "callable", "repr", "ord", "chr", "hex", "oct", "bin", "pow", "divmod",
+    "slice", "property", "staticmethod", "classmethod", "object", "bytes",
+    "bytearray", "memoryview", "frozenset", "complex", "vars", "dir", "id",
+    "help", "eval", "exec", "compile", "globals", "locals", "breakpoint",
+)
+# Build a negative-lookbehind-free pattern: match identifier(kwarg= then
+# check in Python whether the matched name is a builtin.  This avoids a
+# regex that's too complex for the re engine's lookbehind constraints.
+_FUNC_CALL_RE = re.compile(
+    r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*=",
+)
+_MCP_JSONRPC_RE = re.compile(
+    r"""\btools/call\b|\bjsonrpc\b\s*:\s*["']2\.0["']|<\s*tool_call\s*>""",
     re.IGNORECASE,
 )
 
 
 def contains_tool_call_syntax(prompt: str | None) -> bool:
-    """Fast (regex, no-model) structural check for embedded tool-call and MCP JSON-RPC syntax."""
+    """Fast (regex, no-model) structural check for embedded tool-call and MCP JSON-RPC syntax.
+
+    AUDIT FIX F3: The function-call branch now excludes Python builtins
+    (print, dict, sorted, open, range, etc.) that were causing false-positive
+    HITL step-up on any question about Python function syntax.
+    """
     if not prompt:
         return False
-    return bool(_TOOL_CALL_SYNTAX_RE.search(prompt))
+    # MCP / JSON-RPC framing — always a threat signal, no builtins issue
+    if _MCP_JSONRPC_RE.search(prompt):
+        return True
+    # Function-call syntax — skip known-safe Python builtins
+    for m in _FUNC_CALL_RE.finditer(prompt):
+        func_name = m.group(1).lower()
+        if func_name not in _PYTHON_BUILTINS:
+            return True
+    return False
 
 # Agent backends where the response leaves this machine.
 CLOUD_BACKENDS = frozenset({"openai", "openai_compatible"})

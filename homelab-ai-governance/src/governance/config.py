@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -31,8 +32,12 @@ def get_detectors_dir() -> Path:
 
 
 @lru_cache(maxsize=32)
-def load_yaml(path: str | Path) -> dict[str, Any]:
-    """Load and cache a YAML file. Raises ConfigError on failure."""
+def _load_yaml_cached(path: str) -> dict[str, Any]:
+    """Internal: load and cache a YAML file. Returns the CACHED reference.
+
+    NEVER expose this to callers — the returned dict is the live cache entry.
+    Use load_yaml() instead, which returns a deepcopy.
+    """
     resolved = Path(path)
     if not resolved.is_absolute():
         resolved = _CONFIG_DIR / resolved
@@ -50,6 +55,18 @@ def load_yaml(path: str | Path) -> dict[str, Any]:
         raise ConfigError(f"Expected a YAML mapping in {resolved}, got {type(data).__name__}")
 
     return data
+
+
+def load_yaml(path: str | Path) -> dict[str, Any]:
+    """Load a YAML config file (cached on disk, deepcopied per call).
+
+    AUDIT FIX F2: lru_cache previously returned the SAME mutable dict to every
+    caller — any mutation (e.g. rules.append(...)) silently corrupted the
+    cached config for all subsequent callers for the lifetime of the process.
+    Now the cache holds the canonical copy and every caller gets an independent
+    deepcopy that is safe to mutate.
+    """
+    return copy.deepcopy(_load_yaml_cached(str(path)))
 
 
 def load_routing_config() -> dict[str, Any]:

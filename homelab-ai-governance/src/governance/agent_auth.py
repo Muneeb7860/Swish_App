@@ -27,14 +27,33 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 import threading
 import time
 from typing import Any
 
-# Must match agentic_redteam/telemetry_verifier.py AUDIT_PROOF_SECRET exactly.
-AUDIT_PROOF_SECRET = "swishos-audit-proof-signature-key-v4"
+logger = logging.getLogger(__name__)
+
+# AUDIT FIX F13: Load audit-proof secret from env var instead of hardcoding.
+# Falls back to the old hardcoded value for backward compat but logs a warning.
+_AUDIT_PROOF_FALLBACK = "swishos-audit-proof-signature-key-v4"
+
+
+def _audit_proof_secret() -> str:
+    secret = os.environ.get("SWISHOS_AUDIT_PROOF_SECRET")
+    if not secret:
+        logger.warning(
+            "SWISHOS_AUDIT_PROOF_SECRET not set — using hardcoded fallback. "
+            "Set this env var in production to prevent audit-proof forgery."
+        )
+        return _AUDIT_PROOF_FALLBACK
+    return secret
+
+
+# Backward-compat alias for agentic-redteam/telemetry_verifier.py import
+AUDIT_PROOF_SECRET = _AUDIT_PROOF_FALLBACK
 
 _MAX_CLOCK_SKEW_SECONDS = 300  # 5 minutes — matches agentic_redteam/crypto.py
 
@@ -50,6 +69,8 @@ _MAX_CLOCK_SKEW_SECONDS = 300  # 5 minutes — matches agentic_redteam/crypto.py
 # is most likely to be probing.
 _replay_nonce_cache: dict[str, float] = {}
 _replay_lock = threading.Lock()
+_nonce_eviction_counter = 0
+_NONCE_EVICTION_INTERVAL = 100  # F12: only evict every N verifications
 
 
 def _evict_stale_nonces(now: float) -> None:
@@ -65,11 +86,12 @@ def _evict_stale_nonces(now: float) -> None:
 
 def sign_audit_proof(rule_triggered: str, client_ip: str = "127.0.0.1") -> dict[str, str]:
     """Sign a blocked-response audit proof. Returns headers to attach."""
+    secret = _audit_proof_secret()
     ts = str(int(time.time()))
     nonce = secrets.token_hex(16)
     string_to_sign = f"{rule_triggered}:{client_ip}:{ts}:{nonce}"
     sig = hmac.new(
-        AUDIT_PROOF_SECRET.encode("utf-8"), string_to_sign.encode("utf-8"), hashlib.sha256
+        secret.encode("utf-8"), string_to_sign.encode("utf-8"), hashlib.sha256
     ).hexdigest()
     return {
         "X-SwishOS-Audit-Proof": sig,
@@ -137,7 +159,12 @@ def verify_agent_signature(
         return False, "Cryptographic signature mismatch: Unauthorized or spoofed agent payload."
 
     with _replay_lock:
+        global _nonce_eviction_counter
         now = time.time()
-        _evict_stale_nonces(now)
         _replay_nonce_cache[nonce_key] = now
+        _nonce_eviction_counter += 1
+        # AUDIT FIX F12: Amortized eviction — only scan every N calls
+        if _nonce_eviction_counter >= _NONCE_EVICTION_INTERVAL:
+            _evict_stale_nonces(now)
+            _nonce_eviction_counter = 0
     return True, "Valid Signature"
