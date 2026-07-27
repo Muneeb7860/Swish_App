@@ -113,11 +113,14 @@ def requires_hitl_stepup(prompt: str | None) -> bool:
 # enumerate every synonym for "delete"/"grant"/"trade" and is defeated by the
 # next one not on the list), this doesn't care what the function or resource
 # is named — it flags the act of invoking a tool through chat input at all.
-_TOOL_CALL_SYNTAX_RE = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*=")
+_TOOL_CALL_SYNTAX_RE = re.compile(
+    r"\b[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*=|\btools/call\b|\bjsonrpc\b\s*:\s*[\"']2\.0[\"']|<\s*tool_call\s*>",
+    re.IGNORECASE,
+)
 
 
 def contains_tool_call_syntax(prompt: str | None) -> bool:
-    """Fast (regex, no-model) structural check for embedded tool-call syntax."""
+    """Fast (regex, no-model) structural check for embedded tool-call and MCP JSON-RPC syntax."""
     if not prompt:
         return False
     return bool(_TOOL_CALL_SYNTAX_RE.search(prompt))
