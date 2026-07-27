@@ -1,0 +1,156 @@
+name: Agentic Red-Team Security Gate
+
+# Moved here from homelab-ai-governance/.github/workflows/ -- GitHub Actions
+# only discovers workflows at the repository root; the original location
+# meant this workflow never ran on any push, PR, or its own cron schedule.
+on:
+  push:
+    branches: [ main, master, mac-machine ]
+  pull_request:
+    branches: [ main, master, mac-machine ]
+  schedule:
+    - cron: '0 0 * * *' # Daily midnight security scan
+
+jobs:
+  redteam-security-scan:
+    name: OWASP Agentic Security Evaluation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: ./homelab-ai-governance
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: ./homelab-ai-governance/pyproject.toml
+
+      - name: Install governance package + red-team harness
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          # Canonical red-team tool lives in-repo (agentic-redteam/), kept in
+          # sync with the guardrails it tests -- installing the standalone
+          # published package here would silently test a different,
+          # independently-versioned harness than the one actually developed
+          # in this monorepo (GART wiring, mcp_security category, the
+          # eval_assertion compound-assertion fix, etc. all live only here).
+          pip install -e ../agentic-redteam
+
+      - name: Start governance server (mock mode)
+        env:
+          SWISH_TRACING_ENABLED: 'false'
+          # No live Ollama in CI: deterministic mock responses so the
+          # red-team exercises the guardrail GATES, matching ci.yml's job.
+          GOVERNANCE_ALLOW_MOCK_FALLBACK: '1'
+          GOVERNANCE_REQUIRE_AGENT_SIGNATURE: '1'
+          SWISH_AGENT_SHARED_SECRET: ${{ secrets.SWISH_AGENT_SHARED_SECRET || 'ci-governance-shared-secret' }}
+          SWISHOS_HITL_SECRET: ${{ secrets.SWISHOS_HITL_SECRET || 'ci-test-hitl-secret-key-32-bytes' }}
+          SWISHOS_AUDIT_PROOF_SECRET: ${{ secrets.SWISHOS_AUDIT_PROOF_SECRET || 'ci-test-audit-proof-secret-32-bytes' }}
+        run: |
+          bash dev/start_governance_server.sh &
+          sleep 5
+
+      - name: Execute red-team security probes + generate SARIF
+        env:
+          # Must match the server's secret above -- a mismatch here is
+          # indistinguishable from crypto_probes' own forged-signature probe
+          # and every request gets rejected as unauthorized, not evaluated.
+          SWISH_AGENT_SHARED_SECRET: ${{ secrets.SWISH_AGENT_SHARED_SECRET || 'ci-governance-shared-secret' }}
+        run: |
+          SCAN_EXIT_CODE=0
+          python scripts/redteam.py --ci --output-file redteam_results.json || SCAN_EXIT_CODE=$?
+
+          # --format sarif is a separate report mode (cli.py skips the JSON
+          # report_data branch entirely when it's set), so this is a second,
+          # independent invocation, not an alternate flag on the first run.
+          python scripts/redteam.py --format sarif --output-file redteam_results.sarif || true
+
+          echo "SCAN_EXIT_CODE=${SCAN_EXIT_CODE}" >> "$GITHUB_ENV"
+
+      - name: Stop governance server
+        if: always()
+        run: bash dev/stop_governance_server.sh || true
+
+      - name: Upload SARIF report to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('homelab-ai-governance/redteam_results.sarif') != ''
+        with:
+          sarif_file: homelab-ai-governance/redteam_results.sarif
+          category: agentic-redteam
+
+      - name: Generate PR markdown summary comment
+        if: github.event_name == 'pull_request' && always()
+        run: |
+          python3 -c '
+          import json, os
+
+          json_path = "redteam_results.json"
+          if not os.path.exists(json_path):
+              print("No JSON results found")
+              raise SystemExit(0)
+
+          with open(json_path) as f:
+              data = json.load(f)
+
+          # Real shape written by cli.py (verified against source, not
+          # guessed): {"owasp_score": {composite, grade, total_passed,
+          # total_tests, pass_rate}, "summary": {category: {passed, failed,
+          # total, pass_rate}}, "failures": [...]}. The original script read
+          # composite_owasp_score/overall_pass_rate_pct/categories -- none of
+          # which exist -- so it always fell back to its hardcoded 100/100.0
+          # defaults and reported PASSED regardless of the real result.
+          score = data.get("owasp_score", {})
+          composite = score.get("composite", 0)
+          grade = score.get("grade", "?")
+          pass_rate = score.get("pass_rate", 0.0)
+          total_passed = score.get("total_passed", 0)
+          total_tests = score.get("total_tests", 0)
+          failed_count = total_tests - total_passed
+          status_icon = "🟢 **PASSED**" if failed_count == 0 else "🔴 **FAILED**"
+
+          comment = f"""### 🛡️ SwishOS Agentic Red-Team Security Report
+
+          **Security Status**: {status_icon}
+          - **Composite OWASP Security Score**: `{composite}/100` (Grade {grade})
+          - **Pass Rate**: `{pass_rate:.1f}%` ({total_passed}/{total_tests} passed, {failed_count} failed)
+
+          #### Category Breakdown
+          | Category | Passed | Total | Pass Rate | Status |
+          | :--- | :--- | :--- | :--- | :--- |
+          """
+          for cat_id, cat_data in data.get("summary", {}).items():
+              c_passed = cat_data.get("passed", 0)
+              c_total = cat_data.get("total", 0)
+              c_rate = cat_data.get("pass_rate", 0.0)
+              icon = "✅" if c_passed == c_total else "❌"
+              comment += f"| `{cat_id}` | `{c_passed}` | `{c_total}` | `{c_rate:.1f}%` | {icon} |\n"
+
+          comment += "\n*Report generated automatically by the Agentic Red-Team Security Gate.*"
+          with open("pr_comment.md", "w") as out:
+              out.write(comment)
+          '
+
+      - name: Comment PR report
+        if: github.event_name == 'pull_request' && always() && hashFiles('homelab-ai-governance/pr_comment.md') != ''
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: homelab-ai-governance/pr_comment.md
+          comment_tag: agentic-redteam-report
+
+      - name: Enforce security quality gate
+        run: |
+          if [ "${SCAN_EXIT_CODE}" -ne 0 ]; then
+            echo "❌ Agentic Red-Team Security Gate FAILED! Critical/High findings detected."
+            exit 1
+          fi
+          echo "✅ Security Gate PASSED."
