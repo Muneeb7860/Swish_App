@@ -393,8 +393,15 @@ class RateLimiter:
             now = time.time()
             limit = self.get_limit()
             self.requests = [t for t in self.requests if now - t < 3600]
-            if len(self.requests) >= limit:
+            current_count = len(self.requests)
+            if current_count >= limit:
                 return False
+            # Early Warning Alert: log warning when reaching >= 80% capacity
+            if (current_count + 1) >= int(limit * 0.8):
+                pct = int(((current_count + 1) / limit) * 100)
+                logger.warning(
+                    f"RateLimiter threshold warning: {current_count + 1}/{limit} requests used ({pct}% capacity) in hourly window."
+                )
             self.requests.append(now)
             return True
 
