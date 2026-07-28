@@ -1,21 +1,87 @@
-# Homelab AI Governance Platform
+# SwishOS — Homelab AI Governance Platform
 
-This directory contains the semantic routing, guardrail enforcement, and recursive validation system for private on-premise AI models.
+> Zero-latency, fail-closed AI agent governance and semantic routing engine.
 
-## Structure
+---
 
-- `config/`: Core routing configs and agent profiles.
-- `detectors/`: Regex, keyword, and ONNX models for safety policies.
-- `src/governance/`: Main source package.
-  - `agents/`: Local and cloud agent backends.
-  - `evaluator/`: Recursive quality loop and scoring heuristics.
-  - `guardrails/`: Loader and enforcer engines.
-  - `router/`: Classification, token limits, and decision table.
-- `tests/`: Automated unit and integration testing suite.
+## Quickstart (5 Minutes)
 
-## Development and Verification
+### 1. Prerequisites
+- Python 3.10+
+- [Ollama](https://ollama.com/) (for local model inference)
 
-Run tests:
+### 2. Environment Setup
+
 ```bash
-pytest tests/ -v --cov=src/governance --cov-report=term-missing
+git clone https://github.com/muneeb7860/Swish_App.git
+cd Swish_App/homelab-ai-governance
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
+
+### 3. Run Local Governance Engine
+
+```bash
+# Allow mock fallback if Ollama is not yet initialized
+export GOVERNANCE_ALLOW_MOCK_FALLBACK=1
+export PYTHONPATH=src
+
+# Launch FastAPI governance server on port 8000
+python3 -c "import uvicorn; uvicorn.run('governance.server:app', host='127.0.0.1', port=8000)"
+```
+
+### 4. Send Test Governance Payload
+
+```bash
+curl -X POST http://localhost:8000/api/v1/govern \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How do I optimize SQL queries for Postgres?"}'
+```
+
+### 5. Run Red-Team Security Gate
+
+```bash
+pip install agentic-redteam
+
+# Run security benchmark sweep
+agentic-redteam --target-url http://localhost:8000/api/v1/govern --ci
+```
+
+---
+
+## Architecture
+
+```
+POST /api/v1/govern
+  │
+  ├── [G1] NeMo Pattern Gate (Colang matcher, < 5ms)
+  ├── [G2] PII Regex Scanner (Forces local_only on hit)
+  ├── [R1] Intent Classifier (qwen2.5:3b via Ollama)
+  ├── [R2] 27-Rule Decision Table (Intent × Complexity map)
+  ├── [A]  Agent Backend (Gemma 4B / Mistral / DeepSeek / Groq)
+  ├── [G3] Output Guardrails & Self-Correction Loop (≤3 retries)
+  └── [X]  Append-Only JSONL Audit Log (DuckDB analytics)
+```
+
+---
+
+## Verification & Testing
+
+Run full unit and integration test suite:
+
+```bash
+PYTHONPATH=src pytest tests/ -v
+```
+
+---
+
+## Configuration
+
+- `config/routing_config.yaml`: Agent definitions, model routing tables, daily cost ceilings.
+- `config/shared_guardrails.yaml`: Global input/output guardrail rules.
+- `docs/GOVERNANCE_SPEC.md`: Canonical architecture specification.
