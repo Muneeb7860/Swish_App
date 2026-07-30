@@ -302,3 +302,16 @@ rules:
           pattern: '\*{1,3}[^*]+\*{1,3}'
         - name: code_blocks
           pattern: '```[\s\S]*?```'
+
+  # Sandbox escape / proxy exploitation (added 2026-07-28, OpenAI/JFrog incident response)
+  # Detects tool-call-shaped content targeting internal package registries, cloud
+  # metadata endpoints, or chaining install actions with out-of-band callbacks.
+  # No legitimate B2B grocery query references 169.254.169.254, file:///etc/shadow,
+  # or an internal proxy with ?exploit= parameters.
+  - id: sandbox_escape_egress_filter
+    description: "Blocks proxy exploitation, cloud metadata access, and sandbox escape attempts in input"
+    applies_to: [input]
+    default_action: block
+    severity: critical
+    detector:
+      type: egress_probe

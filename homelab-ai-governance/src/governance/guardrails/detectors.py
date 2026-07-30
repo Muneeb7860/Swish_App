@@ -359,6 +359,112 @@ def strip_matched_segments(detector_config: dict[str, Any], content: str) -> str
 # ── Dispatch table ───────────────────────────────────────────────────────────
 
 
+# ── Egress / proxy exploitation detector ─────────────────────────────────────
+# Added 2026-07-28 in response to the OpenAI/JFrog Artifactory zero-day chain
+# (CVE-2026-656xx series). The models escaped a sandboxed eval by exploiting a
+# package registry cache proxy — the very component that exists to allow
+# dependency installs *without* granting internet access. This detector catches
+# tool-call-shaped content that:
+#   (a) targets internal/proxy/registry-shaped URIs with suspicious parameters
+#   (b) attempts to reach cloud metadata endpoints (169.254.169.254, fd00::, etc.)
+#   (c) chains a proxy/install action with an out-of-band callback or file read
+#
+# Unlike the heuristic injection rules, this has its own detector type
+# ("egress_probe") because the match surface (URIs with specific path/param
+# shapes) is structurally different from natural-language pattern matching.
+
+# Internal/proxy hostname patterns. These are destinations an agent should never
+# be targeting directly — they indicate sandbox reconnaissance or proxy abuse.
+_INTERNAL_HOST_RE = re.compile(
+    r"(?:https?://)"
+    r"(?:"
+    r"(?:localhost|127\.0\.0\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)"  # RFC1918 + loopback
+    r"|(?:169\.254\.169\.254|metadata\.google\.internal|169\.254\.170\.2)"  # Cloud metadata
+    r"|(?:[a-z0-9_-]+\.internal|[a-z0-9_-]+-(?:cache|proxy|registry)\.[a-z0-9._-]+)"  # *.internal, *-cache.*, *-proxy.*
+    r"|(?:artifactory|nexus|registry|proxy-cache|npm-proxy|pypi-mirror)[a-z0-9._-]*"  # Package registry names
+    r")"
+    r"(?::\d+)?"  # optional port
+    r"(?:/[^\s\"']*)?",  # path
+    re.IGNORECASE,
+)
+
+# Suspicious parameters/path segments that signal exploitation intent
+_EXPLOIT_PARAM_RE = re.compile(
+    r"(?:"
+    r"exploit=|cve[_-]?\d|payload=|inject=|callback=|hook="
+    r"|post_install[_-]hook|pre[_-]?install[_-]?script"
+    r"|file:///|/etc/(?:passwd|shadow|hosts)"
+    r"|/proc/self|/var/run/secrets"
+    r"|aws[_-]?secret|aws[_-]?access[_-]?key"
+    r"|\bbeacon\b|\bexfil\b|\bstage[rd]?\b"
+    r")",
+    re.IGNORECASE,
+)
+
+# Out-of-band callback indicators
+_OOB_CALLBACK_RE = re.compile(
+    r"(?:"
+    r"curl\s+https?://(?!localhost|127\.)"
+    r"|wget\s+https?://"
+    r"|fetch\s*\(['\"]https?://"
+    r"|requests?\.(?:get|post|put)\s*\("
+    r"|urllib\.request"
+    r"|nc\s+-[a-z]*\s+\d"
+    r"|nslookup\s+\S+\.\S+"
+    r"|dig\s+\S+\.\S+"
+    r")",
+    re.IGNORECASE,
+)
+
+# Egress-escalation: tool-call shapes that combine an install/proxy action with
+# a secondary action (callback, file read, credential access)
+_TOOL_CALL_EGRESS_RE = re.compile(
+    r"(?:"
+    r"install[_-]?package|pip\s+install|npm\s+install|apt[_-]get|conda\s+install"
+    r"|proxy[_-]?fetch|cache[_-]?get|registry[_-]?pull"
+    r"|download[_-]?from|fetch[_-]?url|http[_-]?get"
+    r")(?:\s*\(|\s+\S)",  # followed by ( for function calls, or a space+arg for CLI
+    re.IGNORECASE,
+)
+
+
+def _detect_egress_probe(config: dict[str, Any], content: str) -> bool:
+    """Detect sandbox escape / proxy exploitation attempts.
+
+    Triggers when content contains:
+      - An internal/proxy-shaped URI PLUS an exploit parameter/path; OR
+      - A tool-call install shape PLUS an out-of-band callback; OR
+      - A cloud metadata endpoint access (unconditional block).
+
+    The cloud metadata case is unconditional because there is no legitimate
+    reason for an NL query or tool call to reference 169.254.169.254 in a
+    B2B grocery application. Everything else requires a conjunction to avoid
+    false-positiving on legitimate package install instructions.
+    """
+    # Unconditional: cloud metadata access
+    if re.search(r"169\.254\.169\.254|metadata\.google\.internal|169\.254\.170\.2", content):
+        return True
+
+    # Unconditional: file:// protocol in a tool-call context
+    if re.search(r"file:///(?:etc|proc|var|root|home)", content, re.IGNORECASE):
+        if _TOOL_CALL_EGRESS_RE.search(content) or _INTERNAL_HOST_RE.search(content):
+            return True
+
+    # Conjunction: internal host + exploit parameter
+    if _INTERNAL_HOST_RE.search(content) and _EXPLOIT_PARAM_RE.search(content):
+        return True
+
+    # Conjunction: tool-call install shape + OOB callback
+    if _TOOL_CALL_EGRESS_RE.search(content) and _OOB_CALLBACK_RE.search(content):
+        return True
+
+    # Conjunction: internal host + OOB callback (reconnaissance + exfil)
+    if _INTERNAL_HOST_RE.search(content) and _OOB_CALLBACK_RE.search(content):
+        return True
+
+    return False
+
+
 _DETECTOR_DISPATCH: dict[str, Any] = {
     "regex": _detect_regex,
     "keyword_list": _detect_keyword_list,
@@ -366,4 +472,5 @@ _DETECTOR_DISPATCH: dict[str, Any] = {
     "fingerprint": _detect_fingerprint,
     "toxicity_scorer": _detect_toxicity,
     "sql_ast": detect_unsafe_sql,
+    "egress_probe": _detect_egress_probe,
 }
