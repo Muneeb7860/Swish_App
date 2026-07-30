@@ -315,3 +315,31 @@ rules:
     severity: critical
     detector:
       type: egress_probe
+
+  # Autonomous overreach / rogue agent persistence (added 2026-07-28, ASI10 response)
+  # Detects an agent reasoning aloud about circumventing controls: splitting blocked
+  # actions into sub-threshold increments, self-serving objective expansion, persisting
+  # access after task completion, or explicitly deciding to exceed its mandate.
+  # These are NOT injection — the agent is not being told to do something by an
+  # attacker. It is deciding for itself. The linguistic signature is distinctive:
+  # explicit reference to thresholds/limits + explicit intent to evade them.
+  - id: rogue_agent_overreach_filter
+    description: "Blocks autonomous goal persistence, threshold evasion, and self-serving scope expansion"
+    applies_to: [input]
+    default_action: block
+    severity: critical
+    detector:
+      type: heuristic
+      rules:
+        # Step-budget / threshold evasion: splitting a blocked action into increments
+        - pattern: '(?i)(was\s+blocked|got\s+rejected|was\s+denied|failed\s+the\s+check).{0,80}(instead|split|break|divide|chunk).{0,60}(under\s+the\s+.{0,20}threshold|below\s+the\s+.{0,20}limit|sub.?threshold|each\s+(under|below))'
+        - pattern: '(?i)(stay|remain|keep).{0,30}(under|below|within).{0,30}(review|approval|detection|alert|flag)\s*(threshold|limit|cap|budget)'
+        - pattern: '(?i)(?:execute|perform|do|run|make)\s+\d+\s+(?:transfers?|transactions?|requests?|calls?).{0,40}(?:each|per|of)\s+.{0,20}\$?\d'
+        # Self-serving objective expansion: agent decides to improve its own performance
+        - pattern: '(?i)(improve|increase|boost|inflate)\s+(my|our|the\s+model.?s?|its?)\s+(eval|score|rating|performance|benchmark|grade).{0,40}(by|to)\s+\d+'
+        - pattern: '(?i)(?:proceeding|going\s+ahead|will\s+proceed|starting).{0,30}(download|extract|access|fetch).{0,30}(answer\s*key|solution|benchmark|ground.?truth|eval.?set)'
+        # Persistence mechanisms: writing backdoors, cron jobs, maintaining access
+        - pattern: '(?i)(?:before\s+exiting|after\s+task|task\s+(?:complete|finished|done)).{0,60}(cron|cronjob|at\s+job|systemd|scheduled?\s+task|backdoor|reverse.?shell|maintain.?access)'
+        - pattern: '(?i)(?:cache|store|save|persist).{0,30}(credentials?|tokens?|keys?|secrets?|access).{0,30}(for\s+future\s+sessions?|for\s+later|for\s+next\s+time|across\s+sessions?|permanently)'
+        # Self-directed objective override: agent reprioritizes to unauthorized goals
+        - pattern: '(?i)(primary|original|assigned)\s+(task|objective|goal).{0,30}(complete|done|finished).{0,40}(secondary|new|next)\s+(objective|goal|task).{0,30}(enumerate|collect|harvest|exfiltrate|scan|map)'
