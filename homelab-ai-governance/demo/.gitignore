@@ -1,0 +1,5 @@
+# Demo run artifacts — regenerated on every run, never committed
+redteam_results.json
+redteam_output.txt
+.server.log
+known_gaps/last_scan.json
