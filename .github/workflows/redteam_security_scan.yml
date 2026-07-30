@@ -38,13 +38,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          # Canonical red-team tool lives in-repo (agentic-redteam/), kept in
-          # sync with the guardrails it tests -- installing the standalone
-          # published package here would silently test a different,
-          # independently-versioned harness than the one actually developed
-          # in this monorepo (GART wiring, mcp_security category, the
-          # eval_assertion compound-assertion fix, etc. all live only here).
-          pip install -e ../agentic-redteam
+          # Canonical red-team tool — standalone repo (github.com/Muneeb7860/agentic-redteam).
+          # The vendored in-repo copy was removed to eliminate silent drift.
+          # Will switch to `pip install agentic-redteam` once published to PyPI.
+          pip install "agentic-redteam @ git+https://github.com/Muneeb7860/agentic-redteam.git@master"
 
       - name: Start governance server (mock mode)
         env:

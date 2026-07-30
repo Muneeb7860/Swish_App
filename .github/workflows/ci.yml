@@ -522,8 +522,9 @@ jobs:
       - name: Install governance package + dev deps
         run: |
           pip install -e ".[dev]"
-          # Canonical red-team tool (repo root); scripts/redteam.py shims to it.
-          pip install -e ../agentic-redteam
+          # Canonical red-team tool — standalone repo, single source of truth.
+          # Will switch to `pip install agentic-redteam` once published to PyPI.
+          pip install "agentic-redteam @ git+https://github.com/Muneeb7860/agentic-redteam.git@master"
 
       - name: Run governance test suite
         env:
