@@ -143,3 +143,4 @@ demo/*.log
 * [0-9][0-9]
 * [0-9][0-9].*
 scripts/__pycache__/
+scripts/chaos_tests/__pycache__/
