@@ -17,6 +17,14 @@ os.environ["OTEL_SDK_DISABLED"] = "true"
 # opt-in (production fails honestly instead — GOVERNANCE_SPEC.md §3).
 os.environ["GOVERNANCE_ALLOW_MOCK_FALLBACK"] = "1"
 
+# Shared HMAC secret for audit-proof signing/verification across the
+# governance engine (agent_auth.py) and agentic-redteam (telemetry_verifier.py).
+# Without this, the two sides use different secrets (governance falls back to
+# a hardcoded literal; agentic-redteam generates a random per-process secret)
+# and cross-verification fails. In production, this env var MUST be set
+# consistently on both sides.
+os.environ.setdefault("SWISHOS_AUDIT_PROOF_SECRET", "test-shared-secret-for-ci")
+
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
