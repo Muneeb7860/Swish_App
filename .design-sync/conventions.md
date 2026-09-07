@@ -6,11 +6,17 @@ This document guides the design agent in using this component library to build a
 
 ### Setup & Wrapping
 
-All components require the design system's CSS to render correctly. Include at the root:
+All components require the design system's CSS to render correctly. Load the design
+system's `styles.css` — that one file `@import`s the tokens, the fonts and the component
+styles, so nothing else needs linking:
+
+```html
+<link rel="stylesheet" href="styles.css">
+```
+
+Then wrap the app in the container class:
 
 ```tsx
-import '@swish/design-system/styles.css'
-
 export function App() {
   return (
     <div className="b2b-mfe-container">

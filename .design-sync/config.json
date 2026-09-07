@@ -1,66 +1,28 @@
 {
-	"shape": "package",
-	"pkg": "frontend-b2b",
-	"storybookConfigDir": null,
-	"sourceDir": "frontend-b2b",
-	"buildOutput": "ds-bundle",
-	"components": [
-		"CheckoutPanel",
-		"ConnectionConfig",
-		"CreditCardMockup",
-		"NotificationInbox",
-		"OrderTimeline",
-		"RetailerOnboarding",
-		"SandboxLogs",
-		"SensorProvisioning",
-		"StatusIndicator"
-	],
-	"groups": {
-		"Forms & Input": ["ConnectionConfig"],
-		"Payment & Commerce": ["CheckoutPanel", "CreditCardMockup"],
-		"Status & Timeline": ["OrderTimeline", "StatusIndicator"],
-		"Notifications": ["NotificationInbox"],
-		"Dashboard": ["RetailerOnboarding", "SensorProvisioning", "SandboxLogs"]
-	},
-	"designTokens": {
-		"colors": [
-			"bg-root",
-			"bg-surface",
-			"bg-elevated",
-			"bg-muted",
-			"bg-glass",
-			"text-primary",
-			"text-secondary",
-			"text-muted",
-			"accent",
-			"success",
-			"warning",
-			"error",
-			"info",
-			"purple"
-		],
-		"spacing": [
-			"space-0",
-			"space-1",
-			"space-2",
-			"space-3",
-			"space-4",
-			"space-5",
-			"space-6",
-			"space-7",
-			"space-8"
-		],
-		"typography": [
-			"text-xs",
-			"text-sm",
-			"text-base",
-			"text-lg",
-			"text-xl",
-			"text-2xl"
-		],
-		"radii": ["radius-sm", "radius-md", "radius-lg", "radius-xl", "radius-full"]
-	},
-	"styling": "tailwindcss + css-custom-properties",
-	"status": "phase-1-prep",
-	"createdAt": "2026-06-26"
+  "shape": "package",
+  "pkg": "frontend-b2b",
+  "globalName": "SwishB2B",
+  "buildCmd": "cd frontend-b2b && npm run build && cp dist/assets/style-*.css .ds-compiled.css",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".ds-compiled.css",
+  "tokensGlob": "../shared-ui/src/tokens.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "CheckoutPanel": "src/components/CheckoutPanel.tsx",
+    "ConnectionConfig": "src/components/ConnectionConfig.tsx",
+    "CreditCardMockup": "src/components/CreditCardMockup.tsx",
+    "NotificationInbox": "src/components/NotificationInbox.tsx",
+    "OrderTimeline": "src/components/OrderTimeline.tsx",
+    "RetailerOnboarding": "src/components/RetailerOnboarding.tsx",
+    "SandboxLogs": "src/components/SandboxLogs.tsx",
+    "SensorProvisioning": "src/components/SensorProvisioning.tsx",
+    "StatusIndicator": "src/components/StatusIndicator.tsx"
+  },
+  "extraEntries": [
+    "./.ds-provider.tsx"
+  ],
+  "provider": {
+    "component": "B2bSurface"
+  }
 }
